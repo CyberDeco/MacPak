@@ -1,0 +1,27 @@
+[package]
+name = "macpak-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Command-line interface for BG3 modding"
+
+[[bin]]
+name = "macpak"
+path = "src/main.rs"
+
+[dependencies]
+# Internal
+maclarian = { path = "../MacLarian" }
+macpak = { path = "../MacPak" }
+
+# CLI
+clap = { version = "4.4", features = ["derive", "cargo"] }
+indicatif = "0.17"
+console = "0.15"
+colored = "2.1"
+
+# Workspace dependencies
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
