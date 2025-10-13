@@ -1,13 +1,17 @@
 //! Format conversion utilities
-
 use crate::error::Result;
-use crate::formats::lsf;
 use crate::formats::lsx::LsxDocument;
 use std::path::Path;
 
+pub mod batch;
+pub mod lsf_to_lsx;
+pub mod lsx_to_lsf;
+
+pub use lsf_to_lsx::convert_lsf_to_lsx;
+
 /// Convert LSF to LSX
 pub fn lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
-    lsf::convert_lsf_to_lsx(source, dest)
+    lsf_to_lsx::convert_lsf_to_lsx(source, dest)
 }
 
 /// Convert LSX to LSF

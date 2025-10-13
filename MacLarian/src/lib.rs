@@ -17,7 +17,7 @@ pub use error::{Error, Result};
 pub mod prelude {
     pub use crate::error::{Error, Result};
     pub use crate::formats::common::{AttributeValue, TranslatedString};
-    pub use crate::formats::lsf::{LsfDocument, convert_lsf_to_lsx};
+    pub use crate::formats::lsf::LsfDocument;
     pub use crate::formats::lsx::LsxDocument;
     pub use crate::pak::PakOperations;
     pub use crate::converter;

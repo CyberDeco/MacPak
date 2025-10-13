@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 larian-formats = "0.1.9"
 byteorder = "1.5"
+base64 = "0.21"
 lz4_flex = "0.11"
 quick-xml = "0.31"
 walkdir = "2.4"
@@ -22,6 +23,7 @@ pretty_assertions = "1.4"
 
 # Binary parsing
 byteorder = "1.5"
+base64 = "0.21"
 lz4_flex = "0.11"
 
 # XML handling
