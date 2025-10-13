@@ -12,8 +12,8 @@ path = "src/main.rs"
 
 [dependencies]
 # Internal
-maclarian = { path = "../MacLarian" }
-macpak = { path = "../MacPak" }
+MacLarian.workspace = true
+MacPak.workspace = true
 
 # GUI Framework - Choose one:
 # Option 1: egui (immediate mode, easy to use)

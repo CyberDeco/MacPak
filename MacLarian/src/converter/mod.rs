@@ -8,6 +8,7 @@ pub mod lsf_to_lsx;
 pub mod lsx_to_lsf;
 
 pub use lsf_to_lsx::convert_lsf_to_lsx;
+pub use lsx_to_lsf::convert_lsx_to_lsf;
 
 /// Convert LSF to LSX
 pub fn lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
@@ -16,14 +17,7 @@ pub fn lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
 
 /// Convert LSX to LSF
 pub fn lsx_to_lsf<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
-    let content = std::fs::read_to_string(source)?;
-    let doc = LsxDocument::from_xml(&content)?;
-    
-    // TODO: Implement LSX -> LSF conversion
-    // For now, return an error
-    Err(crate::error::Error::ConversionError(
-        "LSX to LSF conversion not yet implemented".to_string()
-    ))
+    lsx_to_lsf::convert_lsx_to_lsf(source, dest)
 }
 
 /// Batch convert all files in a directory

@@ -12,8 +12,8 @@ path = "src/main.rs"
 
 [dependencies]
 # Internal
-maclarian = { path = "../MacLarian" }
-macpak = { path = "../MacPak" }
+MacLarian.workspace = true
+MacPak.workspace = true
 
 # CLI
 clap = { version = "4.4", features = ["derive", "cargo"] }

@@ -1,43 +1,42 @@
 [package]
-name = "maclarian"
+name = "MacLarian"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-larian-formats = "0.1.9"
-byteorder = "1.5"
-base64 = "0.21"
-lz4_flex = "0.11"
-quick-xml = "0.31"
-walkdir = "2.4"
-crc32fast = "1.3"
-uuid = { version = "1.6", features = ["v4"] }
-thiserror = "1.0"
-anyhow = "1.0"
-tracing = "0.1"
-serde = { version = "1.0", features = ["derive"] }
-
-[dev-dependencies]
-tempfile = "3.8"
-pretty_assertions = "1.4"
-
-# Binary parsing
-byteorder = "1.5"
-base64 = "0.21"
-lz4_flex = "0.11"
-
-# XML handling
-quick-xml = { version = "0.31", features = ["serialize"] }
-
-# File operations
-walkdir = "2.4"
-crc32fast = "1.3"
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+quick-xml = { workspace = true, features = ["serialize"] }
 
 # Error handling
-thiserror = "1.0"
-anyhow = "1.0"
+anyhow.workspace = true
+thiserror.workspace = true
 
-# Utilities
-uuid = { version = "1.6", features = ["v4", "serde"] }
-tracing = "0.1"
+# Compression
+flate2.workspace = true      # ZLIB/GZIP compression
+lz4.workspace = true         # LZ4 frame compression (writing LSF)
+lz4_flex.workspace = true    # LZ4 block compression (reading LSF)
+larian-formats.workspace = true
+
+# Binary I/O
+byteorder.workspace = true   # Reading/writing little-endian data
+
+# Encoding
+base64.workspace = true      # Base64 encoding for ScratchBuffer type
+
+# Hashing
+crc32fast.workspace = true   # CRC32 checksums for PAK files
+
+# File system
+walkdir.workspace = true     # Recursive directory traversal
+
+# Logging
+tracing.workspace = true     # Structured logging
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+
+[lints]
+workspace = true
 

@@ -1,6 +1,6 @@
 //! Error types for MacLarian
-
 use thiserror::Error;
+use lz4_flex::frame::Error as Lz4FrameError;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -21,6 +21,9 @@ pub enum Error {
     
     #[error("Compression failed: {0}")]
     CompressionError(String),
+    
+    #[error("LZ4 frame error: {0}")]
+    Lz4FrameError(#[from] Lz4FrameError),
     
     #[error("XML parse error: {0}")]
     XmlError(#[from] quick_xml::Error),

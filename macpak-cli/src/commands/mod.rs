@@ -1,6 +1,5 @@
 use clap::Subcommand;
 use std::path::PathBuf;
-
 pub mod extract;
 pub mod convert;
 pub mod create;
@@ -31,13 +30,13 @@ pub enum Commands {
         #[arg(short, long)]
         destination: PathBuf,
         
-        /// Input format
-        #[arg(short = 'i', long, default_value = "lsf")]
-        input_format: String,
+        /// Input format (auto-detected from extension if not specified)
+        #[arg(short = 'i', long)]
+        input_format: Option<String>,
         
-        /// Output format
-        #[arg(short = 'o', long, default_value = "lsx")]
-        output_format: String,
+        /// Output format (auto-detected from extension if not specified)
+        #[arg(short = 'o', long)]
+        output_format: Option<String>,
     },
     
     /// Create a PAK file
@@ -66,7 +65,12 @@ impl Commands {
                 extract::execute(source, destination)
             }
             Commands::Convert { source, destination, input_format, output_format } => {
-                convert::execute(source, destination, input_format, output_format)
+                convert::execute(
+                    source, 
+                    destination, 
+                    input_format.as_deref(), 
+                    output_format.as_deref()
+                )
             }
             Commands::Create { source, destination } => {
                 create::execute(source, destination)

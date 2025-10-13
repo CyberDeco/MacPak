@@ -1,5 +1,5 @@
 [package]
-name = "macpak"
+name = "MacPak"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -8,7 +8,7 @@ description = "High-level BG3 modding toolkit library"
 
 [dependencies]
 # Internal
-maclarian = { path = "../MacLarian" }
+MacLarian.workspace = true
 
 # Workspace dependencies
 thiserror.workspace = true

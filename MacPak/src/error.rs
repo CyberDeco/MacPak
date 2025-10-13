@@ -3,7 +3,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("MacLarian error: {0}")]
-    MacLarian(#[from] maclarian::Error),
+    MacLarian(#[from] MacLarian::Error),
     
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
