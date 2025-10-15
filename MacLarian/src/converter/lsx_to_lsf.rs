@@ -112,6 +112,8 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
         }
         buf.clear();
     }
+
+    let has_keys_section = !node_keys.iter().all(|k| k.is_none());
     
     Ok(LsfDocument {
         engine_version,
@@ -120,6 +122,7 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
         attributes,
         values: values_buffer,
         node_keys,
+        has_keys_section,
     })
 }
 

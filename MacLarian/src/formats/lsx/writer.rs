@@ -35,6 +35,15 @@ pub fn serialize_lsx(doc: &LsxDocument) -> Result<String> {
     version.push_attribute(("minor", doc.minor.to_string().as_str()));
     version.push_attribute(("revision", doc.revision.to_string().as_str()));
     version.push_attribute(("build", doc.build.to_string().as_str()));
+
+    // BG3 and DOS2 use byte-swapped GUIDs
+    if doc.major >= 4 {
+        version.push_attribute(("lslib_meta", "v1,bswap_guids"));
+    } else {
+        // Older games (DOS1) don't byte-swap
+        version.push_attribute(("lslib_meta", "v1"));
+    }
+    
     writer.write_event(Event::Empty(version))?;
     
     // <region>s
@@ -85,16 +94,22 @@ fn write_node<W: std::io::Write>(writer: &mut Writer<W>, node: &LsxNode) -> Resu
             let mut attr_tag = BytesStart::new("attribute");
             attr_tag.push_attribute(("id", attr.id.as_str()));
             attr_tag.push_attribute(("type", attr.type_name.as_str()));
-            attr_tag.push_attribute(("value", attr.value.as_str()));
+            //attr_tag.push_attribute(("value", attr.value.as_str()));
             
             if let Some(ref handle) = attr.handle {
+                // TranslatedString or TranslatedFSString
                 attr_tag.push_attribute(("handle", handle.as_str()));
+                
+                if !attr.value.is_empty() {
+                    attr_tag.push_attribute(("value", attr.value.as_str()));
+                }
+                
+                if let Some(version) = attr.version {
+                    attr_tag.push_attribute(("version", version.to_string().as_str()));
+                }
+            } else {
+                attr_tag.push_attribute(("value", attr.value.as_str()));
             }
-            
-            if let Some(version) = attr.version {
-                attr_tag.push_attribute(("version", version.to_string().as_str()));
-            }
-            
             writer.write_event(Event::Empty(attr_tag))?;
         }
     }

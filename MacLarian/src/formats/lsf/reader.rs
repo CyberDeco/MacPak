@@ -73,10 +73,11 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
     
     println!("\n=== Reading values ===");
     let values = read_section(&mut cursor, sections[4], is_compressed)?;
-    
+
     // Read keys section
     println!("\n=== Reading node keys ===");
     let node_keys = read_keys(&mut cursor, sections[1], is_compressed, &names, nodes.len())?;
+    let has_keys_section = !node_keys.iter().all(|k| k.is_none());
     
     Ok(LsfDocument {
         engine_version,
@@ -85,6 +86,7 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
         attributes,
         values,
         node_keys,
+        has_keys_section,
     })
 }
 

@@ -34,7 +34,7 @@ pub fn to_lsx(doc: &LsfDocument) -> Result<String> {
     writer.write_event(Event::Start(BytesStart::new("save")))?;
     
     // <version>
-    write_version(&mut writer, doc.engine_version)?;
+    write_version(&mut writer, doc)?;
     
     // <region>
     let region_id = doc.nodes.first()
@@ -65,18 +65,28 @@ pub fn to_lsx(doc: &LsfDocument) -> Result<String> {
     Ok(xml)
 }
 
-fn write_version<W: std::io::Write>(writer: &mut Writer<W>, engine_version: u64) -> Result<()> {
-    let major = ((engine_version >> 55) & 0x7F) as u32;
-    let minor = ((engine_version >> 47) & 0xFF) as u32;
-    let revision = ((engine_version >> 31) & 0xFFFF) as u32;
-    let build = (engine_version & 0x7FFFFFFF) as u32;
+fn write_version<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument) -> Result<()> {
+    let major = ((doc.engine_version >> 55) & 0x7F) as u32;
+    let minor = ((doc.engine_version >> 47) & 0xFF) as u32;
+    let revision = ((doc.engine_version >> 31) & 0xFFFF) as u32;
+    let build = (doc.engine_version & 0x7FFFFFFF) as u32;
     
     let mut version = BytesStart::new("version");
     version.push_attribute(("major", major.to_string().as_str()));
     version.push_attribute(("minor", minor.to_string().as_str()));
     version.push_attribute(("revision", revision.to_string().as_str()));
     version.push_attribute(("build", build.to_string().as_str()));
-    version.push_attribute(("lslib_meta", "v1,bswap_guids,lsf_keys_adjacency"));
+    
+    // Build metadata based on what we detected
+    let mut meta = vec!["v1"];
+    if major >= 4 {
+        meta.push("bswap_guids");
+    }
+    if doc.has_keys_section {
+        meta.push("lsf_keys_adjacency");
+    }
+    
+    version.push_attribute(("lslib_meta", meta.join(",").as_str()));
     writer.write_event(Event::Empty(version))?;
     Ok(())
 }

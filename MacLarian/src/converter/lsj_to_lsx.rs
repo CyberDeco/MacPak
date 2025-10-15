@@ -62,19 +62,11 @@ fn convert_region_to_node(node_name: &str, lsj_node: &LsjNodeType) -> Result<Lsx
     
     // Convert attributes
     for (attr_name, attr) in &lsj_node.attributes {
-        // Skip the "key" attribute if it exists - it's metadata, not a real attribute
-        if attr_name == "key" {
-            if let LsjAttrType::Simple { value, .. } = attr {
-                lsx_node.key = Some(json_value_to_string(value));
-            }
-            continue;
-        }
-        
         let lsx_attr = convert_attribute(attr_name, attr)?;
         lsx_node.attributes.push(lsx_attr);
     }
     
-    // Convert children - each array becomes child nodes
+    // Convert children
     for (child_name, child_array) in &lsj_node.children {
         for child in child_array {
             let child_node = convert_region_to_node(child_name, child)?;
@@ -102,7 +94,7 @@ fn convert_attribute(name: &str, attr: &LsjAttrType) -> Result<LsxAttribute> {
                 type_name: type_name.clone(),
                 value: value.clone().unwrap_or_default(),
                 handle: Some(handle.clone()),
-                version: *version,
+                version: Some(version.unwrap_or(0))
             })
         }
         LsjAttrType::TranslatedFSString { type_name, value, handle, .. } => {

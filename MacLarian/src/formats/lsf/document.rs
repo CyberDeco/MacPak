@@ -10,6 +10,7 @@ pub struct LsfDocument {
     pub attributes: Vec<LsfAttribute>,
     pub values: Vec<u8>,
     pub node_keys: Vec<Option<String>>,
+    pub has_keys_section: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +39,7 @@ impl LsfDocument {
             attributes: Vec::new(),
             values: Vec::new(),
             node_keys: Vec::new(),
+            has_keys_section: false,
         }
     }
     
