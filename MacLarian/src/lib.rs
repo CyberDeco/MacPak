@@ -1,7 +1,11 @@
-//! MacLarian - Native Rust implementation of LSLib functionality
+//! MacLarian - Larian Studios file format library for macOS
 //! 
-//! This crate provides low-level access to Larian Studios file formats
-//! used in Divinity: Original Sin 2 and Baldur's Gate 3.
+//! This library provides tools for working with Baldur's Gate 3 and other
+//! Larian Studios game file formats, including:
+//! - LSF (binary format)
+//! - LSX (XML format)
+//! - LSJ (JSON format)
+//! - LSBC, LSBX, LSBS (binary formats)
 
 pub mod error;
 pub mod formats;
@@ -16,9 +20,10 @@ pub use error::{Error, Result};
 /// Prelude module for common imports
 pub mod prelude {
     pub use crate::error::{Error, Result};
-    pub use crate::formats::common::{AttributeValue, TranslatedString};
-    pub use crate::formats::lsf::LsfDocument;
-    pub use crate::formats::lsx::LsxDocument;
+    pub use crate::formats::common::{TypeId, get_type_name, type_name_to_id};
+    pub use crate::formats::lsf::{LsfDocument, LsfNode, LsfAttribute};
+    pub use crate::formats::lsx::{LsxDocument, LsxRegion, LsxNode, LsxAttribute};
+    pub use crate::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
     pub use crate::pak::PakOperations;
     pub use crate::converter;
 }

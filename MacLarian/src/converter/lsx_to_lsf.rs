@@ -1,17 +1,14 @@
 //! LSX to LSF conversion
 
 use crate::error::{Error, Result};
-use crate::formats::lsf::{LsfDocument, LsfNode, LsfAttribute};
-use crate::utils::lsf_types::{
-    type_name_to_id, serialize_value, serialize_translated_string, TypeId
+use crate::formats::lsf::{self, LsfDocument, LsfNode, LsfAttribute};
+use crate::formats::common::{
+    type_name_to_id, serialize_value, serialize_translated_string, hash_string_lslib
 };
-use crate::utils::hash::hash_string_lslib;
 
-use byteorder::{LittleEndian, WriteBytesExt};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::collections::HashMap;
-use std::io::{Cursor, Write};
 use std::path::Path;
 
 /// Convert LSX file to LSF format
@@ -22,8 +19,7 @@ pub fn convert_lsx_to_lsf<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     let lsf_doc = from_lsx(&content)?;
     
     // Write LSF binary
-    let lsf_bytes = lsf_doc.to_bytes()?;
-    std::fs::write(dest, lsf_bytes)?;
+    lsf::write_lsf(&lsf_doc, dest)?;
     
     tracing::info!("Conversion complete");
     Ok(())

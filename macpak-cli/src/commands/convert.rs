@@ -1,4 +1,4 @@
-//! CLI interface between LSF <> LSX conversion
+//! CLI interface for format conversion
 use std::path::Path;
 
 pub fn execute(
@@ -30,17 +30,50 @@ pub fn execute(
     
     // Execute conversion based on input/output format
     match (input.as_str(), output.as_str()) {
+        // LSF conversions
         ("lsf", "lsx") => {
             println!("Converting LSF → LSX");
-            MacPak::operations::conversion::lsf_to_lsx(source, destination)?;
+            MacLarian::converter::lsf_to_lsx(source, destination)?;
         }
+        ("lsf", "lsj") => {
+            println!("Converting LSF → LSJ");
+            MacLarian::converter::lsf_to_lsj(source, destination)?;
+        }
+        
+        // LSX conversions
         ("lsx", "lsf") => {
             println!("Converting LSX → LSF");
-            MacPak::operations::conversion::lsx_to_lsf(source, destination)?;
+            MacLarian::converter::lsx_to_lsf(source, destination)?;
         }
+        ("lsx", "lsj") => {
+            println!("Converting LSX → LSJ");
+            MacLarian::converter::lsx_to_lsj(source, destination)?;
+        }
+        
+        // LSJ conversions
+        ("lsj", "lsx") => {
+            println!("Converting LSJ → LSX");
+            MacLarian::converter::lsj_to_lsx(source, destination)?;
+        }
+        ("lsj", "lsf") => {
+            println!("Converting LSJ → LSF");
+            MacLarian::converter::lsj_to_lsf(source, destination)?;
+        }
+        
+        // Same format (copy)
+        (fmt1, fmt2) if fmt1 == fmt2 => {
+            println!("Source and destination formats are the same, copying file...");
+            std::fs::copy(source, destination)?;
+        }
+        
+        // Unsupported
         _ => {
             anyhow::bail!(
-                "Unsupported conversion: {} → {}. Supported: lsf→lsx, lsx→lsf",
+                "Unsupported conversion: {} → {}\n\
+                 Supported conversions:\n\
+                 • LSF ↔ LSX\n\
+                 • LSF ↔ LSJ\n\
+                 • LSX ↔ LSJ",
                 input, output
             );
         }

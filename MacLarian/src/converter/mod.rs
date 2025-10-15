@@ -1,60 +1,30 @@
 //! Format conversion utilities
-use crate::error::Result;
-use crate::formats::lsx::LsxDocument;
-use std::path::Path;
+//! 
+//! This module handles conversions between different Larian file formats:
+//! - LSF (binary) ↔ LSX (XML)
+//! - LSX (XML) ↔ LSJ (JSON)
+//! - LSF (binary) ↔ LSJ (JSON)
+//! - LSBC, LSBX, LSBS conversions - Future
 
-pub mod batch;
-pub mod lsf_to_lsx;
-pub mod lsx_to_lsf;
+mod lsf_to_lsx;
+mod lsx_to_lsf;
+mod lsx_to_lsj;
+mod lsj_to_lsx;
+mod lsf_to_lsj;
+mod lsj_to_lsf;
 
-pub use lsf_to_lsx::convert_lsf_to_lsx;
-pub use lsx_to_lsf::convert_lsx_to_lsf;
+// Re-export conversion functions
+pub use lsf_to_lsx::{convert_lsf_to_lsx, to_lsx};
+pub use lsx_to_lsf::{convert_lsx_to_lsf, from_lsx};
+pub use lsx_to_lsj::{convert_lsx_to_lsj, to_lsj};
+pub use lsj_to_lsx::{convert_lsj_to_lsx, to_lsx as lsj_to_lsx_doc};
+pub use lsf_to_lsj::convert_lsf_to_lsj;
+pub use lsj_to_lsf::convert_lsj_to_lsf;
 
-/// Convert LSF to LSX
-pub fn lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
-    lsf_to_lsx::convert_lsf_to_lsx(source, dest)
-}
-
-/// Convert LSX to LSF
-pub fn lsx_to_lsf<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
-    lsx_to_lsf::convert_lsx_to_lsf(source, dest)
-}
-
-/// Batch convert all files in a directory
-pub fn batch_convert_directory<P: AsRef<Path>>(
-    dir: P,
-    from_format: &str,
-    to_format: &str,
-    recursive: bool,
-) -> Result<Vec<std::path::PathBuf>> {
-    use walkdir::WalkDir;
-    
-    let mut converted = Vec::new();
-    let walker = if recursive {
-        WalkDir::new(&dir)
-    } else {
-        WalkDir::new(&dir).max_depth(1)
-    };
-    
-    for entry in walker {
-        let entry = entry?;
-        let path = entry.path();
-        
-        if let Some(ext) = path.extension() {
-            if ext == from_format {
-                let mut dest_path = path.to_path_buf();
-                dest_path.set_extension(to_format);
-                
-                match (from_format, to_format) {
-                    ("lsf", "lsx") => lsf_to_lsx(path, &dest_path)?,
-                    ("lsx", "lsf") => lsx_to_lsf(path, &dest_path)?,
-                    _ => continue,
-                }
-                
-                converted.push(dest_path);
-            }
-        }
-    }
-    
-    Ok(converted)
-}
+// Convenience aliases
+pub use lsf_to_lsx::convert_lsf_to_lsx as lsf_to_lsx;
+pub use lsx_to_lsf::convert_lsx_to_lsf as lsx_to_lsf;
+pub use lsx_to_lsj::convert_lsx_to_lsj as lsx_to_lsj;
+pub use lsj_to_lsx::convert_lsj_to_lsx as lsj_to_lsx;
+pub use lsf_to_lsj::convert_lsf_to_lsj as lsf_to_lsj;
+pub use lsj_to_lsf::convert_lsj_to_lsf as lsj_to_lsf;

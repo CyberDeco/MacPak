@@ -1,4 +1,4 @@
-//! LSF type utilities - centralized type handling for LSF/LSX conversions
+//! Common type utilities - centralized type handling for LSF/LSX/LSJ conversions
 
 use crate::error::Result;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
@@ -43,7 +43,7 @@ pub const TYPE_GUID: TypeId = 31;
 pub const TYPE_INT64: TypeId = 32;
 pub const TYPE_TRANSLATEDFSSTRING: TypeId = 33;
 
-/// Get the human-readable name for an LSF type ID
+/// Get the human-readable name for a type ID
 pub fn get_type_name(type_id: TypeId) -> &'static str {
     match type_id {
         0 => "None",

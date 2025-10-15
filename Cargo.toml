@@ -26,6 +26,7 @@ eframe = { version = "0.28", default-features = false, features = ["accesskit", 
 pretty_assertions = "1.4"
 
 # For LSF/PAK handling:
+indexmap = "2.0"
 lz4 = "1.24"
 lz4_flex = "0.11"
 flate2 = "1.0"

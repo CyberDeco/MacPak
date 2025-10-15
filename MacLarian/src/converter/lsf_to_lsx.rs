@@ -1,18 +1,17 @@
 //! LSF to LSX conversion
 
 use crate::error::Result;
-use crate::formats::lsf::LsfDocument;
-use crate::utils::lsf_types::{get_type_name, extract_value, extract_translated_string};
+use crate::formats::lsf::{self, LsfDocument};
+use crate::formats::common::{get_type_name, extract_value, extract_translated_string};
 
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
 use std::path::Path;
-use lz4_flex::frame::FrameEncoder;
 
 /// Convert LSF file to LSX format
 pub fn convert_lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     tracing::info!("Converting LSF→LSX: {:?} → {:?}", source.as_ref(), dest.as_ref());
-    let lsf_doc = LsfDocument::from_file(&source)?;
+    let lsf_doc = lsf::read_lsf(&source)?;
     let lsx_xml = to_lsx(&lsf_doc)?;
     std::fs::write(dest, lsx_xml)?;
     tracing::info!("Conversion complete");
