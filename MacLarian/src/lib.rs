@@ -5,7 +5,7 @@
 //! - LSF (binary format)
 //! - LSX (XML format)
 //! - LSJ (JSON format)
-//! - LSBC, LSBX, LSBS (binary formats)
+//! - LSBC, LSBX, LSBS (legacy binary formats)
 
 pub mod error;
 pub mod formats;
