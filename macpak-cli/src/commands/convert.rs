@@ -28,10 +28,23 @@ pub fn execute(
             .ok_or_else(|| anyhow::anyhow!("Cannot detect output format from destination file extension"))?
     };
     
+    // Check for unsupported LSB format
+    if input == "lsb" || output == "lsb" {
+        anyhow::bail!(
+            "LSB format is not supported.\n\
+             \n\
+             The LSB format was deprecated by Larian Studios in Patch 6 (February 2024)\n\
+             and replaced with the LSF format. Modern BG3 uses LSF files exclusively.\n\
+             \n\
+             If you need to work with legacy Early Access save files, please use\n\
+             the original LSLib tool: https://github.com/Norbyte/lslib"
+        );
+    }
+    
     // Execute conversion based on input/output format
     match (input.as_str(), output.as_str()) {
         // LSF conversions
-        ("lsf", "lsx") => {
+        ("lsf" | "lsbc" | "lsbs" | "lsfx", "lsx") => {
             println!("Converting LSF → LSX");
             MacLarian::converter::lsf_to_lsx(source, destination)?;
         }
@@ -41,7 +54,7 @@ pub fn execute(
         }
         
         // LSX conversions
-        ("lsx", "lsf") => {
+        ("lsx", "lsf" | "lsbc" | "lsbs" | "lsfx", ) => {
             println!("Converting LSX → LSF");
             MacLarian::converter::lsx_to_lsf(source, destination)?;
         }
@@ -72,7 +85,7 @@ pub fn execute(
                 "Unsupported conversion: {} → {}\n\
                  Supported conversions:\n\
                  • LSF ↔ LSX\n\
-                 • LSF ↔ LSJ\n\
+                 • LSF ↔ LSJ (via intermediary LSX)\n\
                  • LSX ↔ LSJ",
                 input, output
             );

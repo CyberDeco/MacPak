@@ -1,7 +1,8 @@
 //! PAK archive operations
 
 use crate::error::{Error, Result};
-use larian_formats::lspk::{DecompressedLspk, Reader};
+use larian_formats::lspk::{DecompressedLspk, Reader, Writer};
+use larian_formats::format::Write as LarianWrite;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -24,6 +25,12 @@ impl PakOperations {
         std::fs::create_dir_all(&output_dir)?;
         
         for file in decompressed.files {
+            // Skip .DS_Store files
+            if file.path.file_name() == Some(std::ffi::OsStr::new(".DS_Store")) {
+                tracing::debug!("Skipping .DS_Store file: {:?}", file.path);
+                continue;
+            }
+            
             let output_path = output_dir.as_ref().join(&file.path);
             
             if let Some(parent) = output_path.parent() {
@@ -31,6 +38,32 @@ impl PakOperations {
             }
             
             std::fs::write(&output_path, &file.decompressed_bytes)?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Create a PAK file from a directory
+    pub fn create<P: AsRef<Path>>(source_dir: P, output_pak: P) -> Result<()> {
+        // Remove .DS_Store files before packing
+        Self::remove_ds_store_files(source_dir.as_ref())?;
+        
+        let writer = Writer::with_mod_root_path(source_dir.as_ref())?;
+        writer.write(output_pak.as_ref().to_path_buf())?;
+        
+        Ok(())
+    }
+    
+    /// Remove .DS_Store files from a directory tree
+    fn remove_ds_store_files(dir: &Path) -> Result<()> {
+        use walkdir::WalkDir;
+        
+        for entry in WalkDir::new(dir) {
+            let entry = entry?;
+            if entry.file_name() == ".DS_Store" {
+                std::fs::remove_file(entry.path())?;
+                tracing::debug!("Removed .DS_Store file before packing: {:?}", entry.path());
+            }
         }
         
         Ok(())
