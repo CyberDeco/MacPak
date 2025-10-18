@@ -39,6 +39,9 @@ walkdir = "2.4"
 crc32fast = "1.4"
 larian-formats = "0.3.0"
 
+# For GR2/glTF/dae handling
+libloading = "0.8.9"
+
 # Internal crates
 [workspace.dependencies.MacPak]
 version = "0.1.0"

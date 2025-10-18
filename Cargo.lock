@@ -21,6 +21,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tracing",
+ "tracing-subscriber",
  "walkdir",
 ]
 
@@ -2259,6 +2260,8 @@ dependencies = [
  "colored",
  "console",
  "indicatif",
+ "serde",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
 ]

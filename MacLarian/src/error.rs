@@ -54,6 +54,12 @@ pub enum Error {
     
     #[error("File not found in PAK: {0}")]
     FileNotFoundInPak(String),
+
+    #[error("GR2 parse error: {0}")]
+    Gr2ParseError(String),
+    
+    #[error("Oodle decompression error: {0}")]
+    OodleError(String),
     
     #[error("Invalid file path: {0}")]
     InvalidPath(String),

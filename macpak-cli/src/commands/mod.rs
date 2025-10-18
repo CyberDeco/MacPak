@@ -6,6 +6,7 @@ pub mod create;
 pub mod list;
 pub mod index;
 pub mod validate;
+pub mod gr2;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -56,6 +57,31 @@ pub enum Commands {
         #[arg(short, long)]
         source: PathBuf,
     },
+
+    /// GR2 file operations
+    Gr2 {
+        #[command(subcommand)]
+        command: Gr2Commands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum Gr2Commands {
+    /// Inspect a GR2 file and display its structure
+    Inspect {
+        /// GR2 file to inspect
+        path: PathBuf,
+    },
+    
+    /// Extract mesh information to JSON
+    Extract {
+        /// Source GR2 file
+        path: PathBuf,
+        
+        /// Output JSON file
+        #[arg(short, long)]
+        output: PathBuf,
+    },
 }
 
 impl Commands {
@@ -77,6 +103,22 @@ impl Commands {
             }
             Commands::List { source } => {
                 list::execute(source)
+            }
+            Commands::Gr2 { command } => {
+                command.execute()
+            }
+        }
+    }
+}
+
+impl Gr2Commands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            Gr2Commands::Inspect { path } => {
+                gr2::inspect(path)
+            }
+            Gr2Commands::Extract { path, output } => {
+                gr2::extract_json(path, output)
             }
         }
     }
