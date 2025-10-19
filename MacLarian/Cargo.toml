@@ -15,25 +15,25 @@ anyhow.workspace = true
 thiserror.workspace = true
 
 # Compression
-flate2.workspace = true      # ZLIB/GZIP compression
-lz4.workspace = true         # LZ4 frame compression (writing LSF)
-lz4_flex.workspace = true    # LZ4 block compression (reading LSF)
-larian-formats.workspace = true
+flate2.workspace = true         # ZLIB/GZIP compression
+lz4.workspace = true            # LZ4 frame compression (writing LSF)
+lz4_flex.workspace = true       # LZ4 block compression (reading LSF)
 
 # Binary I/O
-byteorder.workspace = true   # Reading/writing little-endian data
+larian-formats.workspace = true  # LSF reading/writing
+byteorder.workspace = true       # Reading/writing little-endian data
 
 # Encoding
-base64.workspace = true      # Base64 encoding for ScratchBuffer type
+base64.workspace = true          # Base64 encoding for ScratchBuffer type
 
 # Hashing
-crc32fast.workspace = true   # CRC32 checksums for PAK files
+crc32fast.workspace = true       # CRC32 checksums for PAK files
 
 # File system
-walkdir.workspace = true     # Recursive directory traversal
+walkdir.workspace = true         # Recursive directory traversal
 
 # Logging
-tracing.workspace = true     # Structured logging
+tracing.workspace = true         # Structured logging
 
 [dev-dependencies]
 pretty_assertions.workspace = true

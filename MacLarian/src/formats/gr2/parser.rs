@@ -11,17 +11,32 @@ use std::io::Cursor;
 /// Granny3D file magic signature
 const GRANNY_MAGIC: &[u8; 16] = b"\xe5\x9b\x49\x5e\x6f\x63\x1f\x14\x1e\x13\xeb\xa9\x90\xbe\xed\xc4";
 
-/// Granny file header (partial - only fields we need)
+/// Granny file header (complete structure)
 #[derive(Debug, Clone)]
 pub struct GrannyHeader {
-    pub magic: [u8; 16],
-    pub header_size: u32,
-    pub header_format: u32,
-    pub total_size: u32,
-    pub crc32: u32,
-    pub section_offset: u32,
-    pub section_count: u32,
-    pub compression_tag: u32,
+    // Magic and basic info (0x00-0x1F)
+    pub magic: [u8; 16],           // 0x00: Granny magic signature
+    pub header_size: u32,          // 0x10: Size of this header (usually 0x144 = 324 bytes)
+    pub header_format: u32,        // 0x14: Header layout version (0 = standard)
+    // Reserved: 8 bytes at 0x18-0x1F
+
+    // File metadata (0x20-0x47)
+    pub version: u32,              // 0x20: File format version
+    pub total_size: u32,           // 0x24: Total file size in bytes
+    pub crc32: u32,                // 0x28: CRC32 checksum
+    pub section_offset: u32,       // 0x2C: Offset to section descriptor table
+    pub section_count: u32,        // 0x30: Number of sections
+    pub root_type_tag: u32,        // 0x34: Type tag for root object
+    // Reserved: 8 bytes at 0x38-0x3F
+    // Reserved: 4 bytes at 0x40-0x43
+    pub compression_tag: u32,      // 0x44: Compression method (0x80000039 = BitKnit)
+    // Reserved: 24 bytes at 0x48-0x5F
+
+    // Reference structures (0x60+)
+    // NOTE: These fields are not fully understood yet
+    // They appear to contain section references but the exact structure
+    // varies by file version. We'll parse the raw bytes for now.
+    pub extra_data: Vec<u8>,       // 0x60+: Additional header data (varies by version)
 }
 
 impl GrannyHeader {
@@ -33,7 +48,7 @@ impl GrannyHeader {
             ));
         }
 
-        // Check magic
+        // Check magic (0x00-0x0F)
         let magic: [u8; 16] = data[0..16].try_into().unwrap();
         if &magic != GRANNY_MAGIC {
             return Err(Error::Gr2ParseError(
@@ -41,36 +56,87 @@ impl GrannyHeader {
             ));
         }
 
+        // Parse header fields
         let mut cursor = Cursor::new(&data[0x10..]);
 
-        let header_size = cursor.read_u32::<LittleEndian>()?;
-        let header_format = cursor.read_u32::<LittleEndian>()?;
+        // Basic header info (0x10-0x1F)
+        let header_size = cursor.read_u32::<LittleEndian>()?;        // 0x10
+        let header_format = cursor.read_u32::<LittleEndian>()?;      // 0x14
+        cursor.set_position(0x10); // Skip reserved (0x18-0x1F)
 
-        // Skip reserved
-        cursor.set_position(0x10);
-
-        // Read file info (offset 0x20 from start = 0x10 from cursor)
-        cursor.set_position(0x10);
-        let _version = cursor.read_u32::<LittleEndian>()?;
-        let total_size = cursor.read_u32::<LittleEndian>()?;
-        let crc32 = cursor.read_u32::<LittleEndian>()?;
-        let section_offset = cursor.read_u32::<LittleEndian>()?;
-        let section_count = cursor.read_u32::<LittleEndian>()?;
-
-        // Compression tag at offset 0x44 from start = 0x34 from cursor
+        // File metadata (0x20-0x47)
+        let version = cursor.read_u32::<LittleEndian>()?;            // 0x20
+        let total_size = cursor.read_u32::<LittleEndian>()?;         // 0x24
+        let crc32 = cursor.read_u32::<LittleEndian>()?;              // 0x28
+        let section_offset = cursor.read_u32::<LittleEndian>()?;     // 0x2C
+        let section_count = cursor.read_u32::<LittleEndian>()?;      // 0x30
+        let root_type_tag = cursor.read_u32::<LittleEndian>()?;      // 0x34
+        // Skip reserved (0x38-0x43)
         cursor.set_position(0x34);
-        let compression_tag = cursor.read_u32::<LittleEndian>()?;
+        let compression_tag = cursor.read_u32::<LittleEndian>()?;    // 0x44
+
+        // Read extra header data (0x60 onwards)
+        // The header size tells us how much total header data there is
+        let extra_data_start = 0x60;
+        let extra_data_len = header_size as usize - extra_data_start;
+        let extra_data = data[extra_data_start..header_size as usize].to_vec();
 
         Ok(Self {
             magic,
             header_size,
             header_format,
+            version,
             total_size,
             crc32,
             section_offset,
             section_count,
+            root_type_tag,
             compression_tag,
+            extra_data,
         })
+    }
+
+    /// Attempt to locate the root node
+    ///
+    /// The root (GrannyFileInfo) location varies by file version.
+    /// This method tries common locations:
+    /// 1. Section 0, offset 0 (standard)
+    /// 2. Section 1, offset 0 (observed in BG3 files)
+    ///
+    /// Returns (section_index, offset) if found
+    pub fn find_root_location(&self, sections: &[Vec<u8>]) -> Option<(usize, usize)> {
+        // Strategy 1: Check if section 0 has data
+        if !sections.is_empty() && !sections[0].is_empty() {
+            tracing::debug!("Root candidate: Section 0, offset 0");
+            return Some((0, 0));
+        }
+
+        // Strategy 2: Check if section 1 has data (common in BG3)
+        if sections.len() > 1 && !sections[1].is_empty() {
+            tracing::debug!("Root candidate: Section 1, offset 0 (BG3 pattern)");
+            return Some((1, 0));
+        }
+
+        // Strategy 3: Look for section with reasonable size
+        for (i, section) in sections.iter().enumerate() {
+            if section.len() > 100 && section.len() < 10000 {
+                tracing::debug!("Root candidate: Section {}, offset 0 (heuristic)", i);
+                return Some((i, 0));
+            }
+        }
+
+        tracing::warn!("Could not determine root location");
+        None
+    }
+
+    /// Get a human-readable description of the compression method
+    pub fn compression_name(&self) -> &'static str {
+        match self.compression_tag {
+            0x00000000 => "None",
+            0x00000001 => "Oodle Kraken",
+            0x80000039 => "BitKnit (Granny custom)",
+            _ => "Unknown",
+        }
     }
 }
 
@@ -248,6 +314,37 @@ impl ParsedGr2File {
     /// Get total decompressed size
     pub fn total_decompressed_size(&self) -> usize {
         self.decompressed_data.iter().map(|d| d.len()).sum()
+    }
+
+    /// Find the likely location of the root (GrannyFileInfo) structure
+    ///
+    /// Returns (section_index, offset) if found
+    pub fn find_root_location(&self) -> Option<(usize, usize)> {
+        self.header.find_root_location(&self.decompressed_data)
+    }
+
+    /// Get the root section data if available
+    ///
+    /// Returns the decompressed data of the section that likely contains the root
+    pub fn get_root_section(&self) -> Option<&[u8]> {
+        let (section_idx, offset) = self.find_root_location()?;
+        self.decompressed_data.get(section_idx).map(|s| &s[offset..])
+    }
+
+    /// Parse type definitions from the file
+    ///
+    /// Types are typically in the same section as the root.
+    /// Returns a TypeCache for structure deserialization.
+    pub fn parse_types(&self) -> Result<crate::formats::gr2::type_system::TypeCache> {
+        use crate::formats::gr2::type_system::parse_type_definitions;
+
+        // Find root location
+        let (section_idx, offset) = self.find_root_location()
+            .ok_or_else(|| Error::Gr2ParseError("Cannot find root location".to_string()))?;
+
+        // Parse types from root section
+        let section_data = &self.decompressed_data[section_idx];
+        parse_type_definitions(section_data, offset)
     }
 
     /// Reconstruct a decompressed GR2 file that opengr2 can parse

@@ -39,8 +39,14 @@ walkdir = "2.4"
 crc32fast = "1.4"
 larian-formats = "0.3.0"
 
-# For GR2/glTF/dae handling
+# For 3D model/mesh/texture handling
+gltf = "1.4.1"
+# collada = "0.16.0" # .dae files, Blender deprecated
+ddsfile = "0.5.2"
+# image_dds = "0.7.2" # unsure if needed
+glam = "0.27" # 3D math
 libloading = "0.8.9"
+# bevy = "0.17.2" # eventual GUI preview
 
 # Internal crates
 [workspace.dependencies.MacPak]

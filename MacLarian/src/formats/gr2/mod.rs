@@ -6,8 +6,13 @@
 pub mod decompressor;
 pub mod parser;
 pub mod bitknit;
+pub mod type_system;
 
 // Public API exports
 pub use parser::{ParsedGr2File, GrannyHeader, GrannySection};
 pub use decompressor::{decompress_section, BITKNIT_TAG};
 pub use bitknit::{decompress_raw_bitknit, BitknitState};
+pub use type_system::{
+    MemberType, TypeDefinition, FieldDefinition, TypeCache,
+    parse_type_definitions,
+};
