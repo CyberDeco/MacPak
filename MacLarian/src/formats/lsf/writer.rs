@@ -55,26 +55,26 @@ pub fn serialize_lsf(doc: &LsfDocument) -> Result<Vec<u8>> {
     encoder.write_all(values_data)?;
     let values_compressed = encoder.finish()?;
    
-    // Write section sizes - compressed size, then uncompressed size
+    // Write section sizes - uncompressed size first, then compressed size (per LSLib format)
     // Strings section
-    output.write_u32::<LittleEndian>(names_compressed.len() as u32)?;
     output.write_u32::<LittleEndian>(names_data.len() as u32)?;
-    
+    output.write_u32::<LittleEndian>(names_compressed.len() as u32)?;
+
     // Keys section
-    output.write_u32::<LittleEndian>(keys_compressed.len() as u32)?;
     output.write_u32::<LittleEndian>(keys_data.len() as u32)?;
-    
+    output.write_u32::<LittleEndian>(keys_compressed.len() as u32)?;
+
     // Nodes section
-    output.write_u32::<LittleEndian>(nodes_compressed.len() as u32)?;
     output.write_u32::<LittleEndian>(nodes_data.len() as u32)?;
-    
+    output.write_u32::<LittleEndian>(nodes_compressed.len() as u32)?;
+
     // Attributes section
-    output.write_u32::<LittleEndian>(attributes_compressed.len() as u32)?;
     output.write_u32::<LittleEndian>(attributes_data.len() as u32)?;
-    
+    output.write_u32::<LittleEndian>(attributes_compressed.len() as u32)?;
+
     // Values section
-    output.write_u32::<LittleEndian>(values_compressed.len() as u32)?;
     output.write_u32::<LittleEndian>(values_data.len() as u32)?;
+    output.write_u32::<LittleEndian>(values_compressed.len() as u32)?;
     
     // Compression flags (0x01 = LZ4)
     output.write_u32::<LittleEndian>(0x01)?;
