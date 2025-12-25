@@ -40,6 +40,7 @@ pub struct EditorState {
     pub modified: RwSignal<bool>,
     pub converted_from_lsf: RwSignal<bool>,
     pub status_message: RwSignal<String>,
+    pub show_line_numbers: RwSignal<bool>,
 
     // Search state
     pub search_visible: RwSignal<bool>,
@@ -62,6 +63,7 @@ impl EditorState {
             modified: RwSignal::new(false),
             converted_from_lsf: RwSignal::new(false),
             status_message: RwSignal::new(String::new()),
+            show_line_numbers: RwSignal::new(true),
 
             search_visible: RwSignal::new(false),
             search_text: RwSignal::new(String::new()),
@@ -82,6 +84,15 @@ impl Default for EditorState {
     }
 }
 
+/// Sort column options for the file browser
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum SortColumn {
+    Name,
+    Type,
+    Size,
+    Modified,
+}
+
 /// Asset Browser state
 #[derive(Clone)]
 pub struct BrowserState {
@@ -94,10 +105,13 @@ pub struct BrowserState {
     pub preview_content: RwSignal<String>,
     pub preview_name: RwSignal<String>,
     pub preview_info: RwSignal<String>,
+    pub preview_image: RwSignal<Option<Vec<u8>>>,
     pub file_count: RwSignal<usize>,
     pub folder_count: RwSignal<usize>,
     pub total_size: RwSignal<String>,
     pub status_message: RwSignal<String>,
+    pub sort_column: RwSignal<SortColumn>,
+    pub sort_ascending: RwSignal<bool>,
 }
 
 impl BrowserState {
@@ -112,10 +126,13 @@ impl BrowserState {
             preview_content: RwSignal::new(String::new()),
             preview_name: RwSignal::new(String::new()),
             preview_info: RwSignal::new(String::new()),
+            preview_image: RwSignal::new(None),
             file_count: RwSignal::new(0),
             folder_count: RwSignal::new(0),
             total_size: RwSignal::new(String::new()),
             status_message: RwSignal::new(String::new()),
+            sort_column: RwSignal::new(SortColumn::Name),
+            sort_ascending: RwSignal::new(true),
         }
     }
 }

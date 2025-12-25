@@ -12,13 +12,24 @@ mod state;
 mod tabs;
 
 use floem::prelude::*;
-use floem::text::Weight;
+use floem::quit_app;
+use floem::Application;
+use floem::window::WindowConfig;
 
 use state::*;
 use tabs::*;
 
 fn main() {
-    floem::launch(app_view);
+    Application::new()
+        .window(
+            move |_| app_view(),
+            Some(
+                WindowConfig::default()
+                    .size((1200.0, 800.0))
+                    .title("MacPak - BG3 Modding Toolkit"),
+            ),
+        )
+        .run();
 }
 
 fn app_view() -> impl IntoView {
@@ -49,12 +60,16 @@ fn app_view() -> impl IntoView {
     ))
     .style(|s| s.width_full().height_full())
     .window_title(|| "MacPak - BG3 Modding Toolkit".to_string())
+    .on_cleanup(|| {
+        // Quit the app when the window is closed (macOS behavior fix)
+        quit_app();
+    })
 }
 
 fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
     h_stack((
-        tab_button("📝 Editor", 0, active_tab),
-        tab_button("📂 Browser", 1, active_tab),
+        tab_button("📂 Browser", 0, active_tab),
+        tab_button("📝 Editor", 1, active_tab),
         tab_button("📦 PAK Ops", 2, active_tab),
         tab_button("🔍 Search", 3, active_tab),
         tab_button("🎲 UUID", 4, active_tab),
@@ -113,12 +128,12 @@ fn tab_content(
         move || active_tab.get(),
         move |tab_index| {
             match tab_index {
-                0 => editor_tab(app_state.clone(), editor_state.clone()).into_any(),
-                1 => browser_tab(app_state.clone(), browser_state.clone()).into_any(),
+                0 => browser_tab(app_state.clone(), browser_state.clone(), editor_state.clone(), active_tab).into_any(),
+                1 => editor_tab(app_state.clone(), editor_state.clone()).into_any(),
                 2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone()).into_any(),
                 3 => search_tab(app_state.clone(), search_state.clone()).into_any(),
                 4 => uuid_gen_tab(app_state.clone(), uuid_gen_state.clone()).into_any(),
-                _ => editor_tab(app_state.clone(), editor_state.clone()).into_any(),
+                _ => browser_tab(app_state.clone(), browser_state.clone(), editor_state.clone(), active_tab).into_any(),
             }
         },
     )

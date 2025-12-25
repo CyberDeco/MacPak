@@ -4,8 +4,8 @@ members = [
     "MacLarian",       # internal engine crate
     "macpak-cli",      # CLI crate
     "macpak-gui",      # GUI crate (Floem) - DEFAULT
-    "macpak-slint",    # GUI crate (Slint) - deprecated
-    "cacao-prototype", # cacao experiment
+    # "macpak-slint",    # GUI crate (Slint) - deprecated
+    # "cacao-prototype", # cacao experiment
     # "macpak-gui-iced" # GUI crate (iced) - commented out due to web-sys conflict with Slint
 ]
 resolver = "2"
@@ -13,7 +13,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-authors = ["CyberDeco <you@example.com>"]
+authors = ["CyberDeco"]
 license = "MIT OR Apache-2.0"
 
 # Workspace-wide shared dependencies

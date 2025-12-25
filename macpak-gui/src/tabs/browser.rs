@@ -5,15 +5,23 @@
 use floem::prelude::*;
 use floem::event::EventPropagation;
 use floem::text::Weight;
+use floem::views::img;
 use std::path::Path;
 use std::time::UNIX_EPOCH;
+use std::io::Cursor;
 
-use crate::state::{AppState, BrowserState, FileEntry};
+use crate::state::{AppState, BrowserState, EditorState, FileEntry, SortColumn};
+use crate::tabs::load_file;
 
-pub fn browser_tab(_app_state: AppState, browser_state: BrowserState) -> impl IntoView {
+pub fn browser_tab(
+    _app_state: AppState,
+    browser_state: BrowserState,
+    editor_state: EditorState,
+    active_tab: RwSignal<usize>,
+) -> impl IntoView {
     v_stack((
         browser_toolbar(browser_state.clone()),
-        browser_content(browser_state.clone()),
+        browser_content(browser_state.clone(), editor_state, active_tab),
         browser_status_bar(browser_state),
     ))
     .style(|s| s.width_full().height_full())
@@ -23,6 +31,7 @@ fn browser_toolbar(state: BrowserState) -> impl IntoView {
     let state_open = state.clone();
     let state_up = state.clone();
     let state_refresh = state.clone();
+    let state_path = state.clone();
     let state_search = state.clone();
     let state_filter = state.clone();
     let state_all = state.clone();
@@ -31,63 +40,66 @@ fn browser_toolbar(state: BrowserState) -> impl IntoView {
     let state_lsj = state.clone();
     let state_lsf = state.clone();
 
-    h_stack((
-        // Open folder
-        button("📂 Open Folder").action(move || {
-            open_folder_dialog(state_open.clone());
-        }),
+    v_stack((
+        // Row 1: Navigation + file path
+        h_stack((
+            button("📂 Open Folder").action(move || {
+                open_folder_dialog(state_open.clone());
+            }),
+            button("⬆️ Up").action(move || {
+                go_up(state_up.clone());
+            }),
+            button("🔄 Refresh").action(move || {
+                refresh(state_refresh.clone());
+            }),
+            separator(),
+            // File path display box
+            label(move || {
+                state_path
+                    .current_path
+                    .get()
+                    .unwrap_or_else(|| "No folder selected".to_string())
+            })
+            .style(|s| {
+                s.flex_grow(1.0)
+                    .padding(6.0)
+                    .border(1.0)
+                    .border_color(Color::rgb8(200, 200, 200))
+                    .border_radius(4.0)
+                    .background(Color::WHITE)
+                    .text_ellipsis()
+            }),
+        ))
+        .style(|s| s.width_full().gap(8.0).items_center()),
 
-        // Navigation
-        button("⬆️ Up").action(move || {
-            go_up(state_up.clone());
-        }),
-        button("🔄 Refresh").action(move || {
-            refresh(state_refresh.clone());
-        }),
-
-        separator(),
-
-        // Search
-        label(|| "Search:").style(|s| s.margin_right(4.0)),
-        text_input(state_search.search_query)
-            .placeholder("Filter files...")
-            .style(|s| s.width(200.0)),
-        button("🔎").action(move || {
-            apply_filters(state_filter.clone());
-        }),
-
-        separator(),
-
-        // Type filter
-        label(|| "Type:").style(|s| s.margin_right(4.0)),
-        filter_button("All", state_all),
-        filter_button("PAK", state_pak),
-        filter_button("LSX", state_lsx),
-        filter_button("LSJ", state_lsj),
-        filter_button("LSF", state_lsf),
-
-        empty().style(|s| s.flex_grow(1.0)),
-
-        // Path display
-        label(move || {
-            state_search
-                .current_path
-                .get()
-                .unwrap_or_else(|| "No folder selected".to_string())
-        })
-        .style(|s| {
-            s.color(Color::rgb8(100, 100, 100))
-                .font_size(12.0)
-                .text_ellipsis()
-                .max_width(300.0)
-        }),
+        // Row 2: Search + quick filters
+        h_stack((
+            text_input(state_search.search_query)
+                .placeholder("Search files...")
+                .style(|s| {
+                    s.width(200.0)
+                        .padding(6.0)
+                        .border(1.0)
+                        .border_color(Color::rgb8(200, 200, 200))
+                        .border_radius(4.0)
+                }),
+            button("🔎").action(move || {
+                apply_filters(state_filter.clone());
+            }),
+            separator(),
+            filter_button("All", state_all),
+            filter_button("PAK", state_pak),
+            filter_button("LSX", state_lsx),
+            filter_button("LSJ", state_lsj),
+            filter_button("LSF", state_lsf),
+            empty().style(|s| s.flex_grow(1.0)),
+        ))
+        .style(|s| s.width_full().gap(8.0).items_center()),
     ))
     .style(|s| {
         s.width_full()
-            .height(50.0)
             .padding(10.0)
             .gap(8.0)
-            .items_center()
             .background(Color::rgb8(245, 245, 245))
             .border_bottom(1.0)
             .border_color(Color::rgb8(220, 220, 220))
@@ -126,28 +138,119 @@ fn separator() -> impl IntoView {
     })
 }
 
-fn browser_content(state: BrowserState) -> impl IntoView {
+fn sortable_header(
+    name: &'static str,
+    column: SortColumn,
+    sort_column: RwSignal<SortColumn>,
+    sort_ascending: RwSignal<bool>,
+    state: BrowserState,
+) -> impl IntoView {
+    h_stack((
+        label(move || {
+            let current = sort_column.get();
+            let asc = sort_ascending.get();
+            if current == column {
+                if asc {
+                    format!("{} ▲", name)
+                } else {
+                    format!("{} ▼", name)
+                }
+            } else {
+                name.to_string()
+            }
+        })
+        .style(|s| s.font_weight(Weight::BOLD)),
+    ))
+    .style(move |s| {
+        s.cursor(floem::style::CursorStyle::Pointer)
+            .hover(|s| s.background(Color::rgb8(230, 230, 230)))
+            .padding_vert(2.0)
+            .padding_horiz(4.0)
+            .border_radius(4.0)
+            .flex_grow(if column == SortColumn::Name { 1.0 } else { 0.0 })
+    })
+    .on_click_stop(move |_| {
+        let current = sort_column.get();
+        if current == column {
+            sort_ascending.set(!sort_ascending.get());
+        } else {
+            sort_column.set(column);
+            sort_ascending.set(true);
+        }
+        sort_files(state.clone());
+    })
+}
+
+fn sort_files(state: BrowserState) {
+    let sort_col = state.sort_column.get();
+    let ascending = state.sort_ascending.get();
+    let mut files = state.files.get();
+
+    files.sort_by(|a, b| {
+        // Always put directories first
+        match (a.is_dir, b.is_dir) {
+            (true, false) => return std::cmp::Ordering::Less,
+            (false, true) => return std::cmp::Ordering::Greater,
+            _ => {}
+        }
+
+        let cmp = match sort_col {
+            SortColumn::Name => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+            SortColumn::Type => a.file_type.cmp(&b.file_type),
+            SortColumn::Size => a.size.cmp(&b.size),
+            SortColumn::Modified => a.modified.cmp(&b.modified),
+        };
+
+        if ascending {
+            cmp
+        } else {
+            cmp.reverse()
+        }
+    });
+
+    state.files.set(files);
+}
+
+fn browser_content(
+    state: BrowserState,
+    editor_state: EditorState,
+    active_tab: RwSignal<usize>,
+) -> impl IntoView {
     h_stack((
         // File list (left side)
-        file_list(state.clone()),
+        file_list(state.clone(), editor_state, active_tab),
         // Preview panel (right side)
         preview_panel(state),
     ))
     .style(|s| s.width_full().flex_grow(1.0))
 }
 
-fn file_list(state: BrowserState) -> impl IntoView {
+fn file_list(
+    state: BrowserState,
+    editor_state: EditorState,
+    active_tab: RwSignal<usize>,
+) -> impl IntoView {
     let files = state.files;
     let selected = state.selected_index;
     let state_select = state.clone();
+    let sort_column = state.sort_column;
+    let sort_ascending = state.sort_ascending;
+
+    let state_name = state.clone();
+    let state_type = state.clone();
+    let state_size = state.clone();
+    let state_modified = state.clone();
 
     v_stack((
         // Column headers
         h_stack((
-            label(|| "Name").style(|s| s.flex_grow(1.0).font_weight(Weight::BOLD)),
-            label(|| "Type").style(|s| s.width(60.0).font_weight(Weight::BOLD)),
-            label(|| "Size").style(|s| s.width(80.0).font_weight(Weight::BOLD)),
-            label(|| "Modified").style(|s| s.width(120.0).font_weight(Weight::BOLD)),
+            sortable_header("Name", SortColumn::Name, sort_column, sort_ascending, state_name),
+            sortable_header("Type", SortColumn::Type, sort_column, sort_ascending, state_type)
+                .style(|s| s.width(60.0)),
+            sortable_header("Size", SortColumn::Size, sort_column, sort_ascending, state_size)
+                .style(|s| s.width(80.0)),
+            sortable_header("Modified", SortColumn::Modified, sort_column, sort_ascending, state_modified)
+                .style(|s| s.width(120.0)),
         ))
         .style(|s| {
             s.width_full()
@@ -165,6 +268,7 @@ fn file_list(state: BrowserState) -> impl IntoView {
                 move |file| {
                     let state_row = state_select.clone();
                     let state_dbl = state_select.clone();
+                    let editor_for_open = editor_state.clone();
                     let file_path = file.path.clone();
                     let file_for_select = file.clone();
                     let file_for_open = file.clone();
@@ -178,12 +282,17 @@ fn file_list(state: BrowserState) -> impl IntoView {
                             }
                         })
                         .on_double_click(move |_| {
-                            open_file_or_folder(&file_for_open, state_dbl.clone());
+                            open_file_or_folder(
+                                &file_for_open,
+                                state_dbl.clone(),
+                                editor_for_open.clone(),
+                                active_tab,
+                            );
                             EventPropagation::Stop
                         })
                 },
             )
-            .style(|s| s.width_full()),
+            .style(|s| s.width_full().flex_col()),
         )
         .style(|s| s.width_full().flex_grow(1.0)),
     ))
@@ -252,6 +361,7 @@ fn preview_panel(state: BrowserState) -> impl IntoView {
     let preview_name = state.preview_name;
     let preview_info = state.preview_info;
     let preview_content = state.preview_content;
+    let preview_image = state.preview_image;
 
     v_stack((
         // Preview header
@@ -269,14 +379,33 @@ fn preview_panel(state: BrowserState) -> impl IntoView {
                 .border_bottom(1.0)
                 .border_color(Color::rgb8(220, 220, 220))
         }),
-        // Preview content
+        // Preview content (either image or text)
         scroll(
-            label(move || preview_content.get()).style(|s| {
-                s.width_full()
-                    .padding(12.0)
-                    .font_family("monospace".to_string())
-                    .font_size(12.0)
-            }),
+            dyn_container(
+                move || preview_image.get(),
+                move |img_data| {
+                    if let Some(data) = img_data {
+                        // Display image
+                        img(move || data.clone())
+                            .style(|s| {
+                                s.max_width_full()
+                                    .max_height_full()
+                                    .padding(12.0)
+                            })
+                            .into_any()
+                    } else {
+                        // Display text
+                        label(move || preview_content.get())
+                            .style(|s| {
+                                s.width_full()
+                                    .padding(12.0)
+                                    .font_family("monospace".to_string())
+                                    .font_size(12.0)
+                            })
+                            .into_any()
+                    }
+                },
+            ),
         )
         .style(|s| s.width_full().flex_grow(1.0).background(Color::WHITE)),
     ))
@@ -444,16 +573,12 @@ fn load_directory(dir_path: &str, state: BrowserState) {
         }
     }
 
-    // Sort: folders first, then files, alphabetically
-    entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
-        (true, false) => std::cmp::Ordering::Less,
-        (false, true) => std::cmp::Ordering::Greater,
-        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-    });
-
     // Store all files for filtering
     state.all_files.set(entries.clone());
     state.files.set(entries);
+
+    // Apply current sort settings
+    sort_files(state.clone());
 
     // Reset filters
     state.search_query.set(String::new());
@@ -503,11 +628,13 @@ fn apply_filters(state: BrowserState) {
         .collect();
 
     state.files.set(filtered);
+    sort_files(state.clone());
     state.selected_index.set(None);
 }
 
 fn select_file(file: &FileEntry, state: BrowserState) {
     state.preview_name.set(file.name.clone());
+    state.preview_image.set(None); // Clear previous image
 
     if file.is_dir {
         state.preview_info.set("Directory".to_string());
@@ -558,8 +685,27 @@ fn select_file(file: &FileEntry, state: BrowserState) {
                 }
             }
         }
-        "dds" | "png" | "jpg" | "jpeg" => {
-            state.preview_content.set("[Image file - preview not available]".to_string());
+        "dds" => {
+            state.preview_content.set(String::new());
+            match load_dds_as_png(path) {
+                Ok(png_data) => {
+                    state.preview_image.set(Some(png_data));
+                }
+                Err(e) => {
+                    state.preview_content.set(format!("[Error loading DDS: {}]", e));
+                }
+            }
+        }
+        "png" | "jpg" | "jpeg" => {
+            state.preview_content.set(String::new());
+            match std::fs::read(path) {
+                Ok(data) => {
+                    state.preview_image.set(Some(data));
+                }
+                Err(e) => {
+                    state.preview_content.set(format!("[Error loading image: {}]", e));
+                }
+            }
         }
         "gr2" => {
             state.preview_content.set("[GR2 Model file]".to_string());
@@ -573,14 +719,46 @@ fn select_file(file: &FileEntry, state: BrowserState) {
     }
 }
 
-fn open_file_or_folder(file: &FileEntry, state: BrowserState) {
+/// Load a DDS file and convert it to PNG bytes using image_dds
+fn load_dds_as_png(path: &Path) -> Result<Vec<u8>, String> {
+    use image::ImageEncoder;
+    use image::codecs::png::PngEncoder;
+    use image_dds::image_from_dds;
+    use image_dds::ddsfile::Dds;
+
+    // Read the DDS file
+    let dds_data = std::fs::read(path).map_err(|e| e.to_string())?;
+    let dds = Dds::read(&mut Cursor::new(&dds_data)).map_err(|e| e.to_string())?;
+
+    // Convert to an RGBA image
+    let img = image_from_dds(&dds, 0).map_err(|e| e.to_string())?;
+
+    // Encode as PNG
+    let mut png_data = Vec::new();
+    let encoder = PngEncoder::new(&mut png_data);
+    encoder.write_image(
+        img.as_raw(),
+        img.width(),
+        img.height(),
+        image::ExtendedColorType::Rgba8,
+    ).map_err(|e| e.to_string())?;
+
+    Ok(png_data)
+}
+
+fn open_file_or_folder(
+    file: &FileEntry,
+    state: BrowserState,
+    editor_state: EditorState,
+    active_tab: RwSignal<usize>,
+) {
     if file.is_dir {
         load_directory(&file.path, state);
     } else {
-        // For now, open with system default
-        #[cfg(target_os = "macos")]
-        {
-            let _ = std::process::Command::new("open").arg(&file.path).spawn();
-        }
+        // Open file in Editor tab
+        let path = Path::new(&file.path);
+        load_file(path, editor_state);
+        // Switch to Editor tab (index 1)
+        active_tab.set(1);
     }
 }

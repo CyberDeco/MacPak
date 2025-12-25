@@ -166,6 +166,7 @@ fn editor_toolbar(state: EditorState) -> impl IntoView {
                 state.search_visible.set(!visible);
             }
         }),
+        line_number_toggle(state.show_line_numbers),
         button("📐 Format").action(move || {
             format_content(state_format.clone());
         }),
@@ -252,6 +253,39 @@ fn separator() -> impl IntoView {
             .background(Color::rgb8(200, 200, 200))
             .margin_horiz(4.0)
     })
+}
+
+fn line_number_toggle(show_line_numbers: RwSignal<bool>) -> impl IntoView {
+    let label_text = move || {
+        if show_line_numbers.get() {
+            "# On"
+        } else {
+            "# Off"
+        }
+    };
+
+    label(label_text)
+        .style(move |s| {
+            let is_active = show_line_numbers.get();
+            let s = s
+                .padding_horiz(8.0)
+                .padding_vert(4.0)
+                .border_radius(4.0)
+                .font_size(12.0)
+                .cursor(floem::style::CursorStyle::Pointer);
+
+            if is_active {
+                s.background(Color::rgb8(33, 150, 243))
+                    .color(Color::WHITE)
+            } else {
+                s.background(Color::rgb8(230, 230, 230))
+                    .color(Color::rgb8(80, 80, 80))
+                    .hover(|s| s.background(Color::rgb8(210, 210, 210)))
+            }
+        })
+        .on_click_stop(move |_| {
+            show_line_numbers.set(!show_line_numbers.get());
+        })
 }
 
 fn search_panel(state: EditorState) -> impl IntoView {
@@ -669,12 +703,25 @@ fn format_badge(format: RwSignal<String>) -> impl IntoView {
 }
 
 fn editor_content(state: EditorState) -> impl IntoView {
-    let initial_text = state.content.get_untracked();
+    let content = state.content;
+    let modified = state.modified;
+    let show_line_numbers = state.show_line_numbers;
 
-    text_editor(initial_text)
-        .styling(SimpleStyling::new())
-        .style(|s| s.width_full().flex_grow(1.0))
-        .placeholder("Open a file to start editing...")
+    dyn_container(
+        move || (content.get(), show_line_numbers.get()),
+        move |(text, show_lines)| {
+            let state_change = modified;
+            text_editor(text)
+                .styling(SimpleStyling::new())
+                .editor_style(move |s| s.hide_gutter(!show_lines))
+                .style(|s| s.width_full().flex_grow(1.0))
+                .placeholder("Open a file to start editing...")
+                .on_event_stop(floem::event::EventListener::KeyUp, move |_| {
+                    state_change.set(true);
+                })
+        },
+    )
+    .style(|s| s.width_full().flex_grow(1.0))
 }
 
 fn editor_status_bar(state: EditorState) -> impl IntoView {
@@ -739,7 +786,7 @@ fn open_file_dialog(state: EditorState) {
     }
 }
 
-fn load_file(path: &Path, state: EditorState) {
+pub fn load_file(path: &Path, state: EditorState) {
     let path_str = path.to_string_lossy().to_string();
     let ext = path
         .extension()

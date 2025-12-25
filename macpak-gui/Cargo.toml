@@ -34,3 +34,7 @@ lazy_static = "1.4"
 
 # Random number generation for handles
 rand = "0.8"
+
+# Image handling for preview
+image = "0.25"
+image_dds = "0.5"
