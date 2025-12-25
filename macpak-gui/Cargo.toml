@@ -30,6 +30,8 @@ uuid = { version = "1.19", features = ["v4"] }
 # Utilities
 chrono = "0.4"
 rand = "0.8"
+regex = "1.10"
+lazy_static = "1.4"
 
 # Error handling
 anyhow = "1.0"

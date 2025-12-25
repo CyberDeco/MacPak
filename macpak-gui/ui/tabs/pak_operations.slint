@@ -1,0 +1,350 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, ProgressIndicator } from "std-widgets.slint";
+
+// ============================================================================
+// PAK Operations Tab
+// ============================================================================
+export component PakOperationsTab inherits ScrollView {
+    in-out property <string> extract-source: "";
+    in-out property <string> extract-dest: "";
+    in-out property <float> extract-progress: 0.0;
+    in-out property <bool> is-extracting: false;
+    in-out property <string> extract-status: "";
+
+    in-out property <string> create-source: "";
+    in-out property <string> create-dest: "";
+    in-out property <float> create-progress: 0.0;
+    in-out property <bool> is-creating: false;
+    in-out property <string> create-status: "";
+
+    in-out property <string> list-source: "";
+    in-out property <bool> is-listing: false;
+    in-out property <[string]> list-contents: [];
+
+    callback browse-extract-source();
+    callback browse-extract-dest();
+    callback extract();
+
+    callback browse-create-source();
+    callback browse-create-dest();
+    callback create();
+
+    callback browse-list-source();
+    callback list();
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 30px;
+
+        // ===== Extract Section =====
+        VerticalBox {
+            spacing: 12px;
+
+            Text {
+                text: "Extract PAK Archive";
+                font-size: 24px;
+                font-weight: 700;
+            }
+
+            Text {
+                text: "Extract files from a PAK archive to a directory";
+                font-size: 14px;
+                color: #666666;
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+                height: 36px;
+
+                Text {
+                    text: "Source PAK:";
+                    width: 120px;
+                    vertical-alignment: center;
+                    font-weight: 500;
+                }
+
+                Rectangle {
+                    background: #f8f8f8;
+                    border-radius: 4px;
+                    horizontal-stretch: 1;
+
+                    Text {
+                        text: root.extract-source == "" ? "No file selected" : root.extract-source;
+                        x: 10px;
+                        vertical-alignment: center;
+                        color: root.extract-source == "" ? #999999 : black;
+                        overflow: elide;
+                    }
+                }
+
+                Button {
+                    text: "Browse...";
+                    clicked => { root.browse-extract-source(); }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+                height: 36px;
+
+                Text {
+                    text: "Destination:";
+                    width: 120px;
+                    vertical-alignment: center;
+                    font-weight: 500;
+                }
+
+                Rectangle {
+                    background: #f8f8f8;
+                    border-radius: 4px;
+                    horizontal-stretch: 1;
+
+                    Text {
+                        text: root.extract-dest == "" ? "No directory selected" : root.extract-dest;
+                        x: 10px;
+                        vertical-alignment: center;
+                        color: root.extract-dest == "" ? #999999 : black;
+                        overflow: elide;
+                    }
+                }
+
+                Button {
+                    text: "Browse...";
+                    clicked => { root.browse-extract-dest(); }
+                }
+            }
+
+            if root.is-extracting : VerticalBox {
+                spacing: 8px;
+
+                HorizontalBox {
+                    Text {
+                        text: root.extract-status;
+                        font-size: 13px;
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                    Text {
+                        text: Math.round(root.extract-progress) + "%";
+                        font-size: 13px;
+                        font-weight: 500;
+                    }
+                }
+
+                ProgressIndicator {
+                    progress: root.extract-progress / 100.0;
+                    height: 8px;
+                }
+            }
+
+            if !root.is-extracting : Button {
+                text: "Extract PAK";
+                enabled: root.extract-source != "" && root.extract-dest != "";
+                clicked => { root.extract(); }
+                primary: root.extract-source != "" && root.extract-dest != "";
+            }
+        }
+
+        Rectangle { height: 2px; background: #eeeeee; }
+
+        // ===== Create Section =====
+        VerticalBox {
+            spacing: 12px;
+
+            Text {
+                text: "Create PAK Archive";
+                font-size: 24px;
+                font-weight: 700;
+            }
+
+            Text {
+                text: "Create a PAK archive from a directory of mod files";
+                font-size: 14px;
+                color: #666666;
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+                height: 36px;
+
+                Text {
+                    text: "Source Dir:";
+                    width: 120px;
+                    vertical-alignment: center;
+                    font-weight: 500;
+                }
+
+                Rectangle {
+                    background: #f8f8f8;
+                    border-radius: 4px;
+                    horizontal-stretch: 1;
+
+                    Text {
+                        text: root.create-source == "" ? "No directory selected" : root.create-source;
+                        x: 10px;
+                        vertical-alignment: center;
+                        color: root.create-source == "" ? #999999 : black;
+                        overflow: elide;
+                    }
+                }
+
+                Button {
+                    text: "Browse...";
+                    clicked => { root.browse-create-source(); }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+                height: 36px;
+
+                Text {
+                    text: "Destination:";
+                    width: 120px;
+                    vertical-alignment: center;
+                    font-weight: 500;
+                }
+
+                Rectangle {
+                    background: #f8f8f8;
+                    border-radius: 4px;
+                    horizontal-stretch: 1;
+
+                    Text {
+                        text: root.create-dest == "" ? "No file selected" : root.create-dest;
+                        x: 10px;
+                        vertical-alignment: center;
+                        color: root.create-dest == "" ? #999999 : black;
+                        overflow: elide;
+                    }
+                }
+
+                Button {
+                    text: "Browse...";
+                    clicked => { root.browse-create-dest(); }
+                }
+            }
+
+            if root.is-creating : VerticalBox {
+                spacing: 8px;
+
+                HorizontalBox {
+                    Text {
+                        text: root.create-status;
+                        font-size: 13px;
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                    Text {
+                        text: Math.round(root.create-progress) + "%";
+                        font-size: 13px;
+                        font-weight: 500;
+                    }
+                }
+
+                ProgressIndicator {
+                    progress: root.create-progress / 100.0;
+                    height: 8px;
+                }
+            }
+
+            if !root.is-creating : Button {
+                text: "Create PAK";
+                enabled: root.create-source != "" && root.create-dest != "";
+                clicked => { root.create(); }
+                primary: root.create-source != "" && root.create-dest != "";
+            }
+        }
+
+        Rectangle { height: 2px; background: #eeeeee; }
+
+        // ===== List Section =====
+        VerticalBox {
+            spacing: 12px;
+
+            Text {
+                text: "List PAK Contents";
+                font-size: 24px;
+                font-weight: 700;
+            }
+
+            Text {
+                text: "View the contents of a PAK archive";
+                font-size: 14px;
+                color: #666666;
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+                height: 36px;
+
+                Text {
+                    text: "PAK File:";
+                    width: 120px;
+                    vertical-alignment: center;
+                    font-weight: 500;
+                }
+
+                Rectangle {
+                    background: #f8f8f8;
+                    border-radius: 4px;
+                    horizontal-stretch: 1;
+
+                    Text {
+                        text: root.list-source == "" ? "No file selected" : root.list-source;
+                        x: 10px;
+                        vertical-alignment: center;
+                        color: root.list-source == "" ? #999999 : black;
+                        overflow: elide;
+                    }
+                }
+
+                Button {
+                    text: "Browse...";
+                    clicked => { root.browse-list-source(); }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+
+                if root.is-listing : Text {
+                    text: "Loading contents...";
+                    font-size: 14px;
+                    color: #666666;
+                }
+
+                if !root.is-listing : Button {
+                    text: "List Contents";
+                    enabled: root.list-source != "";
+                    clicked => { root.list(); }
+                    primary: root.list-source != "";
+                }
+
+                if root.list-contents.length > 0 : Text {
+                    text: root.list-contents.length + " files";
+                    font-size: 14px;
+                    color: #666666;
+                    vertical-alignment: center;
+                }
+            }
+
+            // Contents list
+            if root.list-contents.length > 0 : Rectangle {
+                background: #f8f8f8;
+                border-radius: 4px;
+                height: 300px;
+
+                ScrollView {
+                    VerticalBox {
+                        padding: 10px;
+                        spacing: 2px;
+
+                        for file in root.list-contents : Text {
+                            text: file;
+                            font-size: 12px;
+                            font-family: "monospace";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

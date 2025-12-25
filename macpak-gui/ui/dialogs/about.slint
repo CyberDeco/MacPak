@@ -1,0 +1,80 @@
+import { Button, VerticalBox } from "std-widgets.slint";
+
+// ============================================================================
+// About Dialog
+// ============================================================================
+export component AboutDialog inherits Rectangle {
+    in-out property <bool> dialog-visible: false;
+    in-out property <string> version: "0.1.0";
+
+    callback close();
+
+    if root.dialog-visible : Rectangle {
+        background: #00000088;
+
+        TouchArea {
+            clicked => { root.close(); }
+        }
+
+        Rectangle {
+            width: 400px;
+            height: 280px;
+            background: white;
+            border-radius: 12px;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: #00000044;
+
+            TouchArea {}  // Prevent clicks from passing through
+
+            VerticalBox {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "MacPak";
+                    font-size: 28px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "BG3 Modding Toolkit for macOS";
+                    font-size: 14px;
+                    color: #666666;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Version " + root.version;
+                    font-size: 13px;
+                    color: #999999;
+                    horizontal-alignment: center;
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                Text {
+                    text: "Native PAK, LSX, LSF, and LSJ support";
+                    font-size: 12px;
+                    color: #666666;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "No Wine or external tools required";
+                    font-size: 12px;
+                    color: #666666;
+                    horizontal-alignment: center;
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                Button {
+                    text: "Close";
+                    clicked => { root.close(); }
+                    horizontal-stretch: 0;
+                }
+            }
+        }
+    }
+}

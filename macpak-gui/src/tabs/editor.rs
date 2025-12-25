@@ -1,9 +1,130 @@
 //! Universal Editor tab callbacks
 
-use std::path::Path;
+use std::sync::{Arc, Mutex};
 use slint::ComponentHandle;
+use regex::RegexBuilder;
 
 use crate::MacPakApp;
+
+/// Pretty-print XML content with proper indentation
+fn format_xml(content: &str) -> String {
+    let mut result = String::new();
+    let mut indent_level: i32 = 0;
+    let indent_str = "    "; // 4 spaces
+
+    // Simple XML formatter - handles basic cases
+    let mut chars = content.chars().peekable();
+    let mut in_tag = false;
+    let mut current_tag = String::new();
+    let mut text_content = String::new();
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            '<' => {
+                // Output any accumulated text content
+                let trimmed = text_content.trim();
+                if !trimmed.is_empty() {
+                    result.push_str(trimmed);
+                }
+                text_content.clear();
+
+                in_tag = true;
+                current_tag.clear();
+                current_tag.push(ch);
+            }
+            '>' => {
+                current_tag.push(ch);
+                in_tag = false;
+
+                let tag = current_tag.trim();
+
+                if tag.starts_with("<?") || tag.starts_with("<!") {
+                    // XML declaration or DOCTYPE - no indent change
+                    if !result.is_empty() && !result.ends_with('\n') {
+                        result.push('\n');
+                    }
+                    result.push_str(tag);
+                    result.push('\n');
+                } else if tag.starts_with("</") {
+                    // Closing tag - decrease indent first
+                    indent_level = (indent_level - 1).max(0);
+                    if !result.is_empty() && !result.ends_with('\n') {
+                        result.push('\n');
+                    }
+                    for _ in 0..indent_level {
+                        result.push_str(indent_str);
+                    }
+                    result.push_str(tag);
+                } else if tag.ends_with("/>") {
+                    // Self-closing tag - no indent change
+                    if !result.is_empty() && !result.ends_with('\n') {
+                        result.push('\n');
+                    }
+                    for _ in 0..indent_level {
+                        result.push_str(indent_str);
+                    }
+                    result.push_str(tag);
+                } else {
+                    // Opening tag - indent then increase
+                    if !result.is_empty() && !result.ends_with('\n') {
+                        result.push('\n');
+                    }
+                    for _ in 0..indent_level {
+                        result.push_str(indent_str);
+                    }
+                    result.push_str(tag);
+                    indent_level += 1;
+                }
+
+                current_tag.clear();
+            }
+            _ => {
+                if in_tag {
+                    current_tag.push(ch);
+                } else {
+                    text_content.push(ch);
+                }
+            }
+        }
+    }
+
+    // Add final newline if not present
+    if !result.ends_with('\n') {
+        result.push('\n');
+    }
+
+    result
+}
+
+/// Pretty-print JSON content with proper indentation
+fn format_json(content: &str) -> String {
+    // Try to parse and re-serialize with indentation
+    match serde_json::from_str::<serde_json::Value>(content) {
+        Ok(value) => {
+            serde_json::to_string_pretty(&value).unwrap_or_else(|_| content.to_string())
+        }
+        Err(_) => content.to_string()
+    }
+}
+
+/// Stores the current search match positions
+struct SearchState {
+    matches: Vec<(usize, usize)>, // (start, end) positions
+    current_index: usize,
+}
+
+impl Default for SearchState {
+    fn default() -> Self {
+        Self {
+            matches: Vec::new(),
+            current_index: 0,
+        }
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref SEARCH_STATE: Arc<Mutex<SearchState>> = Arc::new(Mutex::new(SearchState::default()));
+}
 
 /// Register all Editor tab callbacks
 pub fn register_callbacks(app: &MacPakApp) {
@@ -11,6 +132,19 @@ pub fn register_callbacks(app: &MacPakApp) {
     register_save(app);
     register_save_as(app);
     register_convert(app);
+    register_content_changed(app);
+    register_search_callbacks(app);
+}
+
+fn register_content_changed(app: &MacPakApp) {
+    app.on_editor_content_changed({
+        let app_weak = app.as_weak();
+        move |content| {
+            if let Some(app) = app_weak.upgrade() {
+                app.set_editor_content(content);
+            }
+        }
+    });
 }
 
 fn register_open(app: &MacPakApp) {
@@ -41,11 +175,27 @@ fn register_open(app: &MacPakApp) {
 
                     // Read file content
                     match ext.as_str() {
-                        "LSX" | "LSJ" => {
-                            // Text formats - read directly
+                        "LSX" => {
+                            // XML format - read and auto-indent
                             match std::fs::read_to_string(&path) {
                                 Ok(content) => {
-                                    app.set_editor_content(content.into());
+                                    let formatted = format_xml(&content);
+                                    app.set_editor_content(formatted.into());
+                                    app.set_editor_modified(false);
+                                    app.set_editor_status("File loaded".into());
+                                }
+                                Err(e) => {
+                                    app.set_error_message(format!("Failed to read file: {}", e).into());
+                                    app.set_show_error(true);
+                                }
+                            }
+                        }
+                        "LSJ" => {
+                            // JSON format - read and auto-indent
+                            match std::fs::read_to_string(&path) {
+                                Ok(content) => {
+                                    let formatted = format_json(&content);
+                                    app.set_editor_content(formatted.into());
                                     app.set_editor_modified(false);
                                     app.set_editor_status("File loaded".into());
                                 }
@@ -71,7 +221,8 @@ fn register_open(app: &MacPakApp) {
                                     if let Some(app) = app_weak2.upgrade() {
                                         match result {
                                             Ok(content) => {
-                                                app.set_editor_content(content.into());
+                                                let formatted = format_xml(&content);
+                                                app.set_editor_content(formatted.into());
                                                 app.set_editor_modified(false);
                                                 app.set_editor_status("LSF loaded (showing as LSX)".into());
                                             }
@@ -255,6 +406,271 @@ fn register_convert(app: &MacPakApp) {
                     });
                 } else {
                     app.set_editor_converting(false);
+                }
+            }
+        }
+    });
+}
+
+fn register_search_callbacks(app: &MacPakApp) {
+    register_toggle_search(app);
+    register_search_text_changed(app);
+    register_find_next(app);
+    register_find_previous(app);
+    register_replace_current(app);
+    register_replace_all(app);
+}
+
+fn register_toggle_search(app: &MacPakApp) {
+    app.on_editor_toggle_search({
+        let app_weak = app.as_weak();
+        move || {
+            if let Some(app) = app_weak.upgrade() {
+                let current = app.get_editor_search_visible();
+                app.set_editor_search_visible(!current);
+
+                // Clear search state when hiding
+                if current {
+                    app.set_editor_search_text("".into());
+                    app.set_editor_replace_text("".into());
+                    app.set_editor_search_match_count(0);
+                    app.set_editor_search_current_match(0);
+                    app.set_editor_search_status("".into());
+
+                    if let Ok(mut state) = SEARCH_STATE.lock() {
+                        state.matches.clear();
+                        state.current_index = 0;
+                    }
+                }
+            }
+        }
+    });
+}
+
+fn register_search_text_changed(app: &MacPakApp) {
+    app.on_editor_search_text_changed({
+        let app_weak = app.as_weak();
+        move |search_text| {
+            if let Some(app) = app_weak.upgrade() {
+                let search_text = search_text.to_string();
+
+                if search_text.is_empty() {
+                    app.set_editor_search_match_count(0);
+                    app.set_editor_search_current_match(0);
+                    app.set_editor_search_status("".into());
+
+                    if let Ok(mut state) = SEARCH_STATE.lock() {
+                        state.matches.clear();
+                        state.current_index = 0;
+                    }
+                    return;
+                }
+
+                let content = app.get_editor_content().to_string();
+                let case_sensitive = app.get_editor_search_case_sensitive();
+                let whole_words = app.get_editor_search_whole_words();
+                let use_regex = app.get_editor_search_use_regex();
+
+                // Build the search pattern
+                let pattern = if use_regex {
+                    search_text.clone()
+                } else {
+                    // Escape regex special characters for literal search
+                    let escaped = regex::escape(&search_text);
+                    if whole_words {
+                        format!(r"\b{}\b", escaped)
+                    } else {
+                        escaped
+                    }
+                };
+
+                // Build regex with options
+                match RegexBuilder::new(&pattern)
+                    .case_insensitive(!case_sensitive)
+                    .build()
+                {
+                    Ok(re) => {
+                        let matches: Vec<(usize, usize)> = re
+                            .find_iter(&content)
+                            .map(|m| (m.start(), m.end()))
+                            .collect();
+
+                        let count = matches.len();
+
+                        if let Ok(mut state) = SEARCH_STATE.lock() {
+                            state.matches = matches;
+                            // Reset to first match or keep current if still valid
+                            if state.current_index >= count {
+                                state.current_index = 0;
+                            }
+
+                            app.set_editor_search_match_count(count as i32);
+                            if count > 0 {
+                                app.set_editor_search_current_match((state.current_index + 1) as i32);
+                            } else {
+                                app.set_editor_search_current_match(0);
+                            }
+                        }
+
+                        app.set_editor_search_status("".into());
+                    }
+                    Err(e) => {
+                        app.set_editor_search_match_count(0);
+                        app.set_editor_search_current_match(0);
+                        app.set_editor_search_status(format!("Invalid regex: {}", e).into());
+
+                        if let Ok(mut state) = SEARCH_STATE.lock() {
+                            state.matches.clear();
+                            state.current_index = 0;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+fn register_find_next(app: &MacPakApp) {
+    app.on_editor_find_next({
+        let app_weak = app.as_weak();
+        move || {
+            if let Some(app) = app_weak.upgrade() {
+                if let Ok(mut state) = SEARCH_STATE.lock() {
+                    if state.matches.is_empty() {
+                        return;
+                    }
+
+                    // Move to next match (wrap around)
+                    state.current_index = (state.current_index + 1) % state.matches.len();
+                    app.set_editor_search_current_match((state.current_index + 1) as i32);
+
+                    // Note: Slint's TextEdit doesn't support programmatic cursor/selection control
+                    // So we just update the match counter for now
+                    // Future enhancement could use a custom text component with selection support
+                }
+            }
+        }
+    });
+}
+
+fn register_find_previous(app: &MacPakApp) {
+    app.on_editor_find_previous({
+        let app_weak = app.as_weak();
+        move || {
+            if let Some(app) = app_weak.upgrade() {
+                if let Ok(mut state) = SEARCH_STATE.lock() {
+                    if state.matches.is_empty() {
+                        return;
+                    }
+
+                    // Move to previous match (wrap around)
+                    if state.current_index == 0 {
+                        state.current_index = state.matches.len() - 1;
+                    } else {
+                        state.current_index -= 1;
+                    }
+                    app.set_editor_search_current_match((state.current_index + 1) as i32);
+                }
+            }
+        }
+    });
+}
+
+fn register_replace_current(app: &MacPakApp) {
+    app.on_editor_replace_current({
+        let app_weak = app.as_weak();
+        move || {
+            if let Some(app) = app_weak.upgrade() {
+                let content = app.get_editor_content().to_string();
+                let replace_text = app.get_editor_replace_text().to_string();
+
+                if let Ok(state) = SEARCH_STATE.lock() {
+                    if state.matches.is_empty() {
+                        return;
+                    }
+
+                    let (start, end) = state.matches[state.current_index];
+
+                    // Build new content
+                    let mut new_content = String::with_capacity(content.len());
+                    new_content.push_str(&content[..start]);
+                    new_content.push_str(&replace_text);
+                    new_content.push_str(&content[end..]);
+
+                    app.set_editor_content(new_content.into());
+                    app.set_editor_modified(true);
+
+                    // Trigger re-search to update matches
+                    drop(state); // Release lock before triggering callback
+                }
+
+                // Re-trigger search to update match positions
+                let search_text = app.get_editor_search_text();
+                app.invoke_editor_search_text_changed(search_text);
+            }
+        }
+    });
+}
+
+fn register_replace_all(app: &MacPakApp) {
+    app.on_editor_replace_all({
+        let app_weak = app.as_weak();
+        move || {
+            if let Some(app) = app_weak.upgrade() {
+                let content = app.get_editor_content().to_string();
+                let search_text = app.get_editor_search_text().to_string();
+                let replace_text = app.get_editor_replace_text().to_string();
+                let case_sensitive = app.get_editor_search_case_sensitive();
+                let whole_words = app.get_editor_search_whole_words();
+                let use_regex = app.get_editor_search_use_regex();
+
+                if search_text.is_empty() {
+                    return;
+                }
+
+                // Build the search pattern
+                let pattern = if use_regex {
+                    search_text.clone()
+                } else {
+                    let escaped = regex::escape(&search_text);
+                    if whole_words {
+                        format!(r"\b{}\b", escaped)
+                    } else {
+                        escaped
+                    }
+                };
+
+                match RegexBuilder::new(&pattern)
+                    .case_insensitive(!case_sensitive)
+                    .build()
+                {
+                    Ok(re) => {
+                        let new_content = re.replace_all(&content, replace_text.as_str()).to_string();
+                        let count = app.get_editor_search_match_count();
+
+                        app.set_editor_content(new_content.into());
+                        app.set_editor_modified(true);
+                        app.set_editor_search_status(format!("Replaced {} occurrences", count).into());
+
+                        // Clear status after a delay
+                        let app_weak2 = app.as_weak();
+                        slint::Timer::single_shot(std::time::Duration::from_secs(2), move || {
+                            if let Some(app) = app_weak2.upgrade() {
+                                app.set_editor_search_status("".into());
+                            }
+                        });
+
+                        // Update match count (should be 0 after replace all)
+                        if let Ok(mut state) = SEARCH_STATE.lock() {
+                            state.matches.clear();
+                            state.current_index = 0;
+                        }
+                        app.set_editor_search_match_count(0);
+                        app.set_editor_search_current_match(0);
+                    }
+                    Err(e) => {
+                        app.set_editor_search_status(format!("Replace failed: {}", e).into());
+                    }
                 }
             }
         }
