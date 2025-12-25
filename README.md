@@ -1,7 +1,7 @@
 # MacPak - BG3 Modding Toolkit for macOS
 
 <p align="center">
-    <img src="macpak-gui/assets/icon.iconset/icon_512x512.png" alt="MacPak Icon" width="128">
+    <img src="macpak-gui/assets/icons/icon.iconset/icon_512x512.png" alt="MacPak Icon" width="128">
 </p>
 
 ---
