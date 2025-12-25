@@ -44,6 +44,10 @@ impl LsfDocument {
     }
     
     pub fn get_name(&self, outer: usize, inner: usize) -> Result<&str> {
+        // 65535 (0xFFFF) is a sentinel value meaning "no name" or null
+        if outer == 65535 || inner == 65535 {
+            return Ok("");
+        }
         self.names
             .get(outer)
             .and_then(|list| list.get(inner))
