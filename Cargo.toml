@@ -3,7 +3,9 @@ members = [
     "MacPak",          # library crate
     "MacLarian",       # internal engine crate
     "macpak-cli",      # CLI crate
-    "macpak-gui",      # GUI crate (Slint) - DEFAULT
+    "macpak-gui",      # GUI crate (Floem) - DEFAULT
+    "macpak-slint",    # GUI crate (Slint) - deprecated
+    "cacao-prototype", # cacao experiment
     # "macpak-gui-iced" # GUI crate (iced) - commented out due to web-sys conflict with Slint
 ]
 resolver = "2"

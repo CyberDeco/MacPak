@@ -1,47 +1,36 @@
 [package]
 name = "macpak-gui"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-description = "Slint GUI application for BG3 modding toolkit"
+version = "0.1.0"
+edition = "2021"
 
 [[bin]]
 name = "MacPak"
 path = "src/main.rs"
 
 [dependencies]
-# Internal
+floem = "0.2"
+uuid = { version = "1.0", features = ["v4"] }
+serde_json = "1.0"
+roxmltree = "0.20"
+
+# Internal crates
 MacLarian = { path = "../MacLarian" }
 MacPak = { path = "../MacPak" }
-
-# GUI Framework
-slint = { version = "1.14", default-features = false, features = ["backend-winit", "renderer-femtovg", "std", "compat-1-2"] }
-
-# Async runtime
-tokio = { version = "1", features = ["full"] }
 
 # File dialogs
 rfd = "0.14"
 
-# UUID generation
-uuid = { version = "1.19", features = ["v4"] }
+# Directory traversal
+walkdir = "2.4"
 
-# Utilities
+# Date/time formatting
 chrono = "0.4"
-rand = "0.8"
+
+# Regex for search
 regex = "1.10"
+
+# Lazy static for globals
 lazy_static = "1.4"
 
-# Error handling
-anyhow = "1.0"
-
-# JSON serialization
-serde_json = "1.0"
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = "0.3"
-
-[build-dependencies]
-slint-build = "1.14"
+# Random number generation for handles
+rand = "0.8"

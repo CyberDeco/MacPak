@@ -1,71 +1,126 @@
-slint::include_modules!();
+//! MacPak - BG3 Modding Toolkit
+//!
+//! A native macOS application for Baldur's Gate 3 modding, built with Floem.
+//! Features include:
+//! - Universal Editor for LSX/LSJ/LSF files
+//! - Asset Browser for PAK file contents
+//! - PAK extraction and creation
+//! - Index search across game files
+//! - UUID generator for modding
 
+mod state;
 mod tabs;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use floem::prelude::*;
+use floem::text::Weight;
 
-fn main() -> Result<(), slint::PlatformError> {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
-    tracing::info!("Starting MacPak GUI");
+use state::*;
+use tabs::*;
 
-    // Create the main window
-    let app = MacPakApp::new()?;
+fn main() {
+    floem::launch(app_view);
+}
 
-    // Shared state for history
-    let uuid_history: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
-    let handle_history: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+fn app_view() -> impl IntoView {
+    // Initialize all state
+    let app_state = AppState::new();
+    let editor_state = EditorState::new();
+    let browser_state = BrowserState::new();
+    let pak_ops_state = PakOpsState::new();
+    let search_state = SearchState::new();
+    let uuid_gen_state = UuidGenState::new();
 
-    // Shared state for browser - stores full unfiltered file list
-    let all_files: Rc<RefCell<Vec<FileEntry>>> = Rc::new(RefCell::new(Vec::new()));
+    let active_tab = app_state.active_tab;
 
-    // =========================================================================
-    // Register Tab Callbacks
-    // =========================================================================
+    v_stack((
+        // Tab bar
+        tab_bar(active_tab),
 
-    // UUID Generator
-    tabs::uuid_generator::register_callbacks(&app, uuid_history.clone(), handle_history.clone());
+        // Tab content
+        tab_content(
+            active_tab,
+            app_state,
+            editor_state,
+            browser_state,
+            pak_ops_state,
+            search_state,
+            uuid_gen_state,
+        ),
+    ))
+    .style(|s| s.width_full().height_full())
+    .window_title(|| "MacPak - BG3 Modding Toolkit".to_string())
+}
 
-    // PAK Operations
-    tabs::pak_operations::register_callbacks(&app);
+fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
+    h_stack((
+        tab_button("📝 Editor", 0, active_tab),
+        tab_button("📂 Browser", 1, active_tab),
+        tab_button("📦 PAK Ops", 2, active_tab),
+        tab_button("🔍 Search", 3, active_tab),
+        tab_button("🎲 UUID", 4, active_tab),
+        empty().style(|s| s.flex_grow(1.0)),
+        // App info
+        label(|| "MacPak v0.1.0")
+            .style(|s| s.color(Color::rgb8(128, 128, 128)).font_size(12.0)),
+    ))
+    .style(|s| {
+        s.width_full()
+            .height(44.0)
+            .padding_horiz(8.0)
+            .gap(4.0)
+            .items_center()
+            .background(Color::rgb8(38, 38, 38))
+    })
+}
 
-    // Universal Editor
-    tabs::editor::register_callbacks(&app);
+fn tab_button(label_text: &'static str, index: usize, active_tab: RwSignal<usize>) -> impl IntoView {
+    button(label_text)
+        .style(move |s| {
+            let is_active = active_tab.get() == index;
+            let s = s
+                .padding_horiz(16.0)
+                .padding_vert(8.0)
+                .border_radius(6.0)
+                .font_size(13.0);
 
-    // Asset Browser
-    tabs::asset_browser::register_callbacks(&app, all_files.clone());
-
-    // Index Search
-    tabs::search::register_callbacks(&app);
-
-    // =========================================================================
-    // Menu/Dialog Callbacks
-    // =========================================================================
-
-    app.on_tab_changed({
-        move |tab_index| {
-            tracing::info!("Tab changed to: {}", tab_index);
-        }
-    });
-
-    app.on_show_settings({
-        move || {
-            tracing::info!("Show settings");
-            // TODO: Implement settings dialog
-        }
-    });
-
-    app.on_show_about_dialog({
-        let app_weak = app.as_weak();
-        move || {
-            if let Some(app) = app_weak.upgrade() {
-                app.set_show_about(true);
+            if is_active {
+                s.background(Color::rgb8(60, 60, 60))
+                    .color(Color::WHITE)
+            } else {
+                s.background(Color::TRANSPARENT)
+                    .color(Color::rgb8(180, 180, 180))
+                    .hover(|s| {
+                        s.background(Color::rgb8(50, 50, 50))
+                            .color(Color::WHITE)
+                    })
             }
-        }
-    });
+        })
+        .action(move || {
+            active_tab.set(index);
+        })
+}
 
-    // Run the application
-    tracing::info!("MacPak GUI ready");
-    app.run()
+fn tab_content(
+    active_tab: RwSignal<usize>,
+    app_state: AppState,
+    editor_state: EditorState,
+    browser_state: BrowserState,
+    pak_ops_state: PakOpsState,
+    search_state: SearchState,
+    uuid_gen_state: UuidGenState,
+) -> impl IntoView {
+    dyn_container(
+        move || active_tab.get(),
+        move |tab_index| {
+            match tab_index {
+                0 => editor_tab(app_state.clone(), editor_state.clone()).into_any(),
+                1 => browser_tab(app_state.clone(), browser_state.clone()).into_any(),
+                2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone()).into_any(),
+                3 => search_tab(app_state.clone(), search_state.clone()).into_any(),
+                4 => uuid_gen_tab(app_state.clone(), uuid_gen_state.clone()).into_any(),
+                _ => editor_tab(app_state.clone(), editor_state.clone()).into_any(),
+            }
+        },
+    )
+    .style(|s| s.width_full().flex_grow(1.0).background(Color::WHITE))
 }

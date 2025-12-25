@@ -1,10 +1,18 @@
-//! Universal Editor tab callbacks
+//! Universal Editor Tab
+//!
+//! Text editor for LSX, LSJ, and LSF files using Floem's text_editor
+//! (the same component that powers Lapce).
 
+use floem::prelude::*;
+use floem::views::text_editor;
+use floem::views::editor::text::SimpleStyling;
+use floem::text::Weight;
+use std::fs;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
-use slint::ComponentHandle;
 use regex::RegexBuilder;
 
-use crate::MacPakApp;
+use crate::state::{AppState, EditorState};
 
 /// Pretty-print XML content with proper indentation
 fn format_xml(content: &str) -> String {
@@ -12,7 +20,6 @@ fn format_xml(content: &str) -> String {
     let mut indent_level: i32 = 0;
     let indent_str = "    "; // 4 spaces
 
-    // Simple XML formatter - handles basic cases
     let mut chars = content.chars().peekable();
     let mut in_tag = false;
     let mut current_tag = String::new();
@@ -21,7 +28,6 @@ fn format_xml(content: &str) -> String {
     while let Some(ch) = chars.next() {
         match ch {
             '<' => {
-                // Output any accumulated text content
                 let trimmed = text_content.trim();
                 if !trimmed.is_empty() {
                     result.push_str(trimmed);
@@ -39,14 +45,12 @@ fn format_xml(content: &str) -> String {
                 let tag = current_tag.trim();
 
                 if tag.starts_with("<?") || tag.starts_with("<!") {
-                    // XML declaration or DOCTYPE - no indent change
                     if !result.is_empty() && !result.ends_with('\n') {
                         result.push('\n');
                     }
                     result.push_str(tag);
                     result.push('\n');
                 } else if tag.starts_with("</") {
-                    // Closing tag - decrease indent first
                     indent_level = (indent_level - 1).max(0);
                     if !result.is_empty() && !result.ends_with('\n') {
                         result.push('\n');
@@ -56,7 +60,6 @@ fn format_xml(content: &str) -> String {
                     }
                     result.push_str(tag);
                 } else if tag.ends_with("/>") {
-                    // Self-closing tag - no indent change
                     if !result.is_empty() && !result.ends_with('\n') {
                         result.push('\n');
                     }
@@ -65,7 +68,6 @@ fn format_xml(content: &str) -> String {
                     }
                     result.push_str(tag);
                 } else {
-                    // Opening tag - indent then increase
                     if !result.is_empty() && !result.ends_with('\n') {
                         result.push('\n');
                     }
@@ -88,7 +90,6 @@ fn format_xml(content: &str) -> String {
         }
     }
 
-    // Add final newline if not present
     if !result.ends_with('\n') {
         result.push('\n');
     }
@@ -98,18 +99,15 @@ fn format_xml(content: &str) -> String {
 
 /// Pretty-print JSON content with proper indentation
 fn format_json(content: &str) -> String {
-    // Try to parse and re-serialize with indentation
     match serde_json::from_str::<serde_json::Value>(content) {
-        Ok(value) => {
-            serde_json::to_string_pretty(&value).unwrap_or_else(|_| content.to_string())
-        }
-        Err(_) => content.to_string()
+        Ok(value) => serde_json::to_string_pretty(&value).unwrap_or_else(|_| content.to_string()),
+        Err(_) => content.to_string(),
     }
 }
 
-/// Stores the current search match positions
+/// Search state for Find & Replace
 struct SearchState {
-    matches: Vec<(usize, usize)>, // (start, end) positions
+    matches: Vec<(usize, usize)>,
     current_index: usize,
 }
 
@@ -126,553 +124,876 @@ lazy_static::lazy_static! {
     static ref SEARCH_STATE: Arc<Mutex<SearchState>> = Arc::new(Mutex::new(SearchState::default()));
 }
 
-/// Register all Editor tab callbacks
-pub fn register_callbacks(app: &MacPakApp) {
-    register_open(app);
-    register_save(app);
-    register_save_as(app);
-    register_convert(app);
-    register_content_changed(app);
-    register_search_callbacks(app);
+pub fn editor_tab(_app_state: AppState, editor_state: EditorState) -> impl IntoView {
+    v_stack((
+        editor_toolbar(editor_state.clone()),
+        search_panel(editor_state.clone()),
+        editor_content(editor_state.clone()),
+        editor_status_bar(editor_state),
+    ))
+    .style(|s| s.width_full().height_full())
 }
 
-fn register_content_changed(app: &MacPakApp) {
-    app.on_editor_content_changed({
-        let app_weak = app.as_weak();
-        move |content| {
-            if let Some(app) = app_weak.upgrade() {
-                app.set_editor_content(content);
+fn editor_toolbar(state: EditorState) -> impl IntoView {
+    let state_open = state.clone();
+    let state_save = state.clone();
+    let state_save_as = state.clone();
+    let state_validate = state.clone();
+    let state_format = state.clone();
+
+    h_stack((
+        // File operations
+        button("📂 Open").action(move || {
+            open_file_dialog(state_open.clone());
+        }),
+        button("💾 Save")
+            .disabled(move || !state_save.modified.get() || state_save.converted_from_lsf.get())
+            .action({
+                let state = state_save.clone();
+                move || save_file(state.clone())
+            }),
+        button("Save As...").action(move || {
+            save_file_as_dialog(state_save_as.clone());
+        }),
+
+        separator(),
+
+        // Edit tools
+        button("🔍 Find").action({
+            let state = state.clone();
+            move || {
+                let visible = state.search_visible.get();
+                state.search_visible.set(!visible);
+            }
+        }),
+        button("📐 Format").action(move || {
+            format_content(state_format.clone());
+        }),
+        button("✓ Validate").action(move || {
+            validate_content(state_validate.clone());
+        }),
+
+        separator(),
+
+        // Convert section
+        label(|| "Convert:").style(|s| s.font_weight(Weight::BOLD).margin_right(8.0)),
+        convert_button("LSX", state.clone()),
+        convert_button("LSJ", state.clone()),
+        convert_button("LSF", state.clone()),
+
+        // Spacer
+        empty().style(|s| s.flex_grow(1.0)),
+
+        // Format badge
+        format_badge(state.file_format),
+
+        // Status message
+        status_message(state.clone()),
+    ))
+    .style(|s| {
+        s.width_full()
+            .height(50.0)
+            .padding(10.0)
+            .gap(8.0)
+            .items_center()
+            .background(Color::rgb8(245, 245, 245))
+            .border_bottom(1.0)
+            .border_color(Color::rgb8(220, 220, 220))
+    })
+}
+
+fn status_message(state: EditorState) -> impl IntoView {
+    dyn_container(
+        move || (state.converted_from_lsf.get(), state.status_message.get()),
+        move |(is_converted, msg)| {
+            if !msg.is_empty() {
+                label(move || msg.clone())
+                    .style(|s| {
+                        s.color(Color::rgb8(76, 175, 80))
+                            .font_size(12.0)
+                            .margin_left(8.0)
+                    })
+                    .into_any()
+            } else if is_converted {
+                label(|| "Converted from LSF - use Save As")
+                    .style(|s| {
+                        s.color(Color::rgb8(100, 100, 100))
+                            .font_size(12.0)
+                            .margin_left(8.0)
+                    })
+                    .into_any()
+            } else {
+                empty().into_any()
+            }
+        },
+    )
+}
+
+fn convert_button(format: &'static str, state: EditorState) -> impl IntoView {
+    let current_format = state.file_format;
+    let has_content = state.content;
+    let state_convert = state.clone();
+
+    button(format)
+        .disabled(move || {
+            let f = current_format.get().to_uppercase();
+            let empty = has_content.get().is_empty();
+            f == format || empty
+        })
+        .action(move || {
+            convert_file(state_convert.clone(), format);
+        })
+}
+
+fn separator() -> impl IntoView {
+    empty().style(|s| {
+        s.width(1.0)
+            .height(30.0)
+            .background(Color::rgb8(200, 200, 200))
+            .margin_horiz(4.0)
+    })
+}
+
+fn search_panel(state: EditorState) -> impl IntoView {
+    let visible = state.search_visible;
+    let search_text = state.search_text;
+    let replace_text = state.replace_text;
+    let case_sensitive = state.case_sensitive;
+    let whole_words = state.whole_words;
+    let use_regex = state.use_regex;
+    let match_count = state.match_count;
+    let current_match = state.current_match;
+    let search_status = state.search_status;
+    let content = state.content;
+
+    // State clones for button actions
+    let state_find_next = state.clone();
+    let state_find_prev = state.clone();
+    let state_replace = state.clone();
+    let state_replace_all = state.clone();
+    let state_close = state.clone();
+
+    dyn_container(
+        move || visible.get(),
+        move |is_visible| {
+            if !is_visible {
+                return empty().into_any();
+            }
+
+            let state_find_next = state_find_next.clone();
+            let state_find_prev = state_find_prev.clone();
+            let state_replace = state_replace.clone();
+            let state_replace_all = state_replace_all.clone();
+            let state_close = state_close.clone();
+
+            v_stack((
+                // Find row
+                h_stack((
+                    label(|| "Find:").style(|s| s.width(60.0)),
+                    text_input(search_text)
+                        .placeholder("Search...")
+                        .style(|s| {
+                            s.width(250.0)
+                                .padding(6.0)
+                                .border(1.0)
+                                .border_color(Color::rgb8(200, 200, 200))
+                                .border_radius(4.0)
+                        })
+                        .on_event_stop(floem::event::EventListener::KeyUp, move |_| {
+                            perform_search(
+                                content.get(),
+                                search_text.get(),
+                                case_sensitive.get(),
+                                whole_words.get(),
+                                use_regex.get(),
+                                match_count,
+                                current_match,
+                                search_status,
+                            );
+                        }),
+                    button("▲ Prev").action({
+                        let state = state_find_prev.clone();
+                        move || find_previous(state.clone())
+                    }),
+                    button("▼ Next").action({
+                        let state = state_find_next.clone();
+                        move || find_next(state.clone())
+                    }),
+                    // Match count display
+                    label(move || {
+                        let count = match_count.get();
+                        let current = current_match.get();
+                        if count == 0 {
+                            "No matches".to_string()
+                        } else {
+                            format!("{} / {}", current + 1, count)
+                        }
+                    })
+                    .style(|s| s.width(80.0).font_size(12.0).color(Color::rgb8(100, 100, 100))),
+                    button("✕").action({
+                        let state = state_close.clone();
+                        move || {
+                            state.search_visible.set(false);
+                            state.match_count.set(0);
+                            state.current_match.set(0);
+                            state.search_status.set(String::new());
+                        }
+                    }),
+                ))
+                .style(|s| s.width_full().gap(8.0).items_center()),
+
+                // Replace row
+                h_stack((
+                    label(|| "Replace:").style(|s| s.width(60.0)),
+                    text_input(replace_text)
+                        .placeholder("Replace with...")
+                        .style(|s| {
+                            s.width(250.0)
+                                .padding(6.0)
+                                .border(1.0)
+                                .border_color(Color::rgb8(200, 200, 200))
+                                .border_radius(4.0)
+                        }),
+                    button("Replace").action({
+                        let state = state_replace.clone();
+                        move || replace_current(state.clone())
+                    }),
+                    button("Replace All").action({
+                        let state = state_replace_all.clone();
+                        move || replace_all(state.clone())
+                    }),
+                ))
+                .style(|s| s.width_full().gap(8.0).items_center()),
+
+                // Options row
+                h_stack((
+                    search_option_toggle("Aa", "Case sensitive", case_sensitive),
+                    search_option_toggle("W", "Whole words", whole_words),
+                    search_option_toggle(".*", "Use regex", use_regex),
+                    empty().style(|s| s.flex_grow(1.0)),
+                    label(move || search_status.get())
+                        .style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
+                ))
+                .style(|s| s.width_full().gap(8.0).items_center()),
+            ))
+            .style(|s| {
+                s.width_full()
+                    .padding(12.0)
+                    .gap(8.0)
+                    .background(Color::rgb8(250, 250, 250))
+                    .border_bottom(1.0)
+                    .border_color(Color::rgb8(220, 220, 220))
+            })
+            .into_any()
+        },
+    )
+}
+
+fn search_option_toggle(
+    label_text: &'static str,
+    _tooltip: &'static str,
+    signal: RwSignal<bool>,
+) -> impl IntoView {
+    button(label_text)
+        .style(move |s| {
+            let is_active = signal.get();
+            let s = s
+                .padding_horiz(8.0)
+                .padding_vert(4.0)
+                .border_radius(4.0)
+                .font_size(12.0)
+                .font_family("monospace".to_string());
+
+            if is_active {
+                s.background(Color::rgb8(33, 150, 243))
+                    .color(Color::WHITE)
+            } else {
+                s.background(Color::rgb8(230, 230, 230))
+                    .color(Color::rgb8(80, 80, 80))
+                    .hover(|s| s.background(Color::rgb8(210, 210, 210)))
+            }
+        })
+        .action(move || {
+            signal.set(!signal.get());
+        })
+}
+
+// ============================================================================
+// Search Functions
+// ============================================================================
+
+fn perform_search(
+    content: String,
+    search_text: String,
+    case_sensitive: bool,
+    whole_words: bool,
+    use_regex: bool,
+    match_count: RwSignal<usize>,
+    current_match: RwSignal<usize>,
+    search_status: RwSignal<String>,
+) {
+    if search_text.is_empty() {
+        match_count.set(0);
+        current_match.set(0);
+        search_status.set(String::new());
+        if let Ok(mut state) = SEARCH_STATE.lock() {
+            state.matches.clear();
+            state.current_index = 0;
+        }
+        return;
+    }
+
+    // Build the regex pattern
+    let pattern = if use_regex {
+        search_text.clone()
+    } else {
+        regex::escape(&search_text)
+    };
+
+    let pattern = if whole_words {
+        format!(r"\b{}\b", pattern)
+    } else {
+        pattern
+    };
+
+    match RegexBuilder::new(&pattern)
+        .case_insensitive(!case_sensitive)
+        .build()
+    {
+        Ok(regex) => {
+            let matches: Vec<(usize, usize)> = regex
+                .find_iter(&content)
+                .map(|m| (m.start(), m.end()))
+                .collect();
+
+            let count = matches.len();
+
+            if let Ok(mut state) = SEARCH_STATE.lock() {
+                state.matches = matches;
+                state.current_index = 0;
+            }
+
+            match_count.set(count);
+            current_match.set(0);
+            search_status.set(String::new());
+        }
+        Err(e) => {
+            match_count.set(0);
+            current_match.set(0);
+            search_status.set(format!("Invalid regex: {}", e));
+            if let Ok(mut state) = SEARCH_STATE.lock() {
+                state.matches.clear();
             }
         }
-    });
+    }
 }
 
-fn register_open(app: &MacPakApp) {
-    app.on_editor_open({
-        let app_weak = app.as_weak();
-        move || {
-            let dialog = rfd::FileDialog::new()
-                .set_title("Open File")
-                .add_filter("Larian Files", &["lsx", "lsf", "lsj"])
-                .add_filter("LSX (XML)", &["lsx"])
-                .add_filter("LSF (Binary)", &["lsf"])
-                .add_filter("LSJ (JSON)", &["lsj"])
-                .add_filter("All Files", &["*"]);
+fn find_next(state: EditorState) {
+    let count = state.match_count.get();
+    if count == 0 {
+        return;
+    }
 
-            if let Some(path) = dialog.pick_file() {
-                if let Some(app) = app_weak.upgrade() {
-                    let path_str = path.to_string_lossy().to_string();
-                    tracing::info!("Opening file: {}", path_str);
+    let current = state.current_match.get();
+    let next = if current + 1 >= count { 0 } else { current + 1 };
 
-                    // Determine format from extension
-                    let ext = path.extension()
-                        .and_then(|e| e.to_str())
-                        .unwrap_or("")
-                        .to_uppercase();
+    state.current_match.set(next);
 
-                    app.set_editor_format(ext.clone().into());
-                    app.set_editor_file_path(path_str.clone().into());
+    if let Ok(mut search_state) = SEARCH_STATE.lock() {
+        search_state.current_index = next;
+    }
+}
 
-                    // Read file content
-                    match ext.as_str() {
-                        "LSX" => {
-                            // XML format - read and auto-indent
-                            match std::fs::read_to_string(&path) {
-                                Ok(content) => {
-                                    let formatted = format_xml(&content);
-                                    app.set_editor_content(formatted.into());
-                                    app.set_editor_modified(false);
-                                    app.set_editor_status("File loaded".into());
-                                }
-                                Err(e) => {
-                                    app.set_error_message(format!("Failed to read file: {}", e).into());
-                                    app.set_show_error(true);
-                                }
-                            }
-                        }
-                        "LSJ" => {
-                            // JSON format - read and auto-indent
-                            match std::fs::read_to_string(&path) {
-                                Ok(content) => {
-                                    let formatted = format_json(&content);
-                                    app.set_editor_content(formatted.into());
-                                    app.set_editor_modified(false);
-                                    app.set_editor_status("File loaded".into());
-                                }
-                                Err(e) => {
-                                    app.set_error_message(format!("Failed to read file: {}", e).into());
-                                    app.set_show_error(true);
-                                }
-                            }
-                        }
-                        "LSF" => {
-                            // Binary format - convert to LSX for display
-                            let app_weak2 = app.as_weak();
-                            let path_clone = path.clone();
-                            std::thread::spawn(move || {
-                                // Read LSF and convert to LSX string for display
-                                let result = MacLarian::formats::lsf::read_lsf(&path_clone)
-                                    .and_then(|lsf_doc| {
-                                        // Convert LSF to LSX string
-                                        MacLarian::converter::to_lsx(&lsf_doc)
-                                    });
+fn find_previous(state: EditorState) {
+    let count = state.match_count.get();
+    if count == 0 {
+        return;
+    }
 
-                                slint::invoke_from_event_loop(move || {
-                                    if let Some(app) = app_weak2.upgrade() {
-                                        match result {
-                                            Ok(content) => {
-                                                let formatted = format_xml(&content);
-                                                app.set_editor_content(formatted.into());
-                                                app.set_editor_modified(false);
-                                                app.set_editor_status("LSF loaded (showing as LSX)".into());
-                                            }
-                                            Err(e) => {
-                                                app.set_error_message(format!("Failed to read LSF: {}", e).into());
-                                                app.set_show_error(true);
-                                            }
-                                        }
-                                    }
-                                }).unwrap();
-                            });
-                        }
-                        _ => {
-                            // Unknown format - try to read as text
-                            match std::fs::read_to_string(&path) {
-                                Ok(content) => {
-                                    app.set_editor_content(content.into());
-                                    app.set_editor_modified(false);
-                                }
-                                Err(_) => {
-                                    app.set_editor_content("[Binary file - cannot display]".into());
-                                }
-                            }
-                        }
+    let current = state.current_match.get();
+    let prev = if current == 0 { count - 1 } else { current - 1 };
+
+    state.current_match.set(prev);
+
+    if let Ok(mut search_state) = SEARCH_STATE.lock() {
+        search_state.current_index = prev;
+    }
+}
+
+fn replace_current(state: EditorState) {
+    let count = state.match_count.get();
+    if count == 0 {
+        state.search_status.set("No matches to replace".to_string());
+        return;
+    }
+
+    let replace_with = state.replace_text.get();
+    let current_idx = state.current_match.get();
+
+    if let Ok(search_state) = SEARCH_STATE.lock() {
+        if let Some(&(start, end)) = search_state.matches.get(current_idx) {
+            let content = state.content.get();
+            let mut new_content = String::new();
+            new_content.push_str(&content[..start]);
+            new_content.push_str(&replace_with);
+            new_content.push_str(&content[end..]);
+
+            state.content.set(new_content.clone());
+            state.modified.set(true);
+
+            // Re-run search to update matches
+            drop(search_state);
+            perform_search(
+                new_content,
+                state.search_text.get(),
+                state.case_sensitive.get(),
+                state.whole_words.get(),
+                state.use_regex.get(),
+                state.match_count,
+                state.current_match,
+                state.search_status,
+            );
+
+            state.search_status.set("Replaced 1 occurrence".to_string());
+        }
+    }
+}
+
+fn replace_all(state: EditorState) {
+    let search_text = state.search_text.get();
+    let replace_with = state.replace_text.get();
+    let case_sensitive = state.case_sensitive.get();
+    let whole_words = state.whole_words.get();
+    let use_regex = state.use_regex.get();
+
+    if search_text.is_empty() {
+        state.search_status.set("Nothing to replace".to_string());
+        return;
+    }
+
+    // Build the regex pattern
+    let pattern = if use_regex {
+        search_text.clone()
+    } else {
+        regex::escape(&search_text)
+    };
+
+    let pattern = if whole_words {
+        format!(r"\b{}\b", pattern)
+    } else {
+        pattern
+    };
+
+    match RegexBuilder::new(&pattern)
+        .case_insensitive(!case_sensitive)
+        .build()
+    {
+        Ok(regex) => {
+            let content = state.content.get();
+            let count = regex.find_iter(&content).count();
+
+            if count == 0 {
+                state.search_status.set("No matches found".to_string());
+                return;
+            }
+
+            let new_content = regex.replace_all(&content, replace_with.as_str()).to_string();
+
+            state.content.set(new_content.clone());
+            state.modified.set(true);
+
+            // Re-run search
+            perform_search(
+                new_content,
+                state.search_text.get(),
+                state.case_sensitive.get(),
+                state.whole_words.get(),
+                state.use_regex.get(),
+                state.match_count,
+                state.current_match,
+                state.search_status,
+            );
+
+            state.search_status.set(format!("Replaced {} occurrences", count));
+        }
+        Err(e) => {
+            state.search_status.set(format!("Invalid regex: {}", e));
+        }
+    }
+}
+
+fn format_badge(format: RwSignal<String>) -> impl IntoView {
+    let format_text = move || {
+        let f = format.get();
+        if f.is_empty() {
+            "No file".to_string()
+        } else {
+            format!("Format: {}", f)
+        }
+    };
+
+    label(format_text).style(move |s| {
+        let f = format.get();
+        let (bg, border, text_color) = match f.to_uppercase().as_str() {
+            "LSX" => (
+                Color::rgb8(227, 242, 253),
+                Color::rgb8(33, 150, 243),
+                Color::rgb8(25, 118, 210),
+            ),
+            "LSJ" => (
+                Color::rgb8(243, 229, 245),
+                Color::rgb8(156, 39, 176),
+                Color::rgb8(123, 31, 162),
+            ),
+            "LSF" => (
+                Color::rgb8(255, 243, 224),
+                Color::rgb8(255, 152, 0),
+                Color::rgb8(245, 124, 0),
+            ),
+            _ => (
+                Color::rgb8(240, 240, 240),
+                Color::rgb8(200, 200, 200),
+                Color::rgb8(100, 100, 100),
+            ),
+        };
+
+        s.padding_horiz(12.0)
+            .padding_vert(4.0)
+            .background(bg)
+            .border(1.0)
+            .border_color(border)
+            .border_radius(4.0)
+            .color(text_color)
+            .font_weight(Weight::SEMIBOLD)
+    })
+}
+
+fn editor_content(state: EditorState) -> impl IntoView {
+    let initial_text = state.content.get_untracked();
+
+    text_editor(initial_text)
+        .styling(SimpleStyling::new())
+        .style(|s| s.width_full().flex_grow(1.0))
+        .placeholder("Open a file to start editing...")
+}
+
+fn editor_status_bar(state: EditorState) -> impl IntoView {
+    h_stack((
+        // File path
+        label(move || {
+            state
+                .file_path
+                .get()
+                .unwrap_or_else(|| "No file loaded".to_string())
+        })
+        .style(|s| {
+            s.color(Color::rgb8(100, 100, 100))
+                .font_size(12.0)
+                .text_ellipsis()
+                .max_width(500.0)
+        }),
+
+        empty().style(|s| s.flex_grow(1.0)),
+
+        // Modified indicator
+        label(move || {
+            if state.modified.get() {
+                "● Modified"
+            } else {
+                ""
+            }
+            .to_string()
+        })
+        .style(|s| {
+            s.color(Color::rgb8(255, 152, 0))
+                .font_size(12.0)
+                .margin_right(12.0)
+        }),
+    ))
+    .style(|s| {
+        s.width_full()
+            .height(32.0)
+            .padding_horiz(12.0)
+            .items_center()
+            .background(Color::rgb8(248, 248, 248))
+            .border_top(1.0)
+            .border_color(Color::rgb8(220, 220, 220))
+    })
+}
+
+// ============================================================================
+// File Operations
+// ============================================================================
+
+fn open_file_dialog(state: EditorState) {
+    let dialog = rfd::FileDialog::new()
+        .set_title("Open File")
+        .add_filter("Larian Files", &["lsx", "lsf", "lsj"])
+        .add_filter("LSX (XML)", &["lsx"])
+        .add_filter("LSF (Binary)", &["lsf"])
+        .add_filter("LSJ (JSON)", &["lsj"])
+        .add_filter("All Files", &["*"]);
+
+    if let Some(path) = dialog.pick_file() {
+        load_file(&path, state);
+    }
+}
+
+fn load_file(path: &Path, state: EditorState) {
+    let path_str = path.to_string_lossy().to_string();
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_uppercase();
+
+    state.file_format.set(ext.clone());
+    state.file_path.set(Some(path_str.clone()));
+    state.status_message.set("Loading...".to_string());
+
+    match ext.as_str() {
+        "LSX" => {
+            match fs::read_to_string(path) {
+                Ok(content) => {
+                    // Skip formatting for large files (>500KB)
+                    let (formatted, was_large) = if content.len() > 500_000 {
+                        (content, true)
+                    } else {
+                        (format_xml(&content), false)
+                    };
+
+                    state.content.set(formatted);
+                    state.modified.set(false);
+                    state.converted_from_lsf.set(false);
+
+                    if was_large {
+                        state.status_message.set("Large file - formatting skipped".to_string());
+                    } else {
+                        state.status_message.set("File loaded".to_string());
                     }
+                }
+                Err(e) => {
+                    state.status_message.set(format!("Error: {}", e));
                 }
             }
         }
-    });
-}
+        "LSJ" => {
+            match fs::read_to_string(path) {
+                Ok(content) => {
+                    let (formatted, was_large) = if content.len() > 500_000 {
+                        (content, true)
+                    } else {
+                        (format_json(&content), false)
+                    };
 
-fn register_save(app: &MacPakApp) {
-    app.on_editor_save({
-        let app_weak = app.as_weak();
-        move || {
-            if let Some(app) = app_weak.upgrade() {
-                let path = app.get_editor_file_path().to_string();
-                let content = app.get_editor_content().to_string();
+                    state.content.set(formatted);
+                    state.modified.set(false);
+                    state.converted_from_lsf.set(false);
 
-                if path.is_empty() {
-                    app.set_error_message("No file loaded".into());
-                    app.set_show_error(true);
-                    return;
+                    if was_large {
+                        state.status_message.set("Large file - formatting skipped".to_string());
+                    } else {
+                        state.status_message.set("File loaded".to_string());
+                    }
                 }
-
-                tracing::info!("Saving file: {}", path);
-
-                match std::fs::write(&path, &content) {
-                    Ok(_) => {
-                        app.set_editor_modified(false);
-                        app.set_editor_status("Saved".into());
-                        tracing::info!("File saved");
-
-                        let app_weak2 = app.as_weak();
-                        slint::Timer::single_shot(std::time::Duration::from_secs(2), move || {
-                            if let Some(app) = app_weak2.upgrade() {
-                                app.set_editor_status("".into());
-                            }
-                        });
-                    }
-                    Err(e) => {
-                        app.set_error_message(format!("Failed to save: {}", e).into());
-                        app.set_show_error(true);
-                    }
+                Err(e) => {
+                    state.status_message.set(format!("Error: {}", e));
                 }
             }
         }
-    });
-}
+        "LSF" => {
+            // Binary format - convert to LSX for display using MacLarian
+            match MacLarian::formats::lsf::read_lsf(path) {
+                Ok(lsf_doc) => {
+                    match MacLarian::converter::to_lsx(&lsf_doc) {
+                        Ok(content) => {
+                            let (formatted, was_large) = if content.len() > 500_000 {
+                                (content, true)
+                            } else {
+                                (format_xml(&content), false)
+                            };
 
-fn register_save_as(app: &MacPakApp) {
-    app.on_editor_save_as({
-        let app_weak = app.as_weak();
-        move || {
-            if let Some(app) = app_weak.upgrade() {
-                let content = app.get_editor_content().to_string();
+                            state.content.set(formatted);
+                            state.modified.set(false);
+                            state.converted_from_lsf.set(true);
 
-                let dialog = rfd::FileDialog::new()
-                    .set_title("Save As")
-                    .add_filter("LSX (XML)", &["lsx"])
-                    .add_filter("LSJ (JSON)", &["lsj"])
-                    .add_filter("All Files", &["*"]);
-
-                if let Some(path) = dialog.save_file() {
-                    let path_str = path.to_string_lossy().to_string();
-                    tracing::info!("Saving as: {}", path_str);
-
-                    match std::fs::write(&path, &content) {
-                        Ok(_) => {
-                            app.set_editor_file_path(path_str.into());
-                            app.set_editor_modified(false);
-                            app.set_editor_status("Saved".into());
-
-                            // Update format from new extension
-                            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                                app.set_editor_format(ext.to_uppercase().into());
+                            if was_large {
+                                state.status_message.set("Converted from LSF (large file)".to_string());
+                            } else {
+                                state.status_message.set("Converted from LSF - use Save As".to_string());
                             }
                         }
                         Err(e) => {
-                            app.set_error_message(format!("Failed to save: {}", e).into());
-                            app.set_show_error(true);
+                            state.status_message.set(format!("Conversion error: {}", e));
                         }
                     }
                 }
-            }
-        }
-    });
-}
-
-fn register_convert(app: &MacPakApp) {
-    app.on_editor_convert({
-        let app_weak = app.as_weak();
-        move |conversion_type| {
-            if let Some(app) = app_weak.upgrade() {
-                let source_path = app.get_editor_file_path().to_string();
-
-                if source_path.is_empty() {
-                    app.set_error_message("No file loaded. Open a file first.".into());
-                    app.set_show_error(true);
-                    return;
-                }
-
-                let conversion = conversion_type.to_string();
-                tracing::info!("Convert: {} ({})", source_path, conversion);
-
-                app.set_editor_converting(true);
-
-                // Determine output extension based on conversion type
-                let (_source_ext, target_ext) = match conversion.as_str() {
-                    "lsf-to-lsx" => ("lsf", "lsx"),
-                    "lsx-to-lsf" => ("lsx", "lsf"),
-                    "lsx-to-lsj" => ("lsx", "lsj"),
-                    "lsj-to-lsx" => ("lsj", "lsx"),
-                    "lsf-to-lsj" => ("lsf", "lsj"),
-                    "lsj-to-lsf" => ("lsj", "lsf"),
-                    _ => {
-                        app.set_error_message(format!("Unknown conversion: {}", conversion).into());
-                        app.set_show_error(true);
-                        app.set_editor_converting(false);
-                        return;
-                    }
-                };
-
-                // Show save dialog for converted file
-                let dialog = rfd::FileDialog::new()
-                    .set_title(&format!("Save Converted File ({})", target_ext.to_uppercase()))
-                    .add_filter(&target_ext.to_uppercase(), &[target_ext]);
-
-                if let Some(dest_path) = dialog.save_file() {
-                    let source = source_path.clone();
-                    let dest = dest_path.to_string_lossy().to_string();
-                    let app_weak2 = app_weak.clone();
-
-                    std::thread::spawn(move || {
-                        let result = match conversion.as_str() {
-                            "lsf-to-lsx" => MacLarian::converter::lsf_to_lsx(&source, &dest),
-                            "lsx-to-lsf" => MacLarian::converter::lsx_to_lsf(&source, &dest),
-                            "lsx-to-lsj" => MacLarian::converter::lsx_to_lsj(&source, &dest),
-                            "lsj-to-lsx" => MacLarian::converter::lsj_to_lsx(&source, &dest),
-                            "lsf-to-lsj" => MacLarian::converter::lsf_to_lsj(&source, &dest),
-                            "lsj-to-lsf" => MacLarian::converter::lsj_to_lsf(&source, &dest),
-                            _ => Err(MacLarian::Error::ConversionError("Unknown conversion".into())),
-                        };
-
-                        slint::invoke_from_event_loop(move || {
-                            if let Some(app) = app_weak2.upgrade() {
-                                match result {
-                                    Ok(_) => {
-                                        app.set_editor_status(format!("Converted to {}", target_ext.to_uppercase()).into());
-                                        tracing::info!("Conversion complete: {}", dest);
-                                    }
-                                    Err(e) => {
-                                        app.set_error_message(format!("Conversion failed: {}", e).into());
-                                        app.set_show_error(true);
-                                        tracing::error!("Conversion failed: {}", e);
-                                    }
-                                }
-                                app.set_editor_converting(false);
-                            }
-                        }).unwrap();
-                    });
-                } else {
-                    app.set_editor_converting(false);
+                Err(e) => {
+                    state.status_message.set(format!("Failed to read LSF: {}", e));
                 }
             }
         }
-    });
-}
-
-fn register_search_callbacks(app: &MacPakApp) {
-    register_toggle_search(app);
-    register_search_text_changed(app);
-    register_find_next(app);
-    register_find_previous(app);
-    register_replace_current(app);
-    register_replace_all(app);
-}
-
-fn register_toggle_search(app: &MacPakApp) {
-    app.on_editor_toggle_search({
-        let app_weak = app.as_weak();
-        move || {
-            if let Some(app) = app_weak.upgrade() {
-                let current = app.get_editor_search_visible();
-                app.set_editor_search_visible(!current);
-
-                // Clear search state when hiding
-                if current {
-                    app.set_editor_search_text("".into());
-                    app.set_editor_replace_text("".into());
-                    app.set_editor_search_match_count(0);
-                    app.set_editor_search_current_match(0);
-                    app.set_editor_search_status("".into());
-
-                    if let Ok(mut state) = SEARCH_STATE.lock() {
-                        state.matches.clear();
-                        state.current_index = 0;
-                    }
+        _ => {
+            // Unknown format - try to read as text
+            match fs::read_to_string(path) {
+                Ok(content) => {
+                    state.content.set(content);
+                    state.modified.set(false);
+                    state.converted_from_lsf.set(false);
+                    state.status_message.set("File loaded".to_string());
+                }
+                Err(_) => {
+                    state.content.set("[Binary file - cannot display]".to_string());
+                    state.status_message.set("Binary file".to_string());
                 }
             }
         }
-    });
+    }
 }
 
-fn register_search_text_changed(app: &MacPakApp) {
-    app.on_editor_search_text_changed({
-        let app_weak = app.as_weak();
-        move |search_text| {
-            if let Some(app) = app_weak.upgrade() {
-                let search_text = search_text.to_string();
-
-                if search_text.is_empty() {
-                    app.set_editor_search_match_count(0);
-                    app.set_editor_search_current_match(0);
-                    app.set_editor_search_status("".into());
-
-                    if let Ok(mut state) = SEARCH_STATE.lock() {
-                        state.matches.clear();
-                        state.current_index = 0;
-                    }
-                    return;
-                }
-
-                let content = app.get_editor_content().to_string();
-                let case_sensitive = app.get_editor_search_case_sensitive();
-                let whole_words = app.get_editor_search_whole_words();
-                let use_regex = app.get_editor_search_use_regex();
-
-                // Build the search pattern
-                let pattern = if use_regex {
-                    search_text.clone()
-                } else {
-                    // Escape regex special characters for literal search
-                    let escaped = regex::escape(&search_text);
-                    if whole_words {
-                        format!(r"\b{}\b", escaped)
-                    } else {
-                        escaped
-                    }
-                };
-
-                // Build regex with options
-                match RegexBuilder::new(&pattern)
-                    .case_insensitive(!case_sensitive)
-                    .build()
-                {
-                    Ok(re) => {
-                        let matches: Vec<(usize, usize)> = re
-                            .find_iter(&content)
-                            .map(|m| (m.start(), m.end()))
-                            .collect();
-
-                        let count = matches.len();
-
-                        if let Ok(mut state) = SEARCH_STATE.lock() {
-                            state.matches = matches;
-                            // Reset to first match or keep current if still valid
-                            if state.current_index >= count {
-                                state.current_index = 0;
-                            }
-
-                            app.set_editor_search_match_count(count as i32);
-                            if count > 0 {
-                                app.set_editor_search_current_match((state.current_index + 1) as i32);
-                            } else {
-                                app.set_editor_search_current_match(0);
-                            }
-                        }
-
-                        app.set_editor_search_status("".into());
-                    }
-                    Err(e) => {
-                        app.set_editor_search_match_count(0);
-                        app.set_editor_search_current_match(0);
-                        app.set_editor_search_status(format!("Invalid regex: {}", e).into());
-
-                        if let Ok(mut state) = SEARCH_STATE.lock() {
-                            state.matches.clear();
-                            state.current_index = 0;
-                        }
-                    }
-                }
+fn save_file(state: EditorState) {
+    if let Some(path) = state.file_path.get() {
+        let content = state.content.get();
+        match fs::write(&path, &content) {
+            Ok(_) => {
+                state.modified.set(false);
+                state.status_message.set("Saved".to_string());
+            }
+            Err(e) => {
+                state.status_message.set(format!("Save failed: {}", e));
             }
         }
-    });
+    } else {
+        state.status_message.set("No file loaded".to_string());
+    }
 }
 
-fn register_find_next(app: &MacPakApp) {
-    app.on_editor_find_next({
-        let app_weak = app.as_weak();
-        move || {
-            if let Some(app) = app_weak.upgrade() {
-                if let Ok(mut state) = SEARCH_STATE.lock() {
-                    if state.matches.is_empty() {
-                        return;
-                    }
+fn save_file_as_dialog(state: EditorState) {
+    let dialog = rfd::FileDialog::new()
+        .set_title("Save As")
+        .add_filter("LSX (XML)", &["lsx"])
+        .add_filter("LSJ (JSON)", &["lsj"])
+        .add_filter("All Files", &["*"]);
 
-                    // Move to next match (wrap around)
-                    state.current_index = (state.current_index + 1) % state.matches.len();
-                    app.set_editor_search_current_match((state.current_index + 1) as i32);
+    if let Some(path) = dialog.save_file() {
+        let content = state.content.get();
+        match fs::write(&path, &content) {
+            Ok(_) => {
+                let path_str = path.to_string_lossy().to_string();
+                state.file_path.set(Some(path_str));
+                state.modified.set(false);
+                state.converted_from_lsf.set(false);
 
-                    // Note: Slint's TextEdit doesn't support programmatic cursor/selection control
-                    // So we just update the match counter for now
-                    // Future enhancement could use a custom text component with selection support
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    state.file_format.set(ext.to_uppercase());
                 }
+
+                state.status_message.set("Saved".to_string());
+            }
+            Err(e) => {
+                state.status_message.set(format!("Save failed: {}", e));
             }
         }
-    });
+    }
 }
 
-fn register_find_previous(app: &MacPakApp) {
-    app.on_editor_find_previous({
-        let app_weak = app.as_weak();
-        move || {
-            if let Some(app) = app_weak.upgrade() {
-                if let Ok(mut state) = SEARCH_STATE.lock() {
-                    if state.matches.is_empty() {
-                        return;
-                    }
+fn format_content(state: EditorState) {
+    let content = state.content.get();
+    let format = state.file_format.get().to_uppercase();
 
-                    // Move to previous match (wrap around)
-                    if state.current_index == 0 {
-                        state.current_index = state.matches.len() - 1;
-                    } else {
-                        state.current_index -= 1;
-                    }
-                    app.set_editor_search_current_match((state.current_index + 1) as i32);
-                }
-            }
-        }
-    });
+    if content.is_empty() {
+        state.status_message.set("No content to format".to_string());
+        return;
+    }
+
+    let formatted = match format.as_str() {
+        "LSX" | "LSF" => format_xml(&content),
+        "LSJ" => format_json(&content),
+        _ => content,
+    };
+
+    state.content.set(formatted);
+    state.modified.set(true);
+    state.status_message.set("Content formatted".to_string());
 }
 
-fn register_replace_current(app: &MacPakApp) {
-    app.on_editor_replace_current({
-        let app_weak = app.as_weak();
-        move || {
-            if let Some(app) = app_weak.upgrade() {
-                let content = app.get_editor_content().to_string();
-                let replace_text = app.get_editor_replace_text().to_string();
+fn validate_content(state: EditorState) {
+    let content = state.content.get();
+    let format = state.file_format.get().to_uppercase();
 
-                if let Ok(state) = SEARCH_STATE.lock() {
-                    if state.matches.is_empty() {
-                        return;
-                    }
+    if content.is_empty() {
+        state.status_message.set("No content to validate".to_string());
+        return;
+    }
 
-                    let (start, end) = state.matches[state.current_index];
-
-                    // Build new content
-                    let mut new_content = String::with_capacity(content.len());
-                    new_content.push_str(&content[..start]);
-                    new_content.push_str(&replace_text);
-                    new_content.push_str(&content[end..]);
-
-                    app.set_editor_content(new_content.into());
-                    app.set_editor_modified(true);
-
-                    // Trigger re-search to update matches
-                    drop(state); // Release lock before triggering callback
-                }
-
-                // Re-trigger search to update match positions
-                let search_text = app.get_editor_search_text();
-                app.invoke_editor_search_text_changed(search_text);
+    let result = match format.as_str() {
+        "LSX" | "LSF" => {
+            match roxmltree::Document::parse(&content) {
+                Ok(_) => Ok("Valid XML structure"),
+                Err(e) => Err(format!("Invalid XML: {}", e)),
             }
         }
-    });
+        "LSJ" => {
+            match serde_json::from_str::<serde_json::Value>(&content) {
+                Ok(_) => Ok("Valid JSON structure"),
+                Err(e) => Err(format!("Invalid JSON: {}", e)),
+            }
+        }
+        _ => Ok("Unknown format - skipped validation"),
+    };
+
+    match result {
+        Ok(msg) => state.status_message.set(msg.to_string()),
+        Err(msg) => state.status_message.set(msg),
+    }
 }
 
-fn register_replace_all(app: &MacPakApp) {
-    app.on_editor_replace_all({
-        let app_weak = app.as_weak();
-        move || {
-            if let Some(app) = app_weak.upgrade() {
-                let content = app.get_editor_content().to_string();
-                let search_text = app.get_editor_search_text().to_string();
-                let replace_text = app.get_editor_replace_text().to_string();
-                let case_sensitive = app.get_editor_search_case_sensitive();
-                let whole_words = app.get_editor_search_whole_words();
-                let use_regex = app.get_editor_search_use_regex();
+fn convert_file(state: EditorState, target_format: &str) {
+    let source_path = match state.file_path.get() {
+        Some(p) => p,
+        None => {
+            state.status_message.set("No file loaded".to_string());
+            return;
+        }
+    };
 
-                if search_text.is_empty() {
-                    return;
-                }
+    let current_format = state.file_format.get().to_lowercase();
+    let target = target_format.to_lowercase();
 
-                // Build the search pattern
-                let pattern = if use_regex {
-                    search_text.clone()
-                } else {
-                    let escaped = regex::escape(&search_text);
-                    if whole_words {
-                        format!(r"\b{}\b", escaped)
-                    } else {
-                        escaped
-                    }
-                };
+    // Show save dialog for converted file
+    let dialog = rfd::FileDialog::new()
+        .set_title(&format!("Save as {} File", target.to_uppercase()))
+        .add_filter(&target.to_uppercase(), &[&target]);
 
-                match RegexBuilder::new(&pattern)
-                    .case_insensitive(!case_sensitive)
-                    .build()
-                {
-                    Ok(re) => {
-                        let new_content = re.replace_all(&content, replace_text.as_str()).to_string();
-                        let count = app.get_editor_search_match_count();
+    if let Some(dest_path) = dialog.save_file() {
+        let dest = dest_path.to_string_lossy().to_string();
 
-                        app.set_editor_content(new_content.into());
-                        app.set_editor_modified(true);
-                        app.set_editor_search_status(format!("Replaced {} occurrences", count).into());
+        state.status_message.set("Converting...".to_string());
 
-                        // Clear status after a delay
-                        let app_weak2 = app.as_weak();
-                        slint::Timer::single_shot(std::time::Duration::from_secs(2), move || {
-                            if let Some(app) = app_weak2.upgrade() {
-                                app.set_editor_search_status("".into());
-                            }
-                        });
+        // Perform conversion
+        let result = match (current_format.as_str(), target.as_str()) {
+            ("lsf", "lsx") => MacLarian::converter::lsf_to_lsx(&source_path, &dest),
+            ("lsx", "lsf") => MacLarian::converter::lsx_to_lsf(&source_path, &dest),
+            ("lsx", "lsj") => MacLarian::converter::lsx_to_lsj(&source_path, &dest),
+            ("lsj", "lsx") => MacLarian::converter::lsj_to_lsx(&source_path, &dest),
+            ("lsf", "lsj") => MacLarian::converter::lsf_to_lsj(&source_path, &dest),
+            ("lsj", "lsf") => MacLarian::converter::lsj_to_lsf(&source_path, &dest),
+            _ => {
+                state.status_message.set(format!(
+                    "Unsupported conversion: {} to {}",
+                    current_format, target
+                ));
+                return;
+            }
+        };
 
-                        // Update match count (should be 0 after replace all)
-                        if let Ok(mut state) = SEARCH_STATE.lock() {
-                            state.matches.clear();
-                            state.current_index = 0;
-                        }
-                        app.set_editor_search_match_count(0);
-                        app.set_editor_search_current_match(0);
-                    }
-                    Err(e) => {
-                        app.set_editor_search_status(format!("Replace failed: {}", e).into());
-                    }
-                }
+        match result {
+            Ok(_) => {
+                state.status_message.set(format!("Converted to {}", target.to_uppercase()));
+            }
+            Err(e) => {
+                state.status_message.set(format!("Conversion failed: {}", e));
             }
         }
-    });
+    }
 }
