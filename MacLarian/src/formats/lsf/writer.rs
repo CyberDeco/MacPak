@@ -7,6 +7,16 @@ use lz4_flex::frame::FrameEncoder;
 use std::io::Write;
 use std::path::Path;
 
+/// Compress data using LZ4 Frame format (used by LSF v2+)
+fn compress_lz4_frame(data: &[u8]) -> Result<Vec<u8>> {
+    if data.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut encoder = FrameEncoder::new(Vec::new());
+    encoder.write_all(data)?;
+    Ok(encoder.finish()?)
+}
+
 /// Write an LSF document to disk
 pub fn write_lsf<P: AsRef<Path>>(doc: &LsfDocument, path: P) -> Result<()> {
     let bytes = serialize_lsf(doc)?;
@@ -29,38 +39,23 @@ pub fn serialize_lsf(doc: &LsfDocument) -> Result<Vec<u8>> {
     let nodes_data = write_nodes(doc)?;
     let attributes_data = write_attributes(doc)?;
     let values_data = &doc.values;
-    
-    // Compress sections using LZ4 Frame format
-    let mut encoder = FrameEncoder::new(Vec::new());
-    encoder.write_all(&names_data)?;
-    let names_compressed = encoder.finish()?;
-    
-    let keys_compressed = if keys_data.is_empty() {
-        Vec::new()
-    } else {
-        let mut encoder = FrameEncoder::new(Vec::new());
-        encoder.write_all(&keys_data)?;
-        encoder.finish()?
-    };
-    
-    let mut encoder = FrameEncoder::new(Vec::new());
-    encoder.write_all(&nodes_data)?;
-    let nodes_compressed = encoder.finish()?;
-    
-    let mut encoder = FrameEncoder::new(Vec::new());
-    encoder.write_all(&attributes_data)?;
-    let attributes_compressed = encoder.finish()?;
-    
-    let mut encoder = FrameEncoder::new(Vec::new());
-    encoder.write_all(values_data)?;
-    let values_compressed = encoder.finish()?;
-   
+
+    // Compress sections with LZ4 Frame format (required for v2+)
+    let names_compressed = compress_lz4_frame(&names_data)?;
+    let keys_compressed = compress_lz4_frame(&keys_data)?;
+    let nodes_compressed = compress_lz4_frame(&nodes_data)?;
+    let attributes_compressed = compress_lz4_frame(&attributes_data)?;
+    let values_compressed = compress_lz4_frame(values_data)?;
+
     // Write section sizes - uncompressed size first, then compressed size (per LSLib format)
+    // Header order must match reader expectations for v6+:
+    // Strings, Keys, Nodes, Attributes, Values
+
     // Strings section
     output.write_u32::<LittleEndian>(names_data.len() as u32)?;
     output.write_u32::<LittleEndian>(names_compressed.len() as u32)?;
 
-    // Keys section
+    // Keys section (v6+ only, but we always write v6)
     output.write_u32::<LittleEndian>(keys_data.len() as u32)?;
     output.write_u32::<LittleEndian>(keys_compressed.len() as u32)?;
 
@@ -75,13 +70,13 @@ pub fn serialize_lsf(doc: &LsfDocument) -> Result<Vec<u8>> {
     // Values section
     output.write_u32::<LittleEndian>(values_data.len() as u32)?;
     output.write_u32::<LittleEndian>(values_compressed.len() as u32)?;
-    
+
     // Compression flags (0x01 = LZ4)
     output.write_u32::<LittleEndian>(0x01)?;
-    
+
     // Extended format flags (0 for BG3)
     output.write_u32::<LittleEndian>(0)?;
-    
+
     // Write compressed section data
     output.extend_from_slice(&names_compressed);
     output.extend_from_slice(&nodes_compressed);
