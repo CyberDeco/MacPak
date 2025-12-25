@@ -133,7 +133,8 @@ fn convert_value_to_json(type_id: TypeId, value_str: &str) -> Result<serde_json:
     
     Ok(match type_id {
         // Integers
-        1 | 27 => Value::Number(value_str.parse::<u8>().unwrap_or(0).into()),
+        1 => Value::Number(value_str.parse::<u8>().unwrap_or(0).into()),  // uint8
+        27 => Value::Number(value_str.parse::<i8>().unwrap_or(0).into()), // int8
         2 => Value::Number(value_str.parse::<i16>().unwrap_or(0).into()),
         3 => Value::Number(value_str.parse::<u16>().unwrap_or(0).into()),
         4 => Value::Number(value_str.parse::<i32>().unwrap_or(0).into()),
