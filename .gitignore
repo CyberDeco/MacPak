@@ -2,7 +2,8 @@
 # GitHub Specific
 # ==========================
 
-README.md
+.gitignore
+*.md
 
 # ==========================
 # Rust / Cargo
@@ -62,5 +63,6 @@ build/
 # ==========================
 # Jupyter / Notebooks
 # ==========================
+notebooks
 notebooks/.ipynb_checkpoints/
 *.ipynb_checkpoints/

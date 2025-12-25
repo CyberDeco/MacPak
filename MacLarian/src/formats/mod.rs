@@ -15,4 +15,4 @@ pub use lsx::{LsxDocument, LsxRegion, LsxNode, LsxAttribute};
 pub use lsj::{LsjDocument, LsjNode, LsjAttribute};
 
 // Re-export gr2 handling
-pub use gr2::{ParsedGr2File, GrannyHeader, GrannySection};
+pub use gr2::{decompress, GR2File, GR2Section, GR2Decompressor};

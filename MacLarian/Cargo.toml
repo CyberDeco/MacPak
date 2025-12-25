@@ -23,6 +23,11 @@ lz4_flex.workspace = true       # LZ4 block compression (reading LSF)
 larian-formats.workspace = true  # LSF reading/writing
 byteorder.workspace = true       # Reading/writing little-endian data
 
+# 3D Math & Vertex Processing
+glam.workspace = true            # SIMD-optimized vectors, quaternions, matrices
+half.workspace = true            # IEEE 754 half-precision floats (f16)
+bytemuck.workspace = true        # Safe zero-copy type casting
+
 # Encoding
 base64.workspace = true          # Base64 encoding for ScratchBuffer type
 
@@ -34,6 +39,9 @@ walkdir.workspace = true         # Recursive directory traversal
 
 # Logging
 tracing.workspace = true         # Structured logging
+
+# Utilities
+lazy_static.workspace = true     # Static initialization for GR2 magic signatures
 
 [dev-dependencies]
 pretty_assertions.workspace = true

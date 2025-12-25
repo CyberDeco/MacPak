@@ -8,7 +8,6 @@ pub mod error;
 pub mod index;
 pub mod operations;
 pub mod workspace;
-pub mod utils;
 
 pub use error::{Error, Result};
 

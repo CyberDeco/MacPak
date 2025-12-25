@@ -38,13 +38,16 @@ base64 = "0.22"
 walkdir = "2.4"
 crc32fast = "1.4"
 larian-formats = "0.3.0"
+lazy_static = "1.4"
 
 # For 3D model/mesh/texture handling
 gltf = "1.4.1"
 # collada = "0.16.0" # .dae files, Blender deprecated
 ddsfile = "0.5.2"
 # image_dds = "0.7.2" # unsure if needed
-glam = "0.27" # 3D math
+glam = "0.27" # 3D math (vectors, quaternions, matrices)
+half = { version = "2.6", features = ["bytemuck", "serde"] } # IEEE 754 half-precision floats (f16)
+bytemuck = { version = "1.14", features = ["derive"] } # Safe zero-copy type casting
 libloading = "0.8.9"
 # bevy = "0.17.2" # eventual GUI preview
 
