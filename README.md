@@ -1,7 +1,7 @@
 # MacPak
 
 <p align="center">
-    <img src="MacPak/macpak-gui/assets/icon.iconset/icon_512x512.png" alt="MacPak Icon" width="128">
+    <img src="macpak-gui/assets/icon.iconset/icon_512x512.png" alt="MacPak Icon" width="128">
 </p>
 
 ---
