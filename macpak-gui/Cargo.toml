@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "GUI application for BG3 modding toolkit"
+description = "Slint GUI application for BG3 modding toolkit"
 
 [[bin]]
 name = "MacPak"
@@ -12,29 +12,34 @@ path = "src/main.rs"
 
 [dependencies]
 # Internal
-MacLarian.workspace = true
-MacPak.workspace = true
+MacLarian = { path = "../MacLarian" }
+MacPak = { path = "../MacPak" }
 
-# GUI Framework - Choose one:
-# Option 1: egui (immediate mode, easy to use)
-egui = "0.24"
-eframe = { version = "0.24", features = ["default"] }
+# GUI Framework
+slint = { version = "1.14", default-features = false, features = ["backend-winit", "renderer-femtovg", "std", "compat-1-2"] }
 
-# Option 2: iced (Elm-inspired, reactive)
-# iced = { version = "0.12", features = ["tokio"] }
-
-# Option 3: Tauri (web-based, modern)
-# tauri = { version = "1.5", features = ["shell-open"] }
-# serde.workspace = true
-# serde_json.workspace = true
-
-# Additional
+# Async runtime
 tokio = { version = "1", features = ["full"] }
-rfd = "0.13"  # Native file dialogs
+
+# File dialogs
+rfd = "0.14"
+
+# UUID generation
+uuid = { version = "1.19", features = ["v4"] }
+
+# Utilities
+chrono = "0.4"
+rand = "0.8"
+
+# Error handling
+anyhow = "1.0"
+
+# JSON serialization
+serde_json = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
 
 [build-dependencies]
-embed-resource = "2.4"  # For Windows icon
-
-[target.'cfg(target_os = "macos")'.dependencies]
-cocoa = "0.25"
-objc = "0.2"
+slint-build = "1.14"

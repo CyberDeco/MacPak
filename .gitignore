@@ -4,6 +4,8 @@
 
 .gitignore
 *.md
+!README.md
+*.txt
 
 # ==========================
 # Rust / Cargo
@@ -19,6 +21,10 @@
 # Cargo cache (optional, usually not needed)
 /cargo/registry/
 /cargo/git/
+
+# Testing
+/tests/
+**/tests/
 
 # ==========================
 # IDEs and Editors

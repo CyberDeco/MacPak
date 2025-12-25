@@ -1,4 +1,4 @@
-# MacPak
+# MacPak - BG3 Modding Toolkit for macOS
 
 <p align="center">
     <img src="macpak-gui/assets/icon.iconset/icon_512x512.png" alt="MacPak Icon" width="128">
@@ -25,8 +25,8 @@ Status:
 
 - [x] Working: pak operations (list contents, unpack, verify structure, and pack)
 - [x] Working: .lsf <> .lsx <> .lxj conversion
+- [x] Working (sorta): local Slint GUI (not yet packaged for production)
 - [ ] Currently fist fighting: converting granny2.dll to work on macOS
-- [ ] Future: port over [previous Python GUI](https://github.com/CyberDeco/mac-pak/tree/main/gui_tour)
 
 ### Technical
 

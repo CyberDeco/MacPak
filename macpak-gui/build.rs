@@ -1,4 +1,3 @@
-// macpak-gui/build.rs
 fn main() {
-    // Nothing to do for now
+    slint_build::compile("ui/app.slint").unwrap();
 }
