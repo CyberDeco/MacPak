@@ -38,7 +38,7 @@ fn app_view() -> impl IntoView {
     let browser_state = BrowserState::new();
     let pak_ops_state = PakOpsState::new();
     let search_state = SearchState::new();
-    let uuid_gen_state = UuidGenState::new();
+    let tools_state = ToolsState::new();
 
     let active_tab = app_state.active_tab;
 
@@ -54,7 +54,7 @@ fn app_view() -> impl IntoView {
             browser_state,
             pak_ops_state,
             search_state,
-            uuid_gen_state,
+            tools_state,
         ),
     ))
     .style(|s| s.width_full().height_full())
@@ -73,7 +73,7 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
         tab_button("📝 Editor", 1, active_tab),
         tab_button("📦 PAK Ops", 2, active_tab),
         tab_button("🔍 Search", 3, active_tab),
-        tab_button("🎲 UUID", 4, active_tab),
+        tab_button("🛠️ Tools", 4, active_tab),
         empty().style(|s| s.flex_grow(1.0)),
         // App info
         label(|| "MacPak v0.1.0")
@@ -123,7 +123,7 @@ fn tab_content(
     browser_state: BrowserState,
     pak_ops_state: PakOpsState,
     search_state: SearchState,
-    uuid_gen_state: UuidGenState,
+    tools_state: ToolsState,
 ) -> impl IntoView {
     dyn_container(
         move || active_tab.get(),
@@ -133,7 +133,7 @@ fn tab_content(
                 1 => editor_tab(app_state.clone(), editor_state.clone()).into_any(),
                 2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone()).into_any(),
                 3 => search_tab(app_state.clone(), search_state.clone()).into_any(),
-                4 => uuid_gen_tab(app_state.clone(), uuid_gen_state.clone()).into_any(),
+                4 => tools_tab(app_state.clone(), tools_state.clone()).into_any(),
                 _ => browser_tab(app_state.clone(), browser_state.clone(), editor_state.clone(), active_tab).into_any(),
             }
         },
