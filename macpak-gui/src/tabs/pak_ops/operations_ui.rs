@@ -1,0 +1,149 @@
+//! Operations row UI components
+
+use floem::event::{Event, EventListener};
+use floem::prelude::*;
+
+use crate::state::PakOpsState;
+use super::operations::{
+    create_pak_file, extract_individual_files, extract_pak_file, list_pak_contents,
+    rebuild_pak_file, validate_mod_structure,
+};
+
+/// Main operations row with 3 columns
+pub fn operations_row(state: PakOpsState) -> impl IntoView {
+    h_stack((
+        // Extract operations group
+        extract_group(state.clone()),
+        // Create operations group
+        create_group(state.clone()),
+        // Drop zone
+        drop_zone(state),
+    ))
+    .style(|s| s.width_full().gap(20.0).margin_bottom(20.0))
+}
+
+fn extract_group(state: PakOpsState) -> impl IntoView {
+    let state1 = state.clone();
+    let state2 = state.clone();
+    let state3 = state.clone();
+
+    v_stack((
+        // Extract PAK button
+        operation_button("📦 Extract PAK File", move || {
+            extract_pak_file(state1.clone());
+        }),
+        // List Contents button
+        operation_button("📋 List PAK Contents", move || {
+            list_pak_contents(state2.clone());
+        }),
+        // Extract Individual button
+        operation_button("📄 Extract Individual Files", move || {
+            extract_individual_files(state3.clone());
+        }),
+    ))
+    .style(|s| {
+        s.flex_grow(1.0)
+            .padding(16.0)
+            .gap(8.0)
+            .background(Color::WHITE)
+            .border(1.0)
+            .border_color(Color::rgb8(220, 220, 220))
+            .border_radius(8.0)
+    })
+}
+
+fn create_group(state: PakOpsState) -> impl IntoView {
+    let state1 = state.clone();
+    let state2 = state.clone();
+    let state3 = state.clone();
+
+    v_stack((
+        // Create PAK button
+        operation_button("🔧 Create PAK from Folder", move || {
+            create_pak_file(state1.clone());
+        }),
+        // Rebuild PAK button
+        operation_button("🔧 Rebuild Modified PAK", move || {
+            rebuild_pak_file(state2.clone());
+        }),
+        // Validate button
+        operation_button("✓ Validate Mod Structure", move || {
+            validate_mod_structure(state3.clone());
+        }),
+    ))
+    .style(|s| {
+        s.flex_grow(1.0)
+            .padding(16.0)
+            .gap(8.0)
+            .background(Color::WHITE)
+            .border(1.0)
+            .border_color(Color::rgb8(220, 220, 220))
+            .border_radius(8.0)
+    })
+}
+
+fn drop_zone(state: PakOpsState) -> impl IntoView {
+    let state_for_drop = state.clone();
+
+    container(
+        v_stack((
+            label(|| "📦".to_string()).style(|s| s.font_size(32.0)),
+            label(|| "Drag PAK files here".to_string()).style(|s| {
+                s.font_size(14.0)
+                    .color(Color::rgb8(100, 100, 100))
+                    .margin_top(8.0)
+            }),
+            label(|| "for quick operations".to_string())
+                .style(|s| s.font_size(12.0).color(Color::rgb8(150, 150, 150))),
+        ))
+        .style(|s| s.items_center()),
+    )
+    .on_event_cont(EventListener::DroppedFile, move |e| {
+        if let Event::DroppedFile(drop_event) = e {
+            let path = drop_event.path.to_string_lossy().to_string();
+
+            // Only accept .pak files
+            if path.to_lowercase().ends_with(".pak") {
+                state_for_drop.dropped_file.set(Some(path.clone()));
+                state_for_drop.show_drop_dialog.set(true);
+                state_for_drop.add_result(&format!(
+                    "Dropped: {}",
+                    drop_event
+                        .path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default()
+                ));
+            } else {
+                state_for_drop.add_result("⚠ Only .pak files can be dropped here");
+            }
+        }
+    })
+    .style(|s| {
+        s.flex_grow(1.0)
+            .min_height(120.0)
+            .padding(16.0)
+            .items_center()
+            .justify_center()
+            .background(Color::rgb8(249, 249, 249))
+            .border(2.0)
+            .border_color(Color::rgb8(204, 204, 204))
+            .border_radius(8.0)
+    })
+}
+
+fn operation_button(text: &'static str, on_click: impl Fn() + 'static) -> impl IntoView {
+    button(text).action(on_click).style(|s| {
+        s.width_full()
+            .padding_vert(10.0)
+            .padding_horiz(16.0)
+            .background(Color::rgb8(245, 245, 245))
+            .border(1.0)
+            .border_color(Color::rgb8(200, 200, 200))
+            .border_radius(6.0)
+            .hover(|s| {
+                s.background(Color::rgb8(230, 230, 230))
+                    .border_color(Color::rgb8(180, 180, 180))
+            })
+    })
+}
