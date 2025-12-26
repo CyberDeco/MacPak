@@ -1,0 +1,151 @@
+//! Types for LSPK PAK file handling
+
+use std::path::PathBuf;
+
+/// Compression method used for a file in the PAK
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompressionMethod {
+    None,
+    Zlib,
+    Lz4,
+    Zstd,
+}
+
+impl CompressionMethod {
+    /// Parse compression method from the flags byte
+    pub fn from_flags(flags: u8) -> Self {
+        match flags & 0x0F {
+            0 => CompressionMethod::None,
+            1 => CompressionMethod::Zlib,
+            2 => CompressionMethod::Lz4,
+            3 => CompressionMethod::Zstd,
+            _ => CompressionMethod::None, // Unknown, treat as uncompressed
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CompressionMethod::None => "none",
+            CompressionMethod::Zlib => "zlib",
+            CompressionMethod::Lz4 => "lz4",
+            CompressionMethod::Zstd => "zstd",
+        }
+    }
+}
+
+/// Header of an LSPK PAK file
+#[derive(Debug, Clone)]
+pub struct LspkHeader {
+    /// Magic bytes (should be "LSPK")
+    pub magic: [u8; 4],
+    /// Version number
+    pub version: u32,
+    /// Offset to the footer from the start of the file
+    pub footer_offset: u64,
+}
+
+/// Footer/metadata of an LSPK PAK file
+#[derive(Debug, Clone)]
+pub struct LspkFooter {
+    /// Number of files in the archive
+    pub num_files: u32,
+    /// Size of the compressed file table
+    pub table_size_compressed: u32,
+}
+
+/// Entry in the file table describing a file in the PAK
+#[derive(Debug, Clone)]
+pub struct FileTableEntry {
+    /// Path of the file within the archive
+    pub path: PathBuf,
+    /// Offset of the compressed data from the start of the file
+    pub offset: u64,
+    /// Size of the compressed data
+    pub size_compressed: u32,
+    /// Size of the decompressed data
+    pub size_decompressed: u32,
+    /// Compression method
+    pub compression: CompressionMethod,
+    /// Raw flags byte (for debugging)
+    pub flags: u8,
+}
+
+/// A decompressed file from the PAK archive
+#[derive(Debug, Clone)]
+pub struct PakFile {
+    /// Path of the file within the archive
+    pub path: PathBuf,
+    /// Decompressed file contents
+    pub data: Vec<u8>,
+}
+
+/// Result of reading a PAK file, with support for partial success
+#[derive(Debug)]
+pub struct PakContents {
+    /// Successfully extracted files
+    pub files: Vec<PakFile>,
+    /// Files that failed to extract (path, error message)
+    pub errors: Vec<(PathBuf, String)>,
+    /// PAK version
+    pub version: u32,
+}
+
+impl PakContents {
+    pub fn new(version: u32) -> Self {
+        Self {
+            files: Vec::new(),
+            errors: Vec::new(),
+            version,
+        }
+    }
+
+    /// Returns true if all files were extracted successfully
+    pub fn is_complete(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    /// Returns the total number of files (successful + failed)
+    pub fn total_files(&self) -> usize {
+        self.files.len() + self.errors.len()
+    }
+}
+
+/// Progress information during PAK operations
+#[derive(Debug, Clone)]
+pub struct PakProgress {
+    /// Current operation phase
+    pub phase: PakPhase,
+    /// Current item number (1-indexed)
+    pub current: usize,
+    /// Total number of items
+    pub total: usize,
+    /// Current file being processed (if applicable)
+    pub current_file: Option<String>,
+}
+
+/// Phase of PAK operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PakPhase {
+    /// Reading PAK header
+    ReadingHeader,
+    /// Reading and decompressing file table
+    ReadingTable,
+    /// Decompressing individual files
+    DecompressingFiles,
+    /// Writing files to disk
+    WritingFiles,
+    /// Operation complete
+    Complete,
+}
+
+impl PakPhase {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PakPhase::ReadingHeader => "Reading header",
+            PakPhase::ReadingTable => "Reading file table",
+            PakPhase::DecompressingFiles => "Decompressing files",
+            PakPhase::WritingFiles => "Writing files",
+            PakPhase::Complete => "Complete",
+        }
+    }
+}

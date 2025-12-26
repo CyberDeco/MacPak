@@ -1,6 +1,7 @@
 //! Shared application state for MacPak
 
 use floem::prelude::*;
+use im::Vector as ImVector;
 
 /// Global application state
 #[derive(Clone)]
@@ -221,8 +222,9 @@ pub struct PakOpsState {
     // Results log
     pub results_log: RwSignal<Vec<String>>,
 
-    // List contents (for file list view)
-    pub list_contents: RwSignal<Vec<String>>,
+    // List contents (for file list view) - uses im::Vector for virtual_list performance
+    pub list_contents: RwSignal<ImVector<String>>,
+    pub file_search: RwSignal<String>,
 
     // PAK creation options
     pub compression: RwSignal<PakCompression>,
@@ -253,7 +255,8 @@ impl PakOpsState {
             is_validating: RwSignal::new(false),
 
             results_log: RwSignal::new(Vec::new()),
-            list_contents: RwSignal::new(Vec::new()),
+            list_contents: RwSignal::new(ImVector::new()),
+            file_search: RwSignal::new(String::new()),
 
             compression: RwSignal::new(PakCompression::Lz4Hc),
             priority: RwSignal::new(0),

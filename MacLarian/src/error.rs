@@ -13,9 +13,6 @@ pub enum Error {
     #[error("Unsupported LSF version: {0} (supported: 2-7)")]
     UnsupportedLsfVersion(u32),
 
-    #[error("MacLarian error: {0}")]
-    MacLarian(#[from] larian_formats::error::Error),
-    
     #[error("Invalid PAK magic: expected LSPK")]
     InvalidPakMagic,
     
@@ -55,12 +52,6 @@ pub enum Error {
     #[error("File not found in PAK: {0}")]
     FileNotFoundInPak(String),
 
-    #[error("GR2 parse error: {0}")]
-    Gr2ParseError(String),
-    
-    #[error("Oodle decompression error: {0}")]
-    OodleError(String),
-    
     #[error("Invalid file path: {0}")]
     InvalidPath(String),
     
