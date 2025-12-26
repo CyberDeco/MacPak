@@ -5,10 +5,12 @@ use std::path::Path;
 use std::thread;
 
 use crate::state::PakOpsState;
-use super::types::{create_result_sender, PakResult};
+use super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
 
 /// Extract a PAK file via file dialog
 pub fn extract_pak_file(state: PakOpsState) {
+    state.clear_results();
+
     let dialog = rfd::FileDialog::new()
         .set_title("Select PAK File to Extract")
         .add_filter("PAK Files", &["pak"]);
@@ -49,20 +51,29 @@ pub fn extract_pak_file(state: PakOpsState) {
     state.progress.set(0.0);
     state
         .progress_message
-        .set(format!("Extracting {} (this may take a while)...", pak_name));
+        .set(format!("Reading {}...", pak_name));
+
+    // Reset shared progress state
+    get_shared_progress().reset();
 
     let pak_path = pak_file.to_string_lossy().to_string();
     let dest_path = dest_dir.to_string_lossy().to_string();
 
-    let send = create_result_sender(state);
+    let send = create_result_sender(state.clone());
+    let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        // Get file count from PAK before extraction
+        let result = MacLarian::pak::PakOperations::extract_with_progress(
+            &pak_path,
+            &dest_path,
+            &|current, total, description| {
+                progress_sender(current, total, description);
+            },
+        );
+
         let file_count = MacLarian::pak::PakOperations::list(&pak_path)
             .map(|files| files.len())
             .unwrap_or(0);
-
-        let result = MacLarian::pak::PakOperations::extract(&pak_path, &dest_path);
 
         let pak_result = match result {
             Ok(_) => PakResult::ExtractDone {
@@ -85,6 +96,8 @@ pub fn extract_pak_file(state: PakOpsState) {
 
 /// List contents of a PAK file via file dialog
 pub fn list_pak_contents(state: PakOpsState) {
+    state.clear_results();
+
     let dialog = rfd::FileDialog::new()
         .set_title("Select PAK File to List")
         .add_filter("PAK Files", &["pak"]);
@@ -111,21 +124,29 @@ pub fn list_pak_contents(state: PakOpsState) {
         .unwrap_or_default();
 
     state.add_result(&format!("Listing contents of {}...", pak_name));
-    state.add_result("(Large PAK files may take a moment to read)");
     state.is_listing.set(true);
     state.show_progress.set(true);
     state.progress.set(0.0);
     state
         .progress_message
-        .set(format!("Reading {} (this may take a while)...", pak_name));
+        .set(format!("Reading {}...", pak_name));
+
+    // Reset shared progress state
+    get_shared_progress().reset();
 
     let pak_path = pak_file.to_string_lossy().to_string();
     let pak_name_clone = pak_name.clone();
 
-    let send = create_result_sender(state);
+    let send = create_result_sender(state.clone());
+    let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = MacLarian::pak::PakOperations::list(&pak_path);
+        let result = MacLarian::pak::PakOperations::list_with_progress(
+            &pak_path,
+            &|current, total, description| {
+                progress_sender(current, total, description);
+            },
+        );
 
         let pak_result = match result {
             Ok(files) => PakResult::ListDone {
@@ -148,6 +169,7 @@ pub fn list_pak_contents(state: PakOpsState) {
 
 /// Extract individual files (placeholder)
 pub fn extract_individual_files(state: PakOpsState) {
+    state.clear_results();
     state.add_result("📄 Extract Individual Files");
     state.add_result("This feature allows selecting specific files from a PAK.");
     state.add_result("Use 'List PAK Contents' first, then extract the full PAK.");
@@ -157,6 +179,8 @@ pub fn extract_individual_files(state: PakOpsState) {
 
 /// Create a PAK file from a folder via file dialog
 pub fn create_pak_file(state: PakOpsState) {
+    state.clear_results();
+
     let dialog = rfd::FileDialog::new().set_title("Select Folder to Pack");
 
     let dialog = if let Some(dir) = state.working_dir.get() {
@@ -206,6 +230,8 @@ pub fn create_pak_file(state: PakOpsState) {
 
 /// Rebuild a modified PAK file
 pub fn rebuild_pak_file(state: PakOpsState) {
+    state.clear_results();
+
     let dialog = rfd::FileDialog::new().set_title("Select Modified PAK Folder");
 
     let dialog = if let Some(dir) = state.working_dir.get() {
@@ -310,6 +336,8 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
 
 /// Validate mod structure
 pub fn validate_mod_structure(state: PakOpsState) {
+    state.clear_results();
+
     let dialog = rfd::FileDialog::new().set_title("Select Mod Folder to Validate");
 
     let dialog = if let Some(dir) = state.working_dir.get() {
@@ -394,6 +422,8 @@ pub fn validate_mod_structure(state: PakOpsState) {
 
 /// Extract a dropped PAK file
 pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
+    state.clear_results();
+
     let pak_name = Path::new(&pak_path)
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
@@ -417,18 +447,27 @@ pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
     state.progress.set(0.0);
     state
         .progress_message
-        .set(format!("Extracting {} (this may take a while)...", pak_name));
+        .set(format!("Reading {}...", pak_name));
     state.dropped_file.set(None);
 
-    let send = create_result_sender(state);
+    // Reset shared progress state
+    get_shared_progress().reset();
+
+    let send = create_result_sender(state.clone());
+    let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        // Get file count from PAK before extraction
+        let result = MacLarian::pak::PakOperations::extract_with_progress(
+            &pak_path,
+            &dest_path,
+            &|current, total, description| {
+                progress_sender(current, total, description);
+            },
+        );
+
         let file_count = MacLarian::pak::PakOperations::list(&pak_path)
             .map(|files| files.len())
             .unwrap_or(0);
-
-        let result = MacLarian::pak::PakOperations::extract(&pak_path, &dest_path);
 
         let pak_result = match result {
             Ok(_) => PakResult::ExtractDone {
@@ -449,27 +488,261 @@ pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
     });
 }
 
+/// Batch extract multiple PAK files from a folder
+pub fn batch_extract_paks(state: PakOpsState) {
+    state.clear_results();
+
+    let dialog = rfd::FileDialog::new().set_title("Select Folder Containing PAK Files");
+
+    let dialog = if let Some(dir) = state.working_dir.get() {
+        dialog.set_directory(&dir)
+    } else {
+        dialog
+    };
+
+    let Some(source_dir) = dialog.pick_folder() else {
+        return;
+    };
+
+    // Update working directory
+    state
+        .working_dir
+        .set(Some(source_dir.to_string_lossy().to_string()));
+
+    // Find all .pak files in the folder
+    let pak_files: Vec<_> = std::fs::read_dir(&source_dir)
+        .ok()
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            e.path()
+                .extension()
+                .map(|ext| ext.to_ascii_lowercase() == "pak")
+                .unwrap_or(false)
+        })
+        .map(|e| e.path())
+        .collect();
+
+    if pak_files.is_empty() {
+        state.add_result("⚠ No .pak files found in the selected folder");
+        return;
+    }
+
+    state.add_result(&format!("Found {} PAK files to extract", pak_files.len()));
+
+    // Ask for destination folder
+    let dest_dialog = rfd::FileDialog::new()
+        .set_title("Select Destination Folder for Extracted Files")
+        .set_directory(&source_dir);
+
+    let Some(dest_dir) = dest_dialog.pick_folder() else {
+        return;
+    };
+
+    let dest_path = dest_dir.to_string_lossy().to_string();
+    let pak_count = pak_files.len();
+
+    state.is_extracting.set(true);
+    state.show_progress.set(true);
+    state.progress.set(0.0);
+    state
+        .progress_message
+        .set(format!("Batch extracting {} PAK files...", pak_count));
+
+    // Reset shared progress state
+    get_shared_progress().reset();
+
+    let send = create_result_sender(state.clone());
+    let progress = create_progress_sender(state.clone());
+
+    thread::spawn(move || {
+        let mut success_count = 0;
+        let mut fail_count = 0;
+        let mut results = Vec::new();
+
+        for (i, pak_path) in pak_files.iter().enumerate() {
+            let pak_name = pak_path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+
+            // Update progress
+            progress(i + 1, pak_count, &pak_name);
+
+            // Create a subfolder for each PAK
+            let pak_dest = Path::new(&dest_path).join(
+                pak_path
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string(),
+            );
+
+            if let Err(e) = std::fs::create_dir_all(&pak_dest) {
+                results.push(format!("❌ Failed to create folder for {}: {}", pak_name, e));
+                fail_count += 1;
+                continue;
+            }
+
+            let pak_str = pak_path.to_string_lossy().to_string();
+            let dest_str = pak_dest.to_string_lossy().to_string();
+
+            match MacLarian::pak::PakOperations::extract(&pak_str, &dest_str) {
+                Ok(_) => {
+                    results.push(format!("✅ Extracted: {}", pak_name));
+                    success_count += 1;
+                }
+                Err(e) => {
+                    results.push(format!("❌ Failed {}: {}", pak_name, e));
+                    fail_count += 1;
+                }
+            }
+        }
+
+        send(PakResult::BatchExtractDone {
+            success_count,
+            fail_count,
+            results,
+            dest: dest_path,
+        });
+    });
+}
+
+/// Batch create PAK files from subfolders
+pub fn batch_create_paks(state: PakOpsState) {
+    state.clear_results();
+
+    let dialog = rfd::FileDialog::new().set_title("Select Folder Containing Subfolders to Pack");
+
+    let dialog = if let Some(dir) = state.working_dir.get() {
+        dialog.set_directory(&dir)
+    } else {
+        dialog
+    };
+
+    let Some(source_dir) = dialog.pick_folder() else {
+        return;
+    };
+
+    // Update working directory
+    state
+        .working_dir
+        .set(Some(source_dir.to_string_lossy().to_string()));
+
+    // Find all subfolders
+    let folders: Vec<_> = std::fs::read_dir(&source_dir)
+        .ok()
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.path())
+        .collect();
+
+    if folders.is_empty() {
+        state.add_result("⚠ No subfolders found in the selected folder");
+        return;
+    }
+
+    state.add_result(&format!("Found {} folders to pack", folders.len()));
+
+    // Ask for destination folder for PAK files
+    let dest_dialog = rfd::FileDialog::new()
+        .set_title("Select Destination Folder for PAK Files")
+        .set_directory(&source_dir);
+
+    let Some(dest_dir) = dest_dialog.pick_folder() else {
+        return;
+    };
+
+    let dest_path = dest_dir.to_string_lossy().to_string();
+    let folder_count = folders.len();
+
+    state.is_creating.set(true);
+    state.show_progress.set(true);
+    state.progress.set(0.0);
+    state
+        .progress_message
+        .set(format!("Batch creating {} PAK files...", folder_count));
+
+    // Reset shared progress state
+    get_shared_progress().reset();
+
+    let send = create_result_sender(state.clone());
+    let progress = create_progress_sender(state.clone());
+
+    thread::spawn(move || {
+        let mut success_count = 0;
+        let mut fail_count = 0;
+        let mut results = Vec::new();
+
+        for (i, folder_path) in folders.iter().enumerate() {
+            let folder_name = folder_path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+
+            // Update progress
+            progress(i + 1, folder_count, &folder_name);
+
+            // Create PAK file with same name as folder
+            let pak_path = Path::new(&dest_path).join(format!("{}.pak", folder_name));
+            let folder_str = folder_path.to_string_lossy().to_string();
+            let pak_str = pak_path.to_string_lossy().to_string();
+
+            match MacLarian::pak::PakOperations::create(&folder_str, &pak_str) {
+                Ok(_) => {
+                    results.push(format!("✅ Created: {}.pak", folder_name));
+                    success_count += 1;
+                }
+                Err(e) => {
+                    results.push(format!("❌ Failed {}: {}", folder_name, e));
+                    fail_count += 1;
+                }
+            }
+        }
+
+        send(PakResult::BatchCreateDone {
+            success_count,
+            fail_count,
+            results,
+            dest: dest_path,
+        });
+    });
+}
+
 /// List contents of a dropped PAK file
 pub fn list_dropped_file(state: PakOpsState, pak_path: String) {
+    state.clear_results();
+
     let pak_name = Path::new(&pak_path)
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
 
     state.add_result(&format!("Listing contents of {}...", pak_name));
-    state.add_result("(Large PAK files may take a moment to read)");
     state.is_listing.set(true);
     state.show_progress.set(true);
     state.progress.set(0.0);
     state
         .progress_message
-        .set(format!("Reading {} (this may take a while)...", pak_name));
+        .set(format!("Reading {}...", pak_name));
     state.dropped_file.set(None);
 
-    let send = create_result_sender(state);
+    // Reset shared progress state
+    get_shared_progress().reset();
+
+    let send = create_result_sender(state.clone());
+    let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = MacLarian::pak::PakOperations::list(&pak_path);
+        let result = MacLarian::pak::PakOperations::list_with_progress(
+            &pak_path,
+            &|current, total, description| {
+                progress_sender(current, total, description);
+            },
+        );
 
         let pak_result = match result {
             Ok(files) => PakResult::ListDone {

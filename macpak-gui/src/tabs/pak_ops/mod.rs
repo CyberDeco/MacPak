@@ -11,7 +11,6 @@ mod types;
 mod widgets;
 
 use floem::prelude::*;
-use floem::text::Weight;
 
 use crate::state::{AppState, PakOpsState};
 use dialogs::{create_options_dialog, drop_action_dialog, progress_overlay};
@@ -27,14 +26,6 @@ pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState) -> impl IntoVie
     // The v_stack has position: Relative so absolutely positioned children
     // are positioned relative to it
     v_stack((
-        // Title
-        label(|| "PAK Operations".to_string()).style(|s| {
-            s.font_size(24.0)
-                .font_weight(Weight::BOLD)
-                .margin_bottom(20.0)
-                .width_full()
-                .justify_center()
-        }),
         // Operations row - 3 columns
         operations_row(pak_state.clone()),
         // Results area

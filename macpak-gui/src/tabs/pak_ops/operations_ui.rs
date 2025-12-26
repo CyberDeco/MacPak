@@ -5,8 +5,8 @@ use floem::prelude::*;
 
 use crate::state::PakOpsState;
 use super::operations::{
-    create_pak_file, extract_individual_files, extract_pak_file, list_pak_contents,
-    rebuild_pak_file, validate_mod_structure,
+    batch_create_paks, batch_extract_paks, create_pak_file, extract_individual_files,
+    extract_pak_file, list_pak_contents, rebuild_pak_file, validate_mod_structure,
 };
 
 /// Main operations row with 3 columns
@@ -26,6 +26,7 @@ fn extract_group(state: PakOpsState) -> impl IntoView {
     let state1 = state.clone();
     let state2 = state.clone();
     let state3 = state.clone();
+    let state4 = state.clone();
 
     v_stack((
         // Extract PAK button
@@ -39,6 +40,10 @@ fn extract_group(state: PakOpsState) -> impl IntoView {
         // Extract Individual button
         operation_button("📄 Extract Individual Files", move || {
             extract_individual_files(state3.clone());
+        }),
+        // Batch Extract button
+        operation_button("📦 Batch Extract PAKs", move || {
+            batch_extract_paks(state4.clone());
         }),
     ))
     .style(|s| {
@@ -56,6 +61,7 @@ fn create_group(state: PakOpsState) -> impl IntoView {
     let state1 = state.clone();
     let state2 = state.clone();
     let state3 = state.clone();
+    let state4 = state.clone();
 
     v_stack((
         // Create PAK button
@@ -69,6 +75,10 @@ fn create_group(state: PakOpsState) -> impl IntoView {
         // Validate button
         operation_button("✓ Validate Mod Structure", move || {
             validate_mod_structure(state3.clone());
+        }),
+        // Batch Create button
+        operation_button("🔧 Batch Create PAKs", move || {
+            batch_create_paks(state4.clone());
         }),
     ))
     .style(|s| {

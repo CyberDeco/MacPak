@@ -1,49 +1,159 @@
 //! Dialog overlays for PAK operations
 
+use floem::action::exec_after;
 use floem::prelude::*;
 use floem::text::Weight;
+use floem_reactive::create_effect;
 use std::path::Path;
+use std::time::Duration;
 
 use crate::state::PakOpsState;
 use super::operations::{execute_create_pak, extract_dropped_file, list_dropped_file};
+use super::types::get_shared_progress;
 use super::widgets::{compression_selector, priority_input};
 
 /// Progress overlay shown during long-running operations
+/// Uses a polling timer to read shared atomic state updated by background threads
 pub fn progress_overlay(state: PakOpsState) -> impl IntoView {
     let show = state.show_progress;
-    let progress = state.progress;
-    let message = state.progress_message;
+
+    // Local signals for the polled values - these will be updated by the timer
+    let polled_pct = RwSignal::new(0u32);
+    let polled_msg = RwSignal::new(String::new());
+
+    // Signal to track the current timer token so we can cancel it
+    let timer_active = RwSignal::new(false);
+
+    // Animation counter for indeterminate progress (0-100, bounces back and forth)
+    let anim_pos = RwSignal::new(0i32);
+    let anim_direction = RwSignal::new(1i32); // 1 = forward, -1 = backward
+
+    // Function to poll shared progress and schedule next poll
+    fn poll_and_schedule(
+        polled_pct: RwSignal<u32>,
+        polled_msg: RwSignal<String>,
+        anim_pos: RwSignal<i32>,
+        anim_direction: RwSignal<i32>,
+        show: RwSignal<bool>,
+        timer_active: RwSignal<bool>,
+    ) {
+        // Read from shared atomic state
+        let shared = get_shared_progress();
+        let pct = shared.get_pct();
+        let msg = shared.get_message();
+
+        // Update local signals
+        polled_pct.set(pct);
+        if !msg.is_empty() {
+            polled_msg.set(msg);
+        }
+
+        // Update animation position for indeterminate progress
+        let current_pos = anim_pos.get_untracked();
+        let dir = anim_direction.get_untracked();
+        let new_pos = current_pos + dir * 3; // Move 3% per frame
+
+        if new_pos >= 70 {
+            anim_direction.set(-1);
+            anim_pos.set(70);
+        } else if new_pos <= 0 {
+            anim_direction.set(1);
+            anim_pos.set(0);
+        } else {
+            anim_pos.set(new_pos);
+        }
+
+        // Schedule next poll if still active
+        if show.get_untracked() && timer_active.get_untracked() {
+            exec_after(Duration::from_millis(30), move |_| {
+                if show.get_untracked() && timer_active.get_untracked() {
+                    poll_and_schedule(polled_pct, polled_msg, anim_pos, anim_direction, show, timer_active);
+                }
+            });
+        }
+    }
+
+    // Start/stop polling timer based on visibility
+    create_effect(move |_| {
+        let visible = show.get();
+        if visible {
+            // Reset and start polling immediately
+            polled_pct.set(0);
+            polled_msg.set(String::new());
+            anim_pos.set(0);
+            anim_direction.set(1);
+            timer_active.set(true);
+            // Do first poll immediately, then schedule subsequent ones
+            poll_and_schedule(polled_pct, polled_msg, anim_pos, anim_direction, show, timer_active);
+        } else {
+            // Stop polling
+            timer_active.set(false);
+        }
+    });
 
     dyn_container(
-        move || show.get(),
-        move |visible| {
+        move || {
+            let visible = show.get();
+            let pct = polled_pct.get();
+            let msg = polled_msg.get();
+            let anim = anim_pos.get();
+            (visible, pct, msg, anim)
+        },
+        move |(visible, pct, msg, anim)| {
             if visible {
-                let progress = progress;
-                let message = message;
+                // Determine if we're in indeterminate mode (reading phase with low/no progress)
+                let is_reading = msg.contains("Reading");
+                let is_indeterminate = is_reading && pct < 100;
 
                 v_stack((
-                    label(move || message.get()).style(|s| {
+                    label(move || {
+                        if is_indeterminate {
+                            msg.clone()
+                        } else if pct >= 100 {
+                            "Finishing...".to_string()
+                        } else {
+                            msg.clone()
+                        }
+                    }).style(|s| {
                         s.font_size(14.0)
                             .font_weight(Weight::MEDIUM)
                             .margin_bottom(12.0)
                     }),
                     // Progress bar
                     h_stack((
-                        container(empty().style(move |s| {
-                            let pct = progress.get();
-                            s.width_pct(pct as f64 * 100.0)
-                                .height_full()
-                                .background(Color::rgb8(33, 150, 243))
-                                .border_radius(4.0)
-                        }))
+                        container(
+                            container(empty()).style(move |s| {
+                                if is_indeterminate {
+                                    // Animated sliding bar for indeterminate progress
+                                    s.width_pct(30.0)
+                                        .height_full()
+                                        .background(Color::rgb8(33, 150, 243))
+                                        .border_radius(4.0)
+                                        .margin_left_pct(anim as f64)
+                                } else {
+                                    // Normal progress bar
+                                    let display_pct = if pct > 100 { 100 } else { pct };
+                                    s.width_pct(display_pct as f64)
+                                        .height_full()
+                                        .background(Color::rgb8(33, 150, 243))
+                                        .border_radius(4.0)
+                                }
+                            }),
+                        )
                         .style(|s| {
                             s.flex_grow(1.0)
                                 .height(8.0)
                                 .background(Color::rgb8(230, 230, 230))
                                 .border_radius(4.0)
                         }),
-                        label(move || format!("{:.0}%", progress.get() * 100.0))
-                            .style(|s| s.width(50.0).font_size(12.0)),
+                        label(move || {
+                            if is_indeterminate {
+                                "...".to_string()
+                            } else {
+                                format!("{}%", if pct > 100 { 100 } else { pct })
+                            }
+                        })
+                        .style(|s| s.width(50.0).font_size(12.0)),
                     ))
                     .style(|s| s.width_full().gap(8.0).items_center()),
                 ))
