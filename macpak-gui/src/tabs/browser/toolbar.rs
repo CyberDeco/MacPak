@@ -2,6 +2,7 @@
 
 use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
+use floem::views::PlaceholderTextClass;
 
 use crate::state::BrowserState;
 use super::operations::{apply_filters, go_up, load_directory, open_folder_dialog, refresh};
@@ -17,23 +18,40 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
     let state_filter = state.clone();
     let state_all = state.clone();
     let state_pak = state.clone();
+
+    // Binary files (LSBC and LSBS not included)
     let state_lsx = state.clone();
     let state_lsj = state.clone();
     let state_lsf = state.clone();
+    let state_lsfx = state.clone();
+    
+    // Image files
+    let state_dds = state.clone();
 
+    // Model files
+    let state_gr2 = state.clone();
+    let state_dae = state.clone();
+    let state_gltf = state.clone();
+
+    // Cheat sheet
+    // "PAK" => "📦",
+    // "LSF" | "LSX" | "LSJ" | "LSFX" | "LSBC" | "LSBS" => "📖",
+    // "DDS" | "PNG" | "JPG" | "JPEG" => "🖼️",
+    // "GR2" | "DAE" | "glTF" => "🎨",
+    // "WEM" | "WAV" => "🔊",
+    // "LUA" | "OSI" | "gameScript" | "itemScript" => "📜",
+    // "XML" | "TXT" | "KHN" | "TMPL" => "📝",
+    // "LOCA" => "🌐",
+    // "SHD" | "BSHD" | "METAL" => "✏️",
+    // "DAT" | "DATA" | "PATCH" | "CLC" | "CLM" | "CLN" => "🖥️",
+    // "ANC" | "ANM" | "ANN" => "🪄"
+    
     v_stack((
         // Row 1: Navigation + file path
         h_stack((
-            button("📂 Open Folder").action(move || {
-                open_folder_dialog(state_open.clone());
-            }),
             button("⬆️ Up").action(move || {
                 go_up(state_up.clone());
             }),
-            button("🔄 Refresh").action(move || {
-                refresh(state_refresh.clone());
-            }),
-            separator(),
             // Editable file path input - flex_grow to fill remaining space
             text_input(path_input)
                 .placeholder("Enter path or open folder...")
@@ -46,6 +64,7 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
                         .border(1.0)
                         .border_color(Color::rgb8(200, 200, 200))
                         .border_radius(4.0)
+                        .class(PlaceholderTextClass, |s| s.color(Color::rgb8(120, 120, 120)))
                 })
                 .on_key_down(
                     Key::Named(NamedKey::Enter),
@@ -57,6 +76,14 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
                         }
                     },
                 ),
+            separator(),
+            button("📂 Browse...").action(move || {
+                open_folder_dialog(state_open.clone());
+            }),
+            button("🔄 Refresh").action(move || {
+                refresh(state_refresh.clone());
+            }),
+            
         ))
         .style(|s| s.width_full().gap(8.0).items_center()),
 
@@ -70,6 +97,7 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
                         .border(1.0)
                         .border_color(Color::rgb8(200, 200, 200))
                         .border_radius(4.0)
+                        .class(PlaceholderTextClass, |s| s.color(Color::rgb8(120, 120, 120)))
                 })
                 .on_key_down(
                     Key::Named(NamedKey::Enter),
@@ -82,11 +110,27 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
                 apply_filters(state_filter.clone());
             }),
             separator(),
+            label(|| "Quick Filter:").style(|s| s.color(Color::rgb8(100, 100, 100))),
             filter_button("All", state_all),
+            separator(),
             filter_button("PAK", state_pak),
-            filter_button("LSX", state_lsx),
-            filter_button("LSJ", state_lsj),
-            filter_button("LSF", state_lsf),
+            separator(),
+            // LSF format filters
+            h_stack((
+                filter_button("LSX", state_lsx),
+                filter_button("LSJ", state_lsj),
+                filter_button("LSF", state_lsf),
+                filter_button("LSFX", state_lsfx),
+            )).style(|s| s.gap(8.0)),
+            separator(),
+            filter_button("DDS", state_dds),
+            separator(),
+            // Model format filters
+            h_stack((
+                filter_button("GR2", state_gr2),
+                filter_button("DAE", state_dae),
+                filter_button("glTF", state_gltf),
+            )).style(|s| s.gap(8.0)),
             empty().style(|s| s.flex_grow(1.0)),
         ))
         .style(|s| s.width_full().gap(8.0).items_center()),

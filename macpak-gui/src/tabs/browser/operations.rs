@@ -86,13 +86,16 @@ pub fn load_directory(dir_path: &str, state: BrowserState) {
 
                     let icon = match ext.as_str() {
                         "PAK" => "📦",
-                        "LSF" | "LSX" | "LSJ" => "📄",
+                        "LSF" | "LSX" | "LSJ" | "LSFX" | "LSBC" | "LSBS" => "📖",
                         "DDS" | "PNG" | "JPG" | "JPEG" => "🖼️",
-                        "GR2" => "🎨",
+                        "GR2" | "DAE" | "glTF" => "🎨",
                         "WEM" | "WAV" => "🔊",
-                        "LUA" => "📜",
-                        "XML" => "📝",
+                        "LUA" | "OSI" | "gameScript" | "itemScript" => "📜",
+                        "XML" | "TXT" | "KHN" | "TMPL" => "📝",
                         "LOCA" => "🌐",
+                        "SHD" | "BSHD" | "METAL" => "✏️",
+                        "DAT" | "DATA" | "PATCH" | "CLC" | "CLM" | "CLN" => "🖥️",
+                        "ANC" | "ANM" | "ANN" => "🪄",
                         _ => "📄",
                     };
                     (ext, icon.to_string())
@@ -402,7 +405,23 @@ fn resize_for_preview(img: image::RgbaImage) -> image::RgbaImage {
 pub fn is_text_file(ext: &str) -> bool {
     matches!(
         ext.to_lowercase().as_str(),
-        "lsf" | "lsx" | "lsj" | "txt" | "xml" | "json" | "lua" | "md" | "cfg" | "ini" | "yaml" | "yml" | "toml"
+        "lsf" | "lsx" | "lsj" | "khn" | "txt" | "xml" | "json" | "lua" | "md" | "cfg" | "ini" | "yaml" | "yml" | "toml"
+    )
+}
+
+/// Check if a file extension is an image file type
+pub fn is_img_file(filename: &str, ext: &str) -> bool {
+    filename.contains("_DDS") || matches!(
+        ext.to_lowercase().as_str(),
+        "dds" | "png" | "jpg" | "jpeg" | "tiff"
+    )
+}
+
+/// Check if a file extension is a 3D model file type
+pub fn is_3d_file(ext: &str) -> bool {
+    matches!(
+        ext.to_lowercase().as_str(),
+        "gr2" | "dae" | "gltf"
     )
 }
 

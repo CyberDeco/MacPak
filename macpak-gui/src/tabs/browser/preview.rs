@@ -12,6 +12,65 @@ pub fn preview_panel(state: BrowserState) -> impl IntoView {
     let preview_content = state.preview_content;
     let preview_image = state.preview_image;
 
+    dyn_container(
+        move || preview_name.get().is_empty(),
+        move |is_empty| {
+            if is_empty {
+                // Placeholder when no file is selected
+                v_stack((
+                    // Header matching the actual preview header style
+                    label(|| "Preview")
+                        .style(|s| {
+                            s.font_size(16.0)
+                                .font_weight(Weight::BOLD)
+                                .width_full()
+                                .padding(12.0)
+                                .background(Color::rgb8(248, 248, 248))
+                                .border_bottom(1.0)
+                                .border_color(Color::rgb8(220, 220, 220))
+                        }),
+                    // Placeholder content
+                    v_stack((
+                        label(|| "📄").style(|s| s.font_size(64.0)),
+                        label(|| "Select a file to preview")
+                            .style(|s| s.font_size(16.0).color(Color::rgb8(120, 120, 120))),
+                        label(|| "Click on a file in the list to see its contents")
+                            .style(|s| s.font_size(13.0).color(Color::rgb8(160, 160, 160))),
+                    ))
+                    .style(|s| {
+                        s.flex_grow(1.0)
+                            .width_full()
+                            .items_center()
+                            .justify_center()
+                            .gap(8.0)
+                            .background(Color::WHITE)
+                    }),
+                ))
+                .style(|s| {
+                    s.width_full()
+                        .height_full()
+                })
+                .into_any()
+            } else {
+                preview_content_view(preview_name, preview_info, preview_content, preview_image)
+                    .into_any()
+            }
+        },
+    )
+    .style(|s| {
+        s.width_pct(40.0)
+            .flex_grow(1.0)
+            .flex_basis(0.0)
+            .min_height(0.0)
+    })
+}
+
+fn preview_content_view(
+    preview_name: RwSignal<String>,
+    preview_info: RwSignal<String>,
+    preview_content: RwSignal<String>,
+    preview_image: RwSignal<(u64, Option<crate::state::RawImageData>)>,
+) -> impl IntoView {
     v_stack((
         // Preview header
         v_stack((
@@ -76,9 +135,8 @@ pub fn preview_panel(state: BrowserState) -> impl IntoView {
         }),
     ))
     .style(|s| {
-        s.width_pct(40.0)
-            .flex_grow(1.0)
-            .flex_basis(0.0)
+        s.width_full()
+            .height_full()
             .min_height(0.0)
     })
 }

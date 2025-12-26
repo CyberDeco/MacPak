@@ -19,6 +19,7 @@ pub fn file_list(
     let state_select = state.clone();
     let sort_column = state.sort_column;
     let sort_ascending = state.sort_ascending;
+    let current_path = state.current_path;
 
     let state_name = state.clone();
     let state_type = state.clone();
@@ -29,6 +30,77 @@ pub fn file_list(
     let state_keyboard_enter = state.clone();
     let editor_keyboard = editor_state.clone();
 
+    dyn_container(
+        move || current_path.get().is_some(),
+        move |has_folder| {
+            if !has_folder {
+                // Placeholder when no folder is opened
+                v_stack((
+                    label(|| "📁").style(|s| s.font_size(64.0)),
+                    label(|| "Select a folder to browse")
+                        .style(|s| s.font_size(16.0).color(Color::rgb8(120, 120, 120))),
+                    label(|| "Click \"Browse\" to open a folder")
+                        .style(|s| s.font_size(13.0).color(Color::rgb8(160, 160, 160))),
+                ))
+                .style(|s| {
+                    s.width_full()
+                        .height_full()
+                        .items_center()
+                        .justify_center()
+                        .gap(8.0)
+                        .background(Color::WHITE)
+                })
+                .into_any()
+            } else {
+                file_list_content(
+                    files,
+                    selected,
+                    sort_column,
+                    sort_ascending,
+                    state_select.clone(),
+                    state_name.clone(),
+                    state_type.clone(),
+                    state_size.clone(),
+                    state_modified.clone(),
+                    state_keyboard_down.clone(),
+                    state_keyboard_up.clone(),
+                    state_keyboard_enter.clone(),
+                    editor_state.clone(),
+                    editor_keyboard.clone(),
+                    active_tab,
+                )
+                .into_any()
+            }
+        },
+    )
+    .style(|s| {
+        s.width_pct(60.0)
+            .flex_grow(1.0)
+            .flex_basis(0.0)
+            .min_height(0.0)
+            .background(Color::WHITE)
+            .border_right(1.0)
+            .border_color(Color::rgb8(220, 220, 220))
+    })
+}
+
+fn file_list_content(
+    files: RwSignal<Vec<FileEntry>>,
+    selected: RwSignal<Option<usize>>,
+    sort_column: RwSignal<SortColumn>,
+    sort_ascending: RwSignal<bool>,
+    state_select: BrowserState,
+    state_name: BrowserState,
+    state_type: BrowserState,
+    state_size: BrowserState,
+    state_modified: BrowserState,
+    state_keyboard_down: BrowserState,
+    state_keyboard_up: BrowserState,
+    state_keyboard_enter: BrowserState,
+    editor_state: EditorState,
+    editor_keyboard: EditorState,
+    active_tab: RwSignal<usize>,
+) -> impl IntoView {
     v_stack((
         // Column headers
         h_stack((
@@ -111,13 +183,10 @@ pub fn file_list(
         }),
     ))
     .style(|s| {
-        s.width_pct(60.0)
-            .flex_grow(1.0)
-            .flex_basis(0.0)
-            .min_height(0.0)  // Allow v_stack to shrink
+        s.width_full()
+            .height_full()
+            .min_height(0.0)
             .background(Color::WHITE)
-            .border_right(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
     })
     .keyboard_navigable()
     .on_key_down(
