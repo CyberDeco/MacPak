@@ -18,9 +18,9 @@ thiserror.workspace = true
 flate2.workspace = true         # ZLIB/GZIP compression
 lz4.workspace = true            # LZ4 frame compression (writing LSF)
 lz4_flex.workspace = true       # LZ4 block compression (reading LSF)
+zstd.workspace = true           # Zstandard compression (newer PAK files)
 
 # Binary I/O
-larian-formats.workspace = true  # LSF reading/writing
 byteorder.workspace = true       # Reading/writing little-endian data
 
 # 3D Math & Vertex Processing
