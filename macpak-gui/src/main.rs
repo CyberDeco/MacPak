@@ -12,7 +12,6 @@ mod state;
 mod tabs;
 
 use floem::prelude::*;
-use floem::quit_app;
 use floem::Application;
 use floem::window::WindowConfig;
 
@@ -60,9 +59,11 @@ fn app_view() -> impl IntoView {
     ))
     .style(|s| s.width_full().height_full())
     .window_title(|| "MacPak - BG3 Modding Toolkit".to_string())
-    .on_cleanup(|| {
-        // Quit the app when the window is closed (macOS behavior fix)
-        quit_app();
+    .on_event(floem::event::EventListener::WindowClosed, |_| {
+        // Force quit the app when the window is closed (macOS behavior fix)
+        // Using process::exit because quit_app() alone doesn't terminate
+        // background threads or cleanup all resources on macOS
+        std::process::exit(0);
     })
 }
 
@@ -137,5 +138,5 @@ fn tab_content(
             }
         },
     )
-    .style(|s| s.width_full().flex_grow(1.0).background(Color::WHITE))
+    .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).background(Color::WHITE))
 }

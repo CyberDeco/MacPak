@@ -93,6 +93,14 @@ pub enum SortColumn {
     Modified,
 }
 
+/// Raw RGBA image data for preview display
+#[derive(Clone)]
+pub struct RawImageData {
+    pub width: u32,
+    pub height: u32,
+    pub rgba_data: Vec<u8>,
+}
+
 /// Asset Browser state
 #[derive(Clone)]
 pub struct BrowserState {
@@ -105,13 +113,16 @@ pub struct BrowserState {
     pub preview_content: RwSignal<String>,
     pub preview_name: RwSignal<String>,
     pub preview_info: RwSignal<String>,
-    pub preview_image: RwSignal<Option<Vec<u8>>>,
+    pub preview_image: RwSignal<(u64, Option<RawImageData>)>,  // (version, data) - version forces rebuilds
     pub file_count: RwSignal<usize>,
     pub folder_count: RwSignal<usize>,
     pub total_size: RwSignal<String>,
     pub status_message: RwSignal<String>,
     pub sort_column: RwSignal<SortColumn>,
     pub sort_ascending: RwSignal<bool>,
+    // Inline rename state
+    pub renaming_path: RwSignal<Option<String>>,  // Path of file being renamed (None = not renaming)
+    pub rename_text: RwSignal<String>,            // Current text in rename input
 }
 
 impl BrowserState {
@@ -126,13 +137,15 @@ impl BrowserState {
             preview_content: RwSignal::new(String::new()),
             preview_name: RwSignal::new(String::new()),
             preview_info: RwSignal::new(String::new()),
-            preview_image: RwSignal::new(None),
+            preview_image: RwSignal::new((0, None)),
             file_count: RwSignal::new(0),
             folder_count: RwSignal::new(0),
             total_size: RwSignal::new(String::new()),
             status_message: RwSignal::new(String::new()),
             sort_column: RwSignal::new(SortColumn::Name),
             sort_ascending: RwSignal::new(true),
+            renaming_path: RwSignal::new(None),
+            rename_text: RwSignal::new(String::new()),
         }
     }
 }

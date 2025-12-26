@@ -12,7 +12,7 @@ dependencies = [
  "byteorder",
  "crc32fast",
  "flate2",
- "glam",
+ "glam 0.27.0",
  "half",
  "indexmap",
  "larian-formats",
@@ -291,6 +291,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "astc-decode"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d6058e6202e20b7fa445692ec4b77ca8eb02508091fcd479ea753d9f60e376b"
+
+[[package]]
 name = "async-broadcast"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -539,12 +545,6 @@ name = "base64ct"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55248b47b0caf0546f7988906588779981c43bb1bc9d0c44087278f80cdb44ba"
-
-[[package]]
-name = "bcdec_rs"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9934c2b68e46448d814db20e34a840ef9b4e7b3b7c8b1da91161481230f6350"
 
 [[package]]
 name = "bit-set"
@@ -1213,15 +1213,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be1e0bca6c3637f992fc1cc7cbc52a78c1ef6db076dbf1059c4323d6a2048376"
 
 [[package]]
-name = "ddsfile"
-version = "0.5.2"
+name = "dds"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "479dfe1e6737aa9e96c6ac7b69689dc4c32da8383f2c12744739d76afa8b66c4"
+checksum = "e917a58e17b27d2f15626c490754ccced7f46592dc5b5f39a3013b89cba5f068"
 dependencies = [
+ "astc-decode",
  "bitflags 2.9.4",
- "byteorder",
- "enum-primitive-derive",
- "num-traits",
+ "glam 0.25.0",
+ "rayon",
+ "resize",
+ "zerocopy",
 ]
 
 [[package]]
@@ -1410,17 +1412,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.106",
-]
-
-[[package]]
-name = "enum-primitive-derive"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c375b9c5eadb68d0a6efee2999fef292f45854c3444c86f09d8ab086ba942b0e"
-dependencies = [
- "num-traits",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -1626,7 +1617,7 @@ dependencies = [
  "floem_vger_renderer",
  "im",
  "im-rc",
- "image 0.25.9",
+ "image",
  "indexmap",
  "lapce-xi-rope",
  "parking_lot",
@@ -1740,7 +1731,7 @@ dependencies = [
  "crossbeam",
  "floem-winit",
  "futures",
- "image 0.25.9",
+ "image",
  "parking_lot",
  "peniko",
  "resvg",
@@ -1759,7 +1750,7 @@ dependencies = [
  "bytemuck",
  "floem_renderer",
  "futures",
- "image 0.25.9",
+ "image",
  "peniko",
  "raw-window-handle 0.6.2",
  "resvg",
@@ -1777,7 +1768,7 @@ dependencies = [
  "floem-vger",
  "floem_renderer",
  "futures",
- "image 0.25.9",
+ "image",
  "peniko",
  "raw-window-handle 0.6.2",
  "resvg",
@@ -2101,6 +2092,12 @@ dependencies = [
  "log",
  "xml-rs",
 ]
+
+[[package]]
+name = "glam"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "151665d9be52f9bb40fc7966565d39666f2d1e69233571b71b87791c7e0528b3"
 
 [[package]]
 name = "glam"
@@ -2481,24 +2478,6 @@ dependencies = [
 
 [[package]]
 name = "image"
-version = "0.24.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5690139d2f55868e080017335e4b94cb7414274c74f1669c84fb5feba2c9f69d"
-dependencies = [
- "bytemuck",
- "byteorder",
- "color_quant",
- "exr",
- "gif 0.13.3",
- "jpeg-decoder",
- "num-traits",
- "png 0.17.16",
- "qoi",
- "tiff 0.9.1",
-]
-
-[[package]]
-name = "image"
 version = "0.25.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6506c6c10786659413faa717ceebcb8f70731c0a60cbae39795fdf114519c1a"
@@ -2516,7 +2495,7 @@ dependencies = [
  "ravif",
  "rayon",
  "rgb",
- "tiff 0.10.3",
+ "tiff",
  "zune-core 0.5.0",
  "zune-jpeg 0.5.8",
 ]
@@ -2539,22 +2518,6 @@ checksum = "525e9ff3e1a4be2fbea1fdf0e98686a6d98b4d8f937e1bf7402245af1909e8c3"
 dependencies = [
  "byteorder-lite",
  "quick-error",
-]
-
-[[package]]
-name = "image_dds"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aeb76fb263814aa9dcc4370dda5b3c129ec9b711f5076ae584035c87db3ddc1f"
-dependencies = [
- "bcdec_rs",
- "bytemuck",
- "ddsfile",
- "half",
- "image 0.24.9",
- "intel_tex_2",
- "strum",
- "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -2595,15 +2558,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "intel_tex_2"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "410e8e64fd296f11254dba8fccdc2ed35d8df41592fa96785ffc9877b6a9aaa5"
-dependencies = [
- "ispc_rt",
-]
-
-[[package]]
 name = "interpolate_name"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2630,16 +2584,6 @@ name = "is_terminal_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
-
-[[package]]
-name = "ispc_rt"
-version = "2.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "975b362d330dc07079e546ef0e7c6e7ab03f7fbcf251609d5d5dcd3caf398ed6"
-dependencies = [
- "libc",
- "num_cpus",
-]
 
 [[package]]
 name = "itertools"
@@ -2695,15 +2639,6 @@ checksum = "9afb3de4395d6b3e67a780b6de64b51c978ecf11cb9a462c66be7d4ca9039d33"
 dependencies = [
  "getrandom 0.3.3",
  "libc",
-]
-
-[[package]]
-name = "jpeg-decoder"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00810f1d8b74be64b13dbf3db89ac67740615d6c891f0e7b6179326533011a07"
-dependencies = [
- "rayon",
 ]
 
 [[package]]
@@ -2954,9 +2889,11 @@ dependencies = [
  "MacLarian",
  "MacPak",
  "chrono",
+ "dds",
  "floem",
- "image 0.25.9",
- "image_dds",
+ "floem_reactive",
+ "floem_renderer",
+ "image",
  "lazy_static",
  "rand 0.8.5",
  "regex",
@@ -3304,16 +3241,6 @@ checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
  "libm",
-]
-
-[[package]]
-name = "num_cpus"
-version = "1.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91df4bbde75afed763b708b7eee1e8e7651e02d97f6d5dd763e89367e957b23b"
-dependencies = [
- "hermit-abi",
- "libc",
 ]
 
 [[package]]
@@ -4338,6 +4265,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 
 [[package]]
+name = "resize"
+version = "0.8.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87a103d0b47e783f4579149402f7499397ab25540c7a57b2f70487a5d2d20ef0"
+dependencies = [
+ "rayon",
+ "rgb",
+]
+
+[[package]]
 name = "resvg"
 version = "0.43.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5159,9 +5096,6 @@ name = "strum"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
-dependencies = [
- "strum_macros",
-]
 
 [[package]]
 name = "strum_macros"
@@ -5327,17 +5261,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "tiff"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba1310fcea54c6a9a4fd1aad794ecc02c31682f6bfbecdf460bf19533eed1e3e"
-dependencies = [
- "flate2",
- "jpeg-decoder",
- "weezl",
 ]
 
 [[package]]

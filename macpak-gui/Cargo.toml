@@ -37,4 +37,8 @@ rand = "0.8"
 
 # Image handling for preview
 image = "0.25"
-image_dds = "0.5"
+dds = "0.2"
+
+# For custom image view
+floem_reactive = "0.2"
+floem_renderer = "0.2"

@@ -4,14 +4,109 @@
 
 use floem::prelude::*;
 use floem::event::EventPropagation;
+use floem::keyboard::{Key, NamedKey};
 use floem::text::Weight;
-use floem::views::img;
+use floem::peniko::{self, Blob};
+use floem::{ViewId, View, taffy};
+use floem::action::show_context_menu;
+use floem::menu::{Menu, MenuItem};
+use floem_reactive::create_effect;
+use floem_renderer::Renderer;
+use std::sync::Arc;
 use std::path::Path;
 use std::time::UNIX_EPOCH;
-use std::io::Cursor;
+use std::process::Command;
 
-use crate::state::{AppState, BrowserState, EditorState, FileEntry, SortColumn};
+use crate::state::{AppState, BrowserState, EditorState, FileEntry, RawImageData, SortColumn};
 use crate::tabs::load_file;
+
+// ============================================================================
+// Custom RawImg View - Displays RGBA image data without PNG encoding
+// ============================================================================
+
+/// Custom image view that works with raw RGBA pixel data
+/// Uses a dynamic cache key so each image gets its own texture slot
+pub struct RawImg {
+    id: ViewId,
+    img: Option<peniko::Image>,
+    content_node: Option<taffy::tree::NodeId>,
+    cache_key: u64,
+}
+
+/// Create a raw image view from RGBA data, width, height, and cache key
+pub fn raw_img(width: u32, height: u32, rgba_data: Vec<u8>, cache_key: u64) -> RawImg {
+    let data = Arc::new(rgba_data.into_boxed_slice());
+    let blob = Blob::new(data);
+    let image = peniko::Image::new(blob, peniko::Format::Rgba8, width, height);
+    raw_img_dynamic(move || image.clone(), cache_key)
+}
+
+fn raw_img_dynamic(image: impl Fn() -> peniko::Image + 'static, cache_key: u64) -> RawImg {
+    let id = ViewId::new();
+    create_effect(move |_| {
+        id.update_state(image());
+    });
+    RawImg {
+        id,
+        img: None,
+        content_node: None,
+        cache_key,
+    }
+}
+
+impl View for RawImg {
+    fn id(&self) -> ViewId {
+        self.id
+    }
+
+    fn debug_name(&self) -> std::borrow::Cow<'static, str> {
+        "RawImg".into()
+    }
+
+    fn update(&mut self, _cx: &mut floem::context::UpdateCx, state: Box<dyn std::any::Any>) {
+        if let Ok(img) = state.downcast::<peniko::Image>() {
+            self.img = Some(*img);
+            self.id.request_layout();
+        }
+    }
+
+    fn layout(&mut self, cx: &mut floem::context::LayoutCx) -> taffy::tree::NodeId {
+        cx.layout_node(self.id(), true, |_cx| {
+            if self.content_node.is_none() {
+                self.content_node = Some(self.id.new_taffy_node());
+            }
+            let content_node = self.content_node.unwrap();
+
+            let (width, height) = self
+                .img
+                .as_ref()
+                .map(|img| (img.width, img.height))
+                .unwrap_or((0, 0));
+
+            let style = floem::style::Style::new()
+                .width((width as f64).px())
+                .height((height as f64).px())
+                .to_taffy_style();
+            self.id.set_taffy_style(content_node, style);
+
+            vec![content_node]
+        })
+    }
+
+    fn paint(&mut self, cx: &mut floem::context::PaintCx) {
+        if let Some(ref img) = self.img {
+            let rect = self.id.get_content_rect();
+            let hash_bytes = self.cache_key.to_le_bytes();
+            cx.draw_img(
+                floem_renderer::Img {
+                    img: img.clone(),
+                    hash: &hash_bytes,
+                },
+                rect,
+            );
+        }
+    }
+}
 
 pub fn browser_tab(
     _app_state: AppState,
@@ -24,7 +119,7 @@ pub fn browser_tab(
         browser_content(browser_state.clone(), editor_state, active_tab),
         browser_status_bar(browser_state),
     ))
-    .style(|s| s.width_full().height_full())
+    .style(|s| s.width_full().height_full().min_height(0.0))
 }
 
 fn browser_toolbar(state: BrowserState) -> impl IntoView {
@@ -32,6 +127,7 @@ fn browser_toolbar(state: BrowserState) -> impl IntoView {
     let state_up = state.clone();
     let state_refresh = state.clone();
     let state_path = state.clone();
+    let state_path_nav = state.clone();
     let state_search = state.clone();
     let state_filter = state.clone();
     let state_all = state.clone();
@@ -39,6 +135,21 @@ fn browser_toolbar(state: BrowserState) -> impl IntoView {
     let state_lsx = state.clone();
     let state_lsj = state.clone();
     let state_lsf = state.clone();
+
+    // Create a signal for the path input text
+    let path_input = RwSignal::new(
+        state_path.current_path.get().unwrap_or_default()
+    );
+
+    // Keep path_input in sync with current_path
+    create_effect(move |_| {
+        let current = state_path.current_path.get();
+        if let Some(p) = current {
+            if path_input.get() != p {
+                path_input.set(p);
+            }
+        }
+    });
 
     v_stack((
         // Row 1: Navigation + file path
@@ -53,21 +164,23 @@ fn browser_toolbar(state: BrowserState) -> impl IntoView {
                 refresh(state_refresh.clone());
             }),
             separator(),
-            // File path display box
-            label(move || {
-                state_path
-                    .current_path
-                    .get()
-                    .unwrap_or_else(|| "No folder selected".to_string())
-            })
+            // Editable file path input
+            clip(
+                text_input(path_input)
+                    .placeholder("Enter path or open folder...")
+                    .style(|s| {
+                        s.width_full()
+                            .height_full()
+                            .padding(6.0)
+                    }),
+            )
             .style(|s| {
                 s.flex_grow(1.0)
-                    .padding(6.0)
+                    .height(32.0)
                     .border(1.0)
                     .border_color(Color::rgb8(200, 200, 200))
                     .border_radius(4.0)
                     .background(Color::WHITE)
-                    .text_ellipsis()
             }),
         ))
         .style(|s| s.width_full().gap(8.0).items_center()),
@@ -222,7 +335,11 @@ fn browser_content(
         // Preview panel (right side)
         preview_panel(state),
     ))
-    .style(|s| s.width_full().flex_grow(1.0))
+    .style(|s| {
+        s.width_full()
+            .flex_grow(1.0)
+            .flex_basis(0.0) // Start from 0 and grow, don't expand beyond parent
+    })
 }
 
 fn file_list(
@@ -240,6 +357,10 @@ fn file_list(
     let state_type = state.clone();
     let state_size = state.clone();
     let state_modified = state.clone();
+    let state_keyboard_down = state.clone();
+    let state_keyboard_up = state.clone();
+    let state_keyboard_enter = state.clone();
+    let editor_keyboard = editor_state.clone();
 
     v_stack((
         // Column headers
@@ -260,7 +381,7 @@ fn file_list(
                 .border_bottom(1.0)
                 .border_color(Color::rgb8(200, 200, 200))
         }),
-        // File rows
+        // File rows with scroll - use min_height(0) to allow shrinking
         scroll(
             dyn_stack(
                 move || files.get(),
@@ -268,24 +389,45 @@ fn file_list(
                 move |file| {
                     let state_row = state_select.clone();
                     let state_dbl = state_select.clone();
+                    let state_ctx = state_select.clone();
                     let editor_for_open = editor_state.clone();
+                    let editor_for_ctx = editor_state.clone();
                     let file_path = file.path.clone();
                     let file_for_select = file.clone();
                     let file_for_open = file.clone();
+                    let file_for_ctx = file.clone();
                     let idx = files.get().iter().position(|f| f.path == file_path);
 
-                    file_row(file, selected, idx)
+                    file_row(file, selected, idx, state_row.clone())
                         .on_click_stop(move |_| {
+                            // Cancel any ongoing rename when clicking elsewhere
+                            state_row.renaming_path.set(None);
                             if let Some(i) = idx {
                                 state_row.selected_index.set(Some(i));
                                 select_file(&file_for_select, state_row.clone());
                             }
                         })
                         .on_double_click(move |_| {
-                            open_file_or_folder(
+                            // Only open text files in editor on double-click
+                            open_file_or_folder_filtered(
                                 &file_for_open,
                                 state_dbl.clone(),
                                 editor_for_open.clone(),
+                                active_tab,
+                            );
+                            EventPropagation::Stop
+                        })
+                        .on_secondary_click(move |_| {
+                            // Select the file first
+                            if let Some(i) = idx {
+                                state_ctx.selected_index.set(Some(i));
+                                select_file(&file_for_ctx, state_ctx.clone());
+                            }
+                            // Show context menu
+                            show_file_context_menu(
+                                &file_for_ctx,
+                                state_ctx.clone(),
+                                editor_for_ctx.clone(),
                                 active_tab,
                             );
                             EventPropagation::Stop
@@ -298,28 +440,148 @@ fn file_list(
     ))
     .style(|s| {
         s.width_pct(60.0)
-            .height_full()
+            .flex_grow(1.0)
+            .flex_basis(0.0)
             .background(Color::WHITE)
             .border_right(1.0)
             .border_color(Color::rgb8(220, 220, 220))
     })
+    .keyboard_navigable()
+    .on_key_down(
+        Key::Named(NamedKey::ArrowDown),
+        |_| true,
+        move |_| {
+            let files_list = state_keyboard_down.files.get();
+            let current = state_keyboard_down.selected_index.get();
+            let new_idx = match current {
+                Some(i) if i + 1 < files_list.len() => Some(i + 1),
+                None if !files_list.is_empty() => Some(0),
+                _ => current,
+            };
+            if new_idx != current {
+                state_keyboard_down.selected_index.set(new_idx);
+                if let Some(i) = new_idx {
+                    if let Some(file) = files_list.get(i) {
+                        select_file(file, state_keyboard_down.clone());
+                    }
+                }
+            }
+        },
+    )
+    .on_key_down(
+        Key::Named(NamedKey::ArrowUp),
+        |_| true,
+        move |_| {
+            let files_list = state_keyboard_up.files.get();
+            let current = state_keyboard_up.selected_index.get();
+            let new_idx = match current {
+                Some(i) if i > 0 => Some(i - 1),
+                None if !files_list.is_empty() => Some(0),
+                _ => current,
+            };
+            if new_idx != current {
+                state_keyboard_up.selected_index.set(new_idx);
+                if let Some(i) = new_idx {
+                    if let Some(file) = files_list.get(i) {
+                        select_file(file, state_keyboard_up.clone());
+                    }
+                }
+            }
+        },
+    )
+    .on_key_down(
+        Key::Named(NamedKey::Enter),
+        |_| true,
+        move |_| {
+            let files_list = state_keyboard_enter.files.get();
+            if let Some(i) = state_keyboard_enter.selected_index.get() {
+                if let Some(file) = files_list.get(i) {
+                    open_file_or_folder_filtered(
+                        file,
+                        state_keyboard_enter.clone(),
+                        editor_keyboard.clone(),
+                        active_tab,
+                    );
+                }
+            }
+        },
+    )
 }
 
-fn file_row(file: FileEntry, selected: RwSignal<Option<usize>>, idx: Option<usize>) -> impl IntoView {
+fn file_row(file: FileEntry, selected: RwSignal<Option<usize>>, idx: Option<usize>, state: BrowserState) -> impl IntoView {
     let is_selected = move || selected.get() == idx;
     let icon = file.icon.clone();
     let name = file.name.clone();
     let file_type = file.file_type.clone();
     let size = file.size_formatted.clone();
     let modified = file.modified.clone();
+    let file_path = file.path.clone();
+    let file_path_for_rename = file.path.clone();
+
+    let renaming_path = state.renaming_path;
+    let rename_text = state.rename_text;
 
     h_stack((
-        // Icon + Name
+        // Icon + Name (with inline rename support)
         h_stack((
             label(move || icon.clone()).style(|s| s.width(24.0)),
-            label(move || name.clone()).style(|s| s.flex_grow(1.0).text_ellipsis()),
+            dyn_container(
+                move || {
+                    let is_renaming = renaming_path.get().as_ref() == Some(&file_path);
+                    is_renaming
+                },
+                {
+                    let name = name.clone();
+                    move |is_renaming| {
+                        let file_path_inner = file_path_for_rename.clone();
+                        let state_inner = state.clone();
+                        let name_inner = name.clone();
+                        if is_renaming {
+                            let state_esc = state_inner.clone();
+                            // Show text input for renaming
+                            text_input(rename_text)
+                                .style(|s| {
+                                    s.width_full()
+                                        .min_width(50.0)
+                                        .padding(2.0)
+                                        .border(1.0)
+                                        .border_color(Color::rgb8(33, 150, 243))
+                                        .border_radius(2.0)
+                                        .background(Color::WHITE)
+                                })
+                                .on_key_down(
+                                    Key::Named(NamedKey::Enter),
+                                    |_| true,
+                                    move |_| {
+                                        // Confirm rename
+                                        let new_name = state_inner.rename_text.get();
+                                        if !new_name.is_empty() {
+                                            perform_rename(&file_path_inner, &new_name, state_inner.clone());
+                                        }
+                                        state_inner.renaming_path.set(None);
+                                    },
+                                )
+                                .on_key_down(
+                                    Key::Named(NamedKey::Escape),
+                                    |_| true,
+                                    move |_| {
+                                        // Cancel rename
+                                        state_esc.renaming_path.set(None);
+                                    },
+                                )
+                                .into_any()
+                        } else {
+                            // Show label
+                            label(move || name_inner.clone())
+                                .style(|s| s.flex_grow(1.0).text_ellipsis())
+                                .into_any()
+                        }
+                    }
+                },
+            )
+            .style(|s| s.flex_grow(1.0).min_width(0.0)),
         ))
-        .style(|s| s.flex_grow(1.0).gap(4.0)),
+        .style(|s| s.flex_grow(1.0).gap(4.0).min_width(0.0)),
         // Type
         label(move || file_type.clone()).style(|s| {
             s.width(60.0)
@@ -357,6 +619,23 @@ fn file_row(file: FileEntry, selected: RwSignal<Option<usize>>, idx: Option<usiz
     })
 }
 
+/// Perform the actual file rename
+fn perform_rename(old_path: &str, new_name: &str, state: BrowserState) {
+    let old_path_obj = Path::new(old_path);
+    let parent = old_path_obj.parent().unwrap_or(Path::new("/"));
+    let new_path = parent.join(new_name);
+
+    match std::fs::rename(old_path, &new_path) {
+        Ok(_) => {
+            state.status_message.set("Renamed".to_string());
+            refresh(state);
+        }
+        Err(e) => {
+            state.status_message.set(format!("Rename failed: {}", e));
+        }
+    }
+}
+
 fn preview_panel(state: BrowserState) -> impl IntoView {
     let preview_name = state.preview_name;
     let preview_info = state.preview_info;
@@ -380,19 +659,29 @@ fn preview_panel(state: BrowserState) -> impl IntoView {
                 .border_color(Color::rgb8(220, 220, 220))
         }),
         // Preview content (either image or text)
+        // Uses dyn_stack with version as key to force complete view recreation on each image change.
         scroll(
-            dyn_container(
-                move || preview_image.get(),
-                move |img_data| {
-                    if let Some(data) = img_data {
-                        // Display image
-                        img(move || data.clone())
-                            .style(|s| {
-                                s.max_width_full()
-                                    .max_height_full()
-                                    .padding(12.0)
-                            })
-                            .into_any()
+            dyn_stack(
+                move || {
+                    let (version, data) = preview_image.get();
+                    vec![(version, data)]
+                },
+                |(version, _)| *version,  // Use version as unique key to force new view creation
+                move |(version, img_data)| {
+                    if let Some(data) = img_data.clone() {
+                        // Display image using custom RawImg view (no PNG encoding needed)
+                        container(
+                            raw_img(data.width, data.height, data.rgba_data, version)
+                                .style(|s| s.max_width_full().max_height_full())
+                        )
+                        .style(|s| {
+                            s.width_full()
+                                .height_full()
+                                .padding(12.0)
+                                .items_center()
+                                .justify_center()
+                        })
+                        .into_any()
                     } else {
                         // Display text
                         label(move || preview_content.get())
@@ -405,7 +694,8 @@ fn preview_panel(state: BrowserState) -> impl IntoView {
                             .into_any()
                     }
                 },
-            ),
+            )
+            .style(|s| s.width_full().flex_col()),
         )
         .style(|s| s.width_full().flex_grow(1.0).background(Color::WHITE)),
     ))
@@ -634,7 +924,9 @@ fn apply_filters(state: BrowserState) {
 
 fn select_file(file: &FileEntry, state: BrowserState) {
     state.preview_name.set(file.name.clone());
-    state.preview_image.set(None); // Clear previous image
+    // Clear previous image - increment version to ensure UI updates
+    let (version, _) = state.preview_image.get();
+    state.preview_image.set((version + 1, None));
 
     if file.is_dir {
         state.preview_info.set("Directory".to_string());
@@ -686,10 +978,12 @@ fn select_file(file: &FileEntry, state: BrowserState) {
             }
         }
         "dds" => {
-            state.preview_content.set(String::new());
-            match load_dds_as_png(path) {
-                Ok(png_data) => {
-                    state.preview_image.set(Some(png_data));
+            // Load DDS synchronously (decode to raw RGBA, no PNG encoding)
+            let current_version = state.preview_image.get().0;
+            match load_dds_image(path) {
+                Ok(img_data) => {
+                    state.preview_content.set(String::new());
+                    state.preview_image.set((current_version + 1, Some(img_data)));
                 }
                 Err(e) => {
                     state.preview_content.set(format!("[Error loading DDS: {}]", e));
@@ -697,10 +991,12 @@ fn select_file(file: &FileEntry, state: BrowserState) {
             }
         }
         "png" | "jpg" | "jpeg" => {
-            state.preview_content.set(String::new());
-            match std::fs::read(path) {
-                Ok(data) => {
-                    state.preview_image.set(Some(data));
+            // Load image synchronously (decode to raw RGBA, no PNG encoding)
+            let current_version = state.preview_image.get().0;
+            match load_standard_image(path) {
+                Ok(img_data) => {
+                    state.preview_content.set(String::new());
+                    state.preview_image.set((current_version + 1, Some(img_data)));
                 }
                 Err(e) => {
                     state.preview_content.set(format!("[Error loading image: {}]", e));
@@ -719,34 +1015,94 @@ fn select_file(file: &FileEntry, state: BrowserState) {
     }
 }
 
-/// Load a DDS file and convert it to PNG bytes using image_dds
-fn load_dds_as_png(path: &Path) -> Result<Vec<u8>, String> {
-    use image::ImageEncoder;
-    use image::codecs::png::PngEncoder;
-    use image_dds::image_from_dds;
-    use image_dds::ddsfile::Dds;
+/// Maximum preview dimension (width or height) for resizing
+/// Note: Kept small to avoid filling vger's texture atlas (each 256x256 RGBA = 256KB)
+const MAX_PREVIEW_SIZE: u32 = 256;
 
-    // Read the DDS file
-    let dds_data = std::fs::read(path).map_err(|e| e.to_string())?;
-    let dds = Dds::read(&mut Cursor::new(&dds_data)).map_err(|e| e.to_string())?;
+/// Load a DDS file, resize for preview, and return raw RGBA data
+fn load_dds_image(path: &Path) -> Result<RawImageData, String> {
+    use dds::{Decoder, ColorFormat, ImageViewMut};
 
-    // Convert to an RGBA image
-    let img = image_from_dds(&dds, 0).map_err(|e| e.to_string())?;
+    // Open and decode the DDS file
+    let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    let mut decoder = Decoder::new(file).map_err(|e| e.to_string())?;
 
-    // Encode as PNG
-    let mut png_data = Vec::new();
-    let encoder = PngEncoder::new(&mut png_data);
-    encoder.write_image(
-        img.as_raw(),
-        img.width(),
-        img.height(),
-        image::ExtendedColorType::Rgba8,
-    ).map_err(|e| e.to_string())?;
+    // Get dimensions
+    let size = decoder.main_size();
 
-    Ok(png_data)
+    // Create buffer for RGBA8 output (4 bytes per pixel)
+    let mut rgba_buffer = vec![0u8; size.pixels() as usize * 4];
+
+    // Create image view and decode
+    let view = ImageViewMut::new(&mut rgba_buffer, size, ColorFormat::RGBA_U8)
+        .ok_or_else(|| "Failed to create image view".to_string())?;
+
+    decoder.read_surface(view).map_err(|e| format!("Failed to decode DDS: {:?}", e))?;
+
+    // Create image from raw bytes for resizing
+    let img: image::RgbaImage = image::ImageBuffer::from_raw(size.width, size.height, rgba_buffer)
+        .ok_or_else(|| "Failed to create image buffer".to_string())?;
+
+    // Resize if larger than preview size
+    let img = resize_for_preview(img);
+
+    Ok(RawImageData {
+        width: img.width(),
+        height: img.height(),
+        rgba_data: img.into_raw(),
+    })
 }
 
-fn open_file_or_folder(
+/// Load a regular image file (PNG, JPG), resize for preview, and return raw RGBA data
+fn load_standard_image(path: &Path) -> Result<RawImageData, String> {
+    // Load the image
+    let img = image::open(path).map_err(|e| e.to_string())?;
+    let img = img.into_rgba8();
+
+    // Resize if larger than preview size
+    let img = resize_for_preview(img);
+
+    Ok(RawImageData {
+        width: img.width(),
+        height: img.height(),
+        rgba_data: img.into_raw(),
+    })
+}
+
+/// Resize an image to fit within the preview pane while maintaining aspect ratio
+fn resize_for_preview(img: image::RgbaImage) -> image::RgbaImage {
+    use image::imageops::FilterType;
+
+    let (width, height) = (img.width(), img.height());
+
+    // Only resize if larger than max preview size
+    if width <= MAX_PREVIEW_SIZE && height <= MAX_PREVIEW_SIZE {
+        return img;
+    }
+
+    // Calculate new dimensions maintaining aspect ratio
+    let scale = if width > height {
+        MAX_PREVIEW_SIZE as f32 / width as f32
+    } else {
+        MAX_PREVIEW_SIZE as f32 / height as f32
+    };
+
+    let new_width = (width as f32 * scale) as u32;
+    let new_height = (height as f32 * scale) as u32;
+
+    image::imageops::resize(&img, new_width, new_height, FilterType::Triangle)
+}
+
+/// Check if a file extension is a text/editable file type
+fn is_text_file(ext: &str) -> bool {
+    matches!(
+        ext.to_lowercase().as_str(),
+        "lsf" | "lsx" | "lsj" | "txt" | "xml" | "json" | "lua" | "md" | "cfg" | "ini" | "yaml" | "yml" | "toml"
+    )
+}
+
+/// Open file or folder, but only open text files in editor (not images, audio, etc.)
+fn open_file_or_folder_filtered(
     file: &FileEntry,
     state: BrowserState,
     editor_state: EditorState,
@@ -754,11 +1110,217 @@ fn open_file_or_folder(
 ) {
     if file.is_dir {
         load_directory(&file.path, state);
-    } else {
-        // Open file in Editor tab
+    } else if is_text_file(&file.extension) {
+        // Only open text files in Editor tab
         let path = Path::new(&file.path);
         load_file(path, editor_state);
-        // Switch to Editor tab (index 1)
         active_tab.set(1);
     }
+    // Non-text files: do nothing on double-click (preview is already shown)
 }
+
+/// Show context menu for a file entry
+fn show_file_context_menu(
+    file: &FileEntry,
+    state: BrowserState,
+    editor_state: EditorState,
+    active_tab: RwSignal<usize>,
+) {
+    let file_path = file.path.clone();
+    let file_ext = file.extension.clone();
+    let is_dir = file.is_dir;
+    let file_name = file.name.clone();
+
+    let mut menu = Menu::new("");
+
+    // Open in Editor (text files only)
+    if !is_dir && is_text_file(&file_ext) {
+        let path = file_path.clone();
+        let editor = editor_state.clone();
+        menu = menu.entry(
+            MenuItem::new("Open in Editor")
+                .action(move || {
+                    load_file(Path::new(&path), editor.clone());
+                    active_tab.set(1);
+                })
+        );
+        menu = menu.separator();
+    }
+
+    // Show in Finder
+    {
+        let path = file_path.clone();
+        menu = menu.entry(
+            MenuItem::new("Show in Finder")
+                .action(move || {
+                    let _ = Command::new("open")
+                        .arg("-R")
+                        .arg(&path)
+                        .spawn();
+                })
+        );
+    }
+
+    // Copy Path
+    {
+        let path = file_path.clone();
+        menu = menu.entry(
+            MenuItem::new("Copy Path")
+                .action(move || {
+                    if let Ok(mut child) = Command::new("pbcopy")
+                        .stdin(std::process::Stdio::piped())
+                        .spawn()
+                    {
+                        if let Some(stdin) = child.stdin.as_mut() {
+                            use std::io::Write;
+                            let _ = stdin.write_all(path.as_bytes());
+                        }
+                    }
+                })
+        );
+    }
+
+    menu = menu.separator();
+
+    // Rename (inline)
+    {
+        let path = file_path.clone();
+        let name = file_name.clone();
+        let browser_state = state.clone();
+        menu = menu.entry(
+            MenuItem::new("Rename")
+                .action(move || {
+                    // Start inline rename
+                    browser_state.rename_text.set(name.clone());
+                    browser_state.renaming_path.set(Some(path.clone()));
+                })
+        );
+    }
+
+    // Convert options (for LSX/LSF/LSJ files only)
+    if !is_dir {
+        let ext_lower = file_ext.to_lowercase();
+        if matches!(ext_lower.as_str(), "lsx" | "lsf" | "lsj") {
+            menu = menu.separator();
+
+            // Convert to LSX (if not already LSX)
+            if ext_lower != "lsx" {
+                let path = file_path.clone();
+                let browser_state = state.clone();
+                menu = menu.entry(
+                    MenuItem::new("Convert to LSX")
+                        .action(move || {
+                            convert_file_quick(&path, "lsx", browser_state.clone());
+                        })
+                );
+            }
+
+            // Convert to LSF (if not already LSF)
+            if ext_lower != "lsf" {
+                let path = file_path.clone();
+                let browser_state = state.clone();
+                menu = menu.entry(
+                    MenuItem::new("Convert to LSF")
+                        .action(move || {
+                            convert_file_quick(&path, "lsf", browser_state.clone());
+                        })
+                );
+            }
+
+            // Convert to LSJ (if not already LSJ)
+            if ext_lower != "lsj" {
+                let path = file_path.clone();
+                let browser_state = state.clone();
+                menu = menu.entry(
+                    MenuItem::new("Convert to LSJ")
+                        .action(move || {
+                            convert_file_quick(&path, "lsj", browser_state.clone());
+                        })
+                );
+            }
+        }
+    }
+
+    menu = menu.separator();
+
+    // Delete
+    {
+        let path = file_path.clone();
+        let browser_state = state.clone();
+        let item_type = if is_dir { "folder" } else { "file" };
+        menu = menu.entry(
+            MenuItem::new(format!("Delete {}", item_type))
+                .action(move || {
+                    delete_file(&path, browser_state.clone());
+                })
+        );
+    }
+
+    show_context_menu(menu, None);
+}
+
+/// Quick convert a file to another format in the same directory
+fn convert_file_quick(source_path: &str, target_format: &str, state: BrowserState) {
+    let source = Path::new(source_path);
+    let source_ext = source
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    // Build destination path (same directory, same name, new extension)
+    let dest_path = source.with_extension(target_format);
+    let dest = dest_path.to_string_lossy().to_string();
+
+    state.status_message.set(format!("Converting to {}...", target_format.to_uppercase()));
+
+    let result = match (source_ext.as_str(), target_format) {
+        ("lsf", "lsx") => MacLarian::converter::lsf_to_lsx(source_path, &dest),
+        ("lsx", "lsf") => MacLarian::converter::lsx_to_lsf(source_path, &dest),
+        ("lsx", "lsj") => MacLarian::converter::lsx_to_lsj(source_path, &dest),
+        ("lsj", "lsx") => MacLarian::converter::lsj_to_lsx(source_path, &dest),
+        ("lsf", "lsj") => MacLarian::converter::lsf_to_lsj(source_path, &dest),
+        ("lsj", "lsf") => MacLarian::converter::lsj_to_lsf(source_path, &dest),
+        _ => {
+            state.status_message.set(format!(
+                "Unsupported conversion: {} to {}",
+                source_ext, target_format
+            ));
+            return;
+        }
+    };
+
+    match result {
+        Ok(_) => {
+            state.status_message.set(format!("Converted to {}", target_format.to_uppercase()));
+            // Refresh the directory to show new file
+            refresh(state);
+        }
+        Err(e) => {
+            state.status_message.set(format!("Conversion failed: {}", e));
+        }
+    }
+}
+
+/// Delete a file or folder
+fn delete_file(path: &str, state: BrowserState) {
+    let path_obj = Path::new(path);
+
+    let result = if path_obj.is_dir() {
+        std::fs::remove_dir_all(path_obj)
+    } else {
+        std::fs::remove_file(path_obj)
+    };
+
+    match result {
+        Ok(_) => {
+            state.status_message.set("Deleted".to_string());
+            // Refresh to update file list
+            refresh(state);
+        }
+        Err(e) => {
+            state.status_message.set(format!("Delete failed: {}", e));
+        }
+    }
+}
+
