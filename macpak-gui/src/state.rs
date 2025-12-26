@@ -105,6 +105,7 @@ pub struct RawImageData {
 #[derive(Clone)]
 pub struct BrowserState {
     pub current_path: RwSignal<Option<String>>,
+    pub browser_path: RwSignal<String>,  // Editable path shown in toolbar
     pub selected_index: RwSignal<Option<usize>>,
     pub files: RwSignal<Vec<FileEntry>>,
     pub all_files: RwSignal<Vec<FileEntry>>,
@@ -129,6 +130,7 @@ impl BrowserState {
     pub fn new() -> Self {
         Self {
             current_path: RwSignal::new(None),
+            browser_path: RwSignal::new(String::new()),
             selected_index: RwSignal::new(None),
             files: RwSignal::new(Vec::new()),
             all_files: RwSignal::new(Vec::new()),

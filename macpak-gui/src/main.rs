@@ -138,5 +138,11 @@ fn tab_content(
             }
         },
     )
-    .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).background(Color::WHITE))
+    .style(|s| {
+        s.width_full()
+            .flex_grow(1.0)
+            .flex_basis(0.0)
+            .min_height(0.0)  // Allow content to shrink for scroll
+            .background(Color::WHITE)
+    })
 }

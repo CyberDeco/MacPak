@@ -119,37 +119,27 @@ pub fn browser_tab(
         browser_content(browser_state.clone(), editor_state, active_tab),
         browser_status_bar(browser_state),
     ))
-    .style(|s| s.width_full().height_full().min_height(0.0))
+    .style(|s| {
+        s.width_full()
+            .flex_grow(1.0)
+            .flex_basis(0.0)
+            .min_height(0.0)  // Allow shrinking for scroll to work
+    })
 }
 
 fn browser_toolbar(state: BrowserState) -> impl IntoView {
     let state_open = state.clone();
     let state_up = state.clone();
     let state_refresh = state.clone();
-    let state_path = state.clone();
-    let state_path_nav = state.clone();
+    let state_nav = state.clone();
     let state_search = state.clone();
+    let path_input = state.browser_path;
     let state_filter = state.clone();
     let state_all = state.clone();
     let state_pak = state.clone();
     let state_lsx = state.clone();
     let state_lsj = state.clone();
     let state_lsf = state.clone();
-
-    // Create a signal for the path input text
-    let path_input = RwSignal::new(
-        state_path.current_path.get().unwrap_or_default()
-    );
-
-    // Keep path_input in sync with current_path
-    create_effect(move |_| {
-        let current = state_path.current_path.get();
-        if let Some(p) = current {
-            if path_input.get() != p {
-                path_input.set(p);
-            }
-        }
-    });
 
     v_stack((
         // Row 1: Navigation + file path
@@ -164,24 +154,29 @@ fn browser_toolbar(state: BrowserState) -> impl IntoView {
                 refresh(state_refresh.clone());
             }),
             separator(),
-            // Editable file path input
-            clip(
-                text_input(path_input)
-                    .placeholder("Enter path or open folder...")
-                    .style(|s| {
-                        s.width_full()
-                            .height_full()
-                            .padding(6.0)
-                    }),
-            )
-            .style(|s| {
-                s.flex_grow(1.0)
-                    .height(32.0)
-                    .border(1.0)
-                    .border_color(Color::rgb8(200, 200, 200))
-                    .border_radius(4.0)
-                    .background(Color::WHITE)
-            }),
+            // Editable file path input - flex_grow to fill remaining space
+            text_input(path_input)
+                .placeholder("Enter path or open folder...")
+                .style(|s| {
+                    s.flex_grow(1.0)
+                        .flex_basis(0.0)
+                        .width_full()
+                        .min_width(100.0)
+                        .padding(6.0)
+                        .border(1.0)
+                        .border_color(Color::rgb8(200, 200, 200))
+                        .border_radius(4.0)
+                })
+                .on_key_down(
+                    Key::Named(NamedKey::Enter),
+                    |_| true,
+                    move |_| {
+                        let path = state_nav.browser_path.get();
+                        if !path.is_empty() {
+                            load_directory(&path, state_nav.clone());
+                        }
+                    },
+                ),
         ))
         .style(|s| s.width_full().gap(8.0).items_center()),
 
@@ -338,7 +333,8 @@ fn browser_content(
     .style(|s| {
         s.width_full()
             .flex_grow(1.0)
-            .flex_basis(0.0) // Start from 0 and grow, don't expand beyond parent
+            .flex_basis(0.0)
+            .min_height(0.0)  // Allow content area to shrink for scroll
     })
 }
 
@@ -436,12 +432,18 @@ fn file_list(
             )
             .style(|s| s.width_full().flex_col()),
         )
-        .style(|s| s.width_full().flex_grow(1.0)),
+        .style(|s| {
+            s.width_full()
+                .flex_grow(1.0)
+                .flex_basis(0.0)
+                .min_height(0.0)  // Allow scroll to shrink - critical for scroll to work
+        }),
     ))
     .style(|s| {
         s.width_pct(60.0)
             .flex_grow(1.0)
             .flex_basis(0.0)
+            .min_height(0.0)  // Allow v_stack to shrink
             .background(Color::WHITE)
             .border_right(1.0)
             .border_color(Color::rgb8(220, 220, 220))
@@ -697,9 +699,20 @@ fn preview_panel(state: BrowserState) -> impl IntoView {
             )
             .style(|s| s.width_full().flex_col()),
         )
-        .style(|s| s.width_full().flex_grow(1.0).background(Color::WHITE)),
+        .style(|s| {
+            s.width_full()
+                .flex_grow(1.0)
+                .flex_basis(0.0)
+                .min_height(0.0)
+                .background(Color::WHITE)
+        }),
     ))
-    .style(|s| s.width_pct(40.0).height_full())
+    .style(|s| {
+        s.width_pct(40.0)
+            .flex_grow(1.0)
+            .flex_basis(0.0)
+            .min_height(0.0)
+    })
 }
 
 fn browser_status_bar(state: BrowserState) -> impl IntoView {
@@ -778,6 +791,7 @@ fn load_directory(dir_path: &str, state: BrowserState) {
     }
 
     state.current_path.set(Some(dir_path.to_string()));
+    state.browser_path.set(dir_path.to_string());
 
     let mut entries: Vec<FileEntry> = Vec::new();
     let mut file_count = 0;
