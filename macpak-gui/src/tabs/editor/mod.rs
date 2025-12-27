@@ -14,7 +14,7 @@ use floem::prelude::*;
 use std::path::Path;
 
 use crate::state::{AppState, EditorTab, EditorTabsState};
-use components::{editor_content, editor_status_bar, editor_toolbar, search_panel};
+use components::{editor_content, editor_status_bar, editor_toolbar, meta_lsx_dialog, search_panel};
 
 // Re-export for external use
 pub use operations::load_file;
@@ -38,8 +38,10 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
     let tabs_state_content = tabs_state.clone();
     let tabs_state_status = tabs_state.clone();
     let tabs_state_drop = tabs_state.clone();
+    let tabs_state_dialog = tabs_state.clone();
     let show_line_numbers = tabs_state.show_line_numbers;
 
+    // Use v_stack with position: Relative so absolutely positioned dialogs work correctly
     v_stack((
         file_tab_bar(tabs_state.clone()),
         editor_toolbar(tabs_state_toolbar),
@@ -77,8 +79,14 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
         )
         .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).min_height(0.0)),
         editor_status_bar(tabs_state_status),
+        // Dialog overlay - absolutely positioned
+        meta_lsx_dialog(tabs_state_dialog),
     ))
-    .style(|s| s.width_full().height_full())
+    .style(|s| {
+        s.width_full()
+            .height_full()
+            .position(floem::style::Position::Relative)
+    })
     .on_event_cont(EventListener::DroppedFile, move |e| {
         if let Event::DroppedFile(drop_event) = e {
             let path = &drop_event.path;

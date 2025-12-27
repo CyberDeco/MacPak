@@ -10,12 +10,12 @@ mod color;
 mod handle;
 mod helpers;
 mod history;
+pub mod meta_generator;
 mod uuid;
 mod version;
 mod widgets;
 
 use floem::prelude::*;
-use floem::text::Weight;
 
 use crate::state::{AppState, ToolsState};
 use color::color_picker_section;
@@ -33,9 +33,9 @@ pub fn tools_tab(_app_state: AppState, tools_state: ToolsState) -> impl IntoView
         v_stack((
             // Title and actions
             h_stack((
-                
+
                 // Status message
-                status_bar(tools_state.status_message),                
+                status_bar(tools_state.status_message),
                 empty().style(|s| s.flex_grow(1.0)),
 
                 button("Export History").action(move || {
