@@ -72,15 +72,25 @@ pub enum Gr2Commands {
         /// GR2 file to inspect
         path: PathBuf,
     },
-    
+
     /// Extract mesh information to JSON
     Extract {
         /// Source GR2 file
         path: PathBuf,
-        
+
         /// Output JSON file
         #[arg(short, long)]
         output: PathBuf,
+    },
+
+    /// Decompress a GR2 file (all BitKnit sections)
+    Decompress {
+        /// Source GR2 file
+        path: PathBuf,
+
+        /// Output file (defaults to same directory with _decompressed suffix)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
     },
 }
 
@@ -119,6 +129,9 @@ impl Gr2Commands {
             }
             Gr2Commands::Extract { path, output } => {
                 gr2::extract_json(path, output)
+            }
+            Gr2Commands::Decompress { path, output } => {
+                gr2::decompress(path, output.as_deref())
             }
         }
     }
