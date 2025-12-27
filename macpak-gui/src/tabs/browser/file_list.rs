@@ -5,13 +5,13 @@ use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::state::{BrowserState, EditorState, FileEntry, SortColumn};
+use crate::state::{BrowserState, EditorTabsState, FileEntry, SortColumn};
 use super::context_menu::show_file_context_menu;
 use super::operations::{open_file_or_folder_filtered, perform_rename, select_file, sort_files};
 
 pub fn file_list(
     state: BrowserState,
-    editor_state: EditorState,
+    editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
     let files = state.files;
@@ -28,7 +28,7 @@ pub fn file_list(
     let state_keyboard_down = state.clone();
     let state_keyboard_up = state.clone();
     let state_keyboard_enter = state.clone();
-    let editor_keyboard = editor_state.clone();
+    let editor_keyboard = editor_tabs_state.clone();
 
     dyn_container(
         move || current_path.get().is_some(),
@@ -65,7 +65,7 @@ pub fn file_list(
                     state_keyboard_down.clone(),
                     state_keyboard_up.clone(),
                     state_keyboard_enter.clone(),
-                    editor_state.clone(),
+                    editor_tabs_state.clone(),
                     editor_keyboard.clone(),
                     active_tab,
                 )
@@ -97,8 +97,8 @@ fn file_list_content(
     state_keyboard_down: BrowserState,
     state_keyboard_up: BrowserState,
     state_keyboard_enter: BrowserState,
-    editor_state: EditorState,
-    editor_keyboard: EditorState,
+    editor_tabs_state: EditorTabsState,
+    editor_keyboard: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
     v_stack((
@@ -129,8 +129,8 @@ fn file_list_content(
                     let state_row = state_select.clone();
                     let state_dbl = state_select.clone();
                     let state_ctx = state_select.clone();
-                    let editor_for_open = editor_state.clone();
-                    let editor_for_ctx = editor_state.clone();
+                    let editor_for_open = editor_tabs_state.clone();
+                    let editor_for_ctx = editor_tabs_state.clone();
                     let file_path = file.path.clone();
                     let file_for_select = file.clone();
                     let file_for_open = file.clone();

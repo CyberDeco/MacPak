@@ -5,8 +5,8 @@ use std::time::UNIX_EPOCH;
 
 use floem::prelude::*;
 
-use crate::state::{BrowserState, EditorState, FileEntry, RawImageData, SortColumn};
-use crate::tabs::load_file;
+use crate::state::{BrowserState, EditorTabsState, FileEntry, RawImageData, SortColumn};
+use crate::tabs::load_file_in_tab;
 
 /// Format file size for display
 pub fn format_size(bytes: u64) -> String {
@@ -429,15 +429,15 @@ pub fn is_3d_file(ext: &str) -> bool {
 pub fn open_file_or_folder_filtered(
     file: &FileEntry,
     state: BrowserState,
-    editor_state: EditorState,
+    editor_tabs_state: EditorTabsState,
     active_tab: floem::prelude::RwSignal<usize>,
 ) {
     if file.is_dir {
         load_directory(&file.path, state);
     } else if is_text_file(&file.extension) {
-        // Only open text files in Editor tab
+        // Only open text files in Editor tab (opens in new tab or switches to existing)
         let path = Path::new(&file.path);
-        load_file(path, editor_state);
+        load_file_in_tab(path, editor_tabs_state);
         active_tab.set(1);
     }
     // Non-text files: do nothing on double-click (preview is already shown)

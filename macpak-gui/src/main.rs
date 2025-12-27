@@ -34,7 +34,7 @@ fn main() {
 fn app_view() -> impl IntoView {
     // Initialize all state
     let app_state = AppState::new();
-    let editor_state = EditorState::new();
+    let editor_tabs_state = EditorTabsState::new();
     let browser_state = BrowserState::new();
     let pak_ops_state = PakOpsState::new();
     let search_state = SearchState::new();
@@ -50,7 +50,7 @@ fn app_view() -> impl IntoView {
         tab_content(
             active_tab,
             app_state,
-            editor_state,
+            editor_tabs_state,
             browser_state,
             pak_ops_state,
             search_state,
@@ -119,7 +119,7 @@ fn tab_button(label_text: &'static str, index: usize, active_tab: RwSignal<usize
 fn tab_content(
     active_tab: RwSignal<usize>,
     app_state: AppState,
-    editor_state: EditorState,
+    editor_tabs_state: EditorTabsState,
     browser_state: BrowserState,
     pak_ops_state: PakOpsState,
     search_state: SearchState,
@@ -129,12 +129,12 @@ fn tab_content(
         move || active_tab.get(),
         move |tab_index| {
             match tab_index {
-                0 => browser_tab(app_state.clone(), browser_state.clone(), editor_state.clone(), active_tab).into_any(),
-                1 => editor_tab(app_state.clone(), editor_state.clone()).into_any(),
+                0 => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
+                1 => editor_tab(app_state.clone(), editor_tabs_state.clone()).into_any(),
                 2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone()).into_any(),
                 3 => search_tab(app_state.clone(), search_state.clone()).into_any(),
                 4 => tools_tab(app_state.clone(), tools_state.clone()).into_any(),
-                _ => browser_tab(app_state.clone(), browser_state.clone(), editor_state.clone(), active_tab).into_any(),
+                _ => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
             }
         },
     )

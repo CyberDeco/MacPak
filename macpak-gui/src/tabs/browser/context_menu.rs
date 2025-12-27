@@ -8,15 +8,15 @@ use floem::action::show_context_menu;
 use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 
-use crate::state::{BrowserState, EditorState, FileEntry};
-use crate::tabs::load_file;
+use crate::state::{BrowserState, EditorTabsState, FileEntry};
+use crate::tabs::load_file_in_tab;
 use super::operations::{convert_file_quick, delete_file, is_text_file};
 
 /// Show context menu for a file entry
 pub fn show_file_context_menu(
     file: &FileEntry,
     state: BrowserState,
-    editor_state: EditorState,
+    editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) {
     let file_path = file.path.clone();
@@ -29,11 +29,11 @@ pub fn show_file_context_menu(
     // Open in Editor (text files only)
     if !is_dir && is_text_file(&file_ext) {
         let path = file_path.clone();
-        let editor = editor_state.clone();
+        let editor_tabs = editor_tabs_state.clone();
         menu = menu.entry(
             MenuItem::new("Open in Editor")
                 .action(move || {
-                    load_file(Path::new(&path), editor.clone());
+                    load_file_in_tab(Path::new(&path), editor_tabs.clone());
                     active_tab.set(1);
                 })
         );

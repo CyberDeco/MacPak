@@ -4,10 +4,11 @@ use floem::prelude::*;
 use std::fs;
 use std::path::Path;
 
-use crate::state::EditorState;
+use crate::state::{EditorTab, EditorTabsState};
 use super::formatting::{format_json, format_xml};
 
-pub fn open_file_dialog(state: EditorState) {
+/// Open file dialog - creates a new tab or uses empty existing tab
+pub fn open_file_dialog(tabs_state: EditorTabsState) {
     let dialog = rfd::FileDialog::new()
         .set_title("Open File")
         .add_filter("Larian Files", &["lsx", "lsf", "lsj"])
@@ -17,11 +18,57 @@ pub fn open_file_dialog(state: EditorState) {
         .add_filter("All Files", &["*"]);
 
     if let Some(path) = dialog.pick_file() {
-        load_file(&path, state);
+        let path_str = path.to_string_lossy().to_string();
+
+        // Check if file is already open
+        if tabs_state.switch_to_file(&path_str) {
+            return;
+        }
+
+        // Check if current tab is empty (new, unmodified, no content)
+        let use_current = tabs_state.active_tab().map_or(false, |tab| {
+            tab.file_path.get().is_none()
+                && tab.content.get().is_empty()
+                && !tab.modified.get()
+        });
+
+        let tab = if use_current {
+            tabs_state.active_tab().unwrap()
+        } else {
+            tabs_state.new_tab()
+        };
+
+        load_file(&path, tab);
     }
 }
 
-pub fn load_file(path: &Path, state: EditorState) {
+/// Load a file into a specific tab (used by browser and other components)
+pub fn load_file_in_tab(path: &Path, tabs_state: EditorTabsState) {
+    let path_str = path.to_string_lossy().to_string();
+
+    // Check if file is already open
+    if tabs_state.switch_to_file(&path_str) {
+        return;
+    }
+
+    // Check if current tab is empty
+    let use_current = tabs_state.active_tab().map_or(false, |tab| {
+        tab.file_path.get().is_none()
+            && tab.content.get().is_empty()
+            && !tab.modified.get()
+    });
+
+    let tab = if use_current {
+        tabs_state.active_tab().unwrap()
+    } else {
+        tabs_state.new_tab()
+    };
+
+    load_file(path, tab);
+}
+
+/// Load file contents into the given tab
+pub fn load_file(path: &Path, tab: EditorTab) {
     let path_str = path.to_string_lossy().to_string();
     let ext = path
         .extension()
@@ -29,61 +76,44 @@ pub fn load_file(path: &Path, state: EditorState) {
         .unwrap_or("")
         .to_uppercase();
 
-    state.file_format.set(ext.clone());
-    state.file_path.set(Some(path_str.clone()));
-    state.status_message.set("Loading...".to_string());
+    tab.file_format.set(ext.clone());
+    tab.file_path.set(Some(path_str.clone()));
 
     match ext.as_str() {
         "LSX" => {
             match fs::read_to_string(path) {
                 Ok(content) => {
                     // Skip formatting for large files (>500KB)
-                    let (formatted, was_large) = if content.len() > 500_000 {
-                        (content, true)
+                    let formatted = if content.len() > 500_000 {
+                        content
                     } else {
-                        (format_xml(&content), false)
+                        format_xml(&content)
                     };
 
-                    state.content.set(formatted);
-                    state.modified.set(false);
-                    state.converted_from_lsf.set(false);
-
-                    if was_large {
-                        state
-                            .status_message
-                            .set("Large file - formatting skipped".to_string());
-                    } else {
-                        state.status_message.set("File loaded".to_string());
-                    }
+                    tab.content.set(formatted);
+                    tab.modified.set(false);
+                    tab.converted_from_lsf.set(false);
                 }
-                Err(e) => {
-                    state.status_message.set(format!("Error: {}", e));
+                Err(_e) => {
+                    tab.content.set(String::new());
                 }
             }
         }
         "LSJ" => {
             match fs::read_to_string(path) {
                 Ok(content) => {
-                    let (formatted, was_large) = if content.len() > 500_000 {
-                        (content, true)
+                    let formatted = if content.len() > 500_000 {
+                        content
                     } else {
-                        (format_json(&content), false)
+                        format_json(&content)
                     };
 
-                    state.content.set(formatted);
-                    state.modified.set(false);
-                    state.converted_from_lsf.set(false);
-
-                    if was_large {
-                        state
-                            .status_message
-                            .set("Large file - formatting skipped".to_string());
-                    } else {
-                        state.status_message.set("File loaded".to_string());
-                    }
+                    tab.content.set(formatted);
+                    tab.modified.set(false);
+                    tab.converted_from_lsf.set(false);
                 }
-                Err(e) => {
-                    state.status_message.set(format!("Error: {}", e));
+                Err(_e) => {
+                    tab.content.set(String::new());
                 }
             }
         }
@@ -92,36 +122,22 @@ pub fn load_file(path: &Path, state: EditorState) {
             match MacLarian::formats::lsf::read_lsf(path) {
                 Ok(lsf_doc) => match MacLarian::converter::to_lsx(&lsf_doc) {
                     Ok(content) => {
-                        let (formatted, was_large) = if content.len() > 500_000 {
-                            (content, true)
+                        let formatted = if content.len() > 500_000 {
+                            content
                         } else {
-                            (format_xml(&content), false)
+                            format_xml(&content)
                         };
 
-                        state.content.set(formatted);
-                        state.modified.set(false);
-                        state.converted_from_lsf.set(true);
-
-                        if was_large {
-                            state
-                                .status_message
-                                .set("Converted from LSF (large file)".to_string());
-                        } else {
-                            state
-                                .status_message
-                                .set("Converted from LSF - use Save As".to_string());
-                        }
+                        tab.content.set(formatted);
+                        tab.modified.set(false);
+                        tab.converted_from_lsf.set(true);
                     }
-                    Err(e) => {
-                        state
-                            .status_message
-                            .set(format!("Conversion error: {}", e));
+                    Err(_e) => {
+                        tab.content.set(String::new());
                     }
                 },
-                Err(e) => {
-                    state
-                        .status_message
-                        .set(format!("Failed to read LSF: {}", e));
+                Err(_e) => {
+                    tab.content.set(String::new());
                 }
             }
         }
@@ -129,40 +145,33 @@ pub fn load_file(path: &Path, state: EditorState) {
             // Unknown format - try to read as text
             match fs::read_to_string(path) {
                 Ok(content) => {
-                    state.content.set(content);
-                    state.modified.set(false);
-                    state.converted_from_lsf.set(false);
-                    state.status_message.set("File loaded".to_string());
+                    tab.content.set(content);
+                    tab.modified.set(false);
+                    tab.converted_from_lsf.set(false);
                 }
                 Err(_) => {
-                    state
-                        .content
-                        .set("[Binary file - cannot display]".to_string());
-                    state.status_message.set("Binary file".to_string());
+                    tab.content.set("[Binary file - cannot display]".to_string());
                 }
             }
         }
     }
 }
 
-pub fn save_file(state: EditorState) {
-    if let Some(path) = state.file_path.get() {
-        let content = state.content.get();
+pub fn save_file(tab: EditorTab) {
+    if let Some(path) = tab.file_path.get() {
+        let content = tab.content.get();
         match fs::write(&path, &content) {
             Ok(_) => {
-                state.modified.set(false);
-                state.status_message.set("Saved".to_string());
+                tab.modified.set(false);
             }
-            Err(e) => {
-                state.status_message.set(format!("Save failed: {}", e));
+            Err(_e) => {
+                // Error handling without status_message on tab
             }
         }
-    } else {
-        state.status_message.set("No file loaded".to_string());
     }
 }
 
-pub fn save_file_as_dialog(state: EditorState) {
+pub fn save_file_as_dialog(tab: EditorTab) {
     let dialog = rfd::FileDialog::new()
         .set_title("Save As")
         .add_filter("LSX (XML)", &["lsx"])
@@ -170,35 +179,30 @@ pub fn save_file_as_dialog(state: EditorState) {
         .add_filter("All Files", &["*"]);
 
     if let Some(path) = dialog.save_file() {
-        let content = state.content.get();
+        let content = tab.content.get();
         match fs::write(&path, &content) {
             Ok(_) => {
                 let path_str = path.to_string_lossy().to_string();
-                state.file_path.set(Some(path_str));
-                state.modified.set(false);
-                state.converted_from_lsf.set(false);
+                tab.file_path.set(Some(path_str));
+                tab.modified.set(false);
+                tab.converted_from_lsf.set(false);
 
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                    state.file_format.set(ext.to_uppercase());
+                    tab.file_format.set(ext.to_uppercase());
                 }
-
-                state.status_message.set("Saved".to_string());
             }
-            Err(e) => {
-                state.status_message.set(format!("Save failed: {}", e));
+            Err(_e) => {
+                // Error handling
             }
         }
     }
 }
 
-pub fn format_content(state: EditorState) {
-    let content = state.content.get();
-    let format = state.file_format.get().to_uppercase();
+pub fn format_content(tab: EditorTab) {
+    let content = tab.content.get();
+    let format = tab.file_format.get().to_uppercase();
 
     if content.is_empty() {
-        state
-            .status_message
-            .set("No content to format".to_string());
         return;
     }
 
@@ -208,19 +212,16 @@ pub fn format_content(state: EditorState) {
         _ => content,
     };
 
-    state.content.set(formatted);
-    state.modified.set(true);
-    state.status_message.set("Content formatted".to_string());
+    tab.content.set(formatted);
+    tab.modified.set(true);
 }
 
-pub fn validate_content(state: EditorState) {
-    let content = state.content.get();
-    let format = state.file_format.get().to_uppercase();
+pub fn validate_content(tab: EditorTab, status_message: RwSignal<String>) {
+    let content = tab.content.get();
+    let format = tab.file_format.get().to_uppercase();
 
     if content.is_empty() {
-        state
-            .status_message
-            .set("No content to validate".to_string());
+        status_message.set("No content to validate".to_string());
         return;
     }
 
@@ -237,21 +238,20 @@ pub fn validate_content(state: EditorState) {
     };
 
     match result {
-        Ok(msg) => state.status_message.set(msg.to_string()),
-        Err(msg) => state.status_message.set(msg),
+        Ok(msg) => status_message.set(msg.to_string()),
+        Err(msg) => status_message.set(msg),
     }
 }
 
-pub fn convert_file(state: EditorState, target_format: &str) {
-    let source_path = match state.file_path.get() {
+pub fn convert_file(tab: EditorTab, target_format: &str) {
+    let source_path = match tab.file_path.get() {
         Some(p) => p,
         None => {
-            state.status_message.set("No file loaded".to_string());
             return;
         }
     };
 
-    let current_format = state.file_format.get().to_lowercase();
+    let current_format = tab.file_format.get().to_lowercase();
     let target = target_format.to_lowercase();
 
     // Show save dialog for converted file
@@ -262,10 +262,8 @@ pub fn convert_file(state: EditorState, target_format: &str) {
     if let Some(dest_path) = dialog.save_file() {
         let dest = dest_path.to_string_lossy().to_string();
 
-        state.status_message.set("Converting...".to_string());
-
         // Perform conversion
-        let result = match (current_format.as_str(), target.as_str()) {
+        let _result = match (current_format.as_str(), target.as_str()) {
             ("lsf", "lsx") => MacLarian::converter::lsf_to_lsx(&source_path, &dest),
             ("lsx", "lsf") => MacLarian::converter::lsx_to_lsf(&source_path, &dest),
             ("lsx", "lsj") => MacLarian::converter::lsx_to_lsj(&source_path, &dest),
@@ -273,25 +271,8 @@ pub fn convert_file(state: EditorState, target_format: &str) {
             ("lsf", "lsj") => MacLarian::converter::lsf_to_lsj(&source_path, &dest),
             ("lsj", "lsf") => MacLarian::converter::lsj_to_lsf(&source_path, &dest),
             _ => {
-                state.status_message.set(format!(
-                    "Unsupported conversion: {} to {}",
-                    current_format, target
-                ));
                 return;
             }
         };
-
-        match result {
-            Ok(_) => {
-                state
-                    .status_message
-                    .set(format!("Converted to {}", target.to_uppercase()));
-            }
-            Err(e) => {
-                state
-                    .status_message
-                    .set(format!("Conversion failed: {}", e));
-            }
-        }
     }
 }

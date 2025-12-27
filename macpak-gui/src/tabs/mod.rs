@@ -8,6 +8,7 @@ pub mod tools;
 
 pub use editor::editor_tab;
 pub use editor::load_file;
+pub use editor::load_file_in_tab;
 pub use browser::browser_tab;
 pub use pak_ops::pak_ops_tab;
 pub use search::search_tab;

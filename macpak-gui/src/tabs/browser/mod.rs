@@ -12,7 +12,7 @@ mod toolbar;
 
 use floem::prelude::*;
 
-use crate::state::{AppState, BrowserState, EditorState};
+use crate::state::{AppState, BrowserState, EditorTabsState};
 use file_list::file_list;
 use preview::preview_panel;
 use status_bar::browser_status_bar;
@@ -21,12 +21,12 @@ use toolbar::browser_toolbar;
 pub fn browser_tab(
     _app_state: AppState,
     browser_state: BrowserState,
-    editor_state: EditorState,
+    editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
     v_stack((
         browser_toolbar(browser_state.clone()),
-        browser_content(browser_state.clone(), editor_state, active_tab),
+        browser_content(browser_state.clone(), editor_tabs_state, active_tab),
         browser_status_bar(browser_state),
     ))
     .style(|s| {
@@ -39,12 +39,12 @@ pub fn browser_tab(
 
 fn browser_content(
     state: BrowserState,
-    editor_state: EditorState,
+    editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
     h_stack((
         // File list (left side)
-        file_list(state.clone(), editor_state, active_tab),
+        file_list(state.clone(), editor_tabs_state, active_tab),
         // Preview panel (right side)
         preview_panel(state),
     ))
