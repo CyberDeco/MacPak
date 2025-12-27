@@ -24,6 +24,7 @@ pub mod prelude {
     pub use crate::formats::lsf::{LsfDocument, LsfNode, LsfAttribute};
     pub use crate::formats::lsx::{LsxDocument, LsxRegion, LsxNode, LsxAttribute};
     pub use crate::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
+    pub use crate::formats::gr2::decompress_gr2;
     pub use crate::pak::PakOperations;
     pub use crate::converter;
 }

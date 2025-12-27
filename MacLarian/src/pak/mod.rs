@@ -13,5 +13,5 @@ pub use creator::create_pak;
 pub use extractor::extract_pak;
 pub use lister::list_pak_contents;
 
-// Re-export new LSPK reader types
+// Re-export LSPK reader types
 pub use lspk::{LspkReader, PakContents, PakFile, PakPhase, PakProgress};

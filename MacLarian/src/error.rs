@@ -6,18 +6,24 @@ use lz4_flex::frame::Error as Lz4FrameError;
 pub enum Error {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Invalid LSF magic: expected LSOF, found {0:?}")]
     InvalidLsfMagic([u8; 4]),
-    
+
     #[error("Unsupported LSF version: {0} (supported: 2-7)")]
     UnsupportedLsfVersion(u32),
 
     #[error("Invalid PAK magic: expected LSPK")]
     InvalidPakMagic,
-    
+
     #[error("Decompression failed: {0}")]
     DecompressionError(String),
+
+    #[error("Decompression error: {0}")]
+    Decompression(String),
+
+    #[error("Unexpected end of file")]
+    UnexpectedEof,
     
     #[error("Compression failed: {0}")]
     CompressionError(String),
