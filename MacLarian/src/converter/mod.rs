@@ -26,7 +26,7 @@ pub use lsj_to_lsf::convert_lsj_to_lsf;
 pub use lsj_to_lsx::{convert_lsj_to_lsx, to_lsx as lsj_to_lsx_doc};
 
 // GR2/glTF conversion exports
-pub use gr2_to_gltf::{convert_gr2_to_glb, convert_gr2_bytes_to_glb};
+pub use gr2_to_gltf::{convert_gr2_to_glb, convert_gr2_to_gltf, convert_gr2_bytes_to_glb};
 pub use gltf_to_gr2::{convert_gltf_to_gr2, convert_gltf_bytes_to_gr2};
 
 // Convenience aliases

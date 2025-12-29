@@ -106,6 +106,8 @@ pub struct GltfBufferView {
 pub struct GltfBuffer {
     #[serde(rename = "byteLength")]
     pub byte_length: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uri: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -603,7 +605,7 @@ impl GltfBuilder {
         node_idx
     }
 
-    fn build_document(self, root_bone_idx: Option<usize>) -> (GltfDocument, Vec<u8>) {
+    fn build_document(self, root_bone_idx: Option<usize>, buffer_uri: Option<String>) -> (GltfDocument, Vec<u8>) {
         let mut scene_nodes = Vec::new();
 
         if let Some(root_idx) = root_bone_idx {
@@ -633,6 +635,7 @@ impl GltfBuilder {
             buffer_views: self.buffer_views,
             buffers: vec![GltfBuffer {
                 byte_length: self.buffer.len(),
+                uri: buffer_uri,
             }],
         };
 
@@ -641,7 +644,7 @@ impl GltfBuilder {
 
     /// Build GLB data and return as bytes.
     pub fn build_glb(self, root_bone_idx: Option<usize>) -> Result<Vec<u8>> {
-        let (doc, buffer) = self.build_document(root_bone_idx);
+        let (doc, buffer) = self.build_document(root_bone_idx, None);
         let json = serde_json::to_string(&doc)
             .map_err(|e| Error::ConversionError(format!("JSON serialization error: {}", e)))?;
         let json_bytes = json.as_bytes();
@@ -684,6 +687,32 @@ impl GltfBuilder {
         let glb_data = self.build_glb(root_bone_idx)?;
         let mut file = File::create(path)?;
         file.write_all(&glb_data)?;
+        Ok(())
+    }
+
+    /// Export as separate .gltf (JSON) and .bin (binary buffer) files.
+    pub fn export_gltf(self, path: &Path, root_bone_idx: Option<usize>) -> Result<()> {
+        // Determine the .bin file name (same base name, .bin extension)
+        let bin_filename = path.file_stem()
+            .and_then(|s| s.to_str())
+            .map(|s| format!("{}.bin", s))
+            .ok_or_else(|| Error::ConversionError("Invalid output path".to_string()))?;
+
+        let bin_path = path.with_file_name(&bin_filename);
+
+        // Build document with URI pointing to the .bin file
+        let (doc, buffer) = self.build_document(root_bone_idx, Some(bin_filename));
+
+        // Write JSON to .gltf file
+        let json = serde_json::to_string_pretty(&doc)
+            .map_err(|e| Error::ConversionError(format!("JSON serialization error: {}", e)))?;
+        let mut gltf_file = File::create(path)?;
+        gltf_file.write_all(json.as_bytes())?;
+
+        // Write binary buffer to .bin file
+        let mut bin_file = File::create(&bin_path)?;
+        bin_file.write_all(&buffer)?;
+
         Ok(())
     }
 }

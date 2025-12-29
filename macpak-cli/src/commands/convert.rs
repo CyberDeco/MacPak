@@ -78,6 +78,10 @@ pub fn execute(
             println!("Converting GR2 → GLB");
             MacLarian::converter::convert_gr2_to_glb(source, destination)?;
         }
+        ("gr2", "gltf") => {
+            println!("Converting GR2 → glTF");
+            MacLarian::converter::convert_gr2_to_gltf(source, destination)?;
+        }
         ("glb" | "gltf", "gr2") => {
             println!("Converting glTF → GR2");
             println!("Note: Output will be uncompressed (compression not yet implemented)");
@@ -98,7 +102,7 @@ pub fn execute(
                  • LSF ↔ LSX\n\
                  • LSF ↔ LSJ (via intermediary LSX)\n\
                  • LSX ↔ LSJ\n\
-                 • GR2 → GLB\n\
+                 • GR2 → GLB/glTF\n\
                  • GLB/glTF → GR2",
                 input, output
             );

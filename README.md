@@ -31,8 +31,9 @@ Status:
 - [x] Working: inline text file editor with multiple tabbed support and meta.lsx generator
 - [x] Working: various QOL things - UUID/TranslatedString generator, color picker/saver, etc.
 - [x] Temporarily working: DDS file previews (it's a little jank because it's a stopgap fix)
-- [x] Working: convert .gr2 files to .glb (to .glTF is coming)
-- [ ] Currently: converting .glTF back to .gr2
+- [x] Working: convert .gr2 files <> .glb or .glTF (same as .glb but .bin is its own file)
+  - Attempted: reverse-engineering compression for .gr2 files, but got to be too annoying for just a QOL implementation
+- [ ] Currently: creating a GUI tab for gr2 <> glTF single/batch conversion
 - [ ] Future: incorporate bevy for 3D model rendering (just previews)
 
 I'll get to making a fleshed out wiki once it's release-worthy.
