@@ -31,7 +31,7 @@ Status:
 - [x] Working: inline text file editor with multiple tabbed support and meta.lsx generator
 - [x] Working: various QOL things - UUID/TranslatedString generator, color picker/saver, etc.
 - [x] Temporarily working: DDS file previews (it's a little jank because it's a stopgap fix)
-- [x] Working: convert .gr2 files to .glb
+- [x] Working: convert .gr2 files to .glb (to .glTF is coming)
 - [ ] Currently: converting .glTF back to .gr2
 - [ ] Future: incorporate bevy for 3D model rendering (just previews)
 
@@ -68,7 +68,7 @@ Maybe? But this has been a lot to put together, it's my first time doing anythin
 
 Because attempting this in Python first made me realize I needed a beefier (read: compiler) language and I didn't want to learn C, C#, or C++, among other reasons.
 
-# Credits
+## Credits
 
 Core MacPak functionality is derived from (and wouldn't be possible without):
 - [LSLib](https://github.com/Norbyte/lslib) 

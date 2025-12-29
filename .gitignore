@@ -26,9 +26,6 @@
 /tests/
 **/tests/
 
-# GR2 Decompressor
-MacLarian/src/formats/gr2/decompress.rs
-
 # ==========================
 # IDEs and Editors
 # ==========================
