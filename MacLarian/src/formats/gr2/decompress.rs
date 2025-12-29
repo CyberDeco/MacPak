@@ -181,7 +181,8 @@ impl RANSState {
         let code = self.bits & ((1 << cdf.frequency_bits) - 1);
         let sym = cdf.find_symbol(code);
         let freq = cdf.frequency(sym) as u32;
-        self.bits = (self.bits >> cdf.frequency_bits) * freq + code - cdf.sum_below(sym) as u32;
+        let cumul = cdf.sum_below(sym) as u32;
+        self.bits = (self.bits >> cdf.frequency_bits) * freq + code - cumul;
         self.maybe_refill(stream);
         sym
     }
@@ -363,14 +364,8 @@ impl Bitknit2State {
 
         while self.index < boundary {
             let model_index = self.index % 4;
-            let command = self.pop_model(stream, model_index, &mut state1, &mut state2);
 
-            // Debug: trace first commands
-            if self.index < 70 && self.output.len() < 1000 {
-                eprintln!("decode: index={}, model_idx={}, command={} ({})",
-                          self.index, model_index, command,
-                          if command >= 256 { "COPY" } else { "LIT" });
-            }
+            let command = self.pop_model(stream, model_index, &mut state1, &mut state2);
 
             if command >= 256 {
                 self.decode_copy(stream, command, &mut state1, &mut state2)?;
@@ -397,11 +392,6 @@ impl Bitknit2State {
         state2: &mut RANSState,
     ) -> Result<()> {
         let model_index = self.index % 4;
-
-        // Debug: trace first copy
-        if self.index < 100 && self.output.len() < 1000 {
-            eprintln!("decode_copy: index={}, command={}, model_idx={}", self.index, command, model_index);
-        }
 
         let copy_length = if command < 288 {
             command - 254
@@ -434,10 +424,8 @@ impl Bitknit2State {
 
         self.delta_offset = copy_offset as usize;
 
-        // Debug: check for invalid offset
+        // Validate copy offset
         if copy_offset as usize > self.index {
-            eprintln!("DECODE ERROR: index={}, copy_offset={}, copy_length={}, cache_ref={}",
-                      self.index, copy_offset, copy_length, cache_ref);
             return Err(crate::error::Error::Decompression(
                 format!("Copy offset {} exceeds current position {}", copy_offset, self.index)
             ));
@@ -487,13 +475,6 @@ impl Bitknit2State {
         state1: &mut RANSState,
         state2: &mut RANSState,
     ) -> usize {
-        // Debug: show CDF for first copy
-        if self.index == 56 && self.output.len() < 1000 {
-            let cdf = &self.cache_reference_models[model_index].cdf;
-            eprintln!("  Decoding cache_ref, CDF[0..10]: {:?}",
-                      &cdf.sums[..10.min(cdf.sums.len())]);
-            eprintln!("  BEFORE: state1={:#x}, state2={:#x}", state1.bits, state2.bits);
-        }
         let result = state1.pop_cdf(stream, &self.cache_reference_models[model_index].cdf);
         self.cache_reference_models[model_index].observe_symbol(result);
         std::mem::swap(&mut state1.bits, &mut state2.bits);
@@ -528,12 +509,6 @@ impl Bitknit2State {
         state2.bits = (merged.bits << 16) | stream.pop() as u32;
         state2.bits &= (1 << (16 + split)) - 1;
         state2.bits |= 1 << (16 + split);
-
-        // Debug: show initial states
-        if self.output.len() < 1000 {
-            eprintln!("decode_initial_state: init_0={:#x}, init_1={:#x}, split={}, state1={:#x}, state2={:#x}",
-                      init_0, init_1, split, state1.bits, state2.bits);
-        }
     }
 }
 

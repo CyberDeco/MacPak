@@ -1,4 +1,4 @@
-# MacPak - BG3 Modding Toolkit for macOS
+# MacPak - A BG3 Modding Toolkit for macOS
 
 <p align="center">
     <a href="#">
@@ -8,7 +8,7 @@
 
 ---
 
-macOS BG3 modding tool combining functionality from [Norbyte's ExportTool](https://github.com/Norbyte/lslib/releases) and [ShinyHobo's Baldur's Gate 3 Modder's Multitool](https://github.com/ShinyHobo/BG3-Modders-Multitool), along with a whole mess of unique features as well.
+*Baldurs Gate 3 modding tools for macOS? In **this** economy?*
 
 ---
 
@@ -19,7 +19,7 @@ macOS BG3 modding tool combining functionality from [Norbyte's ExportTool](https
 Components:
 
 - MacPak - the frontend name of the project and eventual app, calls MacLarian on the backend
-- MacLarian - the backend powerhouse behind MacPak (like the sports car... and Larian... and macOS...)
+- MacLarian - the "engine behind MacPak (macOS + Larian = the sports car manufacturer...?)
 - macpak-cli - command-line interface, called by MacLarian and passed into MacPak
 - macpak-gui - the desktop app
 
@@ -66,7 +66,7 @@ Maybe? But this has been a lot to put together, it's my first time doing anythin
 
 ## Why is this written in *Rust*???
 
-Because attempting this in Python first made me realize I needed a beefier (read: compiler) language and I didn't want to learn C, C#, or C++, among other reasons.
+Because attempting this in Python first made me realize I needed a beefier (read: compiler) language and I didn't want to learn C, C#, or C++.
 
 ## Credits
 
