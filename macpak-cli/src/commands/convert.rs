@@ -73,12 +73,23 @@ pub fn execute(
             MacLarian::converter::lsj_to_lsf(source, destination)?;
         }
         
+        // GR2/glTF conversions
+        ("gr2", "glb") => {
+            println!("Converting GR2 → GLB");
+            MacLarian::converter::convert_gr2_to_glb(source, destination)?;
+        }
+        ("glb" | "gltf", "gr2") => {
+            println!("Converting glTF → GR2");
+            println!("Note: Output will be uncompressed (compression not yet implemented)");
+            MacLarian::converter::convert_gltf_to_gr2(source, destination)?;
+        }
+
         // Same format (copy)
         (fmt1, fmt2) if fmt1 == fmt2 => {
             println!("Source and destination formats are the same, copying file...");
             std::fs::copy(source, destination)?;
         }
-        
+
         // Unsupported
         _ => {
             anyhow::bail!(
@@ -86,7 +97,9 @@ pub fn execute(
                  Supported conversions:\n\
                  • LSF ↔ LSX\n\
                  • LSF ↔ LSJ (via intermediary LSX)\n\
-                 • LSX ↔ LSJ",
+                 • LSX ↔ LSJ\n\
+                 • GR2 → GLB\n\
+                 • GLB/glTF → GR2",
                 input, output
             );
         }

@@ -1,118 +1,152 @@
-//! GR2 file inspection, extraction, and decompression
+//! GR2 CLI commands
+//!
+//! Commands for inspecting, converting, and decompressing GR2 files.
 
 use std::path::Path;
-use MacPak::operations::gr2;
+use MacPak::operations::gr2 as gr2_ops;
 
+/// Inspect a GR2 file and display its structure.
 pub fn inspect(path: &Path) -> anyhow::Result<()> {
-    println!("=== GR2 File Inspector ===\n");
-    println!("File: {}\n", path.display());
+    println!("Inspecting GR2 file: {}", path.display());
+    println!();
 
-    let file_size = std::fs::metadata(path)?.len();
-    let (compression_type, sections) = gr2::get_file_info(path)?;
+    let info = gr2_ops::inspect_gr2(path)?;
 
-    println!("File size: {} bytes\n", file_size);
+    println!("GR2 File Information");
+    println!("====================");
+    println!("Version:     {}", info.version);
+    println!("Format:      {}-bit", if info.is_64bit { 64 } else { 32 });
+    println!("File size:   {} bytes", info.file_size);
+    println!("Sections:    {}", info.num_sections);
+    println!();
 
-    // Display header
-    println!("=== Header Information ===");
-    println!("Compression type: {} ({})", compression_type,
-        if compression_type == 4 { "BitKnit" } else { "Unknown" });
-    println!("Section count: {}\n", sections.len());
-
-    // Display sections
-    println!("=== Sections ({}) ===", sections.len());
-
-    let mut total_compressed = 0u64;
-    let mut total_decompressed = 0u64;
-
-    for (i, section) in sections.iter().enumerate() {
-        print!("Section {}: ", i);
-
-        if section.decompressed_size == 0 {
-            println!("empty");
-        } else if section.compressed_size != section.decompressed_size {
-            let ratio = section.decompressed_size as f64 / section.compressed_size as f64;
-            println!(
-                "{} -> {} bytes ({:.1}:1)",
-                section.compressed_size,
-                section.decompressed_size,
-                ratio
-            );
-            total_compressed += section.compressed_size as u64;
-            total_decompressed += section.decompressed_size as u64;
-        } else {
-            println!("{} bytes (uncompressed)", section.decompressed_size);
-            total_compressed += section.decompressed_size as u64;
-            total_decompressed += section.decompressed_size as u64;
-        }
+    println!("Sections:");
+    println!("---------");
+    for section in &info.sections {
+        let ratio = section.compression_ratio
+            .map(|r| format!("{:.2}x", r))
+            .unwrap_or_else(|| "N/A".to_string());
+        println!(
+            "  [{:2}] {:8} | {:>8} → {:>8} bytes ({})",
+            section.index,
+            section.compression,
+            section.compressed_size,
+            section.uncompressed_size,
+            ratio
+        );
     }
 
+    // Also show mesh/skeleton info
     println!();
-    println!("=== Summary ===");
-    println!("Total compressed: {} bytes", total_compressed);
-    println!("Total decompressed: {} bytes", total_decompressed);
-    if total_compressed > 0 {
-        let ratio = total_decompressed as f64 / total_compressed as f64;
-        let saved = (1.0 - (total_compressed as f64 / total_decompressed as f64)) * 100.0;
-        println!("Overall ratio: {:.2}:1", ratio);
-        println!("Space saved: {:.1}%", saved);
+    match gr2_ops::extract_gr2_info(path) {
+        Ok(model_info) => {
+            if let Some(ref skel) = model_info.skeleton {
+                println!("Skeleton: {} ({} bones)", skel.name, skel.bone_count);
+            } else {
+                println!("Skeleton: None");
+            }
+            println!();
+            println!("Meshes ({}):", model_info.meshes.len());
+            for mesh in &model_info.meshes {
+                println!(
+                    "  - {} ({} vertices, {} triangles)",
+                    mesh.name, mesh.vertex_count, mesh.triangle_count
+                );
+            }
+        }
+        Err(e) => {
+            println!("(Could not parse mesh data: {})", e);
+        }
     }
 
     Ok(())
 }
 
+/// Extract mesh information to JSON.
 pub fn extract_json(path: &Path, output: &Path) -> anyhow::Result<()> {
-    println!("=== GR2 to JSON Extractor ===\n");
-    println!("Input: {}", path.display());
-    println!("Output: {}\n", output.display());
+    println!("Extracting GR2 info to JSON: {}", path.display());
 
-    anyhow::bail!("JSON extraction not yet implemented - use 'decompress' command first")
+    let model_info = gr2_ops::extract_gr2_info(path)?;
+    let json = serde_json::to_string_pretty(&model_info)?;
+    std::fs::write(output, json)?;
+
+    println!("Written to: {}", output.display());
+    Ok(())
 }
 
+/// Decompress a GR2 file.
 pub fn decompress(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
-    println!("=== GR2 Decompressor ===\n");
-    println!("Input: {}", path.display());
-
-    // Generate output path if not provided
-    let output_path = match output {
-        Some(p) => p.to_path_buf(),
-        None => {
-            let stem = path.file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("output");
-            let ext = path.extension()
-                .and_then(|s| s.to_str())
-                .unwrap_or("gr2");
-            path.parent()
-                .unwrap_or(Path::new("."))
-                .join(format!("{}_decompressed.{}", stem, ext))
-        }
+    let output_path = if let Some(out) = output {
+        out.to_path_buf()
+    } else {
+        let stem = path.file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("output");
+        let ext = path.extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("gr2");
+        path.with_file_name(format!("{}_decompressed.{}", stem, ext))
     };
 
-    println!("Output: {}\n", output_path.display());
+    println!("Decompressing GR2 file...");
+    println!("  Source:      {}", path.display());
+    println!("  Destination: {}", output_path.display());
 
-    // Get info before decompression
-    let (compression_type, sections) = gr2::get_file_info(path)?;
+    gr2_ops::decompress_gr2(path, &output_path)?;
 
-    let compressed_sections = sections.iter()
-        .filter(|s| s.compressed_size != s.decompressed_size && s.decompressed_size > 0)
-        .count();
+    let original_size = std::fs::metadata(path)?.len();
+    let decompressed_size = std::fs::metadata(&output_path)?.len();
 
-    if compressed_sections == 0 {
-        println!("File has no compressed sections.");
-        return Ok(());
-    }
+    println!();
+    println!("Decompression complete!");
+    println!("  Original size:     {} bytes", original_size);
+    println!("  Decompressed size: {} bytes", decompressed_size);
 
-    println!("Found {} compressed sections (BitKnit)", compressed_sections);
+    Ok(())
+}
 
-    // Decompress
-    gr2::decompress_file(path, &output_path)?;
+/// Convert GR2 to GLB format.
+pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
+    let output_path = if let Some(out) = output {
+        out.to_path_buf()
+    } else {
+        path.with_extension("glb")
+    };
+
+    println!("Converting GR2 to GLB...");
+    println!("  Source:      {}", path.display());
+    println!("  Destination: {}", output_path.display());
+
+    gr2_ops::gr2_to_glb(path, &output_path)?;
 
     let output_size = std::fs::metadata(&output_path)?.len();
-    let input_size = std::fs::metadata(path)?.len();
+    println!();
+    println!("Conversion complete!");
+    println!("  Output size: {} bytes", output_size);
 
-    println!("\nDecompression complete!");
-    println!("  Input:  {} bytes", input_size);
-    println!("  Output: {} bytes", output_size);
+    Ok(())
+}
+
+/// Convert GLB/glTF to GR2 format.
+pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
+    let output_path = if let Some(out) = output {
+        out.to_path_buf()
+    } else {
+        path.with_extension("gr2")
+    };
+
+    println!("Converting glTF to GR2...");
+    println!("  Source:      {}", path.display());
+    println!("  Destination: {}", output_path.display());
+    println!();
+    println!("Note: Output will be uncompressed (compression not yet implemented)");
+
+    gr2_ops::gltf_to_gr2(path, &output_path)?;
+
+    let output_size = std::fs::metadata(&output_path)?.len();
+    println!();
+    println!("Conversion complete!");
+    println!("  Output size: {} bytes", output_size);
 
     Ok(())
 }

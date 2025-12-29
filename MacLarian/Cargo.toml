@@ -27,6 +27,7 @@ byteorder.workspace = true       # Reading/writing little-endian data
 glam.workspace = true            # SIMD-optimized vectors, quaternions, matrices
 half.workspace = true            # IEEE 754 half-precision floats (f16)
 bytemuck.workspace = true        # Safe zero-copy type casting
+gltf.workspace = true            # glTF 2.0 export (includes gltf-json)
 
 # Encoding
 base64.workspace = true          # Base64 encoding for ScratchBuffer type

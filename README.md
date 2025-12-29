@@ -31,8 +31,8 @@ Status:
 - [x] Working: inline text file editor with multiple tabbed support and meta.lsx generator
 - [x] Working: various QOL things - UUID/TranslatedString generator, color picker/saver, etc.
 - [x] Temporarily working: DDS file previews (it's a little jank because it's a stopgap fix)
-- [x] Working: reverse-engineered rANS decompression algorithm for .gr2 files
-- [ ] Currently: adding functionality to convert .gr2 files to .glTF
+- [x] Working: convert .gr2 files to .glb
+- [ ] Currently: converting .glTF back to .gr2
 - [ ] Future: incorporate bevy for 3D model rendering (just previews)
 
 I'll get to making a fleshed out wiki once it's release-worthy.
@@ -48,7 +48,7 @@ I'll get to making a fleshed out wiki once it's release-worthy.
 2. Hook into the game. Meaning, it doesn't work with anything that would require [Norbyte's BG3SE](https://github.com/Norbyte/bg3se), but check out the [BG3SE-macOS](https://github.com/tdimino/bg3se-macos) project.
 3. Edit/access game files. Maybe in the future, but not now.
 4. Access or recreate the Official Larian Modding Toolkit. I looked into it and decided it's not worth the time and effort.
-5. Work on Windows. Because, well, duh. You people already have those tools.
+5. Work on Windows. Because, well, duh. You people already have these tools.
 6. Work on Linux - check out [xiba](https://gitlab.com/saghm/xiba/) for a Linux-focused project.
 7. Work for DOS/DOS2 - I don't have those games and therefore have no desire to implement that support.
 
@@ -67,3 +67,14 @@ Maybe? But this has been a lot to put together, it's my first time doing anythin
 ## Why is this written in *Rust*???
 
 Because attempting this in Python first made me realize I needed a beefier (read: compiler) language and I didn't want to learn C, C#, or C++, among other reasons.
+
+# Credits
+
+Core MacPak functionality is derived from (and wouldn't be possible without):
+- [LSLib](https://github.com/Norbyte/lslib) 
+  - LSF/LSX/LSJ handling
+  - GR2/glTF conversion
+- [xiba](https://gitlab.com/saghm/xiba/)
+  - PAK handling
+- [Knit](https://github.com/neptuwunium/Knit)
+  - GR2 decompression

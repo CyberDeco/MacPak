@@ -4,8 +4,6 @@ pub mod extract;
 pub mod convert;
 pub mod create;
 pub mod list;
-pub mod index;
-pub mod validate;
 pub mod gr2;
 
 #[derive(Subcommand)]
@@ -92,6 +90,26 @@ pub enum Gr2Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
+
+    /// Convert GR2 to GLB (binary glTF) format
+    ToGlb {
+        /// Source GR2 file
+        path: PathBuf,
+
+        /// Output GLB file (defaults to same name with .glb extension)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
+
+    /// Convert GLB/glTF to GR2 format
+    FromGltf {
+        /// Source glTF/GLB file
+        path: PathBuf,
+
+        /// Output GR2 file (defaults to same name with .gr2 extension)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
 }
 
 impl Commands {
@@ -132,6 +150,12 @@ impl Gr2Commands {
             }
             Gr2Commands::Decompress { path, output } => {
                 gr2::decompress(path, output.as_deref())
+            }
+            Gr2Commands::ToGlb { path, output } => {
+                gr2::convert_to_glb(path, output.as_deref())
+            }
+            Gr2Commands::FromGltf { path, output } => {
+                gr2::convert_to_gr2(path, output.as_deref())
             }
         }
     }
