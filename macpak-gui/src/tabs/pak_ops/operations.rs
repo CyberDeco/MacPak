@@ -3,6 +3,7 @@
 use floem::prelude::*;
 use std::path::Path;
 use std::thread;
+use walkdir::WalkDir;
 
 use crate::state::PakOpsState;
 use super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
@@ -488,7 +489,7 @@ pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
     });
 }
 
-/// Batch extract multiple PAK files from a folder
+/// Batch extract multiple PAK files from a folder (recursively)
 pub fn batch_extract_paks(state: PakOpsState) {
     state.clear_results();
 
@@ -509,23 +510,25 @@ pub fn batch_extract_paks(state: PakOpsState) {
         .working_dir
         .set(Some(source_dir.to_string_lossy().to_string()));
 
-    // Find all .pak files in the folder
-    let pak_files: Vec<_> = std::fs::read_dir(&source_dir)
-        .ok()
+    // Recursively find all .pak files
+    let mut pak_files: Vec<_> = WalkDir::new(&source_dir)
+        .follow_links(true)
         .into_iter()
-        .flatten()
         .filter_map(|e| e.ok())
         .filter(|e| {
-            e.path()
-                .extension()
-                .map(|ext| ext.to_ascii_lowercase() == "pak")
-                .unwrap_or(false)
+            e.path().is_file()
+                && e.path()
+                    .extension()
+                    .map(|ext| ext.to_ascii_lowercase() == "pak")
+                    .unwrap_or(false)
         })
-        .map(|e| e.path())
+        .map(|e| e.path().to_path_buf())
         .collect();
 
+    pak_files.sort();
+
     if pak_files.is_empty() {
-        state.add_result("⚠ No .pak files found in the selected folder");
+        state.add_result("No .pak files found in the selected folder");
         return;
     }
 
@@ -540,6 +543,7 @@ pub fn batch_extract_paks(state: PakOpsState) {
         return;
     };
 
+    let source_path = source_dir.to_string_lossy().to_string();
     let dest_path = dest_dir.to_string_lossy().to_string();
     let pak_count = pak_files.len();
 
@@ -560,6 +564,7 @@ pub fn batch_extract_paks(state: PakOpsState) {
         let mut success_count = 0;
         let mut fail_count = 0;
         let mut results = Vec::new();
+        let source_base = Path::new(&source_path);
 
         for (i, pak_path) in pak_files.iter().enumerate() {
             let pak_name = pak_path
@@ -567,20 +572,30 @@ pub fn batch_extract_paks(state: PakOpsState) {
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();
 
-            // Update progress
-            progress(i + 1, pak_count, &pak_name);
+            // Calculate relative path for display and output structure
+            let relative_path = pak_path
+                .strip_prefix(source_base)
+                .unwrap_or(pak_path.as_path());
+            let display_path = relative_path.to_string_lossy();
 
-            // Create a subfolder for each PAK
-            let pak_dest = Path::new(&dest_path).join(
-                pak_path
-                    .file_stem()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string(),
-            );
+            // Update progress
+            progress(i + 1, pak_count, &display_path);
+
+            // Preserve directory structure: create subfolder matching relative path
+            // e.g., source/subdir/file.pak -> dest/subdir/file/
+            let relative_parent = relative_path.parent().unwrap_or(Path::new(""));
+            let pak_stem = pak_path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+
+            let pak_dest = Path::new(&dest_path)
+                .join(relative_parent)
+                .join(&pak_stem);
 
             if let Err(e) = std::fs::create_dir_all(&pak_dest) {
-                results.push(format!("❌ Failed to create folder for {}: {}", pak_name, e));
+                results.push(format!("Failed to create folder for {}: {}", display_path, e));
                 fail_count += 1;
                 continue;
             }
@@ -590,11 +605,11 @@ pub fn batch_extract_paks(state: PakOpsState) {
 
             match MacLarian::pak::PakOperations::extract(&pak_str, &dest_str) {
                 Ok(_) => {
-                    results.push(format!("✅ Extracted: {}", pak_name));
+                    results.push(format!("Extracted: {}", display_path));
                     success_count += 1;
                 }
                 Err(e) => {
-                    results.push(format!("❌ Failed {}: {}", pak_name, e));
+                    results.push(format!("Failed {}: {}", display_path, e));
                     fail_count += 1;
                 }
             }
@@ -609,7 +624,7 @@ pub fn batch_extract_paks(state: PakOpsState) {
     });
 }
 
-/// Batch create PAK files from subfolders
+/// Batch create PAK files from subfolders (recursively finds all packable folders)
 pub fn batch_create_paks(state: PakOpsState) {
     state.clear_results();
 
@@ -630,18 +645,35 @@ pub fn batch_create_paks(state: PakOpsState) {
         .working_dir
         .set(Some(source_dir.to_string_lossy().to_string()));
 
-    // Find all subfolders
-    let folders: Vec<_> = std::fs::read_dir(&source_dir)
-        .ok()
+    // Recursively find all directories that contain files (leaf directories with content)
+    // We look for directories that have at least one file in them
+    let mut folders: Vec<_> = WalkDir::new(&source_dir)
+        .follow_links(true)
+        .min_depth(1) // Skip the root directory itself
         .into_iter()
-        .flatten()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().is_dir())
-        .map(|e| e.path())
+        .filter(|e| {
+            let path = e.path();
+            if !path.is_dir() {
+                return false;
+            }
+            // Check if this directory contains any files (not just subdirs)
+            std::fs::read_dir(path)
+                .ok()
+                .map(|entries| {
+                    entries
+                        .filter_map(|e| e.ok())
+                        .any(|e| e.path().is_file())
+                })
+                .unwrap_or(false)
+        })
+        .map(|e| e.path().to_path_buf())
         .collect();
 
+    folders.sort();
+
     if folders.is_empty() {
-        state.add_result("⚠ No subfolders found in the selected folder");
+        state.add_result("No packable folders found (folders must contain files)");
         return;
     }
 
@@ -656,6 +688,7 @@ pub fn batch_create_paks(state: PakOpsState) {
         return;
     };
 
+    let source_path = source_dir.to_string_lossy().to_string();
     let dest_path = dest_dir.to_string_lossy().to_string();
     let folder_count = folders.len();
 
@@ -676,6 +709,7 @@ pub fn batch_create_paks(state: PakOpsState) {
         let mut success_count = 0;
         let mut fail_count = 0;
         let mut results = Vec::new();
+        let source_base = Path::new(&source_path);
 
         for (i, folder_path) in folders.iter().enumerate() {
             let folder_name = folder_path
@@ -683,21 +717,40 @@ pub fn batch_create_paks(state: PakOpsState) {
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();
 
-            // Update progress
-            progress(i + 1, folder_count, &folder_name);
+            // Calculate relative path for display and output structure
+            let relative_path = folder_path
+                .strip_prefix(source_base)
+                .unwrap_or(folder_path.as_path());
+            let display_path = relative_path.to_string_lossy();
 
-            // Create PAK file with same name as folder
-            let pak_path = Path::new(&dest_path).join(format!("{}.pak", folder_name));
+            // Update progress
+            progress(i + 1, folder_count, &display_path);
+
+            // Preserve directory structure: create PAK in matching relative path
+            // e.g., source/subdir/folder -> dest/subdir/folder.pak
+            let relative_parent = relative_path.parent().unwrap_or(Path::new(""));
+            let pak_dest_dir = Path::new(&dest_path).join(relative_parent);
+
+            // Create parent directories if needed
+            if !pak_dest_dir.exists() {
+                if let Err(e) = std::fs::create_dir_all(&pak_dest_dir) {
+                    results.push(format!("Failed to create dir for {}: {}", display_path, e));
+                    fail_count += 1;
+                    continue;
+                }
+            }
+
+            let pak_path = pak_dest_dir.join(format!("{}.pak", folder_name));
             let folder_str = folder_path.to_string_lossy().to_string();
             let pak_str = pak_path.to_string_lossy().to_string();
 
             match MacLarian::pak::PakOperations::create(&folder_str, &pak_str) {
                 Ok(_) => {
-                    results.push(format!("✅ Created: {}.pak", folder_name));
+                    results.push(format!("Created: {}.pak", display_path));
                     success_count += 1;
                 }
                 Err(e) => {
-                    results.push(format!("❌ Failed {}: {}", folder_name, e));
+                    results.push(format!("Failed {}: {}", display_path, e));
                     fail_count += 1;
                 }
             }

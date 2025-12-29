@@ -8,7 +8,9 @@
 
 ---
 
+<p align="center">
 *Baldurs Gate 3 modding tools for macOS? In **this** economy?*
+</p>
 
 ---
 
@@ -27,14 +29,17 @@ Status:
 
 - [x] Working: pak operations (list contents, unpack single/batch, verify structure, and pack single/batch)
 - [x] Working: .lsf <> .lsx <> .lsj conversion
-- [x] Working: local Floem GUI (not yet packaged for production)
 - [x] Working: inline text file editor with multiple tabbed support and meta.lsx generator
 - [x] Working: various QOL things - UUID/TranslatedString generator, color picker/saver, etc.
 - [x] Temporarily working: DDS file previews (it's a little jank because it's a stopgap fix)
 - [x] Working: convert .gr2 files <> .glb or .glTF (same as .glb but .bin is its own file)
   - Attempted: reverse-engineering compression for .gr2 files, but got to be too annoying for just a QOL implementation
-- [ ] Currently: creating a GUI tab for gr2 <> glTF single/batch conversion
-- [ ] Future: incorporate bevy for 3D model rendering (just previews)
+- [x] Working: local Floem GUI (not yet packaged for production)
+  - [x] File tree/preview/browser tab
+  - [x] Text editor tab + meta.lsx generator
+  - [x] Pak operations tab
+  - [x] Tab for gr2 <> glTF single/batch conversion
+- [ ] Currently: incorporate bevy for 3D model rendering (just previews)
 
 I'll get to making a fleshed out wiki once it's release-worthy.
 
