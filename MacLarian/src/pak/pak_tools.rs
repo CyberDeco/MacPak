@@ -19,9 +19,8 @@ impl PakOperations {
 
     /// Extract a PAK file to a directory with progress callback
     ///
-    /// The callback receives (current, total, phase_description) where:
-    /// - During decompression: "Decompressing [filename]" with file count progress
-    /// - During writing: "Writing [filename]" with file count progress
+    /// The callback receives (current, total, filename) during file extraction.
+    /// Files are decompressed and written one at a time for smooth progress updates.
     pub fn extract_with_progress<P: AsRef<Path>>(
         pak_path: P,
         output_dir: P,
@@ -31,82 +30,68 @@ impl PakOperations {
 
         let mut reader = LspkReader::with_path(file, pak_path.as_ref());
 
-        // Read PAK with progress
-        let contents = reader.read_all(Some(&|p: &PakProgress| {
-            let description = match p.phase {
-                PakPhase::ReadingHeader | PakPhase::ReadingTable => {
-                    "Reading PAK...".to_string()
-                }
-                PakPhase::DecompressingFiles => {
-                    if let Some(ref name) = p.current_file {
-                        format!("Decompressing {}", name)
-                    } else {
-                        "Decompressing...".to_string()
-                    }
-                }
-                PakPhase::WritingFiles => {
-                    if let Some(ref name) = p.current_file {
-                        format!("Writing {}", name)
-                    } else {
-                        "Writing...".to_string()
-                    }
-                }
-                PakPhase::Complete => "Complete".to_string(),
-            };
-            progress(p.current, p.total, &description);
-        }))?;
-
-        // Report any decompression errors but continue
-        for (path, error) in &contents.errors {
-            tracing::warn!("Failed to decompress {}: {}", path.display(), error);
-        }
+        // Get file list without decompressing
+        let entries = reader.list_files()?;
+        let total_files = entries.len();
 
         std::fs::create_dir_all(&output_dir)?;
 
-        let total_files = contents.files.len();
+        let mut errors: Vec<(std::path::PathBuf, String)> = Vec::new();
 
-        for (index, file) in contents.files.iter().enumerate() {
+        // Decompress and write each file one at a time
+        for (index, entry) in entries.iter().enumerate() {
             // Skip .DS_Store files
-            if file.path.file_name() == Some(std::ffi::OsStr::new(".DS_Store")) {
-                tracing::debug!("Skipping .DS_Store file: {:?}", file.path);
+            if entry.path.file_name() == Some(std::ffi::OsStr::new(".DS_Store")) {
+                tracing::debug!("Skipping .DS_Store file: {:?}", entry.path);
                 continue;
             }
 
-            let file_name = file.path.file_name()
+            let file_name = entry.path.file_name()
                 .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| file.path.to_string_lossy().to_string());
-            progress(index + 1, total_files, &format!("Writing {}", file_name));
+                .unwrap_or_else(|| entry.path.to_string_lossy().to_string());
+
+            progress(index + 1, total_files, &file_name);
+
+            // Decompress the file
+            let data = match reader.decompress_file(entry) {
+                Ok(data) => data,
+                Err(e) => {
+                    tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
+                    errors.push((entry.path.clone(), e.to_string()));
+                    continue;
+                }
+            };
 
             // For virtual texture files (.gts/.gtp), organize into subfolders
             let output_path = if is_virtual_texture_file(&file_name) {
                 if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
                     // Insert subfolder before the filename
-                    if let Some(parent) = file.path.parent() {
+                    if let Some(parent) = entry.path.parent() {
                         output_dir.as_ref().join(parent).join(&subfolder).join(&file_name)
                     } else {
                         output_dir.as_ref().join(&subfolder).join(&file_name)
                     }
                 } else {
-                    output_dir.as_ref().join(&file.path)
+                    output_dir.as_ref().join(&entry.path)
                 }
             } else {
-                output_dir.as_ref().join(&file.path)
+                output_dir.as_ref().join(&entry.path)
             };
 
             if let Some(parent) = output_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
 
-            std::fs::write(&output_path, &file.data)?;
+            std::fs::write(&output_path, &data)?;
         }
 
         // If there were errors, return a summary error
-        if !contents.errors.is_empty() {
+        if !errors.is_empty() {
             return Err(Error::ConversionError(format!(
                 "Extracted {} files with {} errors. First error: {}",
-                contents.files.len(),
-                contents.errors.len(),
-                contents.errors[0].1
+                total_files - errors.len(),
+                errors.len(),
+                errors[0].1
             )));
         }
 
