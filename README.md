@@ -34,14 +34,18 @@ Status:
 - [x] Working: various QOL things - UUID/TranslatedString generator, color picker/saver, etc.
 - [x] Temporarily working: DDS file previews (it's a little jank because it's a stopgap fix)
 - [x] Working: convert .gr2 files <> .glb or .glTF (same as .glb but .bin is its own file)
+- [x] Working: decompress and stitch virtual textures
   - Attempted: reverse-engineering compression for .gr2 files, but got to be too annoying for just a QOL implementation
 - [x] Working: local Floem GUI (not yet packaged for production)
   - [x] File tree/preview/browser tab
   - [x] Text editor tab + meta.lsx generator
   - [x] Pak operations tab
-  - [x] Tab for gr2 <> glTF single/batch conversion
-- [ ] Currently: decompressing virtual textures
-- [ ] Next: incorporate bevy for 3D model rendering (just previews)
+  - [x] Tab for gr2 <> glTF/GLB single/batch conversion
+  - [x] Tab for extracting and stitching single/batch virtual textures
+    - [ ] Future: work in reverse for custom virtual textures
+- [ ] Currently: incorporate bevy for 3D model rendering (just previews)
+- [ ] Next: Piece together x-ref library for GR2 files to their base/normal/physical virtual textures and/or cloth msk
+    - [ ] Option to automatically retrieve companion texture files when working with GR2
 
 This is meant to be an all-in-one tool, so if you're looking for a simple or lightweight GUI... this ain't it. I'll get to making a fleshed out wiki once it's release-worthy.
 
