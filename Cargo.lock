@@ -11,7 +11,6 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "crc32fast",
- "fastlz",
  "fastlz-rs",
  "flate2",
  "glam 0.27.0",
@@ -19,9 +18,7 @@ dependencies = [
  "half",
  "indexmap",
  "lazy_static",
- "lz4",
  "lz4_flex",
- "lz77",
  "pretty_assertions",
  "quick-xml 0.31.0",
  "serde",
@@ -1524,28 +1521,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "fastlz"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a44c8ced14f9137fbda9602c6c9a29bbfed9d82c2a809d37d4959ebff3a0e988"
-dependencies = [
- "fastlz-sys",
-]
-
-[[package]]
 name = "fastlz-rs"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aec3f2376b1a451070e235824e1d63d71663356dc117cd0d1cb7ae94cb5c3c09"
-
-[[package]]
-name = "fastlz-sys"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20de788b4299495a08d2382146bd11ce9c7f6c2f53d3750d9ef49dc558cf5a39"
-dependencies = [
- "cc",
-]
 
 [[package]]
 name = "fastrand"
@@ -2876,25 +2855,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lz4"
-version = "1.28.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a20b523e860d03443e98350ceaac5e71c6ba89aea7d960769ec3ce37f4de5af4"
-dependencies = [
- "lz4-sys",
-]
-
-[[package]]
-name = "lz4-sys"
-version = "1.11.1+lz4-1.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bd8c0d6c6ed0cd30b3652886bb8711dc4bb01d637a68105a3d5158039b418e6"
-dependencies = [
- "cc",
- "libc",
-]
-
-[[package]]
 name = "lz4_flex"
 version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2902,12 +2862,6 @@ checksum = "08ab2867e3eeeca90e844d1940eab391c9dc5228783db2ed999acbc0a9ed375a"
 dependencies = [
  "twox-hash",
 ]
-
-[[package]]
-name = "lz77"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7797281bbacf323c6a776305d3e5b5c8547c31ffcb8825f84026e6c0510548e5"
 
 [[package]]
 name = "macpak-cli"

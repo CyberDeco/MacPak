@@ -29,7 +29,7 @@ impl PakOperations {
     ) -> Result<()> {
         let file = File::open(pak_path.as_ref())?;
 
-        let mut reader = LspkReader::new(file);
+        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
 
         // Read PAK with progress
         let contents = reader.read_all(Some(&|p: &PakProgress| {
@@ -127,7 +127,7 @@ impl PakOperations {
     ) -> Result<Vec<String>> {
         let file = File::open(pak_path.as_ref())?;
 
-        let mut reader = LspkReader::new(file);
+        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
 
         progress(0, 1, "Reading PAK...");
 
@@ -144,7 +144,7 @@ impl PakOperations {
     pub fn extract_meta<P: AsRef<Path>>(pak_path: P) -> Result<String> {
         let file = File::open(pak_path.as_ref())?;
 
-        let mut reader = LspkReader::new(file);
+        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
         let contents = reader.read_all(None)?;
 
         // Find meta.lsx

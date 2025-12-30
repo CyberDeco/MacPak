@@ -3,6 +3,7 @@
 use crate::error::{Error, Result};
 
 pub mod lz4;
+pub mod fastlz;
 
 /// Compress data using LZ4
 pub fn compress(data: &[u8]) -> Result<Vec<u8>> {

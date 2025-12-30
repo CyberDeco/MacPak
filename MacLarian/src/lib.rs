@@ -25,6 +25,7 @@ pub mod prelude {
     pub use crate::formats::lsx::{LsxDocument, LsxRegion, LsxNode, LsxAttribute};
     pub use crate::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
     pub use crate::formats::gr2::decompress_gr2;
+    pub use crate::formats::virtual_texture::{VirtualTextureExtractor, GtsFile, GtpFile};
     pub use crate::pak::PakOperations;
     pub use crate::converter;
 }

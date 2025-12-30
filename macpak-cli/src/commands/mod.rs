@@ -5,6 +5,7 @@ pub mod convert;
 pub mod create;
 pub mod list;
 pub mod gr2;
+pub mod virtual_texture;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -61,6 +62,13 @@ pub enum Commands {
         #[command(subcommand)]
         command: Gr2Commands,
     },
+
+    /// Virtual texture operations (GTS/GTP files)
+    #[command(name = "vt")]
+    VirtualTexture {
+        #[command(subcommand)]
+        command: VirtualTextureCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -112,6 +120,52 @@ pub enum Gr2Commands {
     },
 }
 
+/// Virtual Texture (GTS/GTP) commands
+#[derive(Subcommand)]
+pub enum VirtualTextureCommands {
+    /// List textures in a GTS file
+    List {
+        /// Path to .gts file
+        path: PathBuf,
+    },
+
+    /// Extract textures from GTS/GTP files to DDS
+    Extract {
+        /// Path to .gts file
+        gts: PathBuf,
+
+        /// Output directory for DDS files
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Directory containing GTP files (defaults to GTS directory)
+        #[arg(long)]
+        gtp_dir: Option<PathBuf>,
+
+        /// Extract only this texture (by name)
+        #[arg(short, long)]
+        texture: Option<String>,
+
+        /// Layer index to extract (ignored if --all-layers is set)
+        #[arg(short, long)]
+        layer: Option<usize>,
+
+        /// Extract all layers (creates _0, _1, _2 files per texture)
+        #[arg(short, long)]
+        all_layers: bool,
+    },
+
+    /// Show info about a GTP page file
+    GtpInfo {
+        /// Path to .gtp file
+        path: PathBuf,
+
+        /// Path to .gts file (auto-detected if not specified)
+        #[arg(long)]
+        gts: Option<PathBuf>,
+    },
+}
+
 impl Commands {
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
@@ -120,9 +174,9 @@ impl Commands {
             }
             Commands::Convert { source, destination, input_format, output_format } => {
                 convert::execute(
-                    source, 
-                    destination, 
-                    input_format.as_deref(), 
+                    source,
+                    destination,
+                    input_format.as_deref(),
                     output_format.as_deref()
                 )
             }
@@ -133,6 +187,9 @@ impl Commands {
                 list::execute(source)
             }
             Commands::Gr2 { command } => {
+                command.execute()
+            }
+            Commands::VirtualTexture { command } => {
                 command.execute()
             }
         }
@@ -156,6 +213,29 @@ impl Gr2Commands {
             }
             Gr2Commands::FromGltf { path, output } => {
                 gr2::convert_to_gr2(path, output.as_deref())
+            }
+        }
+    }
+}
+
+impl VirtualTextureCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            VirtualTextureCommands::List { path } => {
+                virtual_texture::list(path)
+            }
+            VirtualTextureCommands::Extract { gts, output, gtp_dir, texture, layer, all_layers } => {
+                virtual_texture::extract(
+                    gts,
+                    gtp_dir.as_deref(),
+                    output,
+                    texture.as_deref(),
+                    *layer,
+                    *all_layers,
+                )
+            }
+            VirtualTextureCommands::GtpInfo { path, gts } => {
+                virtual_texture::gtp_info(path, gts.as_deref())
             }
         }
     }

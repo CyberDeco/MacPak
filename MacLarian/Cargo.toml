@@ -16,9 +16,9 @@ thiserror.workspace = true
 
 # Compression
 flate2.workspace = true         # ZLIB/GZIP compression
-lz4.workspace = true            # LZ4 frame compression (writing LSF)
-lz4_flex.workspace = true       # LZ4 block compression (reading LSF)
+lz4_flex.workspace = true       # LZ4 compression (reading/writing LSF)
 zstd.workspace = true           # Zstandard compression (newer PAK files)
+fastlz-rs.workspace = true      # FastLZ compression (virtual textures)
 
 # Binary I/O
 byteorder.workspace = true       # Reading/writing little-endian data
@@ -50,4 +50,3 @@ tracing-subscriber.workspace = true
 
 [lints]
 workspace = true
-

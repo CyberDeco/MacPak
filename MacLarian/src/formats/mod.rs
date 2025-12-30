@@ -17,3 +17,6 @@ pub use lsj::{LsjDocument, LsjNode, LsjAttribute};
 
 // Re-export GR2 decompression utilities
 pub use gr2::decompress_gr2;
+
+// Re-export virtual texture types
+pub use virtual_texture::{VirtualTextureExtractor, GtsFile, GtpFile};

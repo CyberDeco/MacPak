@@ -1,9 +1,9 @@
 //! LSPK PAK file reader with progress callbacks and error recovery
 
-use std::ffi::OsStr;
+use std::collections::HashMap;
+use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::os::unix::ffi::OsStrExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
 use super::{
@@ -20,6 +20,10 @@ pub struct LspkReader<R: Read + Seek> {
     header: Option<LspkHeader>,
     footer: Option<LspkFooter>,
     file_table: Vec<FileTableEntry>,
+    /// Base path for the main PAK file (used to find part files)
+    pak_path: Option<PathBuf>,
+    /// Cached readers for archive parts (lazily opened)
+    part_readers: HashMap<u8, BufReader<File>>,
 }
 
 impl<R: Read + Seek> LspkReader<R> {
@@ -30,9 +34,69 @@ impl<R: Read + Seek> LspkReader<R> {
             header: None,
             footer: None,
             file_table: Vec::new(),
+            pak_path: None,
+            part_readers: HashMap::new(),
         }
     }
 
+    /// Create a new reader with path information for multi-part archive support
+    pub fn with_path(reader: R, path: impl AsRef<Path>) -> Self {
+        Self {
+            reader: BufReader::new(reader),
+            header: None,
+            footer: None,
+            file_table: Vec::new(),
+            pak_path: Some(path.as_ref().to_path_buf()),
+            part_readers: HashMap::new(),
+        }
+    }
+
+    /// Get the path for a specific archive part
+    fn get_part_path(&self, part: u8) -> Option<PathBuf> {
+        let base_path = self.pak_path.as_ref()?;
+        if part == 0 {
+            return Some(base_path.clone());
+        }
+
+        let stem = base_path.file_stem()?.to_str()?;
+        let ext = base_path.extension()?.to_str()?;
+        let parent = base_path.parent()?;
+
+        Some(parent.join(format!("{}_{}.{}", stem, part, ext)))
+    }
+
+    /// Get or open a reader for a specific archive part
+    fn get_part_reader(&mut self, part: u8) -> Result<&mut dyn ReadSeek> {
+        if part == 0 {
+            return Ok(&mut self.reader);
+        }
+
+        // Check if we already have this part open
+        if !self.part_readers.contains_key(&part) {
+            let part_path = self.get_part_path(part)
+                .ok_or_else(|| Error::ConversionError(
+                    format!("Cannot determine path for archive part {}", part)
+                ))?;
+
+            if !part_path.exists() {
+                return Err(Error::ConversionError(
+                    format!("Archive part file not found: {}", part_path.display())
+                ));
+            }
+
+            let file = File::open(&part_path)?;
+            self.part_readers.insert(part, BufReader::new(file));
+        }
+
+        Ok(self.part_readers.get_mut(&part).unwrap())
+    }
+}
+
+/// Trait for types that can Read and Seek
+trait ReadSeek: Read + Seek {}
+impl<T: Read + Seek> ReadSeek for T {}
+
+impl<R: Read + Seek> LspkReader<R> {
     /// Read and parse the PAK file header
     pub fn read_header(&mut self) -> Result<&LspkHeader> {
         self.reader.seek(SeekFrom::Start(0))?;
@@ -132,16 +196,21 @@ impl<R: Read + Seek> LspkReader<R> {
             .iter()
             .position(|&b| b == 0)
             .unwrap_or(PATH_LENGTH);
-        let path = PathBuf::from(OsStr::from_bytes(&bytes[..path_end]));
+        // Use lossy UTF-8 conversion for cross-platform compatibility
+        let path_str = String::from_utf8_lossy(&bytes[..path_end]);
+        let path = PathBuf::from(path_str.as_ref());
 
-        // Offset: bytes 256-263 (complex encoding)
-        // The offset is stored as a 6-byte value with some flags mixed in
+        // Offset: bytes 256-261 (6 bytes)
+        // The offset is stored as a 6-byte value
         let offset_low = u32::from_le_bytes(bytes[256..260].try_into().unwrap());
         let offset_high = u16::from_le_bytes(bytes[260..262].try_into().unwrap());
         let mut offset = u64::from(offset_low) | (u64::from(offset_high) << 32);
 
-        // Mask out flag bits - offset uses lower 52 bits
-        offset &= 0x000F_FFFF_FFFF_FFFF;
+        // Mask out flag bits - offset uses lower 48 bits
+        offset &= 0x0000_FFFF_FFFF_FFFF;
+
+        // Archive part: byte 262
+        let archive_part = bytes[262];
 
         // Flags byte at 263 contains compression type in lower nibble
         let flags = bytes[263];
@@ -160,17 +229,21 @@ impl<R: Read + Seek> LspkReader<R> {
             size_decompressed,
             compression,
             flags,
+            archive_part,
         })
     }
 
     /// Decompress a single file from the PAK
     pub fn decompress_file(&mut self, entry: &FileTableEntry) -> Result<Vec<u8>> {
+        // Get the appropriate reader for this archive part
+        let reader = self.get_part_reader(entry.archive_part)?;
+
         // Seek to the file data
-        self.reader.seek(SeekFrom::Start(entry.offset))?;
+        reader.seek(SeekFrom::Start(entry.offset))?;
 
         // Read compressed data
         let mut compressed = vec![0u8; entry.size_compressed as usize];
-        self.reader.read_exact(&mut compressed)?;
+        reader.read_exact(&mut compressed)?;
 
         // If no compression or zero size, return as-is
         if entry.compression == CompressionMethod::None || entry.size_decompressed == 0 {

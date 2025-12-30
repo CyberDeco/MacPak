@@ -58,7 +58,7 @@ pub struct LspkFooter {
 pub struct FileTableEntry {
     /// Path of the file within the archive
     pub path: PathBuf,
-    /// Offset of the compressed data from the start of the file
+    /// Offset of the compressed data from the start of the archive part
     pub offset: u64,
     /// Size of the compressed data
     pub size_compressed: u32,
@@ -68,6 +68,27 @@ pub struct FileTableEntry {
     pub compression: CompressionMethod,
     /// Raw flags byte (for debugging)
     pub flags: u8,
+    /// Archive part number (0 = main .pak, 1+ = _1.pak, _2.pak, etc.)
+    pub archive_part: u8,
+}
+
+/// Header of an LSPK v16/v18 PAK file (extended format)
+#[derive(Debug, Clone)]
+pub struct LspkHeaderV16 {
+    /// Version number
+    pub version: u32,
+    /// Offset to file list
+    pub file_list_offset: u64,
+    /// Size of file list
+    pub file_list_size: u32,
+    /// Package flags
+    pub flags: u8,
+    /// Priority
+    pub priority: u8,
+    /// MD5 hash
+    pub md5: [u8; 16],
+    /// Number of archive parts
+    pub num_parts: u16,
 }
 
 /// A decompressed file from the PAK archive
