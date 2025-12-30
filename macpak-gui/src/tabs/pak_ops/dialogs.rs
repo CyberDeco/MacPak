@@ -163,7 +163,7 @@ pub fn progress_overlay(state: PakOpsState) -> impl IntoView {
                         .border(1.0)
                         .border_color(Color::rgb8(200, 200, 200))
                         .border_radius(8.0)
-                        .width(400.0)
+                        .width(500.0)
                 })
                 .into_any()
             } else {

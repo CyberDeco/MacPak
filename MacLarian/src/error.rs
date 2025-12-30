@@ -63,6 +63,9 @@ pub enum Error {
     
     #[error("Walk directory error: {0}")]
     WalkDirError(String),
+
+    #[error("Invalid format: {0}")]
+    InvalidFormat(String),
 }
 
 // Add conversion from quick_xml::events::attributes::AttrError

@@ -135,9 +135,8 @@ pub fn handle_gr2_result(state: Gr2State, result: Gr2Result) {
             error_count,
             results,
         } => {
-            for result in results {
-                state.add_result(&result);
-            }
+            // Use batch update to avoid UI freezing with large result sets
+            state.add_results_batch(results);
 
             let status = if error_count == 0 {
                 format!("Converted {} files successfully!", success_count)

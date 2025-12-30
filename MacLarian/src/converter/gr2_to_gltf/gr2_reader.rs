@@ -608,4 +608,79 @@ impl Gr2Reader {
 
         Ok(Some(Skeleton { name, bones }))
     }
+
+    /// Get a description of what data the GR2 file contains
+    pub fn get_content_info(&self, file_data: &[u8]) -> Result<Gr2ContentInfo> {
+        let mut cursor = std::io::Cursor::new(&file_data[0x20..]);
+        cursor.set_position(28);
+        let root_section = cursor.read_u32::<LittleEndian>()? as usize;
+        let root_offset = cursor.read_u32::<LittleEndian>()? as usize;
+
+        let root_addr = self.section_offsets[root_section] + root_offset;
+        let ptr_size = self.ptr_size();
+        let array_size = 4 + ptr_size;
+
+        let mut pos = root_addr + ptr_size * 3; // After 3 pointers
+
+        // Read counts for each array type
+        let texture_count = self.read_u32(pos) as usize;
+        pos += array_size;
+        let material_count = self.read_u32(pos) as usize;
+        pos += array_size;
+        let skeleton_count = self.read_u32(pos) as usize;
+        pos += array_size;
+        let vertex_data_count = self.read_u32(pos) as usize;
+        pos += array_size;
+        let topology_count = self.read_u32(pos) as usize;
+        pos += array_size;
+        let mesh_count = self.read_u32(pos) as usize;
+        pos += array_size;
+        let model_count = self.read_u32(pos) as usize;
+
+        Ok(Gr2ContentInfo {
+            texture_count,
+            material_count,
+            skeleton_count,
+            vertex_data_count,
+            topology_count,
+            mesh_count,
+            model_count,
+        })
+    }
+}
+
+/// Information about what data a GR2 file contains
+#[derive(Debug, Clone)]
+pub struct Gr2ContentInfo {
+    pub texture_count: usize,
+    pub material_count: usize,
+    pub skeleton_count: usize,
+    pub vertex_data_count: usize,
+    pub topology_count: usize,
+    pub mesh_count: usize,
+    pub model_count: usize,
+}
+
+impl Gr2ContentInfo {
+    /// Returns a human-readable description of the file contents
+    pub fn describe(&self) -> String {
+        let mut parts = Vec::new();
+        if self.skeleton_count > 0 {
+            parts.push(format!("{} skeleton(s)", self.skeleton_count));
+        }
+        if self.mesh_count > 0 {
+            parts.push(format!("{} mesh(es)", self.mesh_count));
+        }
+        if self.model_count > 0 {
+            parts.push(format!("{} model(s)", self.model_count));
+        }
+        if self.material_count > 0 {
+            parts.push(format!("{} material(s)", self.material_count));
+        }
+        if parts.is_empty() {
+            "empty".to_string()
+        } else {
+            parts.join(", ")
+        }
+    }
 }

@@ -11,6 +11,8 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "crc32fast",
+ "fastlz",
+ "fastlz-rs",
  "flate2",
  "glam 0.27.0",
  "gltf",
@@ -19,6 +21,7 @@ dependencies = [
  "lazy_static",
  "lz4",
  "lz4_flex",
+ "lz77",
  "pretty_assertions",
  "quick-xml 0.31.0",
  "serde",
@@ -1521,6 +1524,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastlz"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a44c8ced14f9137fbda9602c6c9a29bbfed9d82c2a809d37d4959ebff3a0e988"
+dependencies = [
+ "fastlz-sys",
+]
+
+[[package]]
+name = "fastlz-rs"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aec3f2376b1a451070e235824e1d63d71663356dc117cd0d1cb7ae94cb5c3c09"
+
+[[package]]
+name = "fastlz-sys"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20de788b4299495a08d2382146bd11ce9c7f6c2f53d3750d9ef49dc558cf5a39"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2875,6 +2902,12 @@ checksum = "08ab2867e3eeeca90e844d1940eab391c9dc5228783db2ed999acbc0a9ed375a"
 dependencies = [
  "twox-hash",
 ]
+
+[[package]]
+name = "lz77"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7797281bbacf323c6a776305d3e5b5c8547c31ffcb8825f84026e6c0510548e5"
 
 [[package]]
 name = "macpak-cli"

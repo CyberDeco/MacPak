@@ -31,8 +31,9 @@ pub fn gr2_tab(_app_state: AppState, gr2_state: Gr2State) -> impl IntoView {
     v_stack((
         // Header
         header_section(gr2_state.clone()),
-        // Main content
-        scroll(
+        // Main content area with form sections and results
+        v_stack((
+            // Form sections (fixed height content)
             v_stack((
                 // Direction and format selector
                 direction_section(gr2_state.clone()),
@@ -40,12 +41,20 @@ pub fn gr2_tab(_app_state: AppState, gr2_state: Gr2State) -> impl IntoView {
                 single_file_section(gr2_state.clone()),
                 // Batch conversion
                 batch_section(gr2_state.clone()),
-                // Results log
-                results_section(gr2_state.clone()),
             ))
-            .style(|s| s.width_full().padding(24.0).gap(16.0)),
-        )
-        .style(|s| s.width_full().flex_grow(1.0)),
+            .style(|s| s.width_full().gap(16.0)),
+            // Results log (fills remaining space)
+            results_section(gr2_state.clone()),
+        ))
+        .style(|s| {
+            s.width_full()
+                .height_full()
+                .min_height(0.0)
+                .flex_grow(1.0)
+                .flex_basis(0.0)
+                .padding(24.0)
+                .gap(16.0)
+        }),
         // Progress overlay (shown when converting) - absolutely positioned
         progress_overlay(state),
     ))
@@ -443,7 +452,8 @@ fn results_section(state: Gr2State) -> impl IntoView {
                 .filter(|msg| msg.starts_with("Error") || msg.starts_with("Failed"))
                 .collect::<ImVector<_>>()
         } else {
-            log.into_iter().collect::<ImVector<_>>()
+            // Already an ImVector, return directly
+            log
         }
     };
 
@@ -548,14 +558,23 @@ fn results_section(state: Gr2State) -> impl IntoView {
         )
         .style(|s| {
             s.width_full()
-                .height(150.0)
+                .height_full()
+                .min_height(0.0)
+                .flex_grow(1.0)
+                .flex_basis(0.0)
                 .background(Color::rgb8(250, 250, 250))
                 .border(1.0)
                 .border_color(Color::rgb8(220, 220, 220))
                 .border_radius(4.0)
         }),
     ))
-    .style(|s| card_style(s))
+    .style(|s| {
+        card_style(s)
+            .height_full()
+            .min_height(0.0)
+            .flex_grow(1.0)
+            .flex_basis(0.0)
+    })
 }
 
 fn progress_overlay(state: Gr2State) -> impl IntoView {

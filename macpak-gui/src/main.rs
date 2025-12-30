@@ -25,7 +25,7 @@ fn main() {
             Some(
                 WindowConfig::default()
                     .size((1200.0, 800.0))
-                    .title("MacPak - BG3 Modding Toolkit"),
+                    .title("MacPak"),
             ),
         )
         .run();
@@ -40,6 +40,7 @@ fn app_view() -> impl IntoView {
     let search_state = SearchState::new();
     let tools_state = ToolsState::new();
     let gr2_state = Gr2State::new();
+    let vt_state = VirtualTexturesState::new();
 
     let active_tab = app_state.active_tab;
 
@@ -54,13 +55,14 @@ fn app_view() -> impl IntoView {
             editor_tabs_state,
             browser_state,
             pak_ops_state,
+            gr2_state,
+            vt_state,
             search_state,
             tools_state,
-            gr2_state,
         ),
     ))
     .style(|s| s.width_full().height_full())
-    .window_title(|| "MacPak - BG3 Modding Toolkit".to_string())
+    .window_title(|| "MacPak".to_string())
     .on_event(floem::event::EventListener::WindowClosed, |_| {
         // Force quit the app when the window is closed (macOS behavior fix)
         // Using process::exit because quit_app() alone doesn't terminate
@@ -74,9 +76,10 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
         tab_button("📂 Browser", 0, active_tab),
         tab_button("📝 Editor", 1, active_tab),
         tab_button("📦 PAK Ops", 2, active_tab),
-        tab_button("🔍 Search", 3, active_tab),
-        tab_button("🛠️ Tools", 4, active_tab),
-        tab_button("🦴 GR2", 5, active_tab),
+        tab_button("🦴 GR2", 3, active_tab),
+        tab_button("🖼️ Textures", 4, active_tab),
+        tab_button("🔍 Search", 5, active_tab),
+        tab_button("🛠️ Tools", 6, active_tab),
         empty().style(|s| s.flex_grow(1.0)),
         // App info
         label(|| "MacPak v0.1.0")
@@ -125,9 +128,11 @@ fn tab_content(
     editor_tabs_state: EditorTabsState,
     browser_state: BrowserState,
     pak_ops_state: PakOpsState,
+    gr2_state: Gr2State,
+    vt_state: VirtualTexturesState,
     search_state: SearchState,
     tools_state: ToolsState,
-    gr2_state: Gr2State,
+
 ) -> impl IntoView {
     dyn_container(
         move || active_tab.get(),
@@ -136,9 +141,10 @@ fn tab_content(
                 0 => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
                 1 => editor_tab(app_state.clone(), editor_tabs_state.clone()).into_any(),
                 2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone()).into_any(),
-                3 => search_tab(app_state.clone(), search_state.clone()).into_any(),
-                4 => tools_tab(app_state.clone(), tools_state.clone()).into_any(),
-                5 => gr2_tab(app_state.clone(), gr2_state.clone()).into_any(),
+                3 => gr2_tab(app_state.clone(), gr2_state.clone()).into_any(),
+                4 => virtual_textures_tab(app_state.clone(), vt_state.clone()).into_any(),
+                5 => search_tab(app_state.clone(), search_state.clone()).into_any(),
+                6 => tools_tab(app_state.clone(), tools_state.clone()).into_any(),
                 _ => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
             }
         },

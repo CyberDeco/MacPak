@@ -25,6 +25,10 @@
 # Testing
 /tests/
 **/tests/
+/benches/
+**/benches/
+/examples/
+**/examples/
 
 # ==========================
 # IDEs and Editors

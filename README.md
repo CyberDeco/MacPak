@@ -9,7 +9,7 @@
 ---
 
 <p align="center">
-*Baldurs Gate 3 modding tools for macOS? In **this** economy?*
+<i>Baldurs Gate 3 modding tools for macOS? In <b>this</b> economy?</i>
 </p>
 
 ---
@@ -29,6 +29,7 @@ Status:
 
 - [x] Working: pak operations (list contents, unpack single/batch, verify structure, and pack single/batch)
 - [x] Working: .lsf <> .lsx <> .lsj conversion
+  - BUG: crashes for gigantic _merged.lsf files
 - [x] Working: inline text file editor with multiple tabbed support and meta.lsx generator
 - [x] Working: various QOL things - UUID/TranslatedString generator, color picker/saver, etc.
 - [x] Temporarily working: DDS file previews (it's a little jank because it's a stopgap fix)
@@ -39,13 +40,14 @@ Status:
   - [x] Text editor tab + meta.lsx generator
   - [x] Pak operations tab
   - [x] Tab for gr2 <> glTF single/batch conversion
-- [ ] Currently: incorporate bevy for 3D model rendering (just previews)
+- [ ] Currently: decompressing virtual textures
+- [ ] Next: incorporate bevy for 3D model rendering (just previews)
 
-I'll get to making a fleshed out wiki once it's release-worthy.
+This is meant to be an all-in-one tool, so if you're looking for a simple or lightweight GUI... this ain't it. I'll get to making a fleshed out wiki once it's release-worthy.
 
 ### Technical
 
-1. Self-contained: no need to download/install/build any dependencies.
+1. Self-contained: no need to download/install/build any dependencies - will be at release.
 2. ~~Automatically checks MacPak repo for updates on launch.~~
 
 ## What it does not do:
@@ -80,6 +82,7 @@ Core MacPak functionality is derived from (and wouldn't be possible without):
 - [LSLib](https://github.com/Norbyte/lslib) 
   - LSF/LSX/LSJ handling
   - GR2/glTF conversion
+  - Virtual texture handling
 - [xiba](https://gitlab.com/saghm/xiba/)
   - PAK handling
 - [Knit](https://github.com/neptuwunium/Knit)

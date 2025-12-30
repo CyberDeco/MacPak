@@ -41,6 +41,9 @@ walkdir = "2.4"
 crc32fast = "1.4"
 larian-formats = "0.3.0"
 lazy_static = "1.4"
+fastlz = "0.1.0"
+fastlz-rs = "0.0.3"
+lz77 = "0.1.0"
 
 # For 3D model/mesh/texture handling
 gltf = "1.4.1"

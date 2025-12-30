@@ -230,7 +230,7 @@ fn get_type_icon(file_type: &str) -> &'static str {
         "lsf" => "🔷",
         "dds" | "png" | "jpg" => "🖼️",
         "gr2" => "🦴",
-        "wem" | "ogg" => "🔊",
+        "wem" | "ogg" | "wav" => "🔊",
         _ => "📄",
     }
 }

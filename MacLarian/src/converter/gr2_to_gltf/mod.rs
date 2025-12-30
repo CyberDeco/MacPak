@@ -6,7 +6,7 @@ mod gr2_reader;
 mod gltf_builder;
 mod utils;
 
-pub use gr2_reader::{Gr2Reader, MeshData, Vertex, Skeleton, Bone, Transform};
+pub use gr2_reader::{Gr2Reader, MeshData, Vertex, Skeleton, Bone, Transform, Gr2ContentInfo};
 pub use gltf_builder::GltfBuilder;
 pub use utils::{half_to_f32, decode_qtangent};
 
@@ -24,7 +24,12 @@ pub fn convert_gr2_to_gltf(input_path: &Path, output_path: &Path) -> Result<()> 
     let meshes = reader.parse_meshes(&file_data)?;
 
     if meshes.is_empty() {
-        return Err(Error::ConversionError("No meshes found in GR2 file".to_string()));
+        // Get content info for better error message
+        let info = reader.get_content_info(&file_data)?;
+        return Err(Error::ConversionError(format!(
+            "No meshes found in GR2 file (contains: {})",
+            info.describe()
+        )));
     }
 
     // Build glTF
@@ -62,7 +67,11 @@ pub fn convert_gr2_to_glb(input_path: &Path, output_path: &Path) -> Result<()> {
     let meshes = reader.parse_meshes(&file_data)?;
 
     if meshes.is_empty() {
-        return Err(Error::ConversionError("No meshes found in GR2 file".to_string()));
+        let info = reader.get_content_info(&file_data)?;
+        return Err(Error::ConversionError(format!(
+            "No meshes found in GR2 file (contains: {})",
+            info.describe()
+        )));
     }
 
     // Build glTF
@@ -96,7 +105,11 @@ pub fn convert_gr2_bytes_to_glb(gr2_data: &[u8]) -> Result<Vec<u8>> {
     let meshes = reader.parse_meshes(gr2_data)?;
 
     if meshes.is_empty() {
-        return Err(Error::ConversionError("No meshes found in GR2 file".to_string()));
+        let info = reader.get_content_info(gr2_data)?;
+        return Err(Error::ConversionError(format!(
+            "No meshes found in GR2 file (contains: {})",
+            info.describe()
+        )));
     }
 
     let mut builder = GltfBuilder::new();

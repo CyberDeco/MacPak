@@ -3,7 +3,7 @@
 //!
 //! SPDX-License-Identifier: MIT
 //!
-//! BitKnit compression code is adapted from:
+//! BitKnit compression code is adapted from these clean room implementations:
 //!	https://github.com/neptuwunium/Knit/blob/develop/Knit/Compression/GrannyBitKnitCompression.cs
 //!	https://github.com/eiz/pybg3/blob/9ebda24314822bf35580e74bb7917f666ae046c6/src/rans.h
 

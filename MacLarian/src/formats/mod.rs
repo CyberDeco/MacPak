@@ -5,6 +5,7 @@ pub mod lsf;
 pub mod lsx;
 pub mod lsj;
 pub mod gr2;
+pub mod virtual_texture;
 
 // Re-export common types for convenience
 pub use common::{TypeId, get_type_name, type_name_to_id};
