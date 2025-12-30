@@ -77,7 +77,21 @@ impl PakOperations {
                 .unwrap_or_else(|| file.path.to_string_lossy().to_string());
             progress(index + 1, total_files, &format!("Writing {}", file_name));
 
-            let output_path = output_dir.as_ref().join(&file.path);
+            // For virtual texture files (.gts/.gtp), organize into subfolders
+            let output_path = if is_virtual_texture_file(&file_name) {
+                if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
+                    // Insert subfolder before the filename
+                    if let Some(parent) = file.path.parent() {
+                        output_dir.as_ref().join(parent).join(&subfolder).join(&file_name)
+                    } else {
+                        output_dir.as_ref().join(&subfolder).join(&file_name)
+                    }
+                } else {
+                    output_dir.as_ref().join(&file.path)
+                }
+            } else {
+                output_dir.as_ref().join(&file.path)
+            };
 
             if let Some(parent) = output_path.parent() {
                 std::fs::create_dir_all(parent)?;
@@ -170,4 +184,39 @@ impl PakOperations {
         String::from_utf8(meta_file.data.clone())
             .map_err(|e| Error::ConversionError(format!("Invalid UTF-8 in meta.lsx: {}", e)))
     }
+}
+
+/// Check if a filename is a virtual texture file (.gts or .gtp)
+fn is_virtual_texture_file(filename: &str) -> bool {
+    let lower = filename.to_lowercase();
+    lower.ends_with(".gts") || lower.ends_with(".gtp")
+}
+
+/// Extract the subfolder name for a virtual texture file
+/// e.g., "Albedo_Normal_Physical_0.gts" -> "Albedo_Normal_Physical_0"
+/// e.g., "Albedo_Normal_Physical_0_abc123def.gtp" -> "Albedo_Normal_Physical_0"
+fn get_virtual_texture_subfolder(filename: &str) -> Option<String> {
+    let stem = filename.strip_suffix(".gts")
+        .or_else(|| filename.strip_suffix(".gtp"))
+        .or_else(|| filename.strip_suffix(".GTS"))
+        .or_else(|| filename.strip_suffix(".GTP"))?;
+
+    // For .gts files, the stem is already the subfolder name
+    // e.g., "Albedo_Normal_Physical_0" from "Albedo_Normal_Physical_0.gts"
+    if filename.to_lowercase().ends_with(".gts") {
+        return Some(stem.to_string());
+    }
+
+    // For .gtp files, strip the hash suffix
+    // e.g., "Albedo_Normal_Physical_0_abc123...def" -> "Albedo_Normal_Physical_0"
+    if let Some(last_underscore) = stem.rfind('_') {
+        let suffix = &stem[last_underscore + 1..];
+        // Hash is 32 hex characters
+        if suffix.len() == 32 && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Some(stem[..last_underscore].to_string());
+        }
+    }
+
+    // Fallback: use the full stem
+    Some(stem.to_string())
 }
