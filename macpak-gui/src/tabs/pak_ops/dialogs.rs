@@ -17,154 +17,121 @@ use super::widgets::{compression_selector, priority_input};
 pub fn progress_overlay(state: PakOpsState) -> impl IntoView {
     let show = state.show_progress;
 
-    // Local signals for the polled values - these will be updated by the timer
+    // Local signals for polled values - updated by timer
     let polled_pct = RwSignal::new(0u32);
+    let polled_current = RwSignal::new(0u32);
+    let polled_total = RwSignal::new(0u32);
     let polled_msg = RwSignal::new(String::new());
-
-    // Signal to track the current timer token so we can cancel it
     let timer_active = RwSignal::new(false);
 
-    // Animation counter for indeterminate progress (0-100, bounces back and forth)
-    let anim_pos = RwSignal::new(0i32);
-    let anim_direction = RwSignal::new(1i32); // 1 = forward, -1 = backward
-
-    // Function to poll shared progress and schedule next poll
+    // Polling function
     fn poll_and_schedule(
         polled_pct: RwSignal<u32>,
+        polled_current: RwSignal<u32>,
+        polled_total: RwSignal<u32>,
         polled_msg: RwSignal<String>,
-        anim_pos: RwSignal<i32>,
-        anim_direction: RwSignal<i32>,
         show: RwSignal<bool>,
         timer_active: RwSignal<bool>,
     ) {
         // Read from shared atomic state
         let shared = get_shared_progress();
         let pct = shared.get_pct();
+        let (current, total) = shared.get_counts();
         let msg = shared.get_message();
 
         // Update local signals
         polled_pct.set(pct);
+        polled_current.set(current);
+        polled_total.set(total);
         if !msg.is_empty() {
             polled_msg.set(msg);
         }
 
-        // Update animation position for indeterminate progress
-        let current_pos = anim_pos.get_untracked();
-        let dir = anim_direction.get_untracked();
-        let new_pos = current_pos + dir * 3; // Move 3% per frame
-
-        if new_pos >= 70 {
-            anim_direction.set(-1);
-            anim_pos.set(70);
-        } else if new_pos <= 0 {
-            anim_direction.set(1);
-            anim_pos.set(0);
-        } else {
-            anim_pos.set(new_pos);
-        }
-
         // Schedule next poll if still active
         if show.get_untracked() && timer_active.get_untracked() {
-            exec_after(Duration::from_millis(30), move |_| {
+            exec_after(Duration::from_millis(50), move |_| {
                 if show.get_untracked() && timer_active.get_untracked() {
-                    poll_and_schedule(polled_pct, polled_msg, anim_pos, anim_direction, show, timer_active);
+                    poll_and_schedule(polled_pct, polled_current, polled_total, polled_msg, show, timer_active);
                 }
             });
         }
     }
 
-    // Start/stop polling timer based on visibility
+    // Start/stop polling based on visibility
     create_effect(move |_| {
         let visible = show.get();
         if visible {
-            // Reset and start polling immediately
+            // Reset and start polling
+            get_shared_progress().reset();
             polled_pct.set(0);
-            polled_msg.set(String::new());
-            anim_pos.set(0);
-            anim_direction.set(1);
+            polled_current.set(0);
+            polled_total.set(0);
+            polled_msg.set("Starting...".to_string());
             timer_active.set(true);
-            // Do first poll immediately, then schedule subsequent ones
-            poll_and_schedule(polled_pct, polled_msg, anim_pos, anim_direction, show, timer_active);
+
+            exec_after(Duration::from_millis(50), move |_| {
+                if show.get_untracked() {
+                    poll_and_schedule(polled_pct, polled_current, polled_total, polled_msg, show, timer_active);
+                }
+            });
         } else {
-            // Stop polling
             timer_active.set(false);
         }
     });
 
     dyn_container(
-        move || {
-            let visible = show.get();
-            let pct = polled_pct.get();
-            let msg = polled_msg.get();
-            let anim = anim_pos.get();
-            (visible, pct, msg, anim)
-        },
-        move |(visible, pct, msg, anim)| {
-            if visible {
-                // Determine if we're in indeterminate mode (reading phase with low/no progress)
-                let is_reading = msg.contains("Reading");
-                let is_indeterminate = is_reading && pct < 100;
-
-                v_stack((
-                    label(move || {
-                        if is_indeterminate {
-                            msg.clone()
-                        } else if pct >= 100 {
-                            "Finishing...".to_string()
-                        } else {
-                            msg.clone()
-                        }
-                    }).style(|s| {
-                        s.font_size(14.0)
-                            .font_weight(Weight::MEDIUM)
-                            .margin_bottom(12.0)
-                    }),
-                    // Progress bar
-                    h_stack((
-                        container(
-                            container(empty()).style(move |s| {
-                                if is_indeterminate {
-                                    // Animated sliding bar for indeterminate progress
-                                    s.width_pct(30.0)
-                                        .height_full()
-                                        .background(Color::rgb8(33, 150, 243))
-                                        .border_radius(4.0)
-                                        .margin_left_pct(anim as f64)
-                                } else {
-                                    // Normal progress bar
-                                    let display_pct = if pct > 100 { 100 } else { pct };
-                                    s.width_pct(display_pct as f64)
-                                        .height_full()
-                                        .background(Color::rgb8(33, 150, 243))
-                                        .border_radius(4.0)
-                                }
-                            }),
-                        )
-                        .style(|s| {
-                            s.flex_grow(1.0)
-                                .height(8.0)
-                                .background(Color::rgb8(230, 230, 230))
-                                .border_radius(4.0)
-                        }),
+        move || show.get(),
+        move |is_visible| {
+            if is_visible {
+                container(
+                    v_stack((
+                        // Count display (e.g., "1/5")
                         label(move || {
-                            if is_indeterminate {
-                                "...".to_string()
+                            let total = polled_total.get();
+                            let current = polled_current.get();
+                            if total > 0 {
+                                format!("{}/{}", current, total)
                             } else {
-                                format!("{}%", if pct > 100 { 100 } else { pct })
+                                String::new()
                             }
                         })
-                        .style(|s| s.width(50.0).font_size(12.0)),
+                        .style(|s| {
+                            s.font_size(13.0)
+                                .color(Color::rgb8(100, 100, 100))
+                                .margin_bottom(4.0)
+                        }),
+                        // Filename
+                        label(move || polled_msg.get())
+                            .style(|s| s.font_size(14.0).margin_bottom(12.0)),
+                        // Progress bar - full width
+                        container(
+                            container(empty())
+                                .style(move |s| {
+                                    let pct = polled_pct.get();
+                                    s.height_full()
+                                        .width_pct(pct as f64)
+                                        .background(Color::rgb8(76, 175, 80))
+                                        .border_radius(4.0)
+                                }),
+                        )
+                        .style(|s| {
+                            s.width_full()
+                                .height(8.0)
+                                .background(Color::rgb8(220, 220, 220))
+                                .border_radius(4.0)
+                        }),
+                        label(move || format!("{}%", polled_pct.get()))
+                            .style(|s| s.font_size(12.0).margin_top(8.0).color(Color::rgb8(100, 100, 100))),
                     ))
-                    .style(|s| s.width_full().gap(8.0).items_center()),
-                ))
-                .style(|s| {
-                    s.padding(20.0)
-                        .background(Color::WHITE)
-                        .border(1.0)
-                        .border_color(Color::rgb8(200, 200, 200))
-                        .border_radius(8.0)
-                        .width(510.0)
-                })
+                    .style(|s| {
+                        s.padding(24.0)
+                            .background(Color::WHITE)
+                            .border(1.0)
+                            .border_color(Color::rgb8(200, 200, 200))
+                            .border_radius(8.0)
+                            .width(500.0)
+                    }),
+                )
                 .into_any()
             } else {
                 empty().into_any()

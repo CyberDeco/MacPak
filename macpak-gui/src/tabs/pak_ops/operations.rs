@@ -72,21 +72,20 @@ pub fn extract_pak_file(state: PakOpsState) {
             },
         );
 
-        let file_count = MacLarian::pak::PakOperations::list(&pak_path)
-            .map(|files| files.len())
-            .unwrap_or(0);
+        let files = MacLarian::pak::PakOperations::list(&pak_path)
+            .unwrap_or_default();
 
         let pak_result = match result {
             Ok(_) => PakResult::ExtractDone {
                 success: true,
                 message: String::new(),
-                file_count,
+                files,
                 dest: dest_path,
             },
             Err(e) => PakResult::ExtractDone {
                 success: false,
                 message: e.to_string(),
-                file_count: 0,
+                files: Vec::new(),
                 dest: dest_path,
             },
         };
@@ -315,6 +314,15 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
     let pak_name_clone = pak_name.clone();
 
     thread::spawn(move || {
+        // Collect source files for listing
+        let source_path = std::path::Path::new(&source);
+        let files: Vec<String> = walkdir::WalkDir::new(&source)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .filter_map(|e| e.path().strip_prefix(source_path).ok().map(|p| p.to_string_lossy().to_string()))
+            .collect();
+
         // TODO: Use compression and priority options when MacLarian supports them
         let result = MacLarian::pak::PakOperations::create(&source, &dest);
 
@@ -322,11 +330,13 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
             Ok(_) => PakResult::CreateDone {
                 success: true,
                 message: String::new(),
+                files,
                 pak_name: pak_name_clone,
             },
             Err(e) => PakResult::CreateDone {
                 success: false,
                 message: e.to_string(),
+                files: Vec::new(),
                 pak_name: pak_name_clone,
             },
         };
@@ -466,21 +476,20 @@ pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
             },
         );
 
-        let file_count = MacLarian::pak::PakOperations::list(&pak_path)
-            .map(|files| files.len())
-            .unwrap_or(0);
+        let files = MacLarian::pak::PakOperations::list(&pak_path)
+            .unwrap_or_default();
 
         let pak_result = match result {
             Ok(_) => PakResult::ExtractDone {
                 success: true,
                 message: String::new(),
-                file_count,
+                files,
                 dest: dest_path,
             },
             Err(e) => PakResult::ExtractDone {
                 success: false,
                 message: e.to_string(),
-                file_count: 0,
+                files: Vec::new(),
                 dest: dest_path,
             },
         };

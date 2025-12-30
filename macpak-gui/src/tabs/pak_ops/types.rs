@@ -13,7 +13,7 @@ pub enum PakResult {
     ExtractDone {
         success: bool,
         message: String,
-        file_count: usize,
+        files: Vec<String>,
         dest: String,
     },
     ListDone {
@@ -25,6 +25,7 @@ pub enum PakResult {
     CreateDone {
         success: bool,
         message: String,
+        files: Vec<String>,
         pak_name: String,
     },
     ValidateDone {
@@ -52,6 +53,10 @@ pub enum PakResult {
 pub struct SharedProgress {
     /// Progress as integer percentage (0-100), stored as u32 for atomic access
     pub progress_pct: Arc<AtomicU32>,
+    /// Current item index (1-based for display)
+    pub current: Arc<AtomicU32>,
+    /// Total items count
+    pub total: Arc<AtomicU32>,
     /// Current progress message
     pub message: Arc<Mutex<String>>,
 }
@@ -60,6 +65,8 @@ impl SharedProgress {
     pub fn new() -> Self {
         Self {
             progress_pct: Arc::new(AtomicU32::new(0)),
+            current: Arc::new(AtomicU32::new(0)),
+            total: Arc::new(AtomicU32::new(0)),
             message: Arc::new(Mutex::new(String::new())),
         }
     }
@@ -72,6 +79,8 @@ impl SharedProgress {
             0
         };
         self.progress_pct.store(pct, Ordering::SeqCst);
+        self.current.store(current as u32, Ordering::SeqCst);
+        self.total.store(total as u32, Ordering::SeqCst);
         if let Ok(mut msg) = self.message.lock() {
             *msg = description.to_string();
         }
@@ -82,6 +91,14 @@ impl SharedProgress {
         self.progress_pct.load(Ordering::SeqCst)
     }
 
+    /// Get current and total counts
+    pub fn get_counts(&self) -> (u32, u32) {
+        (
+            self.current.load(Ordering::SeqCst),
+            self.total.load(Ordering::SeqCst),
+        )
+    }
+
     /// Get current message
     pub fn get_message(&self) -> String {
         self.message.lock().map(|m| m.clone()).unwrap_or_default()
@@ -90,6 +107,8 @@ impl SharedProgress {
     /// Reset progress to initial state (call when starting a new operation)
     pub fn reset(&self) {
         self.progress_pct.store(0, Ordering::SeqCst);
+        self.current.store(0, Ordering::SeqCst);
+        self.total.store(0, Ordering::SeqCst);
         if let Ok(mut msg) = self.message.lock() {
             msg.clear();
         }
@@ -138,15 +157,12 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             state.progress.set(1.0);
 
             if success {
-                state.add_result(&format!("✅ Loaded {} files from {}", files.len(), pak_name));
-                // Clear search and set file list (convert Vec to im::Vector for virtual_list)
-                state.file_search.set(String::new());
-                state.list_contents.set(files.into_iter().collect());
+                // Clear results and batch add all files
+                state.clear_results();
+                state.add_results_batch(files.clone());
+                state.status_message.set(format!("Loaded {} ({} files)", pak_name, files.len()));
             } else {
-                state.add_result(&format!(
-                    "❌ Failed to list PAK contents: {}",
-                    error.unwrap_or_default()
-                ));
+                state.status_message.set(format!("Failed: {}", error.unwrap_or_default()));
             }
 
             state.is_listing.set(false);
@@ -156,20 +172,19 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
         PakResult::ExtractDone {
             success,
             message,
-            file_count,
+            files,
             dest,
         } => {
             state.progress.set(1.0);
 
             if success {
-                state.add_result(&format!(
-                    "✅ Successfully extracted {} files to {}",
-                    file_count, dest
-                ));
+                // Clear results and batch add extracted files
+                state.clear_results();
+                state.add_results_batch(files.clone());
+                state.status_message.set(format!("Extracted {} files to {}", files.len(), dest));
             } else {
-                state.add_result(&format!("❌ Extraction failed: {}", message));
+                state.status_message.set(format!("Extraction failed: {}", message));
             }
-            state.add_result("------------------------------------------------------------");
 
             state.is_extracting.set(false);
             state.show_progress.set(false);
@@ -178,16 +193,19 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
         PakResult::CreateDone {
             success,
             message,
+            files,
             pak_name,
         } => {
             state.progress.set(1.0);
 
             if success {
-                state.add_result(&format!("✅ Successfully created {}", pak_name));
+                // Clear results and batch add source files
+                state.clear_results();
+                state.add_results_batch(files.clone());
+                state.status_message.set(format!("Created {} ({} files)", pak_name, files.len()));
             } else {
-                state.add_result(&format!("❌ PAK creation failed: {}", message));
+                state.status_message.set(format!("Creation failed: {}", message));
             }
-            state.add_result("------------------------------------------------------------");
 
             state.is_creating.set(false);
             state.show_progress.set(false);
@@ -198,27 +216,29 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             structure,
             warnings,
         } => {
+            let mut results = Vec::new();
             if valid {
-                state.add_result("✓ Mod structure is valid!");
+                results.push("✓ Mod structure is valid!".to_string());
             } else {
-                state.add_result("⚠ Mod structure has issues:");
+                results.push("⚠ Mod structure has issues:".to_string());
             }
 
             if !structure.is_empty() {
-                state.add_result("Structure found:");
+                results.push("Structure found:".to_string());
                 for item in &structure {
-                    state.add_result(&format!("  {}", item));
+                    results.push(format!("  {}", item));
                 }
             }
 
             if !warnings.is_empty() {
-                state.add_result("Warnings:");
+                results.push("Warnings:".to_string());
                 for warning in &warnings {
-                    state.add_result(&format!("  - {}", warning));
+                    results.push(format!("  - {}", warning));
                 }
             }
 
-            state.add_result("------------------------------------------------------------");
+            results.push("------------------------------------------------------------".to_string());
+            state.add_results_batch(results);
             state.is_validating.set(false);
         }
 
@@ -230,18 +250,15 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
         } => {
             state.progress.set(1.0);
 
-            state.add_result(&format!(
-                "Batch extraction complete: {} succeeded, {} failed",
-                success_count, fail_count
-            ));
-            state.add_result(&format!("Destination: {}", dest));
-            state.add_result("------------------------------------------------------------");
+            let mut all_results = vec![
+                format!("Batch extraction complete: {} succeeded, {} failed", success_count, fail_count),
+                format!("Destination: {}", dest),
+                "------------------------------------------------------------".to_string(),
+            ];
+            all_results.extend(results);
+            all_results.push("------------------------------------------------------------".to_string());
 
-            for result in &results {
-                state.add_result(result);
-            }
-
-            state.add_result("------------------------------------------------------------");
+            state.add_results_batch(all_results);
             state.is_extracting.set(false);
             state.show_progress.set(false);
         }
@@ -254,18 +271,15 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
         } => {
             state.progress.set(1.0);
 
-            state.add_result(&format!(
-                "Batch creation complete: {} succeeded, {} failed",
-                success_count, fail_count
-            ));
-            state.add_result(&format!("Destination: {}", dest));
-            state.add_result("------------------------------------------------------------");
+            let mut all_results = vec![
+                format!("Batch creation complete: {} succeeded, {} failed", success_count, fail_count),
+                format!("Destination: {}", dest),
+                "------------------------------------------------------------".to_string(),
+            ];
+            all_results.extend(results);
+            all_results.push("------------------------------------------------------------".to_string());
 
-            for result in &results {
-                state.add_result(result);
-            }
-
-            state.add_result("------------------------------------------------------------");
+            state.add_results_batch(all_results);
             state.is_creating.set(false);
             state.show_progress.set(false);
         }

@@ -1,13 +1,58 @@
-//! Operations row UI components
+//! UI sections for PAK Operations tab
 
 use floem::event::{Event, EventListener};
 use floem::prelude::*;
+use floem::text::Weight;
 
 use crate::state::PakOpsState;
 use super::operations::{
     batch_create_paks, batch_extract_paks, create_pak_file, extract_individual_files,
     extract_pak_file, list_pak_contents, rebuild_pak_file, validate_mod_structure,
 };
+
+pub fn header_section(state: PakOpsState) -> impl IntoView {
+    h_stack((
+        label(|| "PAK Operations")
+            .style(|s| s.font_size(18.0).font_weight(Weight::BOLD)),
+        empty().style(|s| s.flex_grow(1.0)),
+        // Status message
+        dyn_container(
+            move || state.status_message.get(),
+            move |msg| {
+                if msg.is_empty() {
+                    empty().into_any()
+                } else {
+                    let is_error = msg.contains("Failed") || msg.contains("Error");
+                    label(move || msg.clone())
+                        .style(move |s| {
+                            let s = s
+                                .padding_horiz(12.0)
+                                .padding_vert(6.0)
+                                .border_radius(4.0)
+                                .font_size(12.0);
+                            if is_error {
+                                s.background(Color::rgb8(255, 235, 235))
+                                    .color(Color::rgb8(180, 30, 30))
+                            } else {
+                                s.background(Color::rgb8(232, 245, 233))
+                                    .color(Color::rgb8(46, 125, 50))
+                            }
+                        })
+                        .into_any()
+                }
+            },
+        ),
+    ))
+    .style(|s| {
+        s.width_full()
+            .padding(16.0)
+            .gap(8.0)
+            .items_center()
+            .background(Color::WHITE)
+            .border_bottom(1.0)
+            .border_color(Color::rgb8(220, 220, 220))
+    })
+}
 
 /// Main operations row with 3 columns
 pub fn operations_row(state: PakOpsState) -> impl IntoView {
@@ -98,12 +143,12 @@ fn drop_zone(state: PakOpsState) -> impl IntoView {
     container(
         v_stack((
             label(|| "📦".to_string()).style(|s| s.font_size(32.0)),
-            label(|| "Drag PAK files here".to_string()).style(|s| {
+            label(|| "Drag files here".to_string()).style(|s| {
                 s.font_size(14.0)
                     .color(Color::rgb8(100, 100, 100))
                     .margin_top(8.0)
             }),
-            label(|| "for quick operations".to_string())
+            label(|| ".pak".to_string())
                 .style(|s| s.font_size(12.0).color(Color::rgb8(150, 150, 150))),
         ))
         .style(|s| s.items_center()),
