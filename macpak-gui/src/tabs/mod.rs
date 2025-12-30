@@ -9,6 +9,7 @@ pub mod search;
 pub mod tools;
 
 pub use browser::browser_tab;
+pub use browser::kill_preview_process;
 pub use editor::load_file;
 pub use editor::load_file_in_tab;
 pub use editor::editor_tab;

@@ -20,10 +20,10 @@
 
 Components:
 
-- MacPak - the frontend name of the project and eventual app, calls MacLarian on the backend
+- MacPak - the frontend name of the project/app and is the public API which calls MacLarian on the backend
 - MacLarian - the "engine" behind MacPak (geddit, because macOS + Larian = the sports car manufacturer...?)
 - macpak-bevy - backend for GR2/glTF previews using bevy
-- macpak-cli - command-line interface, called by MacLarian and passed into MacPak
+- macpak-cli - command-line interface, calls MacLarian via the MacPak API
 - macpak-gui - the desktop app
 
 Status:
@@ -43,10 +43,15 @@ Status:
   - [x] Pak operations tab
   - [x] Tab for gr2 <> glTF/GLB single/batch conversion
   - [x] Tab for extracting and stitching single/batch virtual textures
-    - [ ] Future: work in reverse for custom virtual textures
-- [ ] Currently: incorporate bevy for 3D model rendering (just previews)
+    - [ ] Future: work in reverse for custom virtual textures (needs BG3SE for testing)
+- [ ] Currently: incorporate bevy for 3D model and texture rendering (just previews)
+  - [x] .glb/.gltf
+  - [x] .gr2 (via temp .glb conversion)
+  - [ ] .dds
+  - [ ] marry .dds to GR2/glTF (need database for that)
 - [ ] Next: Piece together x-ref library for GR2 files to their base/normal/physical virtual textures and/or cloth msk
     - [ ] Option to automatically retrieve companion texture files when working with GR2
+- [ ] After: dye lab
 
 This is meant to be an all-in-one tool, so if you're looking for a simple or lightweight GUI... this ain't it. I'll get to making a fleshed out wiki once it's release-worthy.
 

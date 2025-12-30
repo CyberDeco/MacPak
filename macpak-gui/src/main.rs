@@ -64,6 +64,8 @@ fn app_view() -> impl IntoView {
     .style(|s| s.width_full().height_full())
     .window_title(|| "MacPak".to_string())
     .on_event(floem::event::EventListener::WindowClosed, |_| {
+        // Kill any running preview process before exiting
+        kill_preview_process();
         // Force quit the app when the window is closed (macOS behavior fix)
         // Using process::exit because quit_app() alone doesn't terminate
         // background threads or cleanup all resources on macOS

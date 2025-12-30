@@ -283,6 +283,8 @@ pub struct BrowserState {
     pub rename_text: RwSignal<String>,            // Current text in rename input
     // 3D Preview state
     pub preview_3d_path: RwSignal<Option<String>>,  // Path to .glb file for 3D preview
+    // Panel layout
+    pub file_list_width: RwSignal<f64>,  // Width of file list panel in pixels
 }
 
 impl BrowserState {
@@ -308,6 +310,7 @@ impl BrowserState {
             renaming_path: RwSignal::new(None),
             rename_text: RwSignal::new(String::new()),
             preview_3d_path: RwSignal::new(None),
+            file_list_width: RwSignal::new(500.0),  // Default width in pixels
         }
     }
 }
