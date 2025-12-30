@@ -318,7 +318,8 @@ pub fn select_file(file: &FileEntry, state: BrowserState) {
             state.preview_3d_path.set(Some(file.path.clone()));
         }
         "gr2" => {
-            state.preview_content.set("[GR2 Model file - Convert to GLB for preview]".to_string());
+            state.preview_content.set("[GR2 Model - Click button to preview]".to_string());
+            state.preview_3d_path.set(Some(file.path.clone()));
         }
         "wem" | "wav" => {
             state.preview_content.set("[Audio file]".to_string());

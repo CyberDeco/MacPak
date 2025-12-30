@@ -1,7 +1,8 @@
 //! 3D Model preview launcher
 //!
-//! Spawns the macpak-bevy binary as a subprocess to display .glb files
+//! Spawns the macpak-bevy binary as a subprocess to display .glb/.gr2 files
 
+use std::path::Path;
 use std::process::{Child, Command};
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -12,29 +13,137 @@ use crate::state::BrowserState;
 /// Global handle to the preview process (only one at a time)
 static PREVIEW_PROCESS: OnceLock<Arc<Mutex<Option<Child>>>> = OnceLock::new();
 
+/// Global handle to the temp file path (to clean up when preview closes)
+static TEMP_GLB_PATH: OnceLock<Arc<Mutex<Option<std::path::PathBuf>>>> = OnceLock::new();
+
 fn get_preview_handle() -> &'static Arc<Mutex<Option<Child>>> {
     PREVIEW_PROCESS.get_or_init(|| Arc::new(Mutex::new(None)))
 }
 
-/// Launch the 3D preview window for a .glb file
+fn get_temp_path_handle() -> &'static Arc<Mutex<Option<std::path::PathBuf>>> {
+    TEMP_GLB_PATH.get_or_init(|| Arc::new(Mutex::new(None)))
+}
+
+/// Launch the 3D preview window for a .glb or .gr2 file
 pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
     // Close any existing preview first
     close_3d_preview(state.clone());
 
-    // Find the preview binary
+    let path = Path::new(file_path);
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    // If it's a GR2 file, convert to temp GLB first
+    let preview_path = if ext == "gr2" {
+        state.status_message.set("Converting GR2 to GLB...".to_string());
+
+        match convert_gr2_to_temp_glb(path) {
+            Ok(temp_path) => {
+                // Store temp path for cleanup
+                if let Ok(mut handle) = get_temp_path_handle().lock() {
+                    *handle = Some(temp_path.clone());
+                }
+                temp_path.to_string_lossy().to_string()
+            }
+            Err(e) => {
+                state.status_message.set(format!("GR2 conversion failed: {}", e));
+                return;
+            }
+        }
+    } else {
+        file_path.to_string()
+    };
+
+    // Find and launch the preview binary
     let preview_binary = find_preview_binary();
 
-    match Command::new(&preview_binary).arg(file_path).spawn() {
+    match Command::new(&preview_binary).arg(&preview_path).spawn() {
         Ok(child) => {
             if let Ok(mut handle) = get_preview_handle().lock() {
                 *handle = Some(child);
             }
             state.status_message.set("3D preview opened".to_string());
+
+            // Spawn a background thread to monitor when the preview window closes
+            std::thread::spawn(move || {
+                // Wait for the process to exit
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+
+                    let should_cleanup = if let Ok(mut handle) = get_preview_handle().lock() {
+                        if let Some(ref mut child) = *handle {
+                            // Check if process has exited
+                            match child.try_wait() {
+                                Ok(Some(_)) => {
+                                    // Process exited, remove from handle
+                                    *handle = None;
+                                    true
+                                }
+                                Ok(None) => false, // Still running
+                                Err(_) => {
+                                    *handle = None;
+                                    true
+                                }
+                            }
+                        } else {
+                            // No process, stop monitoring
+                            break;
+                        }
+                    } else {
+                        break;
+                    };
+
+                    if should_cleanup {
+                        // Clean up temp file
+                        if let Ok(mut temp_handle) = get_temp_path_handle().lock() {
+                            if let Some(temp_path) = temp_handle.take() {
+                                let _ = std::fs::remove_file(temp_path);
+                            }
+                        }
+                        break;
+                    }
+                }
+            });
         }
         Err(e) => {
-            state
-                .status_message
-                .set(format!("Failed to open preview: {}", e));
+            state.status_message.set(format!("Failed to open preview: {}", e));
+        }
+    }
+}
+
+/// Convert a GR2 file to a temporary GLB file
+fn convert_gr2_to_temp_glb(gr2_path: &Path) -> Result<std::path::PathBuf, String> {
+    // Create temp file path based on original filename
+    let file_stem = gr2_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("preview");
+
+    let temp_dir = std::env::temp_dir();
+    let temp_glb = temp_dir.join(format!("{}_preview.glb", file_stem));
+
+    // Convert using MacLarian
+    MacLarian::converter::convert_gr2_to_glb(gr2_path, &temp_glb)
+        .map_err(|e| e.to_string())?;
+
+    Ok(temp_glb)
+}
+
+/// Kill any running preview process (called on app exit)
+pub fn kill_preview_process() {
+    if let Ok(mut handle) = get_preview_handle().lock() {
+        if let Some(mut child) = handle.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+    // Clean up temp file
+    if let Ok(mut temp_handle) = get_temp_path_handle().lock() {
+        if let Some(temp_path) = temp_handle.take() {
+            let _ = std::fs::remove_file(temp_path);
         }
     }
 }
@@ -47,6 +156,14 @@ pub fn close_3d_preview(state: BrowserState) {
             let _ = child.wait();
         }
     }
+
+    // Clean up temp file if any
+    if let Ok(mut temp_handle) = get_temp_path_handle().lock() {
+        if let Some(temp_path) = temp_handle.take() {
+            let _ = std::fs::remove_file(temp_path);
+        }
+    }
+
     state.status_message.set(String::new());
 }
 

@@ -59,10 +59,12 @@ pub fn preview_panel(state: BrowserState) -> impl IntoView {
         },
     )
     .style(|s| {
-        s.width_pct(40.0)
-            .flex_grow(1.0)
+        s.flex_grow(1.0)
             .flex_basis(0.0)
+            .min_width(200.0)  // Minimum preview width
             .min_height(0.0)
+            .border_left(1.0)
+            .border_color(Color::rgb8(220, 220, 220))
     })
 }
 

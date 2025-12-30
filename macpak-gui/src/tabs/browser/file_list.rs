@@ -4,8 +4,52 @@ use floem::event::EventPropagation;
 use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::text::Weight;
+use floem::views::{virtual_list, VirtualDirection, VirtualItemSize};
+use im::Vector as ImVector;
 
 use crate::state::{BrowserState, EditorTabsState, FileEntry, SortColumn};
+
+const FILE_ROW_HEIGHT: f64 = 37.0;
+
+// Fixed column widths (must match the values in file_row)
+const ICON_WIDTH: f64 = 24.0;
+const TYPE_WIDTH: f64 = 60.0;
+const SIZE_WIDTH: f64 = 80.0;
+const MODIFIED_WIDTH: f64 = 120.0;
+const ROW_PADDING: f64 = 16.0;  // 8px on each side
+const COLUMN_GAPS: f64 = 32.0;  // gaps between columns
+const CHAR_WIDTH: f64 = 7.5;    // estimated average character width
+
+/// Truncate filename with middle ellipsis like macOS Finder
+/// e.g., "VeryLongFileName.extension" -> "VeryLong...ension"
+fn truncate_middle(name: &str, max_chars: usize) -> String {
+    if max_chars < 8 || name.chars().count() <= max_chars {
+        return name.to_string();
+    }
+
+    let chars: Vec<char> = name.chars().collect();
+    let total = chars.len();
+
+    // Try to preserve file extension
+    let extension_start = name.rfind('.').unwrap_or(total);
+    let extension_len = total - extension_start;
+
+    // If extension is reasonable length, preserve it
+    if extension_len > 0 && extension_len <= 10 && extension_start > 0 {
+        let available = max_chars.saturating_sub(3).saturating_sub(extension_len); // 3 for "..."
+        if available >= 4 {
+            let prefix: String = chars[..available].iter().collect();
+            let suffix: String = chars[extension_start..].iter().collect();
+            return format!("{}...{}", prefix, suffix);
+        }
+    }
+
+    // Otherwise, just split in the middle
+    let half = (max_chars.saturating_sub(3)) / 2;
+    let prefix: String = chars[..half].iter().collect();
+    let suffix: String = chars[total - half..].iter().collect();
+    format!("{}...{}", prefix, suffix)
+}
 use super::context_menu::show_file_context_menu;
 use super::operations::{open_file_or_folder_filtered, perform_rename, select_file, sort_files};
 
@@ -20,6 +64,7 @@ pub fn file_list(
     let sort_column = state.sort_column;
     let sort_ascending = state.sort_ascending;
     let current_path = state.current_path;
+    let file_list_width = state.file_list_width;
 
     let state_name = state.clone();
     let state_type = state.clone();
@@ -68,19 +113,17 @@ pub fn file_list(
                     editor_tabs_state.clone(),
                     editor_keyboard.clone(),
                     active_tab,
+                    file_list_width,
                 )
                 .into_any()
             }
         },
     )
-    .style(|s| {
-        s.width_pct(60.0)
-            .flex_grow(1.0)
-            .flex_basis(0.0)
+    .style(move |s| {
+        s.width(file_list_width.get())
+            .flex_shrink(0.0)  // Don't shrink below specified width
             .min_height(0.0)
             .background(Color::WHITE)
-            .border_right(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
     })
 }
 
@@ -100,17 +143,18 @@ fn file_list_content(
     editor_tabs_state: EditorTabsState,
     editor_keyboard: EditorTabsState,
     active_tab: RwSignal<usize>,
+    file_list_width: RwSignal<f64>,
 ) -> impl IntoView {
     v_stack((
         // Column headers
         h_stack((
             sortable_header("Name", SortColumn::Name, sort_column, sort_ascending, state_name),
             sortable_header("Type", SortColumn::Type, sort_column, sort_ascending, state_type)
-                .style(|s| s.width(60.0)),
+                .style(|s| s.width(TYPE_WIDTH)),
             sortable_header("Size", SortColumn::Size, sort_column, sort_ascending, state_size)
-                .style(|s| s.width(80.0)),
+                .style(|s| s.width(SIZE_WIDTH)),
             sortable_header("Modified", SortColumn::Modified, sort_column, sort_ascending, state_modified)
-                .style(|s| s.width(120.0)),
+                .style(|s| s.width(MODIFIED_WIDTH)),
         ))
         .style(|s| {
             s.width_full()
@@ -120,10 +164,12 @@ fn file_list_content(
                 .border_bottom(1.0)
                 .border_color(Color::rgb8(200, 200, 200))
         }),
-        // File rows with scroll - use min_height(0) to allow shrinking
+        // File rows with virtual scroll - only renders visible items
         scroll(
-            dyn_stack(
-                move || files.get(),
+            virtual_list(
+                VirtualDirection::Vertical,
+                VirtualItemSize::Fixed(Box::new(|| FILE_ROW_HEIGHT)),
+                move || files.get().into_iter().collect::<ImVector<_>>(),
                 |file| file.path.clone(),
                 move |file| {
                     let state_row = state_select.clone();
@@ -137,7 +183,7 @@ fn file_list_content(
                     let file_for_ctx = file.clone();
                     let idx = files.get().iter().position(|f| f.path == file_path);
 
-                    file_row(file, selected, idx, state_row.clone())
+                    file_row(file, selected, idx, state_row.clone(), file_list_width)
                         .on_click_stop(move |_| {
                             // Cancel any ongoing rename when clicking elsewhere
                             state_row.renaming_path.set(None);
@@ -250,7 +296,13 @@ fn file_list_content(
     )
 }
 
-fn file_row(file: FileEntry, selected: RwSignal<Option<usize>>, idx: Option<usize>, state: BrowserState) -> impl IntoView {
+fn file_row(
+    file: FileEntry,
+    selected: RwSignal<Option<usize>>,
+    idx: Option<usize>,
+    state: BrowserState,
+    list_width: RwSignal<f64>,
+) -> impl IntoView {
     let is_selected = move || selected.get() == idx;
     let icon = file.icon.clone();
     let name = file.name.clone();
@@ -266,7 +318,7 @@ fn file_row(file: FileEntry, selected: RwSignal<Option<usize>>, idx: Option<usiz
     h_stack((
         // Icon + Name (with inline rename support)
         h_stack((
-            label(move || icon.clone()).style(|s| s.width(24.0)),
+            label(move || icon.clone()).style(|s| s.width(ICON_WIDTH).flex_shrink(0.0)),
             dyn_container(
                 move || {
                     let is_renaming = renaming_path.get().as_ref() == Some(&file_path);
@@ -313,10 +365,16 @@ fn file_row(file: FileEntry, selected: RwSignal<Option<usize>>, idx: Option<usiz
                                 )
                                 .into_any()
                         } else {
-                            // Show label
-                            label(move || name_inner.clone())
-                                .style(|s| s.flex_grow(1.0).text_ellipsis())
-                                .into_any()
+                            // Calculate available width for name and truncate with middle ellipsis
+                            let name_for_label = name_inner.clone();
+                            label(move || {
+                                let width = list_width.get();
+                                let available_width = width - ICON_WIDTH - TYPE_WIDTH - SIZE_WIDTH - MODIFIED_WIDTH - ROW_PADDING - COLUMN_GAPS;
+                                let max_chars = (available_width / CHAR_WIDTH).max(10.0) as usize;
+                                truncate_middle(&name_for_label, max_chars)
+                            })
+                            .style(|s| s.flex_grow(1.0))
+                            .into_any()
                         }
                     }
                 },
@@ -326,19 +384,22 @@ fn file_row(file: FileEntry, selected: RwSignal<Option<usize>>, idx: Option<usiz
         .style(|s| s.flex_grow(1.0).gap(4.0).min_width(0.0)),
         // Type
         label(move || file_type.clone()).style(|s| {
-            s.width(60.0)
+            s.width(TYPE_WIDTH)
+                .flex_shrink(0.0)
                 .font_size(12.0)
                 .color(Color::rgb8(100, 100, 100))
         }),
         // Size
         label(move || size.clone()).style(|s| {
-            s.width(80.0)
+            s.width(SIZE_WIDTH)
+                .flex_shrink(0.0)
                 .font_size(12.0)
                 .color(Color::rgb8(100, 100, 100))
         }),
         // Modified
         label(move || modified.clone()).style(|s| {
-            s.width(120.0)
+            s.width(MODIFIED_WIDTH)
+                .flex_shrink(0.0)
                 .font_size(12.0)
                 .color(Color::rgb8(100, 100, 100))
         }),
@@ -346,6 +407,7 @@ fn file_row(file: FileEntry, selected: RwSignal<Option<usize>>, idx: Option<usiz
     .style(move |s| {
         let s = s
             .width_full()
+            .height(FILE_ROW_HEIGHT)
             .padding(8.0)
             .gap(8.0)
             .items_center()
