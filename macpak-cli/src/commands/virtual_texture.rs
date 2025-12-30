@@ -3,25 +3,25 @@
 use std::fs;
 use std::path::Path;
 use anyhow::{Result, Context};
-use MacPak::MacLarian::formats::virtual_texture::{VirtualTextureExtractor, GtsFile, GtpFile};
+use MacPak::operations::virtual_texture;
 
 /// List textures in a GTS file
 pub fn list(gts_path: &Path) -> Result<()> {
-    let gts = GtsFile::open(gts_path)
+    let info = virtual_texture::list_gts(gts_path)
         .with_context(|| format!("Failed to parse GTS file: {}", gts_path.display()))?;
 
     println!("Virtual Texture Set: {}", gts_path.display());
-    println!("GUID: {:02x?}", gts.header.guid);
-    println!("Version: {}", gts.header.version);
+    println!("GUID: {:02x?}", info.guid);
+    println!("Version: {}", info.version);
     println!("Tile size: {}x{} (border: {})",
-        gts.header.tile_width, gts.header.tile_height, gts.header.tile_border);
-    println!("Layers: {}", gts.header.num_layers);
-    println!("Levels: {}", gts.header.num_levels);
-    println!("Page files: {}", gts.header.num_page_files);
+        info.tile_width, info.tile_height, info.tile_border);
+    println!("Layers: {}", info.num_layers);
+    println!("Levels: {}", info.num_levels);
+    println!("Page files: {}", info.page_files.len());
     println!();
 
     println!("Page files:");
-    for (i, pf) in gts.page_files.iter().enumerate() {
+    for (i, pf) in info.page_files.iter().enumerate() {
         println!("  [{}] {} ({} pages)", i, pf.filename, pf.num_pages);
     }
 
@@ -45,46 +45,30 @@ pub fn extract(
     if let Some(gtp) = gtp_path {
         println!("Extracting {} with GTS {}...", gtp.display(), gts_path.display());
 
-        VirtualTextureExtractor::extract_with_gts(
-            gtp,
-            gts_path,
-            output_dir,
-        ).with_context(|| "Failed to extract virtual texture")?;
+        virtual_texture::extract_gtp(gtp, gts_path, output_dir)
+            .with_context(|| "Failed to extract virtual texture")?;
 
         println!("Extraction complete -> {}", output_dir.display());
         return Ok(());
     }
 
-    // Otherwise, find GTP files in the same directory as the GTS
-    let gts = GtsFile::open(gts_path)
+    // Otherwise, extract all GTPs referenced by this GTS
+    let info = virtual_texture::list_gts(gts_path)
         .with_context(|| format!("Failed to parse GTS file: {}", gts_path.display()))?;
 
-    let gts_dir = gts_path.parent().unwrap_or(Path::new("."));
+    println!("Layers: {} | Page files: {}", info.num_layers, info.page_files.len());
 
-    println!("Layers: {} | Page files: {}",
-        gts.header.num_layers, gts.page_files.len());
+    let result = virtual_texture::extract_all(gts_path, output_dir)
+        .with_context(|| "Failed to extract virtual textures")?;
 
-    let mut extracted_count = 0;
-    let total = gts.page_files.len();
-    for (i, pf) in gts.page_files.iter().enumerate() {
-        let gtp_path = gts_dir.join(&pf.filename);
-        if gtp_path.exists() {
-            println!("[{}/{}] Extracting {}...", i + 1, total, pf.filename);
+    println!("Extracted {}/{} GTP files to {}", result.extracted, result.total, output_dir.display());
 
-            match VirtualTextureExtractor::extract_with_gts(
-                &gtp_path,
-                gts_path,
-                output_dir,
-            ) {
-                Ok(()) => extracted_count += 1,
-                Err(e) => eprintln!("Warning: Failed to extract {}: {}", pf.filename, e),
-            }
-        } else {
-            eprintln!("Warning: GTP file not found: {}", gtp_path.display());
+    if !result.errors.is_empty() {
+        for err in &result.errors {
+            eprintln!("Warning: {}", err);
         }
     }
 
-    println!("Extracted {} GTP files to {}", extracted_count, output_dir.display());
     Ok(())
 }
 
@@ -110,19 +94,16 @@ pub fn gtp_info(gtp_path: &Path, gts_path: Option<&Path>) -> Result<()> {
         }
     };
 
-    let gts = GtsFile::open(&gts_path)
-        .with_context(|| format!("Failed to parse GTS file: {}", gts_path.display()))?;
-
-    let gtp = GtpFile::open(gtp_path, &gts)
+    let info = virtual_texture::gtp_info(gtp_path, &gts_path)
         .with_context(|| format!("Failed to parse GTP file: {}", gtp_path.display()))?;
 
     println!("GTP File: {}", gtp_path.display());
-    println!("GUID: {:02x?}", gtp.header.guid);
-    println!("Version: {}", gtp.header.version);
-    println!("Pages: {}", gtp.num_pages());
+    println!("GUID: {:02x?}", info.guid);
+    println!("Version: {}", info.version);
+    println!("Pages: {}", info.num_pages);
 
-    for page in 0..gtp.num_pages() {
-        println!("  Page {}: {} chunks", page, gtp.num_chunks(page));
+    for (page, chunks) in info.chunks_per_page.iter().enumerate() {
+        println!("  Page {}: {} chunks", page, chunks);
     }
 
     Ok(())

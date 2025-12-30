@@ -231,7 +231,7 @@ fn extract_gts_file(
     output_dir: Option<&str>,
     progress: &super::types::SharedProgress,
 ) -> Result<usize, String> {
-    use MacLarian::formats::virtual_texture::{VirtualTextureExtractor, GtsFile};
+    use MacPak::operations::virtual_texture::{self, GtsFile};
 
     let input_ext = Path::new(input_path)
         .extension()
@@ -269,7 +269,7 @@ fn extract_gts_file(
         // Single GTP mode: extract just this GTP file
         progress.update(0, 1, "Extracting GTP...");
 
-        VirtualTextureExtractor::extract_with_gts(
+        virtual_texture::extract_gtp(
             input_path,
             &gts_path,
             &texture_output_dir,
@@ -311,7 +311,7 @@ fn extract_gts_file(
                     .unwrap_or_else(|| format!("gtp_{}", i));
                 let gtp_output_dir = texture_output_dir.join(&gtp_stem);
 
-                match VirtualTextureExtractor::extract_with_gts(
+                match virtual_texture::extract_gtp(
                     &gtp_path,
                     &gts_path,
                     &gtp_output_dir,

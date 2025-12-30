@@ -21,7 +21,7 @@
 Components:
 
 - MacPak - the frontend name of the project and eventual app, calls MacLarian on the backend
-- MacLarian - the "engine behind MacPak (macOS + Larian = the sports car manufacturer...?)
+- MacLarian - the "engine" behind MacPak (geddit, because macOS + Larian = the sports car manufacturer...?)
 - macpak-cli - command-line interface, called by MacLarian and passed into MacPak
 - macpak-gui - the desktop app
 
