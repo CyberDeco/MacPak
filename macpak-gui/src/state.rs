@@ -375,11 +375,13 @@ pub struct PakOpsState {
     pub is_listing: RwSignal<bool>,
     pub is_validating: RwSignal<bool>,
 
-    // Results log
-    pub results_log: RwSignal<Vec<String>>,
+    // Results log - uses im::Vector for virtual_list performance
+    pub results_log: RwSignal<ImVector<String>>,
 
-    // List contents (for file list view) - uses im::Vector for virtual_list performance
-    pub list_contents: RwSignal<ImVector<String>>,
+    // Status message (shown in header)
+    pub status_message: RwSignal<String>,
+
+    // Search filter for results
     pub file_search: RwSignal<String>,
 
     // PAK creation options
@@ -410,8 +412,8 @@ impl PakOpsState {
             is_listing: RwSignal::new(false),
             is_validating: RwSignal::new(false),
 
-            results_log: RwSignal::new(Vec::new()),
-            list_contents: RwSignal::new(ImVector::new()),
+            results_log: RwSignal::new(ImVector::new()),
+            status_message: RwSignal::new(String::new()),
             file_search: RwSignal::new(String::new()),
 
             compression: RwSignal::new(PakCompression::Lz4Hc),
@@ -435,12 +437,20 @@ impl PakOpsState {
 
     pub fn add_result(&self, message: &str) {
         self.results_log.update(|log| {
-            log.push(message.to_string());
+            log.push_back(message.to_string());
+        });
+    }
+
+    pub fn add_results_batch(&self, messages: Vec<String>) {
+        self.results_log.update(|log| {
+            for msg in messages {
+                log.push_back(msg);
+            }
         });
     }
 
     pub fn clear_results(&self) {
-        self.results_log.set(Vec::new());
+        self.results_log.set(ImVector::new());
     }
 }
 
