@@ -235,6 +235,8 @@ pub fn select_file(file: &FileEntry, state: BrowserState) {
     // Clear previous image - increment version to ensure UI updates
     let (version, _) = state.preview_image.get();
     state.preview_image.set((version + 1, None));
+    // Clear 3D preview path (will be set if .glb/.gltf selected)
+    state.preview_3d_path.set(None);
 
     if file.is_dir {
         state.preview_info.set("Directory".to_string());
@@ -311,8 +313,12 @@ pub fn select_file(file: &FileEntry, state: BrowserState) {
                 }
             }
         }
+        "glb" | "gltf" => {
+            state.preview_content.set("[3D Model - Click button to preview]".to_string());
+            state.preview_3d_path.set(Some(file.path.clone()));
+        }
         "gr2" => {
-            state.preview_content.set("[GR2 Model file]".to_string());
+            state.preview_content.set("[GR2 Model file - Convert to GLB for preview]".to_string());
         }
         "wem" | "wav" => {
             state.preview_content.set("[Audio file]".to_string());
@@ -421,8 +427,13 @@ pub fn is_img_file(filename: &str, ext: &str) -> bool {
 pub fn is_3d_file(ext: &str) -> bool {
     matches!(
         ext.to_lowercase().as_str(),
-        "gr2" | "dae" | "gltf"
+        "gr2" | "dae" | "gltf" | "glb"
     )
+}
+
+/// Check if a file is a GLB/GLTF model that can be previewed in 3D
+pub fn is_glb_file(ext: &str) -> bool {
+    matches!(ext.to_lowercase().as_str(), "glb" | "gltf")
 }
 
 /// Open file or folder, but only open text files in editor (not images, audio, etc.)

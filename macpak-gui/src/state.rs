@@ -281,6 +281,8 @@ pub struct BrowserState {
     // Inline rename state
     pub renaming_path: RwSignal<Option<String>>,  // Path of file being renamed (None = not renaming)
     pub rename_text: RwSignal<String>,            // Current text in rename input
+    // 3D Preview state
+    pub preview_3d_path: RwSignal<Option<String>>,  // Path to .glb file for 3D preview
 }
 
 impl BrowserState {
@@ -305,6 +307,7 @@ impl BrowserState {
             sort_ascending: RwSignal::new(true),
             renaming_path: RwSignal::new(None),
             rename_text: RwSignal::new(String::new()),
+            preview_3d_path: RwSignal::new(None),
         }
     }
 }

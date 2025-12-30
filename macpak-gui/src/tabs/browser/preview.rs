@@ -3,8 +3,9 @@
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::state::BrowserState;
+use super::preview_3d::preview_3d_button;
 use super::raw_img::raw_img;
+use crate::state::BrowserState;
 
 pub fn preview_panel(state: BrowserState) -> impl IntoView {
     let preview_name = state.preview_name;
@@ -52,7 +53,7 @@ pub fn preview_panel(state: BrowserState) -> impl IntoView {
                 })
                 .into_any()
             } else {
-                preview_content_view(preview_name, preview_info, preview_content, preview_image)
+                preview_content_view(preview_name, preview_info, preview_content, preview_image, state.clone())
                     .into_any()
             }
         },
@@ -70,6 +71,7 @@ fn preview_content_view(
     preview_info: RwSignal<String>,
     preview_content: RwSignal<String>,
     preview_image: RwSignal<(u64, Option<crate::state::RawImageData>)>,
+    state: BrowserState,
 ) -> impl IntoView {
     v_stack((
         // Preview header
@@ -112,15 +114,18 @@ fn preview_content_view(
                         })
                         .into_any()
                     } else {
-                        // Display text
-                        label(move || preview_content.get())
-                            .style(|s| {
-                                s.width_full()
-                                    .padding(12.0)
-                                    .font_family("monospace".to_string())
-                                    .font_size(12.0)
-                            })
-                            .into_any()
+                        // Display text with optional 3D preview button
+                        v_stack((
+                            label(move || preview_content.get())
+                                .style(|s| {
+                                    s.width_full()
+                                        .font_family("monospace".to_string())
+                                        .font_size(12.0)
+                                }),
+                            preview_3d_button(state.clone()),
+                        ))
+                        .style(|s| s.width_full().padding(12.0))
+                        .into_any()
                     }
                 },
             )

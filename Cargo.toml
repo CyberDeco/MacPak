@@ -4,6 +4,7 @@ members = [
     "MacLarian",       # internal engine crate
     "macpak-cli",      # CLI crate
     "macpak-gui",      # GUI crate (Floem)
+    "macpak-bevy",     # 3D preview (Bevy)
 ]
 resolver = "2"
 

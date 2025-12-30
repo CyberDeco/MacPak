@@ -6,6 +6,7 @@ mod context_menu;
 mod file_list;
 mod operations;
 mod preview;
+mod preview_3d;
 mod raw_img;
 mod status_bar;
 mod toolbar;

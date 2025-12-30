@@ -22,6 +22,7 @@ Components:
 
 - MacPak - the frontend name of the project and eventual app, calls MacLarian on the backend
 - MacLarian - the "engine" behind MacPak (geddit, because macOS + Larian = the sports car manufacturer...?)
+- macpak-bevy - backend for GR2/glTF previews using bevy
 - macpak-cli - command-line interface, called by MacLarian and passed into MacPak
 - macpak-gui - the desktop app
 
@@ -56,7 +57,7 @@ This is meant to be an all-in-one tool, so if you're looking for a simple or lig
 
 ## What it does not do:
 
-1. Edit meshes or textures. You still need to do those in Blender, Photoshop, etc.
+1. Edit meshes or textures. You still need to do those in Blender, Photoshop/GIMP, Substance, etc.
 2. Hook into the game. Meaning, it doesn't work with anything that would require [Norbyte's BG3SE](https://github.com/Norbyte/bg3se), but check out the [BG3SE-macOS](https://github.com/tdimino/bg3se-macos) project.
 3. Edit/access game files. Maybe in the future, but not now.
 4. Access or recreate the Official Larian Modding Toolkit. I looked into it and decided it's not worth the time and effort.
