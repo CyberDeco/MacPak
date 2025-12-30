@@ -5,115 +5,59 @@ use std::thread;
 
 use floem::prelude::*;
 
-use crate::state::{Gr2ConversionDirection, Gr2OutputFormat, Gr2State};
+use crate::state::Gr2State;
 use super::types::{create_result_sender, get_shared_progress, Gr2Result};
 
-/// Convert a single file
-pub fn convert_single(state: Gr2State) {
+/// Convert a single file with explicit options (for operation buttons UI)
+/// Determines direction from input file extension
+pub fn convert_single_with_options(state: Gr2State, to_glb: bool) {
     let Some(input_path) = state.input_file.get() else {
         state.status_message.set("No input file selected".to_string());
         return;
     };
 
-    let direction = state.direction.get();
-    let output_format = state.output_format.get();
-
-    // Generate output path
     let input = Path::new(&input_path);
-    let stem = input.file_stem().unwrap_or_default().to_string_lossy();
-    let parent = input.parent().unwrap_or(Path::new("."));
+    let stem = input.file_stem().unwrap_or_default().to_string_lossy().to_string();
+    let parent = input.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let input_ext = input.extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    let input_name = input.file_name().unwrap_or_default().to_string_lossy().to_string();
 
-    let output_ext = match direction {
-        Gr2ConversionDirection::Gr2ToGltf => output_format.extension(),
-        Gr2ConversionDirection::GltfToGr2 => "gr2",
+    // Determine direction from input file extension
+    let is_gr2_input = input_ext == "gr2";
+    let output_ext = if is_gr2_input {
+        if to_glb { "glb" } else { "gltf" }
+    } else {
+        "gr2"
     };
 
     let output_path = parent.join(format!("{}.{}", stem, output_ext));
-
-    // Ask user to confirm output location
-    let title = match direction {
-        Gr2ConversionDirection::Gr2ToGltf => "Save Converted File As",
-        Gr2ConversionDirection::GltfToGr2 => "Save GR2 File As",
-    };
-
-    let mut dialog = rfd::FileDialog::new()
-        .set_title(title)
-        .set_file_name(output_path.file_name().unwrap_or_default().to_string_lossy());
-
-    match direction {
-        Gr2ConversionDirection::Gr2ToGltf => match output_format {
-            Gr2OutputFormat::Glb => {
-                dialog = dialog.add_filter("GLB Files", &["glb"]);
-            }
-            Gr2OutputFormat::Gltf => {
-                dialog = dialog.add_filter("glTF Files", &["gltf"]);
-            }
-        },
-        Gr2ConversionDirection::GltfToGr2 => {
-            dialog = dialog.add_filter("GR2 Files", &["gr2"]);
-        }
-    }
-
-    if let Some(dir) = state.working_dir.get() {
-        dialog = dialog.set_directory(&dir);
-    }
-
-    let Some(save_path) = dialog.save_file() else {
-        return;
-    };
-
-    // Store the output path
-    state.output_file.set(Some(save_path.to_string_lossy().to_string()));
+    let output_str = output_path.to_string_lossy().to_string();
+    let output_name = output_path.file_name().unwrap_or_default().to_string_lossy().to_string();
 
     // Start conversion
     state.is_converting.set(true);
     state.clear_results();
 
     let input_str = input_path.clone();
-    let output_str = save_path.to_string_lossy().to_string();
-
-    // Create result sender for updating UI from background thread
     let send_result = create_result_sender(state);
 
     thread::spawn(move || {
         let shared = get_shared_progress();
-        shared.update(0, 100, "Converting...");
+        shared.update(0, 1, &input_name);
 
-        let result = match direction {
-            Gr2ConversionDirection::Gr2ToGltf => match output_format {
-                Gr2OutputFormat::Glb => {
-                    MacLarian::converter::convert_gr2_to_glb(
-                        Path::new(&input_str),
-                        Path::new(&output_str),
-                    )
-                }
-                Gr2OutputFormat::Gltf => {
-                    MacLarian::converter::convert_gr2_to_gltf(
-                        Path::new(&input_str),
-                        Path::new(&output_str),
-                    )
-                }
-            },
-            Gr2ConversionDirection::GltfToGr2 => {
-                MacLarian::converter::convert_gltf_to_gr2(
-                    Path::new(&input_str),
-                    Path::new(&output_str),
-                )
+        let result = if is_gr2_input {
+            if to_glb {
+                MacLarian::converter::convert_gr2_to_glb(Path::new(&input_str), Path::new(&output_str))
+            } else {
+                MacLarian::converter::convert_gr2_to_gltf(Path::new(&input_str), Path::new(&output_str))
             }
+        } else {
+            MacLarian::converter::convert_gltf_to_gr2(Path::new(&input_str), Path::new(&output_str))
         };
 
-        shared.update(100, 100, "Complete");
-
-        let input_name = Path::new(&input_str)
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
-        let output_name = Path::new(&output_str)
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
+        shared.update(1, 1, "Complete");
 
         match result {
             Ok(()) => {
@@ -136,17 +80,15 @@ pub fn convert_single(state: Gr2State) {
     });
 }
 
-/// Convert all files in batch
-pub fn convert_batch(state: Gr2State) {
+/// Convert batch files with explicit options (for operation buttons UI)
+/// Determines direction from input file extensions
+pub fn convert_batch_with_options(state: Gr2State, to_glb: bool) {
     let files = state.batch_files.get();
     if files.is_empty() {
         state.status_message.set("No files to convert".to_string());
         return;
     }
 
-    let direction = state.direction.get();
-    let output_format = state.output_format.get();
-    let output_dir = state.batch_output_dir.get();
     let input_base_dir = state.batch_input_dir.get();
 
     // Start conversion
@@ -154,8 +96,6 @@ pub fn convert_batch(state: Gr2State) {
     state.clear_results();
 
     let total = files.len();
-
-    // Create result sender for updating UI from background thread
     let send_result = create_result_sender(state);
 
     thread::spawn(move || {
@@ -167,55 +107,34 @@ pub fn convert_batch(state: Gr2State) {
         for (i, input_path) in files.iter().enumerate() {
             let input = Path::new(input_path);
             let stem = input.file_stem().unwrap_or_default().to_string_lossy();
+            let parent = input.parent().unwrap_or(Path::new("."));
+            let input_ext = input.extension()
+                .map(|e| e.to_string_lossy().to_lowercase())
+                .unwrap_or_default();
 
-            let output_ext = match direction {
-                Gr2ConversionDirection::Gr2ToGltf => output_format.extension(),
-                Gr2ConversionDirection::GltfToGr2 => "gr2",
-            };
-
-            // Determine output path, preserving directory structure
-            let output_path = if let Some(ref out_base) = output_dir {
-                // If we have an output directory and input base, preserve structure
-                if let Some(ref in_base) = input_base_dir {
-                    let in_base_path = Path::new(in_base);
-                    // Get relative path from input base to this file's parent
-                    if let Ok(relative) = input.parent().unwrap_or(Path::new(".")).strip_prefix(in_base_path) {
-                        let out_subdir = Path::new(out_base).join(relative);
-                        // Create subdirectory if needed
-                        if !out_subdir.exists() {
-                            let _ = std::fs::create_dir_all(&out_subdir);
-                        }
-                        out_subdir.join(format!("{}.{}", stem, output_ext))
-                    } else {
-                        // Fallback: put in output root
-                        Path::new(out_base).join(format!("{}.{}", stem, output_ext))
-                    }
-                } else {
-                    // No input base, put in output root
-                    Path::new(out_base).join(format!("{}.{}", stem, output_ext))
-                }
+            // Determine direction from input file extension
+            let is_gr2_input = input_ext == "gr2";
+            let output_ext = if is_gr2_input {
+                if to_glb { "glb" } else { "gltf" }
             } else {
-                // No output dir specified, put next to input file
-                input.parent().unwrap_or(Path::new(".")).join(format!("{}.{}", stem, output_ext))
+                "gr2"
             };
 
-            // Update progress via shared state
+            let output_path = parent.join(format!("{}.{}", stem, output_ext));
+
+            // Update progress
             let input_name = input.file_name().unwrap_or_default().to_string_lossy();
-            shared.update(i, total, &input_name);
+            shared.update(i + 1, total, &input_name);
 
             // Perform conversion
-            let result = match direction {
-                Gr2ConversionDirection::Gr2ToGltf => match output_format {
-                    Gr2OutputFormat::Glb => {
-                        MacLarian::converter::convert_gr2_to_glb(input, &output_path)
-                    }
-                    Gr2OutputFormat::Gltf => {
-                        MacLarian::converter::convert_gr2_to_gltf(input, &output_path)
-                    }
-                },
-                Gr2ConversionDirection::GltfToGr2 => {
-                    MacLarian::converter::convert_gltf_to_gr2(input, &output_path)
+            let result = if is_gr2_input {
+                if to_glb {
+                    MacLarian::converter::convert_gr2_to_glb(input, &output_path)
+                } else {
+                    MacLarian::converter::convert_gr2_to_gltf(input, &output_path)
                 }
+            } else {
+                MacLarian::converter::convert_gltf_to_gr2(input, &output_path)
             };
 
             // Show relative path in results if we have a base dir
@@ -243,7 +162,6 @@ pub fn convert_batch(state: Gr2State) {
         // Final progress update
         shared.update(total, total, "Complete");
 
-        // Send results back to UI thread
         send_result(Gr2Result::BatchDone {
             success_count,
             error_count,
