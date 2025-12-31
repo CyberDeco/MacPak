@@ -54,14 +54,14 @@ impl OrbitCamera {
         Self {
             focus,
             radius,
-            yaw: PI / 4.0, // 45 degrees for nice 3/4 view
+            yaw: PI, // Front view (180 degrees)
             pitch: 0.3,
             default_radius: radius,
         }
     }
 
     pub fn reset(&mut self) {
-        self.yaw = PI / 4.0;
+        self.yaw = PI;
         self.pitch = 0.3;
         self.radius = self.default_radius;
     }

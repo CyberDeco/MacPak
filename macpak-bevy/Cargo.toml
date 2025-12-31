@@ -23,6 +23,7 @@ bevy = { version = "0.17", default-features = false, features = [
     "bevy_light",
     "bevy_mesh",
     "bevy_ui",
+    "bevy_ui_render",
     "bevy_text",
     "bevy_post_process",
     "tonemapping_luts",

@@ -57,11 +57,11 @@ pub fn setup_ui(mut commands: Commands) {
             // Wireframe checkbox
             spawn_checkbox(parent, "Wireframe (W)", CheckboxWireframe, false);
 
-            // Grid checkbox
-            spawn_checkbox(parent, "Grid (G)", CheckboxGrid, true);
-
             // Bones checkbox
             spawn_checkbox(parent, "Skeleton (B)", CheckboxBones, false);
+
+            // Grid checkbox
+            spawn_checkbox(parent, "Grid (G)", CheckboxGrid, true);
 
             // Background checkbox
             spawn_checkbox(parent, "White BG", CheckboxBackground, false);
@@ -105,7 +105,7 @@ fn spawn_checkbox<T: Component>(parent: &mut ChildSpawnerCommands, label: &str, 
                 // Checkmark (only visible when checked)
                 if checked {
                     checkbox.spawn((
-                        Text::new("✓"),
+                        Text::new("X"),
                         TextFont {
                             font_size: 12.0,
                             ..default()
