@@ -310,7 +310,7 @@ impl BrowserState {
             renaming_path: RwSignal::new(None),
             rename_text: RwSignal::new(String::new()),
             preview_3d_path: RwSignal::new(None),
-            file_list_width: RwSignal::new(500.0),  // Default width in pixels
+            file_list_width: RwSignal::new(600.0),  // Default width in pixels
         }
     }
 }

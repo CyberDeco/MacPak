@@ -75,7 +75,7 @@ fn browser_content(
         if is_dragging.get() {
             if let floem::event::Event::PointerMove(pe) = e {
                 // Mouse X in parent coords minus the click offset = new width
-                let new_width = (pe.pos.x - drag_offset.get()).clamp(200.0, 1000.0);
+                let new_width = (pe.pos.x - drag_offset.get()).clamp(400.0, 800.0);
                 file_list_width.set(new_width);
             }
         }
@@ -108,10 +108,8 @@ fn divider_handle(
         .on_event_stop(floem::event::EventListener::PointerDown, move |e| {
             if let floem::event::Event::PointerDown(pe) = e {
                 is_dragging.set(true);
-                // pe.pos.x is position within divider (0-6), we need to offset from the left edge
-                // The divider starts at file_list_width, so click position in parent coords would be
-                // file_list_width + pe.pos.x. We want: new_width = parent_mouse_x - offset
-                // So offset = parent_mouse_x - current_width = (width + pe.pos.x) - width = pe.pos.x
+                // pe.pos.x is position within divider (0-6), need to offset from the left edge
+                // offset = parent_mouse_x - current_width = (width + pe.pos.x) - width = pe.pos.x
                 drag_offset.set(pe.pos.x);
             }
         })
