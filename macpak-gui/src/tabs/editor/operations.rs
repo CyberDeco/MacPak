@@ -7,6 +7,38 @@ use std::path::Path;
 use crate::state::{EditorTab, EditorTabsState};
 use super::formatting::{format_json, format_xml};
 
+/// Threshold for large file warning (50,000 lines)
+const LARGE_FILE_LINE_THRESHOLD: usize = 50_000;
+
+/// Check line count and show warning dialog for large files
+/// Returns: Some(true) = proceed, Some(false) = convert, None = cancel
+fn check_large_file(content: &str, path: &Path) -> Option<bool> {
+    let line_count = content.lines().count();
+    if line_count <= LARGE_FILE_LINE_THRESHOLD {
+        return Some(true); // Proceed normally
+    }
+
+    let filename = path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("file");
+
+    let result = rfd::MessageDialog::new()
+        .set_title("Large File Warning")
+        .set_description(&format!(
+            "{} has {} lines.\n\n\
+            Large files may cause slow scrolling and editing.",
+            filename, line_count
+        ))
+        .set_buttons(rfd::MessageButtons::OkCancelCustom("Open Anyway".to_string(), "Cancel".to_string()))
+        .show();
+
+    match result {
+        rfd::MessageDialogResult::Ok => Some(true),
+        rfd::MessageDialogResult::Cancel => None,
+        _ => None,
+    }
+}
+
 /// Open file dialog - creates a new tab or uses empty existing tab
 pub fn open_file_dialog(tabs_state: EditorTabsState) {
     let dialog = rfd::FileDialog::new()
@@ -76,13 +108,24 @@ pub fn load_file(path: &Path, tab: EditorTab) {
         .unwrap_or("")
         .to_uppercase();
 
-    tab.file_format.set(ext.clone());
-    tab.file_path.set(Some(path_str.clone()));
+    // Helper to finalize tab state after successful load
+    let finalize_tab = |content: String, converted_from_lsf: bool| {
+        tab.file_format.set(ext.clone());
+        tab.file_path.set(Some(path_str.clone()));
+        tab.content.set(content);
+        tab.modified.set(false);
+        tab.converted_from_lsf.set(converted_from_lsf);
+    };
 
     match ext.as_str() {
         "LSX" => {
             match fs::read_to_string(path) {
                 Ok(content) => {
+                    // Check for large file and prompt user
+                    if check_large_file(&content, path).is_none() {
+                        return; // User cancelled
+                    }
+
                     // Skip formatting for large files (>500KB)
                     let formatted = if content.len() > 500_000 {
                         content
@@ -90,30 +133,31 @@ pub fn load_file(path: &Path, tab: EditorTab) {
                         format_xml(&content)
                     };
 
-                    tab.content.set(formatted);
-                    tab.modified.set(false);
-                    tab.converted_from_lsf.set(false);
+                    finalize_tab(formatted, false);
                 }
                 Err(_e) => {
-                    tab.content.set(String::new());
+                    finalize_tab(String::new(), false);
                 }
             }
         }
         "LSJ" => {
             match fs::read_to_string(path) {
                 Ok(content) => {
+                    // Check for large file and prompt user
+                    if check_large_file(&content, path).is_none() {
+                        return; // User cancelled
+                    }
+
                     let formatted = if content.len() > 500_000 {
                         content
                     } else {
                         format_json(&content)
                     };
 
-                    tab.content.set(formatted);
-                    tab.modified.set(false);
-                    tab.converted_from_lsf.set(false);
+                    finalize_tab(formatted, false);
                 }
                 Err(_e) => {
-                    tab.content.set(String::new());
+                    finalize_tab(String::new(), false);
                 }
             }
         }
@@ -122,22 +166,25 @@ pub fn load_file(path: &Path, tab: EditorTab) {
             match MacLarian::formats::lsf::read_lsf(path) {
                 Ok(lsf_doc) => match MacLarian::converter::to_lsx(&lsf_doc) {
                     Ok(content) => {
+                        // Check for large file and prompt user
+                        if check_large_file(&content, path).is_none() {
+                            return; // User cancelled
+                        }
+
                         let formatted = if content.len() > 500_000 {
                             content
                         } else {
                             format_xml(&content)
                         };
 
-                        tab.content.set(formatted);
-                        tab.modified.set(false);
-                        tab.converted_from_lsf.set(true);
+                        finalize_tab(formatted, true);
                     }
-                    Err(_e) => {
-                        tab.content.set(String::new());
+                    Err(e) => {
+                        finalize_tab(format!("<!-- Error converting LSF to LSX: {} -->", e), false);
                     }
                 },
-                Err(_e) => {
-                    tab.content.set(String::new());
+                Err(e) => {
+                    finalize_tab(format!("<!-- Error reading LSF: {} -->", e), false);
                 }
             }
         }
@@ -145,12 +192,15 @@ pub fn load_file(path: &Path, tab: EditorTab) {
             // Unknown format - try to read as text
             match fs::read_to_string(path) {
                 Ok(content) => {
-                    tab.content.set(content);
-                    tab.modified.set(false);
-                    tab.converted_from_lsf.set(false);
+                    // Check for large file and prompt user
+                    if check_large_file(&content, path).is_none() {
+                        return; // User cancelled
+                    }
+
+                    finalize_tab(content, false);
                 }
                 Err(_) => {
-                    tab.content.set("[Binary file - cannot display]".to_string());
+                    finalize_tab("[Binary file - cannot display]".to_string(), false);
                 }
             }
         }
