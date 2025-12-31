@@ -59,13 +59,13 @@ pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
 
     // Find and launch the preview binary
     let preview_binary = find_preview_binary();
+    state.status_message.set("Loading 3D preview...".to_string());
 
     match Command::new(&preview_binary).arg(&preview_path).spawn() {
         Ok(child) => {
             if let Ok(mut handle) = get_preview_handle().lock() {
                 *handle = Some(child);
             }
-            state.status_message.set("3D preview opened".to_string());
 
             // Spawn a background thread to monitor when the preview window closes
             std::thread::spawn(move || {
@@ -103,6 +103,8 @@ pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
                                 let _ = std::fs::remove_file(temp_path);
                             }
                         }
+                        // Clear loading message
+                        state.status_message.set(String::new());
                         break;
                     }
                 }

@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::input::gestures::{PinchGesture, RotationGesture};
 use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll};
 use bevy::prelude::*;
-use bevy::render::mesh::MeshAabb;
+use bevy::camera::primitives::MeshAabb;
 
 use crate::types::{CameraFitPending, GroundGrid, ModelBounds, OrbitCamera, ViewSettings};
 
@@ -81,8 +81,8 @@ pub fn orbit_camera(
     accumulated_mouse_scroll: Res<AccumulatedMouseScroll>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut pinch_events: EventReader<PinchGesture>,
-    mut rotate_events: EventReader<RotationGesture>,
+    mut pinch_events: MessageReader<PinchGesture>,
+    mut rotate_events: MessageReader<RotationGesture>,
     mut query: Query<(&mut Transform, &mut OrbitCamera)>,
     model_bounds: Res<ModelBounds>,
 ) {

@@ -10,19 +10,26 @@ name = "macpak-bevy"
 path = "src/main.rs"
 
 [dependencies]
-bevy = { version = "0.15", default-features = false, features = [
+bevy = { version = "0.17", default-features = false, features = [
     "bevy_asset",
     "bevy_winit",
     "bevy_render",
+    "bevy_core_pipeline",
     "bevy_pbr",
     "bevy_gltf",
     "bevy_gizmos",
     "bevy_scene",
+    "bevy_camera",
+    "bevy_light",
+    "bevy_mesh",
     "bevy_ui",
     "bevy_text",
+    "bevy_post_process",
     "tonemapping_luts",
     "default_font",
     "multi_threaded",
+    "zstd_rust",
+    "reflect_auto_register",
 ] }
 clap = { version = "4.4", features = ["derive"] }
 

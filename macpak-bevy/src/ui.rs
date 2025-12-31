@@ -1,6 +1,7 @@
 //! UI overlay for view settings
 
-use bevy::pbr::wireframe::WireframeConfig;
+use bevy::pbr::wireframe::{NoWireframe, Wireframe, WireframeColor};
+use bevy::pbr::StandardMaterial;
 use bevy::prelude::*;
 
 use crate::types::{GroundGrid, ViewSettings};
@@ -54,13 +55,13 @@ pub fn setup_ui(mut commands: Commands) {
             ));
 
             // Wireframe checkbox
-            spawn_checkbox(parent, "Wireframe", CheckboxWireframe, false);
+            spawn_checkbox(parent, "Wireframe (W)", CheckboxWireframe, false);
 
             // Grid checkbox
-            spawn_checkbox(parent, "Grid", CheckboxGrid, true);
+            spawn_checkbox(parent, "Grid (G)", CheckboxGrid, true);
 
             // Bones checkbox
-            spawn_checkbox(parent, "Skeleton", CheckboxBones, false);
+            spawn_checkbox(parent, "Skeleton (B)", CheckboxBones, false);
 
             // Background checkbox
             spawn_checkbox(parent, "White BG", CheckboxBackground, false);
@@ -68,7 +69,7 @@ pub fn setup_ui(mut commands: Commands) {
 }
 
 /// Helper to spawn a checkbox row
-fn spawn_checkbox<T: Component>(parent: &mut ChildBuilder, label: &str, marker: T, checked: bool) {
+fn spawn_checkbox<T: Component>(parent: &mut ChildSpawnerCommands, label: &str, marker: T, checked: bool) {
     parent
         .spawn((
             Node {
@@ -91,7 +92,7 @@ fn spawn_checkbox<T: Component>(parent: &mut ChildBuilder, label: &str, marker: 
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                BorderColor(Color::WHITE),
+                BorderColor::all(Color::WHITE),
                 BorderRadius::all(Val::Px(3.0)),
                 BackgroundColor(if checked {
                     Color::srgb(0.2, 0.6, 1.0)
@@ -158,13 +159,19 @@ pub fn handle_checkbox_clicks(
     }
 }
 
+/// Track wireframe state
+#[derive(Resource, Default)]
+pub struct WireframeState {
+    pub enabled: bool,
+    pub original_materials: Vec<(AssetId<StandardMaterial>, Color, AlphaMode)>,
+}
+
 /// Sync view settings to actual scene state
 pub fn sync_view_settings(
     view_settings: Res<ViewSettings>,
-    mut wireframe_config: ResMut<WireframeConfig>,
     mut grid_query: Query<&mut Visibility, With<GroundGrid>>,
     mut clear_color: ResMut<ClearColor>,
-    mut checkbox_query: Query<(&Parent, &mut BackgroundColor, Option<&Children>), With<CheckboxBox>>,
+    mut checkbox_query: Query<(&ChildOf, &mut BackgroundColor, Option<&Children>), With<CheckboxBox>>,
     parent_query: Query<(
         Option<&CheckboxWireframe>,
         Option<&CheckboxGrid>,
@@ -173,9 +180,55 @@ pub fn sync_view_settings(
     )>,
     mut commands: Commands,
     text_query: Query<Entity, With<Text>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mesh_query: Query<(Entity, &MeshMaterial3d<StandardMaterial>), Without<GroundGrid>>,
+    grid_entity_query: Query<Entity, With<GroundGrid>>,
+    no_wireframe_query: Query<(), With<NoWireframe>>,
+    mut wireframe_state: ResMut<WireframeState>,
 ) {
-    // Sync wireframe
-    wireframe_config.global = view_settings.show_wireframe;
+    // Ensure ground grid has NoWireframe
+    for entity in &grid_entity_query {
+        if no_wireframe_query.get(entity).is_err() {
+            commands.entity(entity).insert(NoWireframe);
+        }
+    }
+
+    // Sync wireframe - only on state change
+    if view_settings.show_wireframe != wireframe_state.enabled {
+        wireframe_state.enabled = view_settings.show_wireframe;
+
+        if view_settings.show_wireframe {
+            // Add per-mesh wireframe with material colors and make materials transparent
+            let mut processed = std::collections::HashSet::new();
+            for (entity, material_handle) in &mesh_query {
+                let id = material_handle.0.id();
+                if materials.get(&material_handle.0).is_some() {
+                    // Use a visible green color for wireframe (BG3 models use vertex colors, not materials)
+                    let wireframe_color = Color::srgb(0.0, 0.9, 0.4);
+                    commands.entity(entity).insert((Wireframe, WireframeColor { color: wireframe_color }));
+
+                    if processed.insert(id) {
+                        if let Some(mat) = materials.get_mut(id) {
+                            wireframe_state.original_materials.push((id, mat.base_color, mat.alpha_mode));
+                            mat.alpha_mode = AlphaMode::Blend;
+                            mat.base_color = mat.base_color.with_alpha(0.0);
+                        }
+                    }
+                }
+            }
+        } else {
+            // Remove wireframe and restore materials
+            for (entity, _) in &mesh_query {
+                commands.entity(entity).remove::<(Wireframe, WireframeColor)>();
+            }
+            for (id, color, alpha_mode) in wireframe_state.original_materials.drain(..) {
+                if let Some(mat) = materials.get_mut(id) {
+                    mat.base_color = color;
+                    mat.alpha_mode = alpha_mode;
+                }
+            }
+        }
+    }
 
     // Sync grid visibility
     for mut visibility in &mut grid_query {
@@ -194,8 +247,8 @@ pub fn sync_view_settings(
     };
 
     // Update checkbox visuals
-    for (parent, mut bg_color, children) in &mut checkbox_query {
-        if let Ok((wireframe, grid, bones, background)) = parent_query.get(parent.get()) {
+    for (child_of, mut bg_color, children) in &mut checkbox_query {
+        if let Ok((wireframe, grid, bones, background)) = parent_query.get(child_of.parent()) {
             let is_checked = if wireframe.is_some() {
                 view_settings.show_wireframe
             } else if grid.is_some() {
@@ -218,11 +271,11 @@ pub fn sync_view_settings(
             // Handle checkmark visibility
             if let Some(children) = children {
                 for child in children.iter() {
-                    if text_query.get(*child).is_ok() {
+                    if text_query.get(child).is_ok() {
                         if is_checked {
-                            commands.entity(*child).insert(Visibility::Visible);
+                            commands.entity(child).insert(Visibility::Visible);
                         } else {
-                            commands.entity(*child).insert(Visibility::Hidden);
+                            commands.entity(child).insert(Visibility::Hidden);
                         }
                     }
                 }

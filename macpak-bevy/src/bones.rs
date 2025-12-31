@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use bevy::color::palettes::tailwind;
 use bevy::prelude::*;
-use bevy::render::mesh::skinning::SkinnedMesh;
+use bevy::mesh::skinning::SkinnedMesh;
 
 use crate::types::ViewSettings;
 
@@ -15,7 +15,7 @@ pub fn draw_bones(
     skinned_meshes: Query<&SkinnedMesh>,
     transforms: Query<&GlobalTransform>,
     children_query: Query<&Children>,
-    bone_parent_query: Query<&Parent>,
+    bone_parent_query: Query<&ChildOf>,
 ) {
     if !view_settings.show_bones {
         return;
@@ -35,9 +35,9 @@ pub fn draw_bones(
             let joint_pos = joint_transform.translation();
 
             // Check if this joint has a parent that's also a joint
-            if let Ok(parent) = bone_parent_query.get(*joint_entity) {
-                if joint_set.contains(&parent.get()) {
-                    if let Ok(parent_transform) = transforms.get(parent.get()) {
+            if let Ok(child_of) = bone_parent_query.get(*joint_entity) {
+                if joint_set.contains(&child_of.parent()) {
+                    if let Ok(parent_transform) = transforms.get(child_of.parent()) {
                         let parent_pos = parent_transform.translation();
 
                         // Draw bone line
@@ -54,8 +54,8 @@ pub fn draw_bones(
             }
 
             // Draw sphere at root joints (joints without a joint parent)
-            let is_root = if let Ok(parent) = bone_parent_query.get(*joint_entity) {
-                !joint_set.contains(&parent.get())
+            let is_root = if let Ok(child_of) = bone_parent_query.get(*joint_entity) {
+                !joint_set.contains(&child_of.parent())
             } else {
                 true
             };
@@ -77,8 +77,8 @@ pub fn draw_bones(
 
             if let Ok(children) = children_query.get(*joint_entity) {
                 for child in children.iter() {
-                    if joint_set.contains(child) {
-                        if let Ok(child_transform) = transforms.get(*child) {
+                    if joint_set.contains(&child) {
+                        if let Ok(child_transform) = transforms.get(child) {
                             let child_pos = child_transform.translation();
                             gizmos.line(joint_pos, child_pos, tailwind::YELLOW_400);
                         }
