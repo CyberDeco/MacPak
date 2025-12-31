@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "High-level BG3 modding toolkit library"
+description = "BG3 modding toolkit for macOS"
 
 [dependencies]
 # Internal
@@ -16,8 +16,3 @@ anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
-
-# Additional dependencies
-# sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-native-tls"] }
-# tokio = { version = "1", features = ["full"] }
-# async-trait = "0.1"
