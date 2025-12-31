@@ -1,16 +1,12 @@
 //! UI components for the editor
 
-use floem::action::exec_after;
 use floem::prelude::*;
 use floem::text::Weight;
-use floem::views::text_editor;
-use std::time::Duration;
+use floem::views::{text_editor, checkbox};
 
 use crate::state::{EditorTab, EditorTabsState};
-use crate::tabs::tools::meta_generator;
 use super::operations::{
-    convert_file, format_content, open_file_dialog, save_file, save_file_as_dialog,
-    validate_content,
+    convert_file, open_file_dialog, save_file, save_file_as_dialog, validate_content,
 };
 use super::search::{find_next, find_previous, perform_search, replace_all, replace_current};
 use super::syntax::SyntaxStyling;
@@ -21,7 +17,6 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
     let tabs_state_save_action = tabs_state.clone();
     let tabs_state_save_as = tabs_state.clone();
     let tabs_state_validate = tabs_state.clone();
-    let tabs_state_format = tabs_state.clone();
     let tabs_state_find = tabs_state.clone();
     let tabs_state_lsx = tabs_state.clone();
     let tabs_state_lsj = tabs_state.clone();
@@ -66,17 +61,12 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
                     }
                 }
             }),
-            line_number_toggle(tabs_state.show_line_numbers),
-            button("📐 Format").action(move || {
-                if let Some(tab) = tabs_state_format.active_tab() {
-                    format_content(tab);
-                }
-            }),
             button("✓ Validate").action(move || {
                 if let Some(tab) = tabs_state_validate.active_tab() {
                     validate_content(tab, tabs_state.status_message);
                 }
             }),
+            line_number_toggle(tabs_state.show_line_numbers),
         ))
         .style(|s| s.gap(8.0)),
         separator(),
@@ -173,36 +163,28 @@ fn separator() -> impl IntoView {
 }
 
 fn line_number_toggle(show_line_numbers: RwSignal<bool>) -> impl IntoView {
-    let label_text = move || {
-        if show_line_numbers.get() {
-            "# On"
-        } else {
-            "# Off"
-        }
-    };
-
-    label(label_text)
-        .style(move |s| {
-            let is_active = show_line_numbers.get();
-            let s = s
-                .padding_horiz(8.0)
-                .padding_vert(4.0)
-                .border_radius(4.0)
-                .font_size(12.0)
-                .cursor(floem::style::CursorStyle::Pointer);
-
-            if is_active {
-                s.background(Color::rgb8(33, 150, 243))
-                    .color(Color::WHITE)
-            } else {
-                s.background(Color::rgb8(230, 230, 230))
-                    .color(Color::rgb8(80, 80, 80))
-                    .hover(|s| s.background(Color::rgb8(210, 210, 210)))
-            }
-        })
-        .on_click_stop(move |_| {
-            show_line_numbers.set(!show_line_numbers.get());
-        })
+    h_stack((
+        checkbox(move || show_line_numbers.get())
+            .on_update(move |checked| {
+                show_line_numbers.set(checked);
+            })
+            .style(move |s| {
+                s.margin_right(8.0)                                                                    
+            }),
+        label(|| "Show Line Numbers")
+            .style(|s| {
+                s.font_size(12.0)
+                    .cursor(floem::style::CursorStyle::Pointer)
+            }),
+    ))
+    .on_click_stop(move |_| {
+        show_line_numbers.set(!show_line_numbers.get());
+    })
+    .style(|s| {
+        s.padding_horiz(8.0)
+            .padding_vert(4.0)
+            .items_center()
+    })
 }
 
 pub fn search_panel(tab: EditorTab) -> impl IntoView {
@@ -432,7 +414,14 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
             text_editor(text)
                 .styling(styling)
                 .editor_style(move |s| s.hide_gutter(!show_lines))
-                .style(|s| s.width_full().flex_grow(1.0))
+                .style(move |s| {
+                    let s = s.width_full().flex_grow(1.0);
+                    if show_lines {
+                        s
+                    } else {
+                        s.padding_left(12.0)
+                    }
+                })
                 .placeholder("Open a file to start editing...")
                 .on_event_stop(floem::event::EventListener::KeyUp, move |_| {
                     state_change.set(true);
@@ -509,227 +498,3 @@ pub fn editor_status_bar(tabs_state: EditorTabsState) -> impl IntoView {
     )
 }
 
-/// Meta.lsx Generator Dialog
-pub fn meta_lsx_dialog(tabs_state: EditorTabsState) -> impl IntoView {
-    let show_dialog = tabs_state.show_meta_dialog;
-    let mod_name = tabs_state.meta_mod_name;
-    let folder = tabs_state.meta_folder;
-    let author = tabs_state.meta_author;
-    let description = tabs_state.meta_description;
-    let uuid = tabs_state.meta_uuid;
-    let version_major = tabs_state.meta_version_major;
-    let version_minor = tabs_state.meta_version_minor;
-    let version_patch = tabs_state.meta_version_patch;
-    let version_build = tabs_state.meta_version_build;
-
-    let tabs_state_create = tabs_state.clone();
-    let tabs_state_cancel = tabs_state.clone();
-
-    dyn_container(
-        move || show_dialog.get(),
-        move |is_visible| {
-            if !is_visible {
-                return empty().into_any();
-            }
-
-            let tabs_state_create = tabs_state_create.clone();
-            let tabs_state_cancel = tabs_state_cancel.clone();
-
-            // Dialog box
-            v_stack((
-                // Header
-                label(|| "New Meta.lsx")
-                    .style(|s| s.font_size(18.0).font_weight(Weight::BOLD).margin_bottom(16.0)),
-
-                // Form fields
-                v_stack((
-                    // Row 1: Mod Name and Folder
-                    h_stack((
-                        meta_text_field("Mod Name", mod_name, "My Awesome Mod"),
-                        meta_text_field("Folder", folder, "MyAwesomeMod"),
-                    ))
-                    .style(|s| s.width_full().gap(12.0)),
-
-                    // Row 2: Author and Description
-                    h_stack((
-                        meta_text_field("Author", author, "Your Name"),
-                        meta_text_field("Description", description, "A short description..."),
-                    ))
-                    .style(|s| s.width_full().gap(12.0)),
-
-                    // Row 3: UUID with generate button
-                    h_stack((
-                        v_stack((
-                            label(|| "UUID").style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
-                            h_stack((
-                                text_input(uuid)
-                                    .placeholder("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
-                                    .style(|s| {
-                                        s.flex_grow(1.0)
-                                            .flex_basis(0.0)
-                                            .width_full()
-                                            .padding(8.0)
-                                            .border(1.0)
-                                            .border_color(Color::rgb8(200, 200, 200))
-                                            .border_radius(4.0)
-                                            .font_family("monospace".to_string())
-                                    }),
-                                button("Generate")
-                                    .style(|s| s.margin_left(4.0))
-                                    .action(move || {
-                                        let new_uuid = uuid::Uuid::new_v4().to_string();
-                                        uuid.set(new_uuid);
-                                    }),
-                            ))
-                            .style(|s| s.width_full()),
-                        ))
-                        .style(|s| s.flex_grow(1.0).flex_basis(0.0).gap(4.0)),
-                    ))
-                    .style(|s| s.width_full()),
-
-                    // Row 4: Version
-                    h_stack((
-                        v_stack((
-                            label(|| "Version").style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
-                            h_stack((
-                                meta_version_field(version_major, "Major"),
-                                label(|| ".").style(|s| s.font_size(16.0).margin_horiz(2.0)),
-                                meta_version_field(version_minor, "Minor"),
-                                label(|| ".").style(|s| s.font_size(16.0).margin_horiz(2.0)),
-                                meta_version_field(version_patch, "Patch"),
-                                label(|| ".").style(|s| s.font_size(16.0).margin_horiz(2.0)),
-                                meta_version_field(version_build, "Build"),
-                            ))
-                            .style(|s| s.items_center()),
-                        ))
-                        .style(|s| s.gap(4.0)),
-                    ))
-                    .style(|s| s.width_full()),
-                ))
-                .style(|s| s.width_full().gap(12.0)),
-
-                // Action buttons
-                h_stack((
-                    empty().style(|s| s.flex_grow(1.0)),
-                    button("Cancel")
-                        .style(|s| {
-                            s.padding_horiz(16.0)
-                                .padding_vert(8.0)
-                                .border_radius(4.0)
-                        })
-                        .action(move || {
-                            tabs_state_cancel.show_meta_dialog.set(false);
-                        }),
-                    button("Create")
-                        .style(|s| {
-                            s.padding_horiz(16.0)
-                                .padding_vert(8.0)
-                                .background(Color::rgb8(33, 150, 243))
-                                .color(Color::WHITE)
-                                .border_radius(4.0)
-                                .font_weight(Weight::SEMIBOLD)
-                        })
-                        .action(move || {
-                            // Generate meta.lsx content
-                            let content = meta_generator::generate_meta_lsx(
-                                &tabs_state_create.meta_mod_name.get(),
-                                &tabs_state_create.meta_folder.get(),
-                                &tabs_state_create.meta_author.get(),
-                                &tabs_state_create.meta_description.get(),
-                                &tabs_state_create.meta_uuid.get(),
-                                tabs_state_create.meta_version_major.get(),
-                                tabs_state_create.meta_version_minor.get(),
-                                tabs_state_create.meta_version_patch.get(),
-                                tabs_state_create.meta_version_build.get(),
-                            );
-
-                            // Create new tab with content
-                            let tab = tabs_state_create.new_tab();
-                            tab.content.set(content);
-                            tab.file_format.set("LSX".to_string());
-                            tab.modified.set(true);
-
-                            // Close dialog
-                            tabs_state_create.show_meta_dialog.set(false);
-                            tabs_state_create.status_message.set("Created new meta.lsx".to_string());
-
-                            // Clear status after 3 seconds
-                            let status_msg = tabs_state_create.status_message;
-                            exec_after(Duration::from_secs(3), move |_| {
-                                if status_msg.get() == "Created new meta.lsx" {
-                                    status_msg.set(String::new());
-                                }
-                            });
-                        }),
-                ))
-                .style(|s| s.width_full().gap(8.0).margin_top(16.0)),
-            ))
-            .style(|s| {
-                s.width(500.0)
-                    .padding(24.0)
-                    .background(Color::WHITE)
-                    .border(1.0)
-                    .border_color(Color::rgb8(200, 200, 200))
-                    .border_radius(8.0)
-                    .box_shadow_blur(20.0)
-                    .box_shadow_color(Color::rgba8(0, 0, 0, 50))
-            })
-            .into_any()
-        },
-    )
-    .style(move |s| {
-        if show_dialog.get() {
-            s.position(floem::style::Position::Absolute)
-                .inset_top(0.0)
-                .inset_left(0.0)
-                .inset_bottom(0.0)
-                .inset_right(0.0)
-                .items_center()
-                .justify_center()
-                .background(Color::rgba8(0, 0, 0, 100))
-                .z_index(100)
-        } else {
-            s.display(floem::style::Display::None)
-        }
-    })
-}
-
-fn meta_text_field(
-    label_text: &'static str,
-    signal: RwSignal<String>,
-    placeholder: &'static str,
-) -> impl IntoView {
-    v_stack((
-        label(move || label_text)
-            .style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
-        text_input(signal)
-            .placeholder(placeholder)
-            .style(|s| {
-                s.width_full()
-                    .padding(8.0)
-                    .border(1.0)
-                    .border_color(Color::rgb8(200, 200, 200))
-                    .border_radius(4.0)
-            }),
-    ))
-    .style(|s| s.flex_grow(1.0).gap(4.0))
-}
-
-fn meta_version_field(signal: RwSignal<u32>, placeholder: &'static str) -> impl IntoView {
-    let text_signal = RwSignal::new(signal.get().to_string());
-
-    text_input(text_signal)
-        .placeholder(placeholder)
-        .style(|s| {
-            s.width(50.0)
-                .padding(6.0)
-                .border(1.0)
-                .border_color(Color::rgb8(200, 200, 200))
-                .border_radius(4.0)
-        })
-        .on_event_stop(floem::event::EventListener::KeyUp, move |_| {
-            if let Ok(val) = text_signal.get().parse::<u32>() {
-                signal.set(val);
-            }
-        })
-}

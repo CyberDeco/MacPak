@@ -14,7 +14,8 @@ use floem::prelude::*;
 use std::path::Path;
 
 use crate::state::{AppState, EditorTab, EditorTabsState};
-use components::{editor_content, editor_status_bar, editor_toolbar, meta_lsx_dialog, search_panel};
+use crate::utils::meta_dialog::meta_dialog;
+use components::{editor_content, editor_status_bar, editor_toolbar, search_panel};
 
 // Re-export for external use
 pub use operations::load_file;
@@ -40,6 +41,14 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
     let tabs_state_drop = tabs_state.clone();
     let tabs_state_dialog = tabs_state.clone();
     let show_line_numbers = tabs_state.show_line_numbers;
+
+    // Callback for meta dialog - creates a new tab with the generated content
+    let on_meta_create = move |content: String| {
+        let tab = tabs_state_dialog.new_tab();
+        tab.content.set(content);
+        tab.file_format.set("LSX".to_string());
+        tab.modified.set(true);
+    };
 
     // Use v_stack with position: Relative so absolutely positioned dialogs work correctly
     v_stack((
@@ -79,8 +88,8 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
         )
         .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).min_height(0.0)),
         editor_status_bar(tabs_state_status),
-        // Dialog overlay - absolutely positioned
-        meta_lsx_dialog(tabs_state_dialog),
+        // Dialog overlay - uses shared meta_dialog from utils
+        meta_dialog(tabs_state.show_meta_dialog, None, on_meta_create, Some(tabs_state.status_message)),
     ))
     .style(|s| {
         s.width_full()
