@@ -10,7 +10,6 @@ mod color;
 mod handle;
 mod helpers;
 mod history;
-pub mod meta_generator;
 mod uuid;
 mod version;
 mod widgets;
