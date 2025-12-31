@@ -6,6 +6,16 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use std::io::Write;
 use std::path::Path;
 
+/// Node/attribute format for LSF files
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum LsfFormat {
+    /// V2 format: 12-byte nodes/attributes (more compact, default)
+    #[default]
+    V2,
+    /// V3 format: 16-byte nodes/attributes (extended with sibling/offset info)
+    V3,
+}
+
 /// Compress data using LZ4 block format (used for strings section)
 fn compress_lz4_block(data: &[u8]) -> Vec<u8> {
     if data.is_empty() {
@@ -24,45 +34,58 @@ fn compress_lz4_frame(data: &[u8]) -> std::io::Result<Vec<u8>> {
     Ok(encoder.finish()?)
 }
 
-/// Write an LSF document to disk
+/// Write an LSF document to disk (LZ4 compressed, V2 format)
 pub fn write_lsf<P: AsRef<Path>>(doc: &LsfDocument, path: P) -> Result<()> {
-    let bytes = serialize_lsf(doc)?;
+    write_lsf_with_format(doc, path, LsfFormat::V2)
+}
+
+/// Write an LSF document to disk with specified format
+pub fn write_lsf_with_format<P: AsRef<Path>>(
+    doc: &LsfDocument,
+    path: P,
+    format: LsfFormat,
+) -> Result<()> {
+    let bytes = serialize_lsf_with_format(doc, format)?;
     std::fs::write(path, bytes)?;
     Ok(())
 }
 
-/// Serialize LSF document to bytes
+/// Serialize LSF document to bytes (LZ4 compressed, V2 format)
 pub fn serialize_lsf(doc: &LsfDocument) -> Result<Vec<u8>> {
+    serialize_lsf_with_format(doc, LsfFormat::V2)
+}
+
+/// Serialize LSF document to bytes with specified format
+pub fn serialize_lsf_with_format(doc: &LsfDocument, format: LsfFormat) -> Result<Vec<u8>> {
     let mut output = Vec::new();
-    
+
     // Write header
     output.extend_from_slice(b"LSOF");
     output.write_u32::<LittleEndian>(6)?;
     output.write_u64::<LittleEndian>(doc.engine_version)?;
-    
+
     // Prepare sections
     let names_data = write_names(doc)?;
     let keys_data = write_keys(doc)?;
-    let nodes_data = write_nodes(doc)?;
-    let attributes_data = write_attributes(doc)?;
+    let nodes_data = write_nodes(doc, format)?;
+    let attributes_data = write_attributes(doc, format)?;
     let values_data = &doc.values;
 
-    // Compress sections - LSLib uses block for strings, frame for everything else
+    // Compress sections: block for strings, frame for everything else
     let names_compressed = compress_lz4_block(&names_data);
     let keys_compressed = compress_lz4_frame(&keys_data)?;
     let nodes_compressed = compress_lz4_frame(&nodes_data)?;
     let attributes_compressed = compress_lz4_frame(&attributes_data)?;
     let values_compressed = compress_lz4_frame(values_data)?;
 
-    // Write section sizes - uncompressed size first, then compressed size (per LSLib format)
-    // Header order must match reader expectations for v6+:
-    // Strings, Keys, Nodes, Attributes, Values
+    // Write section sizes - uncompressed size first, then compressed size
+    // Header order for v6+: Strings, Keys, Nodes, Attributes, Values
 
     // Strings section
     output.write_u32::<LittleEndian>(names_data.len() as u32)?;
     output.write_u32::<LittleEndian>(names_compressed.len() as u32)?;
 
-    // Keys section (v6+ only, but we always write v6)
+    // Keys section
     output.write_u32::<LittleEndian>(keys_data.len() as u32)?;
     output.write_u32::<LittleEndian>(keys_compressed.len() as u32)?;
 
@@ -78,47 +101,49 @@ pub fn serialize_lsf(doc: &LsfDocument) -> Result<Vec<u8>> {
     output.write_u32::<LittleEndian>(values_data.len() as u32)?;
     output.write_u32::<LittleEndian>(values_compressed.len() as u32)?;
 
-    // Compression flags: 0x02 = LZ4, 0x20 = Default level
+    // Compression flags: 0x22 = LZ4 + Default level
     output.write_u32::<LittleEndian>(0x22)?;
 
-    // Extended format flags (0 for BG3)
-    output.write_u32::<LittleEndian>(0)?;
+    // Metadata format (0 for basic, 2 for keys+adjacency)
+    let metadata_format = if doc.has_keys_section { 2u32 } else { 0u32 };
+    output.write_u32::<LittleEndian>(metadata_format)?;
 
-    // Write compressed section data
+    // Write section data
+    // File order: Strings, Nodes, Attributes, Values, Keys
     output.extend_from_slice(&names_compressed);
     output.extend_from_slice(&nodes_compressed);
     output.extend_from_slice(&attributes_compressed);
     output.extend_from_slice(&values_compressed);
     output.extend_from_slice(&keys_compressed);
-    
+
     Ok(output)
 }
 
 /// Serialize names section
 fn write_names(doc: &LsfDocument) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
-    
+
     // Write number of name lists
     buffer.write_u32::<LittleEndian>(doc.names.len() as u32)?;
-    
+
     for name_list in &doc.names {
         // Write number of names in this list
         buffer.write_u16::<LittleEndian>(name_list.len() as u16)?;
-        
+
         for name in name_list {
             // Write name length and bytes
             buffer.write_u16::<LittleEndian>(name.len() as u16)?;
             buffer.extend_from_slice(name.as_bytes());
         }
     }
-    
+
     Ok(buffer)
 }
 
 /// Serialize keys section
 fn write_keys(doc: &LsfDocument) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
-    
+
     for (node_idx, key_opt) in doc.node_keys.iter().enumerate() {
         if let Some(key) = key_opt {
             if let Some((outer, inner)) = doc.find_name_indices(key) {
@@ -129,36 +154,85 @@ fn write_keys(doc: &LsfDocument) -> Result<Vec<u8>> {
             }
         }
     }
-    
+
     Ok(buffer)
 }
 
 /// Serialize nodes section
-fn write_nodes(doc: &LsfDocument) -> Result<Vec<u8>> {
+fn write_nodes(doc: &LsfDocument, format: LsfFormat) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
-    
+
     for node in &doc.nodes {
+        // NameHashTableIndex: packed as (outer << 16) | inner
         buffer.write_u16::<LittleEndian>(node.name_index_inner as u16)?;
         buffer.write_u16::<LittleEndian>(node.name_index_outer as u16)?;
-        buffer.write_i32::<LittleEndian>(node.parent_index)?;
-        buffer.write_i32::<LittleEndian>(-1)?; // next_sibling_index
-        buffer.write_i32::<LittleEndian>(node.first_attribute_index)?;
+
+        match format {
+            LsfFormat::V2 => {
+                // V2: NameIndex(4), FirstAttributeIndex(4), ParentIndex(4) = 12 bytes
+                buffer.write_i32::<LittleEndian>(node.first_attribute_index)?;
+                buffer.write_i32::<LittleEndian>(node.parent_index)?;
+            }
+            LsfFormat::V3 => {
+                // V3: NameIndex(4), ParentIndex(4), NextSiblingIndex(4), FirstAttributeIndex(4) = 16 bytes
+                buffer.write_i32::<LittleEndian>(node.parent_index)?;
+                buffer.write_i32::<LittleEndian>(-1)?; // next_sibling_index (not tracked)
+                buffer.write_i32::<LittleEndian>(node.first_attribute_index)?;
+            }
+        }
     }
-    
+
     Ok(buffer)
 }
 
 /// Serialize attributes section
-fn write_attributes(doc: &LsfDocument) -> Result<Vec<u8>> {
+fn write_attributes(doc: &LsfDocument, format: LsfFormat) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
-    
-    for attr in &doc.attributes {
-        buffer.write_u16::<LittleEndian>(attr.name_index_inner as u16)?;
-        buffer.write_u16::<LittleEndian>(attr.name_index_outer as u16)?;
-        buffer.write_u32::<LittleEndian>(attr.type_info)?;
-        buffer.write_i32::<LittleEndian>(attr.next_index)?;
-        buffer.write_u32::<LittleEndian>(attr.offset as u32)?;
+
+    match format {
+        LsfFormat::V2 => {
+            // V2: NameIndex(4), TypeAndLength(4), NodeIndex(4) = 12 bytes
+            // Need to figure out which node owns each attribute
+            let attr_to_node = build_attr_to_node_map(doc);
+
+            for (attr_idx, attr) in doc.attributes.iter().enumerate() {
+                buffer.write_u16::<LittleEndian>(attr.name_index_inner as u16)?;
+                buffer.write_u16::<LittleEndian>(attr.name_index_outer as u16)?;
+                buffer.write_u32::<LittleEndian>(attr.type_info)?;
+                let node_index = attr_to_node.get(&attr_idx).copied().unwrap_or(-1);
+                buffer.write_i32::<LittleEndian>(node_index)?;
+            }
+        }
+        LsfFormat::V3 => {
+            // V3: NameIndex(4), TypeAndLength(4), NextAttributeIndex(4), Offset(4) = 16 bytes
+            for attr in &doc.attributes {
+                buffer.write_u16::<LittleEndian>(attr.name_index_inner as u16)?;
+                buffer.write_u16::<LittleEndian>(attr.name_index_outer as u16)?;
+                buffer.write_u32::<LittleEndian>(attr.type_info)?;
+                buffer.write_i32::<LittleEndian>(attr.next_index)?;
+                buffer.write_u32::<LittleEndian>(attr.offset as u32)?;
+            }
+        }
     }
-    
+
     Ok(buffer)
+}
+
+/// Build a map from attribute index to owning node index (for V2 format)
+fn build_attr_to_node_map(doc: &LsfDocument) -> std::collections::HashMap<usize, i32> {
+    let mut map = std::collections::HashMap::new();
+
+    for (node_idx, node) in doc.nodes.iter().enumerate() {
+        let mut attr_idx = node.first_attribute_index;
+        while attr_idx >= 0 {
+            map.insert(attr_idx as usize, node_idx as i32);
+            if let Some(attr) = doc.attributes.get(attr_idx as usize) {
+                attr_idx = attr.next_index;
+            } else {
+                break;
+            }
+        }
+    }
+
+    map
 }
