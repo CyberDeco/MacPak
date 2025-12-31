@@ -1,4 +1,15 @@
 //! LSF file writing and serialization
+//!
+//! # Compression Format Convention
+//!
+//! LSF files use LZ4 compression with two different formats per section:
+//! - **Strings section**: LZ4 Block format (raw compressed data, no frame header)
+//! - **All other sections** (nodes, attributes, values, keys): LZ4 Frame format
+//!   (with magic bytes 0x04 0x22 0x4D 0x18)
+//!
+//! This matches LSLib's behavior where `allowChunked=false` uses Block format
+//! and `allowChunked=true` uses Frame format. The compression flags in the header
+//! (0x22 = LZ4 + DefaultCompress) indicate the method but not per-section format.
 
 use super::document::LsfDocument;
 use crate::error::Result;
@@ -10,9 +21,11 @@ use std::path::Path;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum LsfFormat {
     /// V2 format: 12-byte nodes/attributes (more compact, default)
+    /// Used when MetadataFormat = None (0)
     #[default]
     V2,
     /// V3 format: 16-byte nodes/attributes (extended with sibling/offset info)
+    /// Used when MetadataFormat = KeysAndAdjacency (1)
     V3,
 }
 
@@ -71,7 +84,9 @@ pub fn serialize_lsf_with_format(doc: &LsfDocument, format: LsfFormat) -> Result
     let attributes_data = write_attributes(doc, format)?;
     let values_data = &doc.values;
 
-    // Compress sections: block for strings, frame for everything else
+    // Compress sections per LSLib convention:
+    // - Strings: LZ4 Block (allowChunked=false) - raw compressed data
+    // - All others: LZ4 Frame (allowChunked=true) - with frame header magic
     let names_compressed = compress_lz4_block(&names_data);
     let keys_compressed = compress_lz4_frame(&keys_data)?;
     let nodes_compressed = compress_lz4_frame(&nodes_data)?;
@@ -101,11 +116,18 @@ pub fn serialize_lsf_with_format(doc: &LsfDocument, format: LsfFormat) -> Result
     output.write_u32::<LittleEndian>(values_data.len() as u32)?;
     output.write_u32::<LittleEndian>(values_compressed.len() as u32)?;
 
-    // Compression flags: 0x22 = LZ4 + Default level
+    // Compression flags: 0x22 = MethodLZ4 (0x02) | DefaultCompress (0x20)
+    // Note: This indicates compression method, not per-section format (Block vs Frame)
     output.write_u32::<LittleEndian>(0x22)?;
 
-    // Metadata format (0 for basic, 2 for keys+adjacency)
-    let metadata_format = if doc.has_keys_section { 2u32 } else { 0u32 };
+    // Metadata format determines node/attribute format:
+    // - 0 (None) = V2 format (12-byte nodes/attrs)
+    // - 1 (KeysAndAdjacency) = V3 format (16-byte nodes/attrs with sibling/offset)
+    // - 2 (None2) = V2 format (same as 0, different lslib_meta string)
+    let metadata_format = match format {
+        LsfFormat::V3 => 1u32,  // KeysAndAdjacency
+        LsfFormat::V2 => 0u32,  // None
+    };
     output.write_u32::<LittleEndian>(metadata_format)?;
 
     // Write section data

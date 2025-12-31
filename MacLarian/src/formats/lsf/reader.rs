@@ -71,8 +71,10 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
     let compression_method = compression_flags & 0x0F;
     let is_compressed = compression_method != 0;
 
-    // Determine if using extended node/attribute format (v3+)
-    let has_extended_nodes = version >= LSF_VER_EXTENDED_NODES;
+    // Determine if using extended node/attribute format
+    // V3+ format is only used when MetadataFormat is KeysAndAdjacency
+    let has_extended_nodes = version >= LSF_VER_EXTENDED_NODES
+        && metadata_format == LsfMetadataFormat::KeysAndAdjacency;
 
     // Read sections in FILE ORDER: Strings, Nodes, Attributes, Values, [Keys]
     let names = read_names(&mut cursor, strings_uncompressed, strings_compressed, is_compressed)?;
