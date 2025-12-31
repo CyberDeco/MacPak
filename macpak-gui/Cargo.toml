@@ -45,6 +45,7 @@ rand = { version = "0.8", default-features = false, features = ["std", "std_rng"
 # image = "0.25"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
 dds = "0.2"
+sha2 = "0.10"
 
 # For custom image view
 floem_reactive = "0.2"
