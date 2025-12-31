@@ -17,7 +17,8 @@ thiserror.workspace = true
 # Compression
 flate2.workspace = true         # ZLIB/GZIP compression
 lz4_flex.workspace = true       # LZ4 compression (reading/writing LSF)
-zstd.workspace = true           # Zstandard compression (newer PAK files)
+# zstd.workspace = true           # Zstandard compression (newer PAK files)
+
 fastlz-rs.workspace = true      # FastLZ compression (virtual textures)
 
 # Binary I/O

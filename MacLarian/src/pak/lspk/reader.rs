@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+// use ruzstd::StreamingDecoder;
 
 use crate::error::{Error, Result};
 use super::{
@@ -262,9 +263,9 @@ impl<R: Read + Seek> LspkReader<R> {
                 self.decompress_zlib(&compressed, entry.size_decompressed as usize, &entry.path)
             }
 
-            CompressionMethod::Zstd => {
-                self.decompress_zstd(&compressed, entry.size_decompressed as usize, &entry.path)
-            }
+            // CompressionMethod::Zstd => {
+            //     self.decompress_zstd(&compressed, entry.size_decompressed as usize, &entry.path)
+            // }
         }
     }
 
@@ -319,14 +320,14 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// Decompress Zstd data
-    fn decompress_zstd(&self, compressed: &[u8], expected_size: usize, path: &PathBuf) -> Result<Vec<u8>> {
-        zstd::decode_all(compressed)
-            .map_err(|e| Error::DecompressionError(format!(
-                "Failed to decompress Zstd data for {}: {}",
-                path.display(),
-                e
-            )))
-    }
+    // fn decompress_zstd(&self, compressed: &[u8], expected_size: usize, path: &PathBuf) -> Result<Vec<u8>> {
+    //     zstd::decode_all(compressed)
+    //         .map_err(|e| Error::DecompressionError(format!(
+    //             "Failed to decompress Zstd data for {}: {}",
+    //             path.display(),
+    //             e
+    //         )))
+    // }
 
     /// Read the entire PAK file with progress callbacks and error recovery
     pub fn read_all(&mut self, progress: Option<ProgressCallback>) -> Result<PakContents> {

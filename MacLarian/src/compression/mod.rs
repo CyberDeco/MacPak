@@ -4,6 +4,7 @@ use crate::error::{Error, Result};
 
 pub mod lz4;
 pub mod fastlz;
+// pub mod zstd;
 
 /// Compress data using LZ4
 pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
@@ -21,3 +22,20 @@ pub fn decompress_with_size(data: &[u8]) -> Result<Vec<u8>> {
     lz4_flex::decompress_size_prepended(data)
         .map_err(|e| Error::DecompressionError(format!("LZ4: {}", e)))
 }
+
+// Decompress zstd for ?
+// pub fn decompress_zstd(&self, compressed: &[u8], _expected_size: usize, path: &PathBuf) -> Result<Vec<u8>> {
+//       let mut decoder = StreamingDecoder::new(compressed)
+//           .map_err(|e| Error::DecompressionError(format!(
+//               "Failed to init Zstd decoder for {}: {:?}", path.display(), e
+//           )))?;
+
+//       let mut result = Vec::new();
+//       decoder.read_to_end(&mut result)
+//           .map_err(|e| Error::DecompressionError(format!(
+//               "Failed to decompress Zstd data for {}: {}", path.display(), e
+//           )))?;
+
+//       Ok(result)
+//   }
+

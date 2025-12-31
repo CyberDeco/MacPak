@@ -17,9 +17,9 @@ MacPak.workspace = true
 
 # CLI
 clap = { version = "4.4", features = ["derive", "cargo"] }
-indicatif = "0.17"
-console = "0.15"
-colored = "2.1"
+# indicatif = "0.17"
+# console = "0.15"
+# colored = "2.1"
 
 # Workspace dependencies
 anyhow.workspace = true

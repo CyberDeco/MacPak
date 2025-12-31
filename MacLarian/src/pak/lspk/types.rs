@@ -8,7 +8,7 @@ pub enum CompressionMethod {
     None,
     Zlib,
     Lz4,
-    Zstd,
+    // Zstd,
 }
 
 impl CompressionMethod {
@@ -18,7 +18,7 @@ impl CompressionMethod {
             0 => CompressionMethod::None,
             1 => CompressionMethod::Zlib,
             2 => CompressionMethod::Lz4,
-            3 => CompressionMethod::Zstd,
+            // 3 => CompressionMethod::Zstd,
             _ => CompressionMethod::None, // Unknown, treat as uncompressed
         }
     }
@@ -28,7 +28,7 @@ impl CompressionMethod {
             CompressionMethod::None => "none",
             CompressionMethod::Zlib => "zlib",
             CompressionMethod::Lz4 => "lz4",
-            CompressionMethod::Zstd => "zstd",
+            // CompressionMethod::Zstd => "zstd",
         }
     }
 }

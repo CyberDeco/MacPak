@@ -4,6 +4,7 @@
 
 .gitignore
 *.md
+**/*.md
 !README.md
 *.txt
 

@@ -10,7 +10,8 @@ path = "src/main.rs"
 [dependencies]
 floem = "0.2"
 im = "15.1"
-uuid = { version = "1.0", features = ["v4"] }
+# uuid = { version = "1.0", features = ["v4"] }
+uuid = { version = "1.0", default-features = false, features = ["v4", "std"] }
 serde_json = "1.0"
 roxmltree = "0.20"
 
@@ -24,20 +25,25 @@ rfd = "0.14"
 # Directory traversal
 walkdir = "2.4"
 
-# Date/time formatting
-chrono = "0.4"
-
-# Regex for search
-regex = "1.10"
-
 # Lazy static for globals
 lazy_static = "1.4"
 
-# Random number generation for handles
-rand = "0.8"
+# # Date/time formatting
+# chrono = "0.4"
+
+# # Regex for search
+# regex = "1.10"
+
+# # Random number generation for handles
+# rand = "0.8"
+
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+regex = { version = "1.10", default-features = false, features = ["std", "perf"] }
+rand = { version = "0.8", default-features = false, features = ["std", "std_rng"] }
 
 # Image handling for preview
-image = "0.25"
+# image = "0.25"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
 dds = "0.2"
 
 # For custom image view
