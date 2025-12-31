@@ -3,16 +3,23 @@
 use super::document::LsfDocument;
 use crate::error::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
-use lz4_flex::frame::FrameEncoder;
 use std::io::Write;
 use std::path::Path;
 
-/// Compress data using LZ4 Frame format (used by LSF v2+)
-fn compress_lz4_frame(data: &[u8]) -> Result<Vec<u8>> {
+/// Compress data using LZ4 block format (used for strings section)
+fn compress_lz4_block(data: &[u8]) -> Vec<u8> {
+    if data.is_empty() {
+        return Vec::new();
+    }
+    lz4_flex::block::compress(data)
+}
+
+/// Compress data using LZ4 frame format (used for nodes, attributes, values, keys)
+fn compress_lz4_frame(data: &[u8]) -> std::io::Result<Vec<u8>> {
     if data.is_empty() {
         return Ok(Vec::new());
     }
-    let mut encoder = FrameEncoder::new(Vec::new());
+    let mut encoder = lz4_flex::frame::FrameEncoder::new(Vec::new());
     encoder.write_all(data)?;
     Ok(encoder.finish()?)
 }
@@ -40,8 +47,8 @@ pub fn serialize_lsf(doc: &LsfDocument) -> Result<Vec<u8>> {
     let attributes_data = write_attributes(doc)?;
     let values_data = &doc.values;
 
-    // Compress sections with LZ4 Frame format (required for v2+)
-    let names_compressed = compress_lz4_frame(&names_data)?;
+    // Compress sections - LSLib uses block for strings, frame for everything else
+    let names_compressed = compress_lz4_block(&names_data);
     let keys_compressed = compress_lz4_frame(&keys_data)?;
     let nodes_compressed = compress_lz4_frame(&nodes_data)?;
     let attributes_compressed = compress_lz4_frame(&attributes_data)?;
@@ -71,8 +78,8 @@ pub fn serialize_lsf(doc: &LsfDocument) -> Result<Vec<u8>> {
     output.write_u32::<LittleEndian>(values_data.len() as u32)?;
     output.write_u32::<LittleEndian>(values_compressed.len() as u32)?;
 
-    // Compression flags (0x01 = LZ4)
-    output.write_u32::<LittleEndian>(0x01)?;
+    // Compression flags: 0x02 = LZ4, 0x20 = Default level
+    output.write_u32::<LittleEndian>(0x22)?;
 
     // Extended format flags (0 for BG3)
     output.write_u32::<LittleEndian>(0)?;

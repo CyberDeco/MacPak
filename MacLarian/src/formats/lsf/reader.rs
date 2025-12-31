@@ -4,7 +4,6 @@
 use super::document::{LsfDocument, LsfNode, LsfAttribute, LsfMetadataFormat};
 use crate::error::{Error, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
-use lz4_flex::frame::FrameDecoder;
 use std::fs::File;
 use std::io::{Cursor, Read};
 use std::path::Path;
@@ -155,11 +154,16 @@ fn read_section<R: Read>(
     reader.read_exact(&mut buffer)?;
 
     if is_compressed && compressed_size > 0 {
-        let mut decoder = FrameDecoder::new(Cursor::new(buffer));
+        // Try LZ4 frame format first
+        let mut decoder = lz4_flex::frame::FrameDecoder::new(Cursor::new(&buffer));
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed)
-            .map_err(|e| Error::DecompressionError(format!("LZ4: {}", e)))?;
-        Ok(decompressed)
+        if decoder.read_to_end(&mut decompressed).is_ok() {
+            return Ok(decompressed);
+        }
+
+        // Fall back to LZ4 block decompression
+        lz4_flex::block::decompress(&buffer, uncompressed_size)
+            .map_err(|e| Error::DecompressionError(format!("LZ4: {}", e)))
     } else {
         Ok(buffer)
     }
