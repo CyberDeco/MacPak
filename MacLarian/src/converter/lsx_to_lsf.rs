@@ -1,7 +1,7 @@
 //! LSX to LSF conversion
 
 use crate::error::{Error, Result};
-use crate::formats::lsf::{self, LsfDocument, LsfNode, LsfAttribute};
+use crate::formats::lsf::{self, LsfDocument, LsfNode, LsfAttribute, LsfMetadataFormat};
 use crate::formats::common::{
     type_name_to_id, serialize_value, serialize_translated_string, hash_string_lslib
 };
@@ -32,6 +32,7 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
     
     let mut buf = Vec::new();
     let mut engine_version: u64 = 0;
+    let mut metadata_format = LsfMetadataFormat::None;
     let mut string_table = StringTable::new();
     let mut nodes = Vec::new();
     let mut attributes: Vec<LsfAttribute> = Vec::new();
@@ -45,7 +46,9 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
             Ok(Event::Start(e)) => {
                 match e.name().as_ref() {
                     b"version" => {
-                        engine_version = parse_version(&e)?;
+                        let (ver, meta) = parse_version(&e)?;
+                        engine_version = ver;
+                        metadata_format = meta;
                     }
                     b"node" => {
                         let node_idx = parse_and_create_node(
@@ -73,7 +76,9 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
             Ok(Event::Empty(e)) => {
                 match e.name().as_ref() {
                     b"version" => {
-                        engine_version = parse_version(&e)?;
+                        let (ver, meta) = parse_version(&e)?;
+                        engine_version = ver;
+                        metadata_format = meta;
                     }
                     b"node" => {
                         // Self-closing node - create but don't push to stack
@@ -114,7 +119,7 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
     }
 
     let has_keys_section = !node_keys.iter().all(|k| k.is_none());
-    
+
     Ok(LsfDocument {
         engine_version,
         names: string_table.to_name_lists(),
@@ -123,15 +128,17 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
         values: values_buffer,
         node_keys,
         has_keys_section,
+        metadata_format,
     })
 }
 
-fn parse_version(e: &quick_xml::events::BytesStart) -> Result<u64> {
+fn parse_version(e: &quick_xml::events::BytesStart) -> Result<(u64, LsfMetadataFormat)> {
     let mut major = 0u32;
     let mut minor = 0u32;
     let mut revision = 0u32;
     let mut build = 0u32;
-    
+    let mut metadata_format = LsfMetadataFormat::None;
+
     for attr in e.attributes() {
         let attr = attr?;
         let value = String::from_utf8_lossy(&attr.value);
@@ -140,15 +147,25 @@ fn parse_version(e: &quick_xml::events::BytesStart) -> Result<u64> {
             b"minor" => minor = value.parse().unwrap_or(0),
             b"revision" => revision = value.parse().unwrap_or(0),
             b"build" => build = value.parse().unwrap_or(0),
+            b"lslib_meta" => {
+                // Parse lslib_meta to determine metadata format
+                if value.contains("lsf_keys_adjacency") {
+                    metadata_format = LsfMetadataFormat::KeysAndAdjacency;
+                } else if value.contains("lsf_adjacency") {
+                    metadata_format = LsfMetadataFormat::None2;
+                }
+            }
             _ => {}
         }
     }
-    
+
     // Pack version into u64
-    Ok(((major as u64 & 0x7F) << 55)
+    let engine_version = ((major as u64 & 0x7F) << 55)
         | ((minor as u64 & 0xFF) << 47)
         | ((revision as u64 & 0xFFFF) << 31)
-        | (build as u64 & 0x7FFFFFFF))
+        | (build as u64 & 0x7FFFFFFF);
+
+    Ok((engine_version, metadata_format))
 }
 
 fn parse_and_create_node(

@@ -30,7 +30,6 @@ Status:
 
 - [x] Working: pak operations (list contents, unpack single/batch, verify structure, and pack single/batch)
 - [x] Working: .lsf <> .lsx <> .lsj conversion
-  - BUG: crashes for gigantic _merged.lsf files
 - [x] Working: inline text file editor with multiple tabbed support and meta.lsx generator
 - [x] Working: various QOL things - UUID/TranslatedString generator, color picker/saver, etc.
 - [x] Temporarily working: DDS file previews (it's a little jank because it's a stopgap fix)
@@ -47,7 +46,7 @@ Status:
 - [ ] Currently: incorporate bevy for 3D model and texture rendering (just previews)
   - [x] .glb/.gltf
   - [x] .gr2 (via temp .glb conversion)
-  - [ ] .dds
+  - [ ] .dds - can already load 512 x 512 previews in the GUI
   - [ ] marry .dds to GR2/glTF (need database for that)
 - [ ] Next: Piece together x-ref library for GR2 files to their base/normal/physical virtual textures and/or cloth msk
     - [ ] Option to automatically retrieve companion texture files when working with GR2

@@ -44,7 +44,7 @@ pub enum Error {
     Utf8Error(#[from] std::string::FromUtf8Error),
     
     #[error("Invalid string index: {0}")]
-    InvalidStringIndex(i32),
+    InvalidStringIndex(String),
     
     #[error("Invalid node index: {0}")]
     InvalidNodeIndex(i32),
@@ -66,6 +66,9 @@ pub enum Error {
 
     #[error("Invalid format: {0}")]
     InvalidFormat(String),
+
+    #[error("Invalid index: {0}")]
+    InvalidIndex(String),
 }
 
 // Add conversion from quick_xml::events::attributes::AttrError

@@ -1,4 +1,5 @@
 //! LSX file writing
+//! LSLib's metadata output purposefully maintained as an homage
 
 use super::document::{LsxDocument, LsxNode};
 use crate::error::Result;

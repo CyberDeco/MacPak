@@ -1,7 +1,7 @@
 //! LSF file reading and parsing
 //! Based on LSLib's LSFReader.cs implementation
 
-use super::document::{LsfDocument, LsfNode, LsfAttribute};
+use super::document::{LsfDocument, LsfNode, LsfAttribute, LsfMetadataFormat};
 use crate::error::{Error, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
 use lz4_flex::frame::FrameDecoder;
@@ -65,7 +65,8 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
     let values_compressed = cursor.read_u32::<LittleEndian>()? as usize;
 
     let compression_flags = cursor.read_u32::<LittleEndian>()?;
-    let _unknown2 = cursor.read_u32::<LittleEndian>()?;
+    let metadata_format_raw = cursor.read_u32::<LittleEndian>()?;
+    let metadata_format = LsfMetadataFormat::from(metadata_format_raw);
 
     // Compression method is in lower 4 bits
     let compression_method = compression_flags & 0x0F;
@@ -77,20 +78,24 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
     // Read sections in FILE ORDER: Strings, Nodes, Attributes, Values, [Keys]
     let names = read_names(&mut cursor, strings_uncompressed, strings_compressed, is_compressed)?;
 
+    // Detect node format - this also determines attribute format since they must match
+    let node_extended_format = detect_extended_format(nodes_uncompressed, has_extended_nodes);
+
     let nodes = read_nodes(
         &mut cursor,
         nodes_uncompressed,
         nodes_compressed,
         is_compressed,
-        has_extended_nodes,
+        node_extended_format,
     )?;
 
+    // Use the same format detected for nodes - they must be consistent
     let attributes = read_attributes(
         &mut cursor,
         attributes_uncompressed,
         attributes_compressed,
         is_compressed,
-        has_extended_nodes,
+        node_extended_format,
         &nodes,
     )?;
 
@@ -114,7 +119,20 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
         values,
         node_keys,
         has_keys_section,
+        metadata_format,
     })
+}
+
+/// Detect if extended format (16-byte) or V2 format (12-byte) based on data size
+fn detect_extended_format(data_size: usize, version_hint: bool) -> bool {
+    if data_size % 16 == 0 && data_size % 12 != 0 {
+        true  // Only divisible by 16
+    } else if data_size % 12 == 0 && data_size % 16 != 0 {
+        false // Only divisible by 12
+    } else {
+        // Divisible by both (or neither), fall back to hint
+        version_hint
+    }
 }
 
 fn read_section<R: Read>(
@@ -279,34 +297,48 @@ fn read_attributes<R: Read>(
             });
         } else {
             // V2 format: has NodeIndex instead of NextAttributeIndex, no explicit Offset
-            let _node_index = cursor.read_i32::<LittleEndian>()?;
+            let node_index = cursor.read_i32::<LittleEndian>()?;
 
             // Offset is calculated from cumulative lengths
             let offset = current_data_offset;
             current_data_offset += length;
 
-            // NextIndex will be recalculated below
+            // Store node_index temporarily in next_index field (will be fixed below)
+            // We use negative offset to distinguish: -(node_index + 1) so node 0 becomes -1
             attributes.push(LsfAttribute {
                 name_index_outer,
                 name_index_inner,
                 type_info: type_and_length,
-                next_index: -1, // Will be set below
+                next_index: -(node_index + 1), // Temporary: stores negated node_index
                 offset,
             });
         }
     }
 
-    // For V2, recalculate NextAttributeIndex based on node ownership
+    // For V2, build attribute chains based on node ownership
     if !extended_format {
-        // Build attribute chains per node
-        for node in nodes {
-            if node.first_attribute_index >= 0 {
-                let first_idx = node.first_attribute_index as usize;
-                // Find all attributes for this node and chain them
-                // In V2, attributes are stored contiguously per node
-                // The node's first_attribute_index points to the first one
-                // We need to chain consecutive attributes until we hit the next node's attributes
-                // For simplicity, this implementation assumes attributes are in order
+        // Group attributes by their owning node and chain them
+        // The next_index field currently holds -(node_index + 1)
+
+        // First, collect attribute indices for each node
+        let mut node_attrs: std::collections::HashMap<i32, Vec<usize>> = std::collections::HashMap::new();
+        for (attr_idx, attr) in attributes.iter().enumerate() {
+            // Decode node_index from our temporary encoding
+            let node_index = -(attr.next_index + 1);
+            node_attrs.entry(node_index).or_default().push(attr_idx);
+        }
+
+        // Now chain attributes within each node
+        for attr_indices in node_attrs.values() {
+            for i in 0..attr_indices.len() {
+                let attr_idx = attr_indices[i];
+                if i + 1 < attr_indices.len() {
+                    // Point to next attribute in chain
+                    attributes[attr_idx].next_index = attr_indices[i + 1] as i32;
+                } else {
+                    // Last attribute in chain
+                    attributes[attr_idx].next_index = -1;
+                }
             }
         }
     }

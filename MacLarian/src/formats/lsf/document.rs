@@ -2,6 +2,25 @@
 
 use crate::error::{Error, Result};
 
+/// LSF Metadata format (from header field)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LsfMetadataFormat {
+    #[default]
+    None = 0,
+    KeysAndAdjacency = 1,
+    None2 = 2,  // Uses lsf_adjacency instead of lsf_keys_adjacency
+}
+
+impl From<u32> for LsfMetadataFormat {
+    fn from(value: u32) -> Self {
+        match value {
+            1 => LsfMetadataFormat::KeysAndAdjacency,
+            2 => LsfMetadataFormat::None2,
+            _ => LsfMetadataFormat::None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct LsfDocument {
     pub engine_version: u64,
@@ -11,6 +30,7 @@ pub struct LsfDocument {
     pub values: Vec<u8>,
     pub node_keys: Vec<Option<String>>,
     pub has_keys_section: bool,
+    pub metadata_format: LsfMetadataFormat,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +60,7 @@ impl LsfDocument {
             values: Vec::new(),
             node_keys: Vec::new(),
             has_keys_section: false,
+            metadata_format: LsfMetadataFormat::None,
         }
     }
     
@@ -52,7 +73,13 @@ impl LsfDocument {
             .get(outer)
             .and_then(|list| list.get(inner))
             .map(|s| s.as_str())
-            .ok_or_else(|| Error::InvalidStringIndex(inner as i32))
+            .ok_or_else(|| {
+                let bucket_size = self.names.get(outer).map(|l| l.len()).unwrap_or(0);
+                Error::InvalidStringIndex(format!(
+                    "outer={}, inner={} (bucket has {} strings, total {} buckets)",
+                    outer, inner, bucket_size, self.names.len()
+                ))
+            })
     }
     
     /// Find name indices in the names table

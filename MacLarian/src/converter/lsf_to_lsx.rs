@@ -1,7 +1,7 @@
 //! LSF to LSX conversion
 
 use crate::error::Result;
-use crate::formats::lsf::{self, LsfDocument};
+use crate::formats::lsf::{self, LsfDocument, LsfMetadataFormat};
 use crate::formats::common::{get_type_name, extract_value, extract_translated_string};
 
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
@@ -21,10 +21,6 @@ pub fn convert_lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
 /// Convert LSF document to LSX XML string
 pub fn to_lsx(doc: &LsfDocument) -> Result<String> {
     let mut output = Vec::new();
-    
-    // Write UTF-8 BOM
-    output.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
-    
     let mut writer = Writer::new_with_indent(&mut output, b'\t', 1);
     
     // XML declaration
@@ -35,41 +31,44 @@ pub fn to_lsx(doc: &LsfDocument) -> Result<String> {
     
     // <version>
     write_version(&mut writer, doc)?;
-    
-    // <region>
-    let region_id = doc.nodes.first()
-        .filter(|n| n.parent_index == -1)
-        .map(|n| doc.get_name(n.name_index_outer, n.name_index_inner))
-        .transpose()?
-        .unwrap_or("root");
-    
-    let mut region = BytesStart::new("region");
-    region.push_attribute(("id", region_id));
-    writer.write_event(Event::Start(region.borrow()))?;
-    
-    // Write root nodes
+
+    // Each root node gets its own <region> wrapper
     for (i, node) in doc.nodes.iter().enumerate() {
         if node.parent_index == -1 {
+            let region_id = doc.get_name(node.name_index_outer, node.name_index_inner)?;
+            let mut region = BytesStart::new("region");
+            region.push_attribute(("id", region_id));
+            writer.write_event(Event::Start(region.borrow()))?;
+
             write_node(&mut writer, doc, i)?;
+
+            writer.write_event(Event::End(BytesEnd::new("region")))?;
         }
     }
-    
-    writer.write_event(Event::End(BytesEnd::new("region")))?;
+
     writer.write_event(Event::End(BytesEnd::new("save")))?;
-    
-    let xml = String::from_utf8(output)?;
-    // Convert to Windows line endings (CRLF) to match LSLib output
-    let xml = xml.replace("\n", "\r\n");
+
+    let mut xml = String::from_utf8(output)?;
     // Fix spacing before self-closing tags
-    let xml = xml.replace("/>", " />");
+    xml = xml.replace("/>", " />");
+    // Add trailing newline
+    xml.push('\n');
     Ok(xml)
 }
 
 fn write_version<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument) -> Result<()> {
-    let major = ((doc.engine_version >> 55) & 0x7F) as u32;
-    let minor = ((doc.engine_version >> 47) & 0xFF) as u32;
-    let revision = ((doc.engine_version >> 31) & 0xFFFF) as u32;
-    let build = (doc.engine_version & 0x7FFFFFFF) as u32;
+    let mut major = ((doc.engine_version >> 55) & 0x7F) as u32;
+    let mut minor = ((doc.engine_version >> 47) & 0xFF) as u32;
+    let mut revision = ((doc.engine_version >> 31) & 0xFFFF) as u32;
+    let mut build = (doc.engine_version & 0x7FFFFFFF) as u32;
+
+    // Workaround for merged LSF files with missing engine version number (matches LSLib)
+    if major == 0 {
+        major = 4;
+        minor = 0;
+        revision = 9;
+        build = 0;
+    }
     
     let mut version = BytesStart::new("version");
     version.push_attribute(("major", major.to_string().as_str()));
@@ -82,8 +81,11 @@ fn write_version<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument) -
     if major >= 4 {
         meta.push("bswap_guids");
     }
-    if doc.has_keys_section {
-        meta.push("lsf_keys_adjacency");
+    // Use metadata format from header to determine adjacency tag
+    match doc.metadata_format {
+        LsfMetadataFormat::KeysAndAdjacency => meta.push("lsf_keys_adjacency"),
+        LsfMetadataFormat::None2 => meta.push("lsf_adjacency"),
+        LsfMetadataFormat::None => {}
     }
     
     version.push_attribute(("lslib_meta", meta.join(",").as_str()));
@@ -95,7 +97,8 @@ fn write_node<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument, node
     let node = &doc.nodes[node_idx];
     let node_name = doc.get_name(node.name_index_outer, node.name_index_inner)?;
     
-    let has_attributes = node.first_attribute_index >= 0;
+    let has_attributes = node.first_attribute_index >= 0
+        && (node.first_attribute_index as usize) < doc.attributes.len();
     let children: Vec<_> = doc.nodes
         .iter()
         .enumerate()
@@ -123,6 +126,9 @@ fn write_node<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument, node
     if has_attributes {
         let mut attr_idx = node.first_attribute_index as usize;
         loop {
+            if attr_idx >= doc.attributes.len() {
+                break;
+            }
             write_attribute(writer, doc, attr_idx)?;
             let attr = &doc.attributes[attr_idx];
             if attr.next_index < 0 {
@@ -145,7 +151,10 @@ fn write_node<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument, node
 }
 
 fn write_attribute<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument, attr_idx: usize) -> Result<()> {
-    let attr = &doc.attributes[attr_idx];
+    let attr = doc.attributes.get(attr_idx)
+        .ok_or_else(|| crate::error::Error::InvalidIndex(format!(
+            "Attribute index {} out of bounds (len: {})", attr_idx, doc.attributes.len()
+        )))?;
     let attr_name = doc.get_name(attr.name_index_outer, attr.name_index_inner)?;
     let type_id = attr.type_info & 0x3F;
     let value_length = (attr.type_info >> 6) as usize;
