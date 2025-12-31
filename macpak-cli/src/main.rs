@@ -6,7 +6,7 @@ mod commands;
 use commands::Commands;
 
 #[derive(Parser)]
-#[command(name = "macpak")]
+#[command(name = "macpak-cli")]
 #[command(about = "BG3 Modding Toolkit", long_about = None)]
 struct Cli {
     #[command(subcommand)]

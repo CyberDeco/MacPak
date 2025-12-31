@@ -7,7 +7,7 @@ license.workspace = true
 description = "Command-line interface for BG3 modding"
 
 [[bin]]
-name = "macpak"
+name = "macpak-cli"
 path = "src/main.rs"
 
 [dependencies]
