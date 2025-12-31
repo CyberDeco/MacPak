@@ -50,7 +50,10 @@ Status:
   - [ ] marry .dds to GR2/glTF (need database for that)
 - [ ] Next: Piece together x-ref library for GR2 files to their base/normal/physical virtual textures and/or cloth msk
     - [ ] Option to automatically retrieve companion texture files when working with GR2
-- [ ] After: dye lab
+- [ ] Currently: dye lab
+    - [x] Mimic Official Toolkit's dye menu... thing... and improve it + use built-in macOS Color Picker
+    - [ ] Preview on a GR2 + mesh ?
+    - [ ] Auto-populate mod structure based on Padme4000's template
 
 This is meant to be an all-in-one tool, so if you're looking for a simple or lightweight GUI... this ain't it. I'll get to making a fleshed out wiki once it's release-worthy.
 

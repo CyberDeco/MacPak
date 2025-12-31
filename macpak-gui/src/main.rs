@@ -41,6 +41,7 @@ fn app_view() -> impl IntoView {
     let tools_state = ToolsState::new();
     let gr2_state = Gr2State::new();
     let vt_state = VirtualTexturesState::new();
+    let dyes_state = DyesState::new();
 
     let active_tab = app_state.active_tab;
 
@@ -57,6 +58,7 @@ fn app_view() -> impl IntoView {
             pak_ops_state,
             gr2_state,
             vt_state,
+            dyes_state,
             search_state,
             tools_state,
         ),
@@ -80,8 +82,9 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
         tab_button("📦 PAK Ops", 2, active_tab),
         tab_button("🦴 GR2", 3, active_tab),
         tab_button("🖼️ Textures", 4, active_tab),
-        tab_button("🔍 Search", 5, active_tab),
-        tab_button("🛠️ Tools", 6, active_tab),
+        tab_button("🧪 Dyes", 5, active_tab),
+        tab_button("🔍 Search", 6, active_tab),
+        tab_button("🛠️ Tools", 7, active_tab),
         empty().style(|s| s.flex_grow(1.0)),
         // App info
         label(|| "MacPak v0.1.0")
@@ -132,9 +135,9 @@ fn tab_content(
     pak_ops_state: PakOpsState,
     gr2_state: Gr2State,
     vt_state: VirtualTexturesState,
+    dyes_state: DyesState,
     search_state: SearchState,
     tools_state: ToolsState,
-
 ) -> impl IntoView {
     dyn_container(
         move || active_tab.get(),
@@ -145,8 +148,9 @@ fn tab_content(
                 2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone()).into_any(),
                 3 => gr2_tab(app_state.clone(), gr2_state.clone()).into_any(),
                 4 => virtual_textures_tab(app_state.clone(), vt_state.clone()).into_any(),
-                5 => search_tab(app_state.clone(), search_state.clone()).into_any(),
-                6 => tools_tab(app_state.clone(), tools_state.clone()).into_any(),
+                5 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
+                6 => search_tab(app_state.clone(), search_state.clone()).into_any(),
+                7 => tools_tab(app_state.clone(), tools_state.clone()).into_any(),
                 _ => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
             }
         },
