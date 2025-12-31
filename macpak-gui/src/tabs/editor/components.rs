@@ -34,7 +34,7 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
             button("📂 Open").action(move || {
                 open_file_dialog(tabs_state_open.clone());
             }),
-            button("New Meta.lsx").action(move || {
+            button("Generate meta.lsx").action(move || {
                 tabs_state_meta.show_meta_dialog.set(true);
             }),
             button("💾 Save")
