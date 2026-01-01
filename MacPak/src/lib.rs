@@ -14,6 +14,7 @@ pub use error::{Error, Result};
 /// Main toolkit interface
 pub struct Toolkit {
     workspace: workspace::Workspace,
+    #[allow(dead_code)] // Future: file indexing functionality
     index: index::FileIndex,
 }
 

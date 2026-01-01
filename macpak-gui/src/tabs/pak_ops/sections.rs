@@ -75,19 +75,19 @@ fn extract_group(state: PakOpsState) -> impl IntoView {
 
     v_stack((
         // Extract PAK button
-        operation_button("📦 Extract PAK File", move || {
+        operation_button("📦 Extract PAK File", state.clone(), move || {
             extract_pak_file(state1.clone());
         }),
         // List Contents button
-        operation_button("📋 List PAK Contents", move || {
+        operation_button("📋 List PAK Contents", state.clone(), move || {
             list_pak_contents(state2.clone());
         }),
         // Extract Individual button
-        operation_button("📄 Extract Individual Files", move || {
+        operation_button("📄 Extract Individual Files", state.clone(), move || {
             extract_individual_files(state3.clone());
         }),
         // Batch Extract button
-        operation_button("📦 Batch Extract PAKs", move || {
+        operation_button("📦 Batch Extract PAKs", state.clone(), move || {
             batch_extract_paks(state4.clone());
         }),
     ))
@@ -110,19 +110,19 @@ fn create_group(state: PakOpsState) -> impl IntoView {
 
     v_stack((
         // Create PAK button
-        operation_button("🔧 Create PAK from Folder", move || {
+        operation_button("🔧 Create PAK from Folder", state.clone(), move || {
             create_pak_file(state1.clone());
         }),
         // Rebuild PAK button
-        operation_button("🔧 Rebuild Modified PAK", move || {
+        operation_button("🔧 Rebuild Modified PAK", state.clone(), move || {
             rebuild_pak_file(state2.clone());
         }),
         // Validate button
-        operation_button("✓ Validate Mod Structure", move || {
+        operation_button("✓ Validate Mod Structure", state.clone(), move || {
             validate_mod_structure(state3.clone());
         }),
         // Batch Create button
-        operation_button("🔧 Batch Create PAKs", move || {
+        operation_button("🔧 Batch Create PAKs", state.clone(), move || {
             batch_create_paks(state4.clone());
         }),
     ))
@@ -187,18 +187,37 @@ fn drop_zone(state: PakOpsState) -> impl IntoView {
     })
 }
 
-fn operation_button(text: &'static str, on_click: impl Fn() + 'static) -> impl IntoView {
-    button(text).action(on_click).style(|s| {
-        s.width_full()
-            .padding_vert(10.0)
-            .padding_horiz(16.0)
-            .background(Color::rgb8(245, 245, 245))
-            .border(1.0)
-            .border_color(Color::rgb8(200, 200, 200))
-            .border_radius(6.0)
-            .hover(|s| {
+fn operation_button(text: &'static str, state: PakOpsState, on_click: impl Fn() + 'static) -> impl IntoView {
+    let state_for_action = state.clone();
+    let state_for_disabled = state.clone();
+    let state_for_style = state.clone();
+    button(text)
+        .action(move || {
+            if !state_for_action.is_busy() {
+                on_click();
+            }
+        })
+        .disabled(move || state_for_disabled.is_busy())
+        .style(move |s| {
+            let busy = state_for_style.is_busy();
+            let s = s
+                .width_full()
+                .padding_vert(10.0)
+                .padding_horiz(16.0)
+                .border(1.0)
+                .border_radius(6.0);
+
+            if busy {
                 s.background(Color::rgb8(230, 230, 230))
-                    .border_color(Color::rgb8(180, 180, 180))
-            })
-    })
+                    .border_color(Color::rgb8(210, 210, 210))
+                    .color(Color::rgb8(160, 160, 160))
+            } else {
+                s.background(Color::rgb8(245, 245, 245))
+                    .border_color(Color::rgb8(200, 200, 200))
+                    .hover(|s| {
+                        s.background(Color::rgb8(230, 230, 230))
+                            .border_color(Color::rgb8(180, 180, 180))
+                    })
+            }
+        })
 }

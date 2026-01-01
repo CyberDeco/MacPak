@@ -24,6 +24,7 @@ impl PakCompression {
         }
     }
 
+    #[allow(dead_code)]
     pub fn description(&self) -> &'static str {
         match self {
             PakCompression::Lz4Hc => "Best compression (default)",
