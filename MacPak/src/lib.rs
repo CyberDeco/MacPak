@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 //! MacPak - High-level BG3 modding toolkit
 use std::path::Path;
 
@@ -8,6 +9,16 @@ pub mod error;
 pub mod index;
 pub mod operations;
 pub mod workspace;
+
+// Feature-gated modules
+#[cfg(feature = "gui")]
+pub mod gui;
+
+#[cfg(feature = "cli")]
+pub mod cli;
+
+#[cfg(feature = "viewer")]
+pub mod viewer;
 
 pub use error::{Error, Result};
 

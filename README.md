@@ -16,7 +16,7 @@
 
 ## Install Instructions
 
-It's going to be packaged into a .dmg probably, since I don't want to pay for an Apple dev license and I'm assuming it'll be a large file. Just haven't figured out hosting yet.
+It's going to be packaged into a .dmg probably, since I don't want to pay for an Apple dev license and I'm assuming it'll be a large file (~1 GB). Just haven't figured out hosting yet.
 
 ## Features:
 
@@ -24,11 +24,8 @@ It's going to be packaged into a .dmg probably, since I don't want to pay for an
 
 Components:
 
-- MacPak - the frontend name of the project/app and is the public API which calls MacLarian on the backend
+- MacPak - the package itself; contains GUI and CLI
 - MacLarian - the "engine" behind MacPak (geddit, because macOS + Larian = the sports car manufacturer...?)
-- macpak-bevy - backend for GR2/glTF previews using bevy
-- macpak-cli - command-line interface, calls MacLarian via the MacPak API
-- macpak-gui - the desktop app
 
 Status:
 

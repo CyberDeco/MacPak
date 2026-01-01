@@ -1,10 +1,7 @@
 [workspace]
 members = [
-    "MacPak",          # library crate
-    "MacLarian",       # internal engine crate
-    "macpak-cli",      # CLI crate
-    "macpak-gui",      # GUI crate (Floem)
-    "macpak-bevy",     # 3D preview (Bevy)
+    "MacPak",          # Main crate: library + GUI + CLI + Viewer binaries
+    "MacLarian",       # Internal engine crate (file formats)
 ]
 resolver = "2"
 

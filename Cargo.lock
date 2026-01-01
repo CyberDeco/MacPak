@@ -35,10 +35,28 @@ version = "0.1.0"
 dependencies = [
  "MacLarian",
  "anyhow",
+ "bevy",
+ "chrono",
+ "clap",
+ "dds",
+ "floem",
+ "floem_reactive",
+ "floem_renderer",
+ "im",
+ "image",
+ "lazy_static",
+ "rand 0.8.5",
+ "regex",
+ "rfd",
+ "roxmltree",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror 1.0.69",
  "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "walkdir",
 ]
 
 [[package]]
@@ -3970,52 +3988,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08ab2867e3eeeca90e844d1940eab391c9dc5228783db2ed999acbc0a9ed375a"
 dependencies = [
  "twox-hash",
-]
-
-[[package]]
-name = "macpak-bevy"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "clap",
-]
-
-[[package]]
-name = "macpak-cli"
-version = "0.1.0"
-dependencies = [
- "MacLarian",
- "MacPak",
- "anyhow",
- "clap",
- "serde",
- "serde_json",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "macpak-gui"
-version = "0.1.0"
-dependencies = [
- "MacLarian",
- "MacPak",
- "chrono",
- "dds",
- "floem",
- "floem_reactive",
- "floem_renderer",
- "im",
- "image",
- "lazy_static",
- "rand 0.8.5",
- "regex",
- "rfd",
- "roxmltree",
- "serde_json",
- "sha2",
- "uuid",
- "walkdir",
 ]
 
 [[package]]

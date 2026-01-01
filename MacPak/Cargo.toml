@@ -6,13 +6,107 @@ authors.workspace = true
 license.workspace = true
 description = "BG3 modding toolkit for macOS"
 
+# Binary definitions
+[[bin]]
+name = "MacPak"
+path = "src/bin/macpak.rs"
+required-features = ["gui"]
+
+[[bin]]
+name = "macpak-cli"
+path = "src/bin/macpak-cli.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "macpak-viewer"
+path = "src/bin/macpak-viewer.rs"
+required-features = ["viewer"]
+
+[features]
+default = ["gui", "cli"]
+gui = [
+    "dep:floem",
+    "dep:floem_reactive",
+    "dep:floem_renderer",
+    "dep:uuid",
+    "dep:rfd",
+    "dep:walkdir",
+    "dep:lazy_static",
+    "dep:chrono",
+    "dep:regex",
+    "dep:rand",
+    "dep:image",
+    "dep:dds",
+    "dep:sha2",
+    "dep:roxmltree",
+    "dep:im",
+]
+cli = [
+    "dep:clap",
+    "dep:tracing-subscriber",
+]
+viewer = [
+    "gui",  # viewer requires gui
+    "dep:bevy",
+    "dep:clap",
+]
+full = ["gui", "cli", "viewer"]
+
 [dependencies]
-# Internal
+# Internal - always needed
 MacLarian.workspace = true
 
-# Workspace dependencies
+# Core dependencies - always needed
 thiserror.workspace = true
 anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+
+# GUI dependencies (optional)
+floem = { version = "0.2", optional = true }
+floem_reactive = { version = "0.2", optional = true }
+floem_renderer = { version = "0.2", optional = true }
+uuid = { version = "1.0", default-features = false, features = ["v4", "std"], optional = true }
+rfd = { version = "0.14", optional = true }
+walkdir = { version = "2.4", optional = true }
+lazy_static = { version = "1.4", optional = true }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"], optional = true }
+regex = { version = "1.10", default-features = false, features = ["std", "perf"], optional = true }
+rand = { version = "0.8", default-features = false, features = ["std", "std_rng"], optional = true }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"], optional = true }
+dds = { version = "0.2", optional = true }
+sha2 = { version = "0.10", optional = true }
+roxmltree = { version = "0.20", optional = true }
+im = { version = "15.1", optional = true }
+
+# CLI dependencies (optional)
+clap = { version = "4.4", features = ["derive", "cargo"], optional = true }
+tracing-subscriber = { version = "0.3", optional = true }
+
+# Viewer dependencies (optional)
+bevy = { version = "0.17", default-features = false, features = [
+    "bevy_asset",
+    "bevy_winit",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_gltf",
+    "bevy_gizmos",
+    "bevy_scene",
+    "bevy_camera",
+    "bevy_light",
+    "bevy_mesh",
+    "bevy_ui",
+    "bevy_ui_render",
+    "bevy_text",
+    "bevy_post_process",
+    "tonemapping_luts",
+    "default_font",
+    "multi_threaded",
+    "zstd_rust",
+    "reflect_auto_register",
+], optional = true }
+
+[lints]
+workspace = true
