@@ -1,5 +1,7 @@
 //! UI components for the editor
 
+use floem::event::{Event, EventListener};
+use floem::keyboard::{Key, Modifiers, NamedKey};
 use floem::prelude::*;
 use floem::text::Weight;
 use floem::views::{text_editor, checkbox};
@@ -10,6 +12,17 @@ use super::operations::{
 };
 use super::search::{find_next, find_previous, perform_search, replace_all, replace_current};
 use super::syntax::SyntaxStyling;
+
+/// Common toolbar button style for consistent height
+fn toolbar_button_style(s: floem::style::Style) -> floem::style::Style {
+    s.min_height(0.0)
+        .height(22.0)
+        .max_height(22.0)
+        .padding_horiz(6.0)
+        .padding_vert(2.0)
+        .items_center()
+        .justify_center()
+}
 
 pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
     let tabs_state_open = tabs_state.clone();
@@ -28,13 +41,18 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
     h_stack((
         // File operations group
         h_stack((
-            button("📂 Open").action(move || {
-                open_file_dialog(tabs_state_open.clone());
-            }),
-            button("Generate meta.lsx").action(move || {
-                tabs_state_meta.show_meta_dialog.set(true);
-            }),
+            button("📂 Open")
+                .style(toolbar_button_style)
+                .action(move || {
+                    open_file_dialog(tabs_state_open.clone());
+                }),
+            // button("Generate meta.lsx")
+            //     .style(toolbar_button_style)
+            //     .action(move || {
+            //         tabs_state_meta.show_meta_dialog.set(true);
+            //     }),
             button("💾 Save")
+                .style(toolbar_button_style)
                 .disabled(move || {
                     tabs_state_save_check.active_tab().map_or(true, |tab| {
                         !tab.modified.get() || tab.converted_from_lsf.get()
@@ -45,55 +63,62 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
                         save_file(tab);
                     }
                 }),
-            button("Save As...").action(move || {
-                if let Some(tab) = tabs_state_save_as.active_tab() {
-                    save_file_as_dialog(tab);
-                }
-            }),
+            button("💾 Save As...")
+                .style(toolbar_button_style)
+                .action(move || {
+                    if let Some(tab) = tabs_state_save_as.active_tab() {
+                        save_file_as_dialog(tab);
+                    }
+                }),
         ))
-        .style(|s| s.gap(8.0)),
+        .style(|s| s.gap(8.0).items_center()),
         separator(),
         // Edit tools group
         h_stack((
-            button("🔍 Find").action({
-                move || {
-                    if let Some(tab) = tabs_state_find.active_tab() {
-                        let visible = tab.search_visible.get();
-                        tab.search_visible.set(!visible);
+            button("🔍 Find")
+                .style(toolbar_button_style)
+                .action({
+                    move || {
+                        if let Some(tab) = tabs_state_find.active_tab() {
+                            let visible = tab.search_visible.get();
+                            tab.search_visible.set(!visible);
+                        }
                     }
-                }
-            }),
-            button("✓ Validate").action(move || {
-                if let Some(tab) = tabs_state_validate.active_tab() {
-                    validate_content(tab, tabs_state.status_message);
-                }
-            }),
+                }),
+            button("✓ Validate")
+                .style(toolbar_button_style)
+                .action(move || {
+                    if let Some(tab) = tabs_state_validate.active_tab() {
+                        validate_content(tab, tabs_state.status_message);
+                    }
+                }),
             line_number_toggle(tabs_state.show_line_numbers),
         ))
-        .style(|s| s.gap(8.0)),
+        .style(|s| s.gap(8.0).items_center()),
+        // Spacer
+        empty().style(|s| s.flex_grow(1.0)),
         separator(),
         // LSF/LSX/LSJ Convert section (disabled for LOCA files)
         h_stack((
-            label(|| "Convert:").style(|s| s.font_weight(Weight::BOLD).margin_right(8.0)),
+            // label(|| "Convert:").style(|s| s.font_weight(Weight::BOLD).margin_right(8.0)),
             convert_button_lsf_group("LSX", tabs_state_lsx),
             convert_button_lsf_group("LSJ", tabs_state_lsj),
             convert_button_lsf_group("LSF", tabs_state_lsf),
         ))
-        .style(|s| s.gap(8.0)),
+        .style(|s| s.gap(8.0).items_center()),
         separator(),
         // LOCA/XML Convert section (disabled for LSF/LSX/LSJ files)
         h_stack((
-            label(|| "Loca:").style(|s| s.font_weight(Weight::BOLD).margin_right(8.0)),
+            // label(|| "Loca:").style(|s| s.font_weight(Weight::BOLD).margin_right(8.0)),
             convert_button_loca_group("XML", tabs_state_xml),
             convert_button_loca_group("LOCA", tabs_state_loca),
         ))
-        .style(|s| s.gap(8.0)),
-        // Spacer
-        empty().style(|s| s.flex_grow(1.0)),
+        .style(|s| s.gap(8.0).items_center()),
+        separator(),
         // Format badge
         format_badge(tabs_state.clone()),
         // Status message
-        status_message(tabs_state.clone()),
+        status_message(tabs_state.status_message),
     ))
     .style(|s| {
         s.width_full()
@@ -107,36 +132,18 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
     })
 }
 
-fn status_message(tabs_state: EditorTabsState) -> impl IntoView {
+fn status_message(status: RwSignal<String>) -> impl IntoView {
     dyn_container(
-        move || {
-            let global_msg = tabs_state.status_message.get();
-            let tab_info = tabs_state.active_tab().map(|tab| {
-                (tab.converted_from_lsf.get(), global_msg.clone())
-            });
-            tab_info
-        },
-        move |maybe_info| {
-            if let Some((is_converted, msg)) = maybe_info {
-                if !msg.is_empty() {
-                    label(move || msg.clone())
-                        .style(|s| {
-                            s.color(Color::rgb8(76, 175, 80))
-                                .font_size(12.0)
-                                .margin_left(8.0)
-                        })
-                        .into_any()
-                } else if is_converted {
-                    label(|| "Converted from LSF - use Save As")
-                        .style(|s| {
-                            s.color(Color::rgb8(100, 100, 100))
-                                .font_size(12.0)
-                                .margin_left(8.0)
-                        })
-                        .into_any()
-                } else {
-                    empty().into_any()
-                }
+        move || status.get(),
+        move |msg| {
+            if !msg.is_empty() {
+                label(move || msg.clone())
+                    .style(|s| {
+                        s.color(Color::rgb8(76, 175, 80))
+                            .font_size(12.0)
+                            .margin_left(8.0)
+                    })
+                    .into_any()
             } else {
                 empty().into_any()
             }
@@ -150,6 +157,7 @@ fn convert_button_lsf_group(format: &'static str, tabs_state: EditorTabsState) -
     let tabs_state_action = tabs_state.clone();
 
     button(format)
+        .style(toolbar_button_style)
         .disabled(move || {
             tabs_state_check.active_tab().map_or(true, |tab| {
                 let f = tab.file_format.get().to_uppercase();
@@ -171,6 +179,7 @@ fn convert_button_loca_group(format: &'static str, tabs_state: EditorTabsState) 
     let tabs_state_action = tabs_state.clone();
 
     button(format)
+        .style(toolbar_button_style)
         .disabled(move || {
             tabs_state_check.active_tab().map_or(true, |tab| {
                 let f = tab.file_format.get().to_uppercase();
@@ -252,20 +261,46 @@ pub fn search_panel(tab: EditorTab) -> impl IntoView {
             let tab_replace_all = tab_replace_all.clone();
             let tab_close = tab_close.clone();
 
+            // Clone tab for Enter key handler
+            let tab_find_enter = tab_find_next.clone();
+
             v_stack((
                 // Find row
                 h_stack((
                     label(|| "Find:").style(|s| s.width(60.0)),
-                    text_input(search_text)
-                        .placeholder("Search...")
-                        .style(|s| {
-                            s.width(250.0)
-                                .padding(6.0)
-                                .border(1.0)
-                                .border_color(Color::rgb8(200, 200, 200))
-                                .border_radius(4.0)
+                    {
+                        let input = text_input(search_text)
+                            .placeholder("Search...")
+                            .style(|s| {
+                                s.width(250.0)
+                                    .padding(6.0)
+                                    .border(1.0)
+                                    .border_color(Color::rgb8(200, 200, 200))
+                                    .border_radius(4.0)
+                            });
+                        // Auto-focus the search input when panel opens
+                        let input_id = input.id();
+                        input_id.request_focus();
+                        input
+                    }
+                        .on_event_stop(EventListener::KeyDown, {
+                            let tab = tab_find_enter.clone();
+                            move |e| {
+                                // Enter key jumps to next match
+                                if let Event::KeyDown(key_event) = e {
+                                    if key_event.key.logical_key == Key::Named(NamedKey::Enter) {
+                                        find_next(tab.clone());
+                                    }
+                                }
+                            }
                         })
-                        .on_event_stop(floem::event::EventListener::KeyUp, move |_| {
+                        .on_event_cont(EventListener::KeyUp, move |e| {
+                            // Don't re-search on Enter release (it would reset the match index)
+                            if let Event::KeyUp(key_event) = e {
+                                if key_event.key.logical_key == Key::Named(NamedKey::Enter) {
+                                    return;
+                                }
+                            }
                             perform_search(
                                 content.get(),
                                 search_text.get(),
@@ -441,6 +476,8 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
     let content = tab.content;
     let modified = tab.modified;
     let file_format = tab.file_format;
+    let goto_offset = tab.goto_offset;
+    let search_visible = tab.search_visible;
 
     dyn_container(
         move || (content.get(), show_line_numbers.get(), file_format.get()),
@@ -449,21 +486,55 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
             // Create syntax highlighting based on file format
             let styling = SyntaxStyling::new(&text, &format);
 
-            text_editor(text)
-                .styling(styling)
-                .editor_style(move |s| s.hide_gutter(!show_lines))
-                .style(move |s| {
-                    let s = s.width_full().flex_grow(1.0);
-                    if show_lines {
-                        s
-                    } else {
-                        s.padding_left(12.0)
-                    }
-                })
-                .placeholder("Open a file to start editing...")
-                .on_event_stop(floem::event::EventListener::KeyUp, move |_| {
-                    state_change.set(true);
-                })
+            container(
+                text_editor(text)
+                    .styling(styling)
+                    .editor_style(move |s| s.hide_gutter(!show_lines))
+                    .style(move |s| {
+                        let s = s.width_full().flex_grow(1.0);
+                        if show_lines {
+                            s
+                        } else {
+                            s.padding_left(12.0)
+                        }
+                    })
+                    .placeholder("Open a file to start editing...")
+                    .on_event_cont(EventListener::KeyDown, move |e| {
+                        // Intercept CMD+F / Ctrl+F before the editor handles it
+                        if let Event::KeyDown(key_event) = e {
+                            let is_named_find = key_event.key.logical_key == Key::Named(NamedKey::Find);
+                            let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
+                                || key_event.modifiers.contains(Modifiers::CONTROL);
+                            let is_f_key = matches!(
+                                &key_event.key.logical_key,
+                                Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
+                            );
+
+                            if is_named_find || (is_cmd_or_ctrl && is_f_key) {
+                                search_visible.set(!search_visible.get());
+                            }
+                        }
+                    })
+                    .on_event_stop(EventListener::KeyUp, move |_| {
+                        state_change.set(true);
+                    })
+                    .with_editor(move |editor| {
+                        // Set up reactive effect to jump to offset when goto_offset changes
+                        let cursor = editor.cursor;
+                        let editor_clone = editor.clone();
+                        floem::reactive::create_effect(move |_| {
+                            if let Some(offset) = goto_offset.get() {
+                                // Move cursor to the match offset
+                                cursor.update(|c| c.set_offset(offset, false, false));
+                                // Center the view on the new cursor position
+                                editor_clone.center_window();
+                                // Clear the goto_offset so it doesn't keep triggering
+                                goto_offset.set(None);
+                            }
+                        });
+                    })
+            )
+            .style(|s| s.width_full().flex_grow(1.0))
         },
     )
     .style(|s| s.width_full().flex_grow(1.0))

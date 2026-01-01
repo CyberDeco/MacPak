@@ -8,16 +8,20 @@
 //! - Index search across game files
 //! - UUID generator for modding
 
+mod native_menu;
 mod state;
 mod tabs;
 mod utils;
 
+use floem::event::{Event, EventListener};
+use floem::keyboard::{Key, Modifiers, NamedKey};
 use floem::prelude::*;
 use floem::Application;
 use floem::window::WindowConfig;
 
 use state::*;
 use tabs::*;
+use tabs::editor::{open_file_dialog, save_file};
 
 fn main() {
     Application::new()
@@ -46,6 +50,11 @@ fn app_view() -> impl IntoView {
 
     let active_tab = app_state.active_tab;
 
+    // Set up native macOS menu with CMD+F shortcut
+    native_menu::setup_native_menu(editor_tabs_state.clone(), active_tab);
+
+    let editor_tabs_for_keyboard = editor_tabs_state.clone();
+
     v_stack((
         // Tab bar
         tab_bar(active_tab),
@@ -66,13 +75,62 @@ fn app_view() -> impl IntoView {
     ))
     .style(|s| s.width_full().height_full())
     .window_title(|| "MacPak".to_string())
-    .on_event(floem::event::EventListener::WindowClosed, |_| {
+    .on_event(EventListener::WindowClosed, |_| {
         // Kill any running preview process before exiting
         kill_preview_process();
         // Force quit the app when the window is closed (macOS behavior fix)
         // Using process::exit because quit_app() alone doesn't terminate
         // background threads or cleanup all resources on macOS
         std::process::exit(0);
+    })
+    .on_event_cont(EventListener::KeyDown, move |e| {
+        // Global keyboard shortcuts for Editor tab
+        if let Event::KeyDown(key_event) = e {
+            let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
+                || key_event.modifiers.contains(Modifiers::CONTROL);
+
+            // Only handle when Editor tab is active (tab index 1)
+            if active_tab.get() != 1 {
+                return;
+            }
+
+            // CMD+F / Ctrl+F - Find
+            let is_named_find = key_event.key.logical_key == Key::Named(NamedKey::Find);
+            let is_f_key = matches!(
+                &key_event.key.logical_key,
+                Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
+            );
+            if is_named_find || (is_cmd_or_ctrl && is_f_key) {
+                if let Some(tab) = editor_tabs_for_keyboard.active_tab() {
+                    tab.search_visible.set(!tab.search_visible.get());
+                }
+                return;
+            }
+
+            // CMD+O / Ctrl+O - Open
+            let is_o_key = matches!(
+                &key_event.key.logical_key,
+                Key::Character(c) if c.as_str().eq_ignore_ascii_case("o")
+            );
+            if is_cmd_or_ctrl && is_o_key {
+                open_file_dialog(editor_tabs_for_keyboard.clone());
+                return;
+            }
+
+            // CMD+S / Ctrl+S - Save
+            let is_s_key = matches!(
+                &key_event.key.logical_key,
+                Key::Character(c) if c.as_str().eq_ignore_ascii_case("s")
+            );
+            if is_cmd_or_ctrl && is_s_key {
+                if let Some(tab) = editor_tabs_for_keyboard.active_tab() {
+                    // Only save if modified and not converted from LSF
+                    if tab.modified.get() && !tab.converted_from_lsf.get() {
+                        save_file(tab);
+                    }
+                }
+            }
+        }
     })
 }
 

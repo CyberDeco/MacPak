@@ -23,6 +23,8 @@ pub struct EditorTab {
     pub match_count: RwSignal<usize>,
     pub current_match: RwSignal<usize>,
     pub search_status: RwSignal<String>,
+    /// Offset to jump to (set by find next/prev, consumed by editor)
+    pub goto_offset: RwSignal<Option<usize>>,
 }
 
 impl EditorTab {
@@ -44,6 +46,7 @@ impl EditorTab {
             match_count: RwSignal::new(0),
             current_match: RwSignal::new(0),
             search_status: RwSignal::new(String::new()),
+            goto_offset: RwSignal::new(None),
         }
     }
 

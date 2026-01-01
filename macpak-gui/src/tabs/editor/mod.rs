@@ -20,6 +20,8 @@ use components::{editor_content, editor_status_bar, editor_toolbar, search_panel
 // Re-export for external use
 pub use operations::load_file;
 pub use operations::load_file_in_tab;
+pub use operations::open_file_dialog;
+pub use operations::save_file;
 
 /// File extensions that can be opened in the editor
 fn is_editable_file(path: &Path) -> bool {
@@ -40,6 +42,7 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
     let tabs_state_status = tabs_state.clone();
     let tabs_state_drop = tabs_state.clone();
     let tabs_state_dialog = tabs_state.clone();
+    let tabs_state_keyboard = tabs_state.clone();
     let show_line_numbers = tabs_state.show_line_numbers;
 
     // Callback for meta dialog - creates a new tab with the generated content

@@ -104,6 +104,10 @@ pub fn find_next(state: EditorState) {
 
     if let Ok(mut search_state) = SEARCH_STATE.lock() {
         search_state.current_index = next;
+        // Set goto_offset to jump to the match
+        if let Some(&(start, _end)) = search_state.matches.get(next) {
+            state.goto_offset.set(Some(start));
+        }
     }
 }
 
@@ -120,6 +124,10 @@ pub fn find_previous(state: EditorState) {
 
     if let Ok(mut search_state) = SEARCH_STATE.lock() {
         search_state.current_index = prev;
+        // Set goto_offset to jump to the match
+        if let Some(&(start, _end)) = search_state.matches.get(prev) {
+            state.goto_offset.set(Some(start));
+        }
     }
 }
 
