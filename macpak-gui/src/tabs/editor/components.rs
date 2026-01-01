@@ -476,12 +476,15 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
     let content = tab.content;
     let modified = tab.modified;
     let file_format = tab.file_format;
+    let file_path = tab.file_path;
     let goto_offset = tab.goto_offset;
     let search_visible = tab.search_visible;
 
+    // Track file path + format to know when to recreate editor (not on every content change)
     dyn_container(
-        move || (content.get(), show_line_numbers.get(), file_format.get()),
-        move |(text, show_lines, format)| {
+        move || (file_path.get(), show_line_numbers.get(), file_format.get()),
+        move |(_path, show_lines, format)| {
+            let text = content.get(); // Get content inside, not as trigger
             let state_change = modified;
             // Create syntax highlighting based on file format
             let styling = SyntaxStyling::new(&text, &format);
@@ -515,9 +518,6 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
                             }
                         }
                     })
-                    .on_event_stop(EventListener::KeyUp, move |_| {
-                        state_change.set(true);
-                    })
                     .with_editor(move |editor| {
                         // Set up reactive effect to jump to offset when goto_offset changes
                         let cursor = editor.cursor;
@@ -531,6 +531,21 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
                                 // Clear the goto_offset so it doesn't keep triggering
                                 goto_offset.set(None);
                             }
+                        });
+
+                        // Sync editor content back to tab.content when document changes
+                        let doc = editor.doc();
+                        let cache_rev = doc.cache_rev();
+                        let editor_for_sync = editor.clone();
+                        floem::reactive::create_effect(move |prev_rev: Option<u64>| {
+                            let current_rev = cache_rev.get();
+                            // Only sync if revision changed (actual edit occurred)
+                            if prev_rev.is_some() && prev_rev != Some(current_rev) {
+                                let new_text = editor_for_sync.doc().text().to_string();
+                                content.set(new_text);
+                                state_change.set(true);
+                            }
+                            current_rev
                         });
                     })
             )

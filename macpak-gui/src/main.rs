@@ -53,6 +53,7 @@ fn app_view() -> impl IntoView {
     native_menu::setup_native_menu(editor_tabs_state.clone(), active_tab);
 
     let editor_tabs_for_keyboard = editor_tabs_state.clone();
+    let editor_tabs_for_close = editor_tabs_state.clone();
 
     v_stack((
         // Tab bar
@@ -73,13 +74,31 @@ fn app_view() -> impl IntoView {
     ))
     .style(|s| s.width_full().height_full())
     .window_title(|| "MacPak".to_string())
-    .on_event(EventListener::WindowClosed, |_| {
-        // Kill any running preview process before exiting
-        kill_preview_process();
-        // Force quit the app when the window is closed (macOS behavior fix)
-        // Using process::exit because quit_app() alone doesn't terminate
-        // background threads or cleanup all resources on macOS
-        std::process::exit(0);
+    .on_event(EventListener::WindowClosed, move |_| {
+        use floem::event::EventPropagation;
+
+        // Check for unsaved changes before closing
+        let should_quit = if editor_tabs_for_close.has_unsaved_changes() {
+            let response = rfd::MessageDialog::new()
+                .set_title("Unsaved Changes")
+                .set_description("You have unsaved changes. Are you sure you want to quit?")
+                .set_buttons(rfd::MessageButtons::YesNo)
+                .show();
+            response == rfd::MessageDialogResult::Yes
+        } else {
+            true
+        };
+
+        if should_quit {
+            // Kill any running preview process before exiting
+            kill_preview_process();
+            // Force quit the app when the window is closed (macOS behavior fix)
+            // Using process::exit because quit_app() alone doesn't terminate
+            // background threads or cleanup all resources on macOS
+            std::process::exit(0);
+        }
+
+        EventPropagation::Stop
     })
     .on_event_cont(EventListener::KeyDown, move |e| {
         // Global keyboard shortcuts for Editor tab

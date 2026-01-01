@@ -121,8 +121,33 @@ impl EditorTabsState {
         tab_clone
     }
 
+    /// Try to close tab at index, prompting if there are unsaved changes
+    pub fn try_close_tab(&self, index: usize) {
+        let tabs = self.tabs.get();
+        if let Some(tab) = tabs.get(index) {
+            if tab.modified.get() {
+                let file_name = tab.file_path.get()
+                    .as_ref()
+                    .and_then(|p| std::path::Path::new(p).file_name())
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "Untitled".to_string());
+
+                let response = rfd::MessageDialog::new()
+                    .set_title("Unsaved Changes")
+                    .set_description(&format!("'{}' has unsaved changes. Close anyway?", file_name))
+                    .set_buttons(rfd::MessageButtons::YesNo)
+                    .show();
+
+                if response == rfd::MessageDialogResult::No {
+                    return;
+                }
+            }
+        }
+        self.close_tab(index);
+    }
+
     /// Close tab at index
-    pub fn close_tab(&self, index: usize) {
+    fn close_tab(&self, index: usize) {
         let tabs = self.tabs.get();
         if tabs.len() <= 1 {
             // Don't close the last tab, just clear it

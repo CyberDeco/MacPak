@@ -213,7 +213,7 @@ fn file_tab_button(
                     .cursor(floem::style::CursorStyle::Pointer)
             })
             .on_click_stop(move |_| {
-                tabs_state_close.close_tab(index);
+                tabs_state_close.try_close_tab(index);
             }),
     ))
     .style(move |s| {
@@ -316,7 +316,7 @@ fn show_tab_context_menu(
     menu = menu.entry(
         MenuItem::new("Close Tab")
             .action(move || {
-                tabs_state_close.close_tab(index);
+                tabs_state_close.try_close_tab(index);
             })
     );
 
