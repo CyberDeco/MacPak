@@ -50,8 +50,8 @@ pub fn export_section(state: DyesState) -> impl IntoView {
                             .set_title("Select output folder for mod")
                             .pick_folder()
                         {
-                            let result = export_dye_mod(&state_export, &path, &mod_name_str);
-                            status.set(result.message);
+                            let message = export_dye_mod(&state_export, &path, &mod_name_str);
+                            status.set(message);
                         }
                     })
             },

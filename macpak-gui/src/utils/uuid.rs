@@ -1,6 +1,7 @@
 //! UUID generation utilities for BG3 modding
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(dead_code)]
 pub enum UuidFormat {
     Standard,    // 8-4-4-4-12
     Compact,     // No dashes

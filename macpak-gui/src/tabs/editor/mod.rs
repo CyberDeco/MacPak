@@ -41,7 +41,7 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
     let tabs_state_status = tabs_state.clone();
     let tabs_state_drop = tabs_state.clone();
     let tabs_state_dialog = tabs_state.clone();
-    let tabs_state_keyboard = tabs_state.clone();
+    let _tabs_state_keyboard = tabs_state.clone();
     let show_line_numbers = tabs_state.show_line_numbers;
 
     // Callback for meta dialog - creates a new tab with the generated content

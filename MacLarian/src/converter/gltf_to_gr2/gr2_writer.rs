@@ -729,7 +729,7 @@ impl Gr2Writer {
 
         // Calculate relocation table offsets (uncompressed)
         let mut reloc_offsets = Vec::new();
-        for (i, section) in sections.iter().enumerate() {
+        for (_i, section) in sections.iter().enumerate() {
             reloc_offsets.push(current_offset);
             if !section.fixups.is_empty() {
                 current_offset += section.fixups.len() * 12;

@@ -280,23 +280,6 @@ pub fn save_file_as_dialog(tab: EditorTab) {
     }
 }
 
-pub fn format_content(tab: EditorTab) {
-    let content = tab.content.get();
-    let format = tab.file_format.get().to_uppercase();
-
-    if content.is_empty() {
-        return;
-    }
-
-    let formatted = match format.as_str() {
-        "LSX" | "LSF" => format_xml(&content),
-        "LSJ" => format_json(&content),
-        _ => content,
-    };
-
-    tab.content.set(formatted);
-    tab.modified.set(true);
-}
 
 pub fn validate_content(tab: EditorTab, status_message: RwSignal<String>) {
     let content = tab.content.get();

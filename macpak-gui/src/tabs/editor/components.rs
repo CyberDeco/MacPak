@@ -34,7 +34,7 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
     let tabs_state_lsx = tabs_state.clone();
     let tabs_state_lsj = tabs_state.clone();
     let tabs_state_lsf = tabs_state.clone();
-    let tabs_state_meta = tabs_state.clone();
+    let _tabs_state_meta = tabs_state.clone();
     let tabs_state_xml = tabs_state.clone();
     let tabs_state_loca = tabs_state.clone();
 

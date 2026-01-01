@@ -7,7 +7,7 @@ use floem::text::Weight;
 
 use crate::state::{AppState, SearchState, SearchResult};
 
-pub fn search_tab(app_state: AppState, search_state: SearchState) -> impl IntoView {
+pub fn search_tab(_app_state: AppState, search_state: SearchState) -> impl IntoView {
     v_stack((
         search_toolbar(search_state.clone()),
         search_results(search_state.clone()),
@@ -193,7 +193,7 @@ fn search_result_row(result: SearchResult) -> impl IntoView {
     })
 }
 
-fn search_status_bar(state: SearchState) -> impl IntoView {
+fn search_status_bar(_state: SearchState) -> impl IntoView {
     h_stack((
         label(|| "Index: Ready")
             .style(|s| s.color(Color::rgb8(100, 100, 100)).font_size(12.0)),

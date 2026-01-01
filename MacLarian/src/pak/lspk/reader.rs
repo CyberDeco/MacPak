@@ -191,7 +191,7 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// Parse a single file table entry
-    fn parse_file_entry(&self, bytes: &[u8], version: u32) -> Result<FileTableEntry> {
+    fn parse_file_entry(&self, bytes: &[u8], _version: u32) -> Result<FileTableEntry> {
         // Path: bytes 0-255 (null-terminated string)
         let path_end = bytes[..PATH_LENGTH]
             .iter()

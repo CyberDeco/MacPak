@@ -9,11 +9,6 @@ use crate::state::{DyesState, GeneratedDyeEntry};
 use crate::utils::{generate_uuid, UuidFormat};
 use super::generators::hex_to_fvec3;
 
-/// Export result with status message
-pub struct ExportResult {
-    pub success: bool,
-    pub message: String,
-}
 
 /// Default color value - colors matching this are skipped in export
 const DEFAULT_COLOR: &str = "808080";
@@ -49,21 +44,15 @@ pub fn check_required_colors_at_default(state: &DyesState) -> Vec<&'static str> 
 }
 
 /// Export a complete dye mod to the specified directory
-pub fn export_dye_mod(state: &DyesState, output_dir: &Path, mod_name: &str) -> ExportResult {
+pub fn export_dye_mod(state: &DyesState, output_dir: &Path, mod_name: &str) -> String {
     // Validate inputs
     if mod_name.is_empty() {
-        return ExportResult {
-            success: false,
-            message: "Mod name is required".to_string(),
-        };
+        return "Mod name is required".to_string();
     }
 
     let dyes = state.generated_dyes.get();
     if dyes.is_empty() {
-        return ExportResult {
-            success: false,
-            message: "No dyes generated. Use 'Generate Dye' first.".to_string(),
-        };
+        return "No dyes generated. Use 'Generate Dye' first.".to_string();
     }
 
     // Generate mod UUID
@@ -71,10 +60,7 @@ pub fn export_dye_mod(state: &DyesState, output_dir: &Path, mod_name: &str) -> E
 
     // Create directory structure
     if let Err(e) = create_mod_structure(output_dir, mod_name) {
-        return ExportResult {
-            success: false,
-            message: format!("Failed to create directories: {}", e),
-        };
+        return format!("Failed to create directories: {}", e);
     }
 
     // Generate and write all files
@@ -106,18 +92,12 @@ pub fn export_dye_mod(state: &DyesState, output_dir: &Path, mod_name: &str) -> E
     // Check for errors
     for result in &results {
         if let Err(e) = result {
-            return ExportResult {
-                success: false,
-                message: format!("Failed to write file: {}", e),
-            };
+            return format!("Failed to write file: {}", e);
         }
     }
 
     let count = dyes.len();
-    ExportResult {
-        success: true,
-        message: format!("Exported {} dye{} to {}", count, if count == 1 { "" } else { "s" }, output_dir.display()),
-    }
+    format!("Exported {} dye{} to {}", count, if count == 1 { "" } else { "s" }, output_dir.display())
 }
 
 /// Create the mod directory structure

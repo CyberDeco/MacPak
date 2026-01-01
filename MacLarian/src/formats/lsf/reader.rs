@@ -9,10 +9,13 @@ use std::io::{Cursor, Read};
 use std::path::Path;
 
 // LSF Version constants
+// V1: Initial format
+// V2: Added chunked/frame compression (auto-detect on read)
+// V3: Extended node format (16-byte vs 12-byte)
+// V4: BG3 extended header (handled implicitly)
+// V6: BG3 node keys section
 const LSF_VER_INITIAL: u32 = 1;
-const LSF_VER_CHUNKED_COMPRESS: u32 = 2;
 const LSF_VER_EXTENDED_NODES: u32 = 3;
-const LSF_VER_BG3_EXTENDED_HEADER: u32 = 4;
 const LSF_VER_BG3_NODE_KEYS: u32 = 6;
 
 /// Read an LSF file from disk
@@ -261,7 +264,7 @@ fn read_attributes<R: Read>(
     compressed_size: usize,
     is_compressed: bool,
     extended_format: bool,
-    nodes: &[LsfNode],
+    _nodes: &[LsfNode],
 ) -> Result<Vec<LsfAttribute>> {
     let data = read_section(reader, uncompressed_size, compressed_size, is_compressed)?;
     if data.is_empty() {
@@ -286,7 +289,7 @@ fn read_attributes<R: Read>(
 
         // TypeAndLength: lower 6 bits = type, upper 26 bits = length
         let type_and_length = cursor.read_u32::<LittleEndian>()?;
-        let type_id = type_and_length & 0x3F;
+        let _type_id = type_and_length & 0x3F;
         let length = (type_and_length >> 6) as usize;
 
         if extended_format {

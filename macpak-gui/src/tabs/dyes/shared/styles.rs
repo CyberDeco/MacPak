@@ -28,17 +28,6 @@ pub fn button_style(s: floem::style::Style) -> floem::style::Style {
         .cursor(floem::style::CursorStyle::Pointer)
 }
 
-/// Small button style for generate UUID
-pub fn small_button_style(s: floem::style::Style) -> floem::style::Style {
-    s.padding_horiz(8.0)
-        .padding_vert(6.0)
-        .font_size(10.0)
-        .background(Color::rgb8(107, 114, 128))
-        .color(Color::WHITE)
-        .border_radius(4.0)
-        .cursor(floem::style::CursorStyle::Pointer)
-}
-
 /// Secondary button style for import actions
 pub fn secondary_button_style(s: floem::style::Style) -> floem::style::Style {
     s.padding_horiz(12.0)

@@ -576,7 +576,7 @@ pub fn batch_extract_paks(state: PakOpsState) {
         let source_base = Path::new(&source_path);
 
         for (i, pak_path) in pak_files.iter().enumerate() {
-            let pak_name = pak_path
+            let _pak_name = pak_path
                 .file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();

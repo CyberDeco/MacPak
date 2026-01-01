@@ -3,52 +3,14 @@
 use floem::prelude::*;
 use im::Vector as ImVector;
 
-/// Output format for GR2 conversion
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Gr2OutputFormat {
-    Glb,   // Single binary file (.glb)
-    Gltf,  // Separate .gltf + .bin files
-}
-
-impl Gr2OutputFormat {
-    pub fn extension(&self) -> &'static str {
-        match self {
-            Gr2OutputFormat::Glb => "glb",
-            Gr2OutputFormat::Gltf => "gltf",
-        }
-    }
-
-    pub fn description(&self) -> &'static str {
-        match self {
-            Gr2OutputFormat::Glb => "GLB (single binary)",
-            Gr2OutputFormat::Gltf => "glTF (separate files)",
-        }
-    }
-}
-
-/// Conversion direction for GR2 tab
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Gr2ConversionDirection {
-    Gr2ToGltf,  // GR2 → glTF/GLB
-    GltfToGr2,  // glTF/GLB → GR2
-}
-
 /// GR2 Conversion tab state
 #[derive(Clone)]
 pub struct Gr2State {
-    // Conversion direction
-    pub direction: RwSignal<Gr2ConversionDirection>,
-
-    // Output format (for GR2 → glTF direction)
-    pub output_format: RwSignal<Gr2OutputFormat>,
-
     // Single file conversion
     pub input_file: RwSignal<Option<String>>,
-    pub output_file: RwSignal<Option<String>>,
 
     // Batch conversion
     pub batch_input_dir: RwSignal<Option<String>>,
-    pub batch_output_dir: RwSignal<Option<String>>,
     pub batch_files: RwSignal<Vec<String>>,
 
     // Progress (uses shared atomic state for thread-safe updates)
@@ -65,12 +27,8 @@ pub struct Gr2State {
 impl Gr2State {
     pub fn new() -> Self {
         Self {
-            direction: RwSignal::new(Gr2ConversionDirection::Gr2ToGltf),
-            output_format: RwSignal::new(Gr2OutputFormat::Glb),
             input_file: RwSignal::new(None),
-            output_file: RwSignal::new(None),
             batch_input_dir: RwSignal::new(None),
-            batch_output_dir: RwSignal::new(None),
             batch_files: RwSignal::new(Vec::new()),
             is_converting: RwSignal::new(false),
             results_log: RwSignal::new(ImVector::new()),
