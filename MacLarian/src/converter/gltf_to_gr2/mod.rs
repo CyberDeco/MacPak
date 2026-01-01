@@ -14,7 +14,7 @@ pub use gr2_writer::Gr2Writer;
 pub use utils::{encode_qtangent, f32_to_half, crc32};
 
 use std::path::Path;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// Convert a glTF/GLB file to GR2 format.
 pub fn convert_gltf_to_gr2(input_path: &Path, output_path: &Path) -> Result<()> {

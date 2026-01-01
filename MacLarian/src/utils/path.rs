@@ -1,6 +1,6 @@
 //! Path utilities
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Normalize path separators to forward slashes (for PAK files)
 pub fn normalize_path<P: AsRef<Path>>(path: P) -> String {

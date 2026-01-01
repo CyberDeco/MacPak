@@ -14,7 +14,7 @@ pub use app::AppState;
 pub use browser::{BrowserState, FileEntry, RawImageData, SortColumn};
 pub use dyes::{DyeColorEntry, DyesState, GeneratedDyeEntry, ImportedDyeEntry};
 pub use editor::{EditorState, EditorTab, EditorTabsState};
-pub use gr2::{Gr2ConversionDirection, Gr2OutputFormat, Gr2State};
+pub use gr2::Gr2State;
 pub use pak_ops::{PakCompression, PakOpsState};
 pub use search::{SearchResult, SearchState};
 pub use virtual_textures::VirtualTexturesState;

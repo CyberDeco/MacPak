@@ -1,7 +1,7 @@
 //! PAK archive operations
 
 use crate::error::{Error, Result};
-use super::lspk::{LspkReader, LspkWriter, PakPhase, PakProgress};
+use super::lspk::{LspkReader, LspkWriter};
 use std::fs::File;
 use std::path::Path;
 

@@ -18,7 +18,6 @@ use crate::utils::meta_dialog::meta_dialog;
 use components::{editor_content, editor_status_bar, editor_toolbar, search_panel};
 
 // Re-export for external use
-pub use operations::load_file;
 pub use operations::load_file_in_tab;
 pub use operations::open_file_dialog;
 pub use operations::save_file;
