@@ -5,8 +5,8 @@ use std::path::Path;
 
 use floem::prelude::*;
 
-use crate::state::{DyesState, GeneratedDyeEntry, UuidFormat};
-use crate::utils::generate_uuid;
+use crate::state::{DyesState, GeneratedDyeEntry};
+use crate::utils::{generate_uuid, UuidFormat};
 use super::generators::hex_to_fvec3;
 
 /// Export result with status message

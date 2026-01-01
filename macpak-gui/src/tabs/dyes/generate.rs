@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::state::{DyesState, GeneratedDyeEntry, UuidFormat};
-use crate::utils::generate_uuid;
+use crate::state::{DyesState, GeneratedDyeEntry};
+use crate::utils::{generate_uuid, UuidFormat};
 use super::export::check_required_colors_at_default;
 use super::shared::{button_style, input_style};
 
@@ -70,8 +70,8 @@ pub fn generate_dye_section(state: DyesState) -> impl IntoView {
                             }
 
                             // Generate UUIDs
-                            let preset_uuid = generate_uuid(UuidFormat::Standard);
-                            let template_uuid = generate_uuid(UuidFormat::Standard);
+                            let preset_uuid = generate_uuid(UuidFormat::Larian);
+                            let template_uuid = generate_uuid(UuidFormat::Larian);
                             let name_handle = generate_uuid(UuidFormat::Larian);
                             let desc_handle = generate_uuid(UuidFormat::Larian);
 

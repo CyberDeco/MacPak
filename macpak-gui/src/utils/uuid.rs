@@ -1,6 +1,11 @@
 //! UUID generation utilities for BG3 modding
 
-use crate::state::UuidFormat;
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum UuidFormat {
+    Standard,    // 8-4-4-4-12
+    Compact,     // No dashes
+    Larian,      // Larian's format (h prefix + specific format)
+}
 
 /// Generate a new UUID v4 in the specified format
 pub fn generate_uuid(format: UuidFormat) -> String {

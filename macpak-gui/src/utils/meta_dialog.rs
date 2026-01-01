@@ -5,8 +5,7 @@
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::state::UuidFormat;
-use super::{meta_generator, generate_uuid};
+use super::{meta_generator, generate_uuid, UuidFormat};
 
 /// Create the meta.lsx dialog UI with its own internal state
 ///
@@ -89,7 +88,7 @@ where
                                         button("Generate")
                                             .style(|s| s.margin_left(8.0))
                                             .action(move || {
-                                                uuid.set(generate_uuid(UuidFormat::Standard));
+                                                uuid.set(generate_uuid(UuidFormat::Larian));
                                             })
                                     },
                                 ))
