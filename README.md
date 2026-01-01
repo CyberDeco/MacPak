@@ -67,7 +67,7 @@ No more going back and forth between the Official Larian Toolkit, a hex code gen
 
 1. Self-contained: no need to download/install/build any dependencies - will be at release.
 2. Ported over most of what [LSLib](https://github.com/Norbyte/lslib) does, with the exception of . LSLib metadata is still used in MacPak's LSF/LSX/LSJ output as a nod to the GOAT.
-3. Removed reliance on granny2.dll for GR2 handling, which was, by far, the biggest hurdle for macOS. ***Huge*** shoutout to [neptuwunium](https://github.com/arves100/opengr2/issues/8) for their clean room reverse-engineering of the rANS decompression algorithm in [Knit](https://github.com/neptuwunium/Knit).
+3. Removed reliance on granny2.dll for GR2 handling, which was, by far, the biggest hurdle for macOS. ***Huge*** shoutout to [neptuwunium](https://github.com/arves100/opengr2/issues/8) for their clean room reverse-engineering.
 4. ~~Automatically checks MacPak repo for updates on launch.~~
 
 ## What it does not do:

@@ -45,6 +45,20 @@ pub enum PakResult {
         results: Vec<String>,
         dest: String,
     },
+    /// File list loaded for individual file selection
+    FileSelectLoaded {
+        success: bool,
+        files: Vec<String>,
+        pak_path: String,
+        error: Option<String>,
+    },
+    /// Individual files extracted
+    IndividualExtractDone {
+        success: bool,
+        message: String,
+        files: Vec<String>,
+        dest: String,
+    },
 }
 
 /// Shared progress state that can be updated from background threads
@@ -282,6 +296,44 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             state.add_results_batch(all_results);
             state.is_creating.set(false);
             state.show_progress.set(false);
+        }
+
+        PakResult::FileSelectLoaded {
+            success,
+            files,
+            pak_path,
+            error,
+        } => {
+            state.is_listing.set(false);
+            state.show_progress.set(false);
+
+            if success {
+                state.file_select_pak.set(Some(pak_path));
+                state.file_select_list.set(files);
+                state.file_select_selected.set(std::collections::HashSet::new());
+                state.show_file_select.set(true);
+            } else {
+                state.status_message.set(format!("Failed to load PAK: {}", error.unwrap_or_default()));
+            }
+        }
+
+        PakResult::IndividualExtractDone {
+            success,
+            message,
+            files,
+            dest,
+        } => {
+            state.progress.set(1.0);
+            state.is_extracting.set(false);
+            state.show_progress.set(false);
+
+            if success {
+                state.clear_results();
+                state.add_results_batch(files.clone());
+                state.status_message.set(format!("Extracted {} files to {}", files.len(), dest));
+            } else {
+                state.status_message.set(format!("Extraction failed: {}", message));
+            }
         }
     }
 }

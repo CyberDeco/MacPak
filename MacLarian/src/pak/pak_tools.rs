@@ -139,6 +139,117 @@ impl PakOperations {
             .collect())
     }
 
+    /// Extract specific files from a PAK to a directory
+    ///
+    /// Takes a list of file paths (as they appear in the PAK) and extracts only those files.
+    /// File paths should match exactly as returned by `list()`.
+    pub fn extract_files<P: AsRef<Path>, S: AsRef<str>>(
+        pak_path: P,
+        output_dir: P,
+        file_paths: &[S],
+    ) -> Result<()> {
+        Self::extract_files_with_progress(pak_path, output_dir, file_paths, &|_, _, _| {})
+    }
+
+    /// Extract specific files from a PAK to a directory with progress callback
+    ///
+    /// Takes a list of file paths (as they appear in the PAK) and extracts only those files.
+    /// The callback receives (current, total, filename) during extraction.
+    pub fn extract_files_with_progress<P: AsRef<Path>, S: AsRef<str>>(
+        pak_path: P,
+        output_dir: P,
+        file_paths: &[S],
+        progress: ProgressCallback,
+    ) -> Result<()> {
+        if file_paths.is_empty() {
+            return Ok(());
+        }
+
+        let file = File::open(pak_path.as_ref())?;
+        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
+
+        // Build a set of requested paths for fast lookup
+        let requested: std::collections::HashSet<&str> = file_paths
+            .iter()
+            .map(|p| p.as_ref())
+            .collect();
+
+        // Get file list and filter to only requested files
+        let all_entries = reader.list_files()?;
+        let entries_to_extract: Vec<_> = all_entries
+            .into_iter()
+            .filter(|e| requested.contains(e.path.to_string_lossy().as_ref()))
+            .collect();
+
+        if entries_to_extract.is_empty() {
+            return Err(Error::ConversionError(
+                "None of the requested files were found in the PAK".to_string()
+            ));
+        }
+
+        std::fs::create_dir_all(&output_dir)?;
+
+        let total_files = entries_to_extract.len();
+        let mut errors: Vec<(std::path::PathBuf, String)> = Vec::new();
+
+        for (index, entry) in entries_to_extract.iter().enumerate() {
+            // Skip .DS_Store files
+            if entry.path.file_name() == Some(std::ffi::OsStr::new(".DS_Store")) {
+                tracing::debug!("Skipping .DS_Store file: {:?}", entry.path);
+                continue;
+            }
+
+            let file_name = entry.path.file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| entry.path.to_string_lossy().to_string());
+
+            progress(index + 1, total_files, &file_name);
+
+            // Decompress the file
+            let data = match reader.decompress_file(entry) {
+                Ok(data) => data,
+                Err(e) => {
+                    tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
+                    errors.push((entry.path.clone(), e.to_string()));
+                    continue;
+                }
+            };
+
+            // For virtual texture files (.gts/.gtp), organize into subfolders
+            let output_path = if is_virtual_texture_file(&file_name) {
+                if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
+                    if let Some(parent) = entry.path.parent() {
+                        output_dir.as_ref().join(parent).join(&subfolder).join(&file_name)
+                    } else {
+                        output_dir.as_ref().join(&subfolder).join(&file_name)
+                    }
+                } else {
+                    output_dir.as_ref().join(&entry.path)
+                }
+            } else {
+                output_dir.as_ref().join(&entry.path)
+            };
+
+            if let Some(parent) = output_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+
+            std::fs::write(&output_path, &data)?;
+        }
+
+        // If there were errors, return a summary error
+        if !errors.is_empty() {
+            return Err(Error::ConversionError(format!(
+                "Extracted {} files with {} errors. First error: {}",
+                total_files - errors.len(),
+                errors.len(),
+                errors[0].1
+            )));
+        }
+
+        Ok(())
+    }
+
     /// Extract meta.lsx from a PAK
     pub fn extract_meta<P: AsRef<Path>>(pak_path: P) -> Result<String> {
         let file = File::open(pak_path.as_ref())?;

@@ -167,14 +167,140 @@ pub fn list_pak_contents(state: PakOpsState) {
     });
 }
 
-/// Extract individual files (placeholder)
+/// Extract individual files - opens PAK and shows file selection dialog
 pub fn extract_individual_files(state: PakOpsState) {
     state.clear_results();
-    state.add_result("📄 Extract Individual Files");
-    state.add_result("This feature allows selecting specific files from a PAK.");
-    state.add_result("Use 'List PAK Contents' first, then extract the full PAK.");
-    state.add_result("Individual file extraction UI coming soon.");
-    state.add_result("------------------------------------------------------------");
+
+    let dialog = rfd::FileDialog::new()
+        .set_title("Select PAK File")
+        .add_filter("PAK Files", &["pak"]);
+
+    let dialog = if let Some(dir) = state.working_dir.get() {
+        dialog.set_directory(&dir)
+    } else {
+        dialog
+    };
+
+    let Some(pak_file) = dialog.pick_file() else {
+        return;
+    };
+
+    if let Some(parent) = pak_file.parent() {
+        state
+            .working_dir
+            .set(Some(parent.to_string_lossy().to_string()));
+    }
+
+    let pak_name = pak_file
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    state.add_result(&format!("Loading contents of {}...", pak_name));
+    state.is_listing.set(true);
+    state.show_progress.set(true);
+    state.progress.set(0.0);
+    state.progress_message.set(format!("Reading {}...", pak_name));
+
+    get_shared_progress().reset();
+
+    let pak_path = pak_file.to_string_lossy().to_string();
+
+    let send = create_result_sender(state.clone());
+    let progress_sender = create_progress_sender(state);
+
+    thread::spawn(move || {
+        let result = MacLarian::pak::PakOperations::list_with_progress(
+            &pak_path,
+            &|current, total, description| {
+                progress_sender(current, total, description);
+            },
+        );
+
+        let pak_result = match result {
+            Ok(files) => PakResult::FileSelectLoaded {
+                success: true,
+                files,
+                pak_path,
+                error: None,
+            },
+            Err(e) => PakResult::FileSelectLoaded {
+                success: false,
+                files: Vec::new(),
+                pak_path,
+                error: Some(e.to_string()),
+            },
+        };
+
+        send(pak_result);
+    });
+}
+
+/// Execute extraction of selected individual files
+pub fn execute_individual_extract(state: PakOpsState) {
+    let Some(pak_path) = state.file_select_pak.get() else {
+        return;
+    };
+
+    let selected: Vec<String> = state.file_select_selected.get().into_iter().collect();
+    if selected.is_empty() {
+        state.status_message.set("No files selected".to_string());
+        return;
+    }
+
+    // Close the dialog
+    state.show_file_select.set(false);
+
+    // Ask for destination
+    let dest_dialog = rfd::FileDialog::new()
+        .set_title("Select Extraction Destination")
+        .set_directory(Path::new(&pak_path).parent().unwrap_or(Path::new("/")));
+
+    let Some(dest_dir) = dest_dialog.pick_folder() else {
+        return;
+    };
+
+    let dest_path = dest_dir.to_string_lossy().to_string();
+
+    state.clear_results();
+    state.add_result(&format!("Extracting {} files...", selected.len()));
+    state.is_extracting.set(true);
+    state.show_progress.set(true);
+    state.progress.set(0.0);
+    state.progress_message.set("Extracting...".to_string());
+
+    get_shared_progress().reset();
+
+    let send = create_result_sender(state.clone());
+    let progress_sender = create_progress_sender(state);
+
+    thread::spawn(move || {
+        let result = MacLarian::pak::PakOperations::extract_files_with_progress(
+            &pak_path,
+            &dest_path,
+            &selected,
+            &|current, total, description| {
+                progress_sender(current, total, description);
+            },
+        );
+
+        let pak_result = match result {
+            Ok(_) => PakResult::IndividualExtractDone {
+                success: true,
+                message: String::new(),
+                files: selected,
+                dest: dest_path,
+            },
+            Err(e) => PakResult::IndividualExtractDone {
+                success: false,
+                message: e.to_string(),
+                files: Vec::new(),
+                dest: dest_path,
+            },
+        };
+
+        send(pak_result);
+    });
 }
 
 /// Create a PAK file from a folder via file dialog

@@ -2,6 +2,7 @@
 
 use floem::prelude::*;
 use im::Vector as ImVector;
+use std::collections::HashSet;
 
 /// Compression options for PAK creation
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -73,6 +74,12 @@ pub struct PakOpsState {
     // Dropped file (for drag-drop dialog)
     pub dropped_file: RwSignal<Option<String>>,
     pub show_drop_dialog: RwSignal<bool>,
+
+    // File selection dialog (for extract individual files)
+    pub show_file_select: RwSignal<bool>,
+    pub file_select_pak: RwSignal<Option<String>>,
+    pub file_select_list: RwSignal<Vec<String>>,
+    pub file_select_selected: RwSignal<HashSet<String>>,
 }
 
 impl PakOpsState {
@@ -100,6 +107,11 @@ impl PakOpsState {
 
             dropped_file: RwSignal::new(None),
             show_drop_dialog: RwSignal::new(false),
+
+            show_file_select: RwSignal::new(false),
+            file_select_pak: RwSignal::new(None),
+            file_select_list: RwSignal::new(Vec::new()),
+            file_select_selected: RwSignal::new(HashSet::new()),
         }
     }
 
