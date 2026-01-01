@@ -14,6 +14,10 @@
 
 ---
 
+## Install Instructions
+
+It's going to be packaged into a .dmg probably, since I don't want to pay for an Apple dev license and I'm assuming it'll be a large file. Just haven't figured out hosting yet.
+
 ## Features:
 
 ### General
@@ -57,10 +61,16 @@ Status:
 
 This is meant to be an all-in-one tool, so if you're looking for a simple or lightweight GUI... this ain't it. I'll get to making a fleshed out wiki once it's release-worthy.
 
-### Technical
+## Dye Lab
+
+No more going back and forth between the Official Larian Toolkit, a hex code generator, and a text editor! The Dye Lab tab uses the native Color Picker in macOS (which also has sliders, hex code input, etc.) to choose a
+
+## Technical
 
 1. Self-contained: no need to download/install/build any dependencies - will be at release.
-2. ~~Automatically checks MacPak repo for updates on launch.~~
+2. Ported over most of what [LSLib](https://github.com/Norbyte/lslib) does, with the exception of . LSLib metadata is still used in MacPak's LSF/LSX/LSJ output as a nod to the GOAT.
+3. Removed reliance on granny2.dll for GR2 handling, which was, by far, the biggest hurdle for macOS. ***Huge*** shoutout to [neptuwunium](https://github.com/arves100/opengr2/issues/8) for their clean room reverse-engineering of the rANS decompression algorithm in [Knit](https://github.com/neptuwunium/Knit).
+4. ~~Automatically checks MacPak repo for updates on launch.~~
 
 ## What it does not do:
 

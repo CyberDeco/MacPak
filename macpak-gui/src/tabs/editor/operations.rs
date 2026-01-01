@@ -188,6 +188,38 @@ pub fn load_file(path: &Path, tab: EditorTab) {
                 }
             }
         }
+        "LOCA" => {
+            // Binary LOCA format - convert to XML for display
+            match MacLarian::formats::loca::read_loca(path) {
+                Ok(resource) => match MacLarian::converter::loca_to_xml_string(&resource) {
+                    Ok(content) => {
+                        // Check for large file and prompt user
+                        if check_large_file(&content, path).is_none() {
+                            return; // User cancelled
+                        }
+
+                        let formatted = if content.len() > 500_000 {
+                            content
+                        } else {
+                            format_xml(&content)
+                        };
+
+                        // Set format to LOCA (not XML) so we know it came from a .loca file
+                        tab.file_format.set("LOCA".to_string());
+                        tab.file_path.set(Some(path_str.clone()));
+                        tab.content.set(formatted);
+                        tab.modified.set(false);
+                        tab.converted_from_lsf.set(true); // Reuse flag for "converted from binary"
+                    }
+                    Err(e) => {
+                        finalize_tab(format!("<!-- Error converting LOCA to XML: {} -->", e), false);
+                    }
+                },
+                Err(e) => {
+                    finalize_tab(format!("<!-- Error reading LOCA: {} -->", e), false);
+                }
+            }
+        }
         _ => {
             // Unknown format - try to read as text
             match fs::read_to_string(path) {
@@ -320,6 +352,8 @@ pub fn convert_file(tab: EditorTab, target_format: &str) {
             ("lsj", "lsx") => MacLarian::converter::lsj_to_lsx(&source_path, &dest),
             ("lsf", "lsj") => MacLarian::converter::lsf_to_lsj(&source_path, &dest),
             ("lsj", "lsf") => MacLarian::converter::lsj_to_lsf(&source_path, &dest),
+            ("loca", "xml") => MacLarian::converter::convert_loca_to_xml(&source_path, &dest),
+            ("xml", "loca") => MacLarian::converter::convert_xml_to_loca(&source_path, &dest),
             _ => {
                 return;
             }

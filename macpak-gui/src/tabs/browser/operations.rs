@@ -272,6 +272,34 @@ pub fn select_file(file: &FileEntry, state: BrowserState) {
         "lsf" => {
             state.preview_content.set("[Binary LSF file - double-click to open in editor]".to_string());
         }
+        "loca" => {
+            // Convert to XML for preview
+            let temp_path = std::path::Path::new("/tmp/temp_loca.xml");
+            match MacLarian::converter::convert_loca_to_xml(path, temp_path) {
+                Ok(_) => {
+                    match std::fs::read_to_string(temp_path) {
+                        Ok(content) => {
+                            let preview = if content.len() > 5000 {
+                                format!(
+                                    "{}...\n\n[Truncated - {} bytes total]",
+                                    &content[..5000],
+                                    content.len()
+                                )
+                            } else {
+                                content
+                            };
+                            state.preview_content.set(preview);
+                        }
+                        Err(_) => {
+                            state.preview_content.set("[Unable to read converted file]".to_string());
+                        }
+                    }
+                }
+                Err(e) => {
+                    state.preview_content.set(format!("[Error converting LOCA: {}]", e));
+                }
+            }
+        }
         "pak" => {
             match MacLarian::pak::PakOperations::list(path) {
                 Ok(pak_files) => {
@@ -412,7 +440,7 @@ fn resize_for_preview(img: image::RgbaImage) -> image::RgbaImage {
 pub fn is_text_file(ext: &str) -> bool {
     matches!(
         ext.to_lowercase().as_str(),
-        "lsf" | "lsx" | "lsj" | "khn" | "txt" | "xml" | "json" | "lua" | "md" | "cfg" | "ini" | "yaml" | "yml" | "toml"
+        "lsf" | "lsx" | "lsj" | "loca" | "khn" | "txt" | "xml" | "json" | "lua" | "md" | "cfg" | "ini" | "yaml" | "yml" | "toml"
     )
 }
 
@@ -516,6 +544,8 @@ pub fn convert_file_quick(source_path: &str, target_format: &str, state: Browser
         ("lsj", "lsx") => MacLarian::converter::lsj_to_lsx(source_path, &dest),
         ("lsf", "lsj") => MacLarian::converter::lsf_to_lsj(source_path, &dest),
         ("lsj", "lsf") => MacLarian::converter::lsj_to_lsf(source_path, &dest),
+        ("loca", "xml") => MacLarian::converter::convert_loca_to_xml(source_path, &dest),
+        ("xml", "loca") => MacLarian::converter::convert_xml_to_loca(source_path, &dest),
         _ => {
             state.status_message.set(format!(
                 "Unsupported conversion: {} to {}",

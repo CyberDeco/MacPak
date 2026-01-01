@@ -22,6 +22,8 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
     let tabs_state_lsj = tabs_state.clone();
     let tabs_state_lsf = tabs_state.clone();
     let tabs_state_meta = tabs_state.clone();
+    let tabs_state_xml = tabs_state.clone();
+    let tabs_state_loca = tabs_state.clone();
 
     h_stack((
         // File operations group
@@ -70,12 +72,20 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
         ))
         .style(|s| s.gap(8.0)),
         separator(),
-        // Convert section group
+        // LSF/LSX/LSJ Convert section (disabled for LOCA files)
         h_stack((
             label(|| "Convert:").style(|s| s.font_weight(Weight::BOLD).margin_right(8.0)),
-            convert_button("LSX", tabs_state_lsx),
-            convert_button("LSJ", tabs_state_lsj),
-            convert_button("LSF", tabs_state_lsf),
+            convert_button_lsf_group("LSX", tabs_state_lsx),
+            convert_button_lsf_group("LSJ", tabs_state_lsj),
+            convert_button_lsf_group("LSF", tabs_state_lsf),
+        ))
+        .style(|s| s.gap(8.0)),
+        separator(),
+        // LOCA/XML Convert section (disabled for LSF/LSX/LSJ files)
+        h_stack((
+            label(|| "Loca:").style(|s| s.font_weight(Weight::BOLD).margin_right(8.0)),
+            convert_button_loca_group("XML", tabs_state_xml),
+            convert_button_loca_group("LOCA", tabs_state_loca),
         ))
         .style(|s| s.gap(8.0)),
         // Spacer
@@ -134,7 +144,8 @@ fn status_message(tabs_state: EditorTabsState) -> impl IntoView {
     )
 }
 
-fn convert_button(format: &'static str, tabs_state: EditorTabsState) -> impl IntoView {
+/// Convert button for LSF/LSX/LSJ group - disabled for LOCA files
+fn convert_button_lsf_group(format: &'static str, tabs_state: EditorTabsState) -> impl IntoView {
     let tabs_state_check = tabs_state.clone();
     let tabs_state_action = tabs_state.clone();
 
@@ -143,7 +154,29 @@ fn convert_button(format: &'static str, tabs_state: EditorTabsState) -> impl Int
             tabs_state_check.active_tab().map_or(true, |tab| {
                 let f = tab.file_format.get().to_uppercase();
                 let empty = tab.content.get().is_empty();
-                f == format || empty
+                // Disable if: current format matches, empty, OR it's a LOCA-related file
+                f == format || empty || matches!(f.as_str(), "LOCA" | "XML")
+            })
+        })
+        .action(move || {
+            if let Some(tab) = tabs_state_action.active_tab() {
+                convert_file(tab, format);
+            }
+        })
+}
+
+/// Convert button for LOCA/XML group - disabled for LSF/LSX/LSJ files
+fn convert_button_loca_group(format: &'static str, tabs_state: EditorTabsState) -> impl IntoView {
+    let tabs_state_check = tabs_state.clone();
+    let tabs_state_action = tabs_state.clone();
+
+    button(format)
+        .disabled(move || {
+            tabs_state_check.active_tab().map_or(true, |tab| {
+                let f = tab.file_format.get().to_uppercase();
+                let empty = tab.content.get().is_empty();
+                // Disable if: current format matches, empty, OR it's a LSF-related file
+                f == format || empty || matches!(f.as_str(), "LSF" | "LSX" | "LSJ")
             })
         })
         .action(move || {
@@ -375,6 +408,11 @@ fn format_badge(tabs_state: EditorTabsState) -> impl IntoView {
                     Color::rgb8(255, 243, 224),
                     Color::rgb8(255, 152, 0),
                     Color::rgb8(245, 124, 0),
+                ),
+                "LOCA" => (
+                    Color::rgb8(232, 245, 233),
+                    Color::rgb8(76, 175, 80),
+                    Color::rgb8(56, 142, 60),
                 ),
                 _ => (
                     Color::rgb8(240, 240, 240),

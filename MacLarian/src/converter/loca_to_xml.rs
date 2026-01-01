@@ -5,7 +5,18 @@ use crate::formats::loca;
 
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
+use std::borrow::Cow;
 use std::path::Path;
+
+/// Escape only the characters required in XML text content (not attributes).
+/// In text content, only < and & need escaping. Apostrophes and quotes are fine.
+fn escape_text_minimal(s: &str) -> Cow<'_, str> {
+    if s.contains('&') || s.contains('<') {
+        Cow::Owned(s.replace('&', "&amp;").replace('<', "&lt;"))
+    } else {
+        Cow::Borrowed(s)
+    }
+}
 
 /// Convert .loca file to XML format
 pub fn convert_loca_to_xml<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
@@ -40,7 +51,10 @@ pub fn to_xml(resource: &loca::LocaResource) -> Result<String> {
             writer.write_event(Event::Empty(content))?;
         } else {
             writer.write_event(Event::Start(content.borrow()))?;
-            writer.write_event(Event::Text(BytesText::new(&entry.text)))?;
+            // Use minimal escaping - only < and & need escaping in text content.
+            // Apostrophes and quotes are shown literally for better readability.
+            let escaped = escape_text_minimal(&entry.text);
+            writer.write_event(Event::Text(BytesText::from_escaped(escaped)))?;
             writer.write_event(Event::End(BytesEnd::new("content")))?;
         }
     }

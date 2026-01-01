@@ -131,6 +131,32 @@ pub fn show_file_context_menu(
                 );
             }
         }
+
+        // LOCA conversion options
+        if ext_lower == "loca" {
+            menu = menu.separator();
+            let path = file_path.clone();
+            let browser_state = state.clone();
+            menu = menu.entry(
+                MenuItem::new("Convert to XML")
+                    .action(move || {
+                        convert_file_quick(&path, "xml", browser_state.clone());
+                    })
+            );
+        }
+
+        // XML to LOCA option
+        if ext_lower == "xml" {
+            menu = menu.separator();
+            let path = file_path.clone();
+            let browser_state = state.clone();
+            menu = menu.entry(
+                MenuItem::new("Convert to LOCA")
+                    .action(move || {
+                        convert_file_quick(&path, "loca", browser_state.clone());
+                    })
+            );
+        }
     }
 
     menu = menu.separator();

@@ -32,7 +32,7 @@ pub use gr2_to_gltf::{convert_gr2_to_glb, convert_gr2_to_gltf, convert_gr2_bytes
 pub use gltf_to_gr2::{convert_gltf_to_gr2, convert_gltf_bytes_to_gr2};
 
 // LOCA conversion exports
-pub use loca_to_xml::convert_loca_to_xml;
+pub use loca_to_xml::{convert_loca_to_xml, to_xml as loca_to_xml_string};
 pub use xml_to_loca::convert_xml_to_loca;
 
 // Convenience aliases
