@@ -40,6 +40,14 @@ impl Toolkit {
         operations::conversion::lsf_to_lsx(source, dest)
     }
 
+    pub fn convert_loca_to_xml(&self, source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
+        operations::conversion::loca_to_xml(source, dest)
+    }
+
+    pub fn convert_xml_to_loca(&self, source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
+        operations::conversion::xml_to_loca(source, dest)
+    }
+
     // Virtual texture operations
 
     /// List information about a GTS file

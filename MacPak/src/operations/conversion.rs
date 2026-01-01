@@ -35,3 +35,14 @@ pub fn lsj_to_lsx(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()
     MacLarian::converter::lsj_to_lsx(source.as_ref(), dest.as_ref())
         .map_err(|e| e.into())
 }
+
+// LOCA (localization)
+pub fn loca_to_xml(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
+    MacLarian::converter::convert_loca_to_xml(source.as_ref(), dest.as_ref())
+        .map_err(|e| e.into())
+}
+
+pub fn xml_to_loca(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
+    MacLarian::converter::convert_xml_to_loca(source.as_ref(), dest.as_ref())
+        .map_err(|e| e.into())
+}

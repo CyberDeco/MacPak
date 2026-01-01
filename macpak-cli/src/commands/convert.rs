@@ -88,6 +88,16 @@ pub fn execute(
             MacLarian::converter::convert_gltf_to_gr2(source, destination)?;
         }
 
+        // LOCA conversions
+        ("loca", "xml") => {
+            println!("Converting LOCA → XML");
+            MacLarian::converter::convert_loca_to_xml(source, destination)?;
+        }
+        ("xml", "loca") => {
+            println!("Converting XML → LOCA");
+            MacLarian::converter::convert_xml_to_loca(source, destination)?;
+        }
+
         // Same format (copy)
         (fmt1, fmt2) if fmt1 == fmt2 => {
             println!("Source and destination formats are the same, copying file...");
@@ -103,7 +113,8 @@ pub fn execute(
                  • LSF ↔ LSJ (via intermediary LSX)\n\
                  • LSX ↔ LSJ\n\
                  • GR2 → GLB/glTF\n\
-                 • GLB/glTF → GR2",
+                 • GLB/glTF → GR2\n\
+                 • LOCA ↔ XML",
                 input, output
             );
         }

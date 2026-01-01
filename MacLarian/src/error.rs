@@ -10,6 +10,9 @@ pub enum Error {
     #[error("Invalid LSF magic: expected LSOF, found {0:?}")]
     InvalidLsfMagic([u8; 4]),
 
+    #[error("Invalid LOCA magic: expected LOCA, found {0:?}")]
+    InvalidLocaMagic([u8; 4]),
+
     #[error("Unsupported LSF version: {0} (supported: 2-7)")]
     UnsupportedLsfVersion(u32),
 
