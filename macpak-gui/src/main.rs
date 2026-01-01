@@ -10,6 +10,7 @@
 
 mod state;
 mod tabs;
+mod utils;
 
 use floem::prelude::*;
 use floem::Application;
@@ -24,7 +25,7 @@ fn main() {
             move |_| app_view(),
             Some(
                 WindowConfig::default()
-                    .size((1200.0, 800.0))
+                    .size((1200.0, 850.0))
                     .title("MacPak"),
             ),
         )

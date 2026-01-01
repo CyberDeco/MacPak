@@ -1,6 +1,7 @@
 //! Dyes tab state
 
 use floem::prelude::*;
+use std::collections::HashMap;
 
 /// A single dye color entry with its category name and color value
 #[derive(Clone)]
@@ -16,6 +17,32 @@ impl DyeColorEntry {
             hex: RwSignal::new(default_hex.to_string()),
         }
     }
+}
+
+/// A fully parsed dye entry from LSF/LSX files with all color data
+#[derive(Clone, Debug, Default)]
+pub struct ImportedDyeEntry {
+    pub name: String,
+    /// The Resource ID from the LSF - this is the Preset UUID used in ItemCombos.txt
+    pub preset_uuid: Option<String>,
+    /// Color parameters: parameter name -> hex color (e.g., "Cloth_Primary" -> "FF0000")
+    pub colors: HashMap<String, String>,
+}
+
+/// A generated dye entry created in the current session
+#[derive(Clone, Debug)]
+pub struct GeneratedDyeEntry {
+    pub name: String,
+    /// The preset UUID for this dye (used in ItemCombos.txt and ColorPresets)
+    pub preset_uuid: String,
+    /// The root template UUID for this dye (used in Object.txt and RootTemplates)
+    pub template_uuid: String,
+    /// Localization handle for display name
+    pub name_handle: String,
+    /// Localization handle for description
+    pub desc_handle: String,
+    /// Color parameters: parameter name -> hex color
+    pub colors: HashMap<String, String>,
 }
 
 /// Dyes tab state for custom dye color creation
@@ -60,6 +87,29 @@ pub struct DyesState {
 
     // Status message
     pub status_message: RwSignal<String>,
+
+    // Generate Dye settings
+    pub individual_dye_name: RwSignal<String>,
+
+    // Generated dyes (created in current session)
+    pub generated_dyes: RwSignal<Vec<GeneratedDyeEntry>>,
+    pub selected_generated_index: RwSignal<Option<usize>>,
+
+    // Export settings
+    pub mod_name: RwSignal<String>,
+
+    // Import state (from txt files)
+    pub imported_entries: RwSignal<Vec<(String, Option<String>, Option<String>)>>, // (name, preset_uuid, root_template_uuid)
+    pub selected_import_index: RwSignal<Option<usize>>,
+
+    // Import state (from LSF/LSX files with full color data)
+    pub imported_lsf_entries: RwSignal<Vec<ImportedDyeEntry>>,
+    pub selected_lsf_index: RwSignal<Option<usize>>,
+    /// Path to the imported LSF file (for re-export in place)
+    pub imported_lsf_path: RwSignal<Option<String>>,
+
+    // Meta.lsx dialog visibility
+    pub show_meta_dialog: RwSignal<bool>,
 }
 
 impl DyesState {
@@ -106,6 +156,28 @@ impl DyesState {
             tertiary_color_underscore: DyeColorEntry::new("Tertiary_Color", default),
 
             status_message: RwSignal::new(String::new()),
+
+            // Generate Dye settings
+            individual_dye_name: RwSignal::new(String::new()),
+
+            // Generated dyes
+            generated_dyes: RwSignal::new(Vec::new()),
+            selected_generated_index: RwSignal::new(None),
+
+            // Export settings
+            mod_name: RwSignal::new("MyDyeMod".to_string()),
+
+            // Import state
+            imported_entries: RwSignal::new(Vec::new()),
+            selected_import_index: RwSignal::new(None),
+
+            // LSF import state
+            imported_lsf_entries: RwSignal::new(Vec::new()),
+            selected_lsf_index: RwSignal::new(None),
+            imported_lsf_path: RwSignal::new(None),
+
+            // Meta.lsx dialog
+            show_meta_dialog: RwSignal::new(false),
         }
     }
 }

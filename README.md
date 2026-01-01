@@ -53,7 +53,7 @@ Status:
 - [ ] Currently: dye lab
     - [x] Mimic Official Toolkit's dye menu... thing... and improve it + use built-in macOS Color Picker
     - [ ] Preview on a GR2 + mesh ?
-    - [ ] Auto-populate mod structure based on Padme4000's template
+    - [x] Auto-populate mod structure based on Padme4000's template
 
 This is meant to be an all-in-one tool, so if you're looking for a simple or lightweight GUI... this ain't it. I'll get to making a fleshed out wiki once it's release-worthy.
 
@@ -92,9 +92,11 @@ Because attempting this in Python first made me realize I needed a beefier (read
 
 Core MacPak functionality is derived from (and wouldn't be possible without):
 - [LSLib](https://github.com/Norbyte/lslib) 
+  - PAK handling
   - LSF/LSX/LSJ handling
   - GR2/glTF conversion
   - Virtual texture handling
+  - Loca file handling
 - [xiba](https://gitlab.com/saghm/xiba/)
   - PAK handling
 - [Knit](https://github.com/neptuwunium/Knit)

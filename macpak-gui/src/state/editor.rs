@@ -74,17 +74,8 @@ pub struct EditorTabsState {
     /// Show line numbers (global setting)
     pub show_line_numbers: RwSignal<bool>,
 
-    // Meta.lsx Generator Dialog
+    // Meta.lsx Generator Dialog visibility
     pub show_meta_dialog: RwSignal<bool>,
-    pub meta_mod_name: RwSignal<String>,
-    pub meta_folder: RwSignal<String>,
-    pub meta_author: RwSignal<String>,
-    pub meta_description: RwSignal<String>,
-    pub meta_uuid: RwSignal<String>,
-    pub meta_version_major: RwSignal<u32>,
-    pub meta_version_minor: RwSignal<u32>,
-    pub meta_version_patch: RwSignal<u32>,
-    pub meta_version_build: RwSignal<u32>,
 }
 
 impl EditorTabsState {
@@ -99,15 +90,6 @@ impl EditorTabsState {
             show_line_numbers: RwSignal::new(true),
 
             show_meta_dialog: RwSignal::new(false),
-            meta_mod_name: RwSignal::new(String::new()),
-            meta_folder: RwSignal::new(String::new()),
-            meta_author: RwSignal::new(String::new()),
-            meta_description: RwSignal::new(String::new()),
-            meta_uuid: RwSignal::new(String::new()),
-            meta_version_major: RwSignal::new(1),
-            meta_version_minor: RwSignal::new(0),
-            meta_version_patch: RwSignal::new(0),
-            meta_version_build: RwSignal::new(0),
         }
     }
 
