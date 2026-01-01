@@ -2,7 +2,7 @@
 
 <p align="center">
     <a href="#">
-        <img src="macpak-gui/assets/icons/icon.iconset/icon_512x512.png" alt="MacPak Icon" width="128">
+        <img src="MacPak/src/gui/assets/icons/icon.iconset/icon_512x512.png" alt="MacPak Icon" width="128">
     </a>
 </p>
 
