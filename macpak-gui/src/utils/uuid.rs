@@ -7,8 +7,8 @@ pub fn generate_uuid(format: UuidFormat) -> String {
     let uuid = uuid::Uuid::new_v4();
 
     match format {
-        UuidFormat::Standard => uuid.to_string().to_uppercase(),
-        UuidFormat::Compact => uuid.simple().to_string().to_uppercase(),
+        UuidFormat::Standard => uuid.to_string(),
+        UuidFormat::Compact => uuid.simple().to_string(),
         UuidFormat::Larian => {
             let simple = uuid.simple().to_string();
             format!(
