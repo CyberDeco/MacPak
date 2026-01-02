@@ -14,6 +14,7 @@ pub mod pak;
 pub mod compression;
 pub mod converter;
 pub mod utils;
+pub mod merged;
 
 // Re-exports for convenience
 pub use error::{Error, Result};
@@ -29,6 +30,7 @@ pub mod prelude {
     pub use crate::formats::virtual_texture::{VirtualTextureExtractor, GtsFile, GtpFile};
     pub use crate::pak::PakOperations;
     pub use crate::converter;
+    pub use crate::merged::{MergedResolver, MergedDatabase, VisualAsset};
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

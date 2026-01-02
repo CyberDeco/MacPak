@@ -40,6 +40,7 @@ base64 = "0.22"
 walkdir = "2.4"
 crc32fast = "1.4"
 lazy_static = "1.4"
+tempfile = "3.14"
 
 # For 3D model/mesh/texture handling
 gltf = "1.4.1"
