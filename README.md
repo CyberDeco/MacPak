@@ -44,13 +44,13 @@ Status:
   - [x] Tab for gr2 <> glTF/GLB single/batch conversion
   - [x] Tab for extracting and stitching single/batch virtual textures
     - [ ] Future: work in reverse for custom virtual textures (needs BG3SE for testing)
+- [x] Working: Piece together x-ref library for GR2 files to their base/normal/physical virtual textures and/or cloth msk
+    - [ ] Option to automatically retrieve companion texture files when working with GR2
 - [ ] Currently: incorporate bevy for 3D model and texture rendering (just previews)
   - [x] .glb/.gltf
   - [x] .gr2 (via temp .glb conversion)
   - [ ] .dds - can already load 512 x 512 previews in the GUI
-  - [ ] marry .dds to GR2/glTF (need database for that)
-- [ ] Next: Piece together x-ref library for GR2 files to their base/normal/physical virtual textures and/or cloth msk
-    - [ ] Option to automatically retrieve companion texture files when working with GR2
+  - [ ] marry texture(s) to GR2/glTF (paths database built)
 - [ ] Currently: dye lab
     - [x] Mimic Official Toolkit's dye menu... thing... and improve it + use built-in macOS Color Picker
     - [ ] Preview on a GR2 + mesh ?
