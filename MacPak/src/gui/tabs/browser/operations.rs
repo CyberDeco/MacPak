@@ -88,7 +88,7 @@ pub fn load_directory(dir_path: &str, state: BrowserState) {
                         "PAK" => "📦",
                         "LSF" | "LSX" | "LSJ" | "LSFX" | "LSBC" | "LSBS" => "📖",
                         "DDS" | "PNG" | "JPG" | "JPEG" => "🖼️",
-                        "GR2" | "DAE" | "glTF" => "🎨",
+                        "GR2" | "DAE" | "glTF" | "GLB" => "🎨",
                         "WEM" | "WAV" => "🔊",
                         "LUA" | "OSI" | "gameScript" | "itemScript" => "📜",
                         "XML" | "TXT" | "KHN" | "TMPL" => "📝",
