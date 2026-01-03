@@ -8,6 +8,7 @@ use floem::text::Weight;
 
 use crate::gui::state::DyesState;
 use super::shared::secondary_button_style;
+use super::shared::constants::*;
 
 use components::{imported_fields_display, txt_import_selector, lsf_import_selector};
 use operations::{import_from_file, import_from_lsf, import_from_mod_folder};
@@ -23,7 +24,7 @@ pub fn import_section(state: DyesState) -> impl IntoView {
         // Section header
         h_stack((
             label(|| "Import")
-                .style(|s| s.font_size(14.0).font_weight(Weight::SEMIBOLD)),
+                .style(|s| s.font_size(FONT_HEADER).font_weight(Weight::SEMIBOLD)),
             empty().style(|s| s.flex_grow(1.0)),
             {
                 let state = state.clone();
@@ -59,7 +60,7 @@ pub fn import_section(state: DyesState) -> impl IntoView {
                     })
             },
         ))
-        .style(|s| s.width_full().items_center().gap(8.0).margin_bottom(8.0)),
+        .style(|s| s.width_full().items_center().gap(GAP_STD).margin_bottom(PADDING_STD)),
 
         // Inner card with imported data display
         v_stack((
@@ -74,20 +75,20 @@ pub fn import_section(state: DyesState) -> impl IntoView {
         ))
         .style(|s| {
             s.width_full()
-                .padding(12.0)
-                .background(Color::rgb8(250, 250, 250))
+                .padding(PADDING_BTN_H)
+                .background(BG_CARD)
                 .border(1.0)
-                .border_color(Color::rgb8(220, 220, 220))
-                .border_radius(4.0)
+                .border_color(BORDER_CARD)
+                .border_radius(RADIUS_STD)
         }),
     ))
     .style(|s| {
         s.flex_grow(1.0)
             .flex_basis(0.0)
-            .padding(16.0)
+            .padding(PADDING_LG)
             .background(Color::WHITE)
             .border(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
+            .border_color(BORDER_CARD)
             .border_radius(6.0)
     })
 }

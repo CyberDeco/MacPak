@@ -2,6 +2,7 @@
 
 use floem::prelude::*;
 use std::process::Command;
+use super::constants::COLOR_DEFAULT_GRAY;
 
 /// Parse hex string to Color for display
 pub fn parse_hex_to_color(hex: &str) -> Color {
@@ -15,7 +16,7 @@ pub fn parse_hex_to_color(hex: &str) -> Color {
             return Color::rgb8(r, g, b);
         }
     }
-    Color::rgb8(128, 128, 128) // Default gray
+    COLOR_DEFAULT_GRAY
 }
 
 /// Parse hex string to RGB tuple

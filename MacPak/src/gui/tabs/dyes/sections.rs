@@ -5,34 +5,35 @@ use floem::text::Weight;
 
 use crate::gui::state::DyesState;
 use super::color_row::color_row;
+use super::shared::constants::*;
 
 /// Creates a section header - matches Results Log style
 fn section_header(title: &'static str) -> impl IntoView {
     label(move || title)
         .style(|s| {
-            s.font_size(14.0)
+            s.font_size(FONT_HEADER)
                 .font_weight(Weight::SEMIBOLD)
-                .margin_bottom(8.0)
+                .margin_bottom(PADDING_STD)
         })
 }
 
 /// Inner card style for the color rows
 fn inner_card_style(s: floem::style::Style) -> floem::style::Style {
     s.width_full()
-        .background(Color::rgb8(250, 250, 250))
+        .background(BG_CARD)
         .border(1.0)
-        .border_color(Color::rgb8(220, 220, 220))
-        .border_radius(4.0)
+        .border_color(BORDER_CARD)
+        .border_radius(RADIUS_STD)
 }
 
 /// Outer white card style - matches Results Log container
 fn outer_card_style(s: floem::style::Style) -> floem::style::Style {
     s.flex_grow(1.0)
         .flex_basis(0.0)
-        .padding(16.0)
+        .padding(PADDING_LG)
         .background(Color::WHITE)
         .border(1.0)
-        .border_color(Color::rgb8(220, 220, 220))
+        .border_color(BORDER_CARD)
         .border_radius(6.0)
 }
 

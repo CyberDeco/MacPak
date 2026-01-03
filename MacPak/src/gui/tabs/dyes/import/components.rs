@@ -1,10 +1,13 @@
 //! UI components for the import section
 
 use floem::prelude::*;
-use floem::text::Weight;
 
 use crate::gui::state::DyesState;
-use super::super::shared::{secondary_button_style, nav_button_style, selector_display_style};
+use super::super::shared::{
+    secondary_button_style,
+    nav_row, selector_container_green, selector_container_gray, selector_label_style,
+};
+use super::super::shared::constants::*;
 use super::operations::{load_selected_entry, load_lsf_entry, update_lsf_entry, reexport_lsf};
 
 /// Display imported fields with editable name
@@ -32,14 +35,14 @@ pub fn imported_fields_display(
         move |show| {
             if !show {
                 label(|| "No data imported")
-                    .style(|s| s.font_size(11.0).color(Color::rgb8(150, 150, 150)).padding(8.0))
+                    .style(|s| s.font_size(FONT_BODY).color(TEXT_MUTED).padding(PADDING_STD))
                     .into_any()
             } else {
                 v_stack((
                     // Dye Name row - editable
                     h_stack((
                         label(|| "Dye Name")
-                            .style(|s| s.width(90.0).font_size(11.0)),
+                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         text_input(dye_name)
                             .on_event_stop(floem::event::EventListener::FocusLost, move |_| {
                                 // Update the name in imported_lsf_entries when focus is lost
@@ -57,71 +60,71 @@ pub fn imported_fields_display(
                                 s.flex_grow(1.0)
                                     .flex_basis(0.0)
                                     .width_full()
-                                    .min_width(100.0)
-                                    .padding(6.0)
-                                    .font_size(11.0)
+                                    .min_width(INPUT_MIN_WIDTH)
+                                    .padding(PADDING_BTN_V)
+                                    .font_size(FONT_BODY)
                                     .font_family("monospace".to_string())
                                     .background(Color::WHITE)
                                     .border(1.0)
-                                    .border_color(Color::rgb8(200, 200, 200))
-                                    .border_radius(4.0)
+                                    .border_color(BORDER_INPUT)
+                                    .border_radius(RADIUS_STD)
                             }),
                     ))
-                    .style(|s| s.width_full().items_center().gap(8.0)),
+                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
 
                     // Dye UUID row (formerly Preset UUID)
                     h_stack((
                         label(|| "Dye UUID")
-                            .style(|s| s.width(90.0).font_size(11.0)),
+                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         label(move || {
                             let uuid = preset_uuid.get();
                             if uuid.is_empty() { "(not found)".to_string() } else { uuid }
                         })
                         .style(move |s| {
                             let s = s.flex_grow(1.0)
-                                .padding(6.0)
-                                .font_size(11.0)
+                                .padding(PADDING_BTN_V)
+                                .font_size(FONT_BODY)
                                 .font_family("monospace".to_string())
-                                .background(Color::rgb8(245, 245, 245))
+                                .background(BG_INPUT_READONLY)
                                 .border(1.0)
-                                .border_color(Color::rgb8(200, 200, 200))
-                                .border_radius(4.0);
+                                .border_color(BORDER_INPUT)
+                                .border_radius(RADIUS_STD);
                             if preset_uuid.get().is_empty() {
-                                s.color(Color::rgb8(150, 150, 150))
+                                s.color(TEXT_MUTED)
                             } else {
                                 s
                             }
                         }),
                     ))
-                    .style(|s| s.width_full().items_center().gap(8.0)),
+                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
 
                     // Mod UUID row (formerly Template UUID)
                     h_stack((
                         label(|| "Mod UUID")
-                            .style(|s| s.width(90.0).font_size(11.0)),
+                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         label(move || {
                             let uuid = template_uuid.get();
                             if uuid.is_empty() { "(not found)".to_string() } else { uuid }
                         })
                         .style(move |s| {
                             let s = s.flex_grow(1.0)
-                                .padding(6.0)
-                                .font_size(11.0)
+                                .padding(PADDING_BTN_V)
+                                .font_size(FONT_BODY)
                                 .font_family("monospace".to_string())
-                                .background(Color::rgb8(245, 245, 245))
+                                .background(BG_INPUT_READONLY)
                                 .border(1.0)
-                                .border_color(Color::rgb8(200, 200, 200))
-                                .border_radius(4.0);
+                                .border_color(BORDER_INPUT)
+                                .border_radius(RADIUS_STD);
                             if template_uuid.get().is_empty() {
-                                s.color(Color::rgb8(150, 150, 150))
+                                s.color(TEXT_MUTED)
                             } else {
                                 s
                             }
                         }),
                     ))
-                    .style(|s| s.width_full().items_center().gap(8.0)),
+                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
                 ))
-                .style(|s| s.width_full().gap(8.0))
+                .style(|s| s.width_full().gap(GAP_STD))
                 .into_any()
             }
         },
@@ -146,76 +149,38 @@ pub fn txt_import_selector(
                 empty().into_any()
             } else {
                 let state_load = state_for_selector.clone();
+                let state_on_nav = state_for_selector.clone();
+                let imported_entries_display = imported_entries;
+                let selected_index_display = selected_index;
 
                 h_stack((
-                    label(|| "TXT:").style(|s| s.font_size(11.0).font_weight(Weight::SEMIBOLD)),
-                    // Dropdown-style selector
-                    h_stack((
-                        // Previous button
-                        {
-                            let selected_index = selected_index;
-                            let imported_entries = imported_entries;
-                            let state_prev = state_for_selector.clone();
-                            let imported_dye_name = imported_dye_name;
-                            let imported_preset_uuid = imported_preset_uuid;
-                            let imported_template_uuid = imported_template_uuid;
-                            label(|| "<")
-                                .style(nav_button_style)
-                                .on_click_stop(move |_| {
-                                    let len = imported_entries.get().len();
-                                    if len > 0 {
-                                        let current = selected_index.get().unwrap_or(0);
-                                        let new_idx = if current == 0 { len - 1 } else { current - 1 };
-                                        selected_index.set(Some(new_idx));
-                                        load_selected_entry(state_prev.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
-                                    }
-                                })
+                    label(|| "TXT:").style(selector_label_style),
+                    // Navigation row
+                    nav_row(
+                        selected_index,
+                        move || imported_entries.get().len(),
+                        move || {
+                            let entries = imported_entries_display.get();
+                            let idx = selected_index_display.get().unwrap_or(0);
+                            if let Some((name, _, _)) = entries.get(idx) {
+                                format!("{} ({}/{})", name, idx + 1, entries.len())
+                            } else {
+                                "Select...".to_string()
+                            }
                         },
-                        // Current selection display
                         {
-                            let selected_index = selected_index;
-                            let imported_entries = imported_entries;
-                            label(move || {
-                                let entries = imported_entries.get();
-                                let idx = selected_index.get().unwrap_or(0);
-                                if let Some((name, _, _)) = entries.get(idx) {
-                                    format!("{} ({}/{})", name, idx + 1, entries.len())
-                                } else {
-                                    "Select...".to_string()
-                                }
-                            })
-                            .style(selector_display_style)
+                            let state = state_on_nav.clone();
+                            move || load_selected_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid)
                         },
-                        // Next button
                         {
-                            let selected_index = selected_index;
-                            let imported_entries = imported_entries;
-                            let state_next = state_for_selector.clone();
-                            let imported_dye_name = imported_dye_name;
-                            let imported_preset_uuid = imported_preset_uuid;
-                            let imported_template_uuid = imported_template_uuid;
-                            label(|| ">")
-                                .style(nav_button_style)
-                                .on_click_stop(move |_| {
-                                    let len = imported_entries.get().len();
-                                    if len > 0 {
-                                        let current = selected_index.get().unwrap_or(0);
-                                        let new_idx = (current + 1) % len;
-                                        selected_index.set(Some(new_idx));
-                                        load_selected_entry(state_next.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
-                                    }
-                                })
+                            let state = state_on_nav.clone();
+                            move || load_selected_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid)
                         },
-                    ))
-                    .style(|s| s.flex_grow(1.0).gap(4.0).items_center()),
+                    ),
                     // Clear button
                     {
-                        let state_clear = state_load.clone();
                         let imported_entries = imported_entries;
                         let selected_index = selected_index;
-                        let imported_dye_name = imported_dye_name;
-                        let imported_preset_uuid = imported_preset_uuid;
-                        let imported_template_uuid = imported_template_uuid;
                         label(|| "Clear")
                             .style(secondary_button_style)
                             .on_click_stop(move |_| {
@@ -224,21 +189,11 @@ pub fn txt_import_selector(
                                 imported_dye_name.set(String::new());
                                 imported_preset_uuid.set(String::new());
                                 imported_template_uuid.set(String::new());
-                                state_clear.status_message.set("Cleared".to_string());
+                                state_load.status_message.set("Cleared".to_string());
                             })
                     },
                 ))
-                .style(|s| {
-                    s.width_full()
-                        .padding(8.0)
-                        .margin_bottom(8.0)
-                        .gap(8.0)
-                        .items_center()
-                        .background(Color::rgb8(243, 244, 246))
-                        .border(1.0)
-                        .border_color(Color::rgb8(209, 213, 219))
-                        .border_radius(4.0)
-                })
+                .style(selector_container_gray)
                 .into_any()
             }
         },
@@ -263,69 +218,35 @@ pub fn lsf_import_selector(
                 empty().into_any()
             } else {
                 let state_nav = state_for_lsf.clone();
+                let state_on_nav = state_for_lsf.clone();
+                let imported_lsf_display = imported_lsf;
+                let selected_lsf_display = selected_lsf;
 
                 h_stack((
-                    label(|| "LSF:").style(|s| s.font_size(11.0).font_weight(Weight::SEMIBOLD)),
-                    // Dropdown-style selector
-                    h_stack((
-                        // Previous button
-                        {
-                            let selected_lsf = selected_lsf;
-                            let imported_lsf = imported_lsf;
-                            let state_prev = state_for_lsf.clone();
-                            let imported_dye_name = imported_dye_name;
-                            let imported_preset_uuid = imported_preset_uuid;
-                            let imported_template_uuid = imported_template_uuid;
-                            label(|| "<")
-                                .style(nav_button_style)
-                                .on_click_stop(move |_| {
-                                    let len = imported_lsf.get().len();
-                                    if len > 0 {
-                                        let current = selected_lsf.get().unwrap_or(0);
-                                        let new_idx = if current == 0 { len - 1 } else { current - 1 };
-                                        selected_lsf.set(Some(new_idx));
-                                        load_lsf_entry(state_prev.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
-                                    }
-                                })
+                    label(|| "LSF:").style(selector_label_style),
+                    // Navigation row
+                    nav_row(
+                        selected_lsf,
+                        move || imported_lsf.get().len(),
+                        move || {
+                            let entries = imported_lsf_display.get();
+                            let idx = selected_lsf_display.get().unwrap_or(0);
+                            if let Some(entry) = entries.get(idx) {
+                                format!("{} ({}/{})", entry.name, idx + 1, entries.len())
+                            } else {
+                                "Select...".to_string()
+                            }
                         },
-                        // Current selection display
                         {
-                            let selected_lsf = selected_lsf;
-                            let imported_lsf = imported_lsf;
-                            label(move || {
-                                let entries = imported_lsf.get();
-                                let idx = selected_lsf.get().unwrap_or(0);
-                                if let Some(entry) = entries.get(idx) {
-                                    format!("{} ({}/{})", entry.name, idx + 1, entries.len())
-                                } else {
-                                    "Select...".to_string()
-                                }
-                            })
-                            .style(selector_display_style)
+                            let state = state_on_nav.clone();
+                            move || load_lsf_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid)
                         },
-                        // Next button
                         {
-                            let selected_lsf = selected_lsf;
-                            let imported_lsf = imported_lsf;
-                            let state_next = state_for_lsf.clone();
-                            let imported_dye_name = imported_dye_name;
-                            let imported_preset_uuid = imported_preset_uuid;
-                            let imported_template_uuid = imported_template_uuid;
-                            label(|| ">")
-                                .style(nav_button_style)
-                                .on_click_stop(move |_| {
-                                    let len = imported_lsf.get().len();
-                                    if len > 0 {
-                                        let current = selected_lsf.get().unwrap_or(0);
-                                        let new_idx = (current + 1) % len;
-                                        selected_lsf.set(Some(new_idx));
-                                        load_lsf_entry(state_next.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
-                                    }
-                                })
+                            let state = state_on_nav.clone();
+                            move || load_lsf_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid)
                         },
-                    ))
-                    .style(|s| s.flex_grow(1.0).gap(4.0).items_center()),
-                    // Update button - saves current colors to selected LSF entry
+                    ),
+                    // Update button
                     {
                         let state_update = state_nav.clone();
                         label(|| "Update")
@@ -334,7 +255,7 @@ pub fn lsf_import_selector(
                                 update_lsf_entry(state_update.clone());
                             })
                     },
-                    // Re-export button - writes all entries back to the original LSF file
+                    // Re-export button
                     {
                         let state_reexport = state_nav.clone();
                         label(|| "Re-export")
@@ -348,9 +269,6 @@ pub fn lsf_import_selector(
                         let state_clear = state_nav.clone();
                         let imported_lsf = imported_lsf;
                         let selected_lsf = selected_lsf;
-                        let imported_dye_name = imported_dye_name;
-                        let imported_preset_uuid = imported_preset_uuid;
-                        let imported_template_uuid = imported_template_uuid;
                         label(|| "Clear")
                             .style(secondary_button_style)
                             .on_click_stop(move |_| {
@@ -363,17 +281,7 @@ pub fn lsf_import_selector(
                             })
                     },
                 ))
-                .style(|s| {
-                    s.width_full()
-                        .padding(8.0)
-                        .margin_bottom(8.0)
-                        .gap(8.0)
-                        .items_center()
-                        .background(Color::rgb8(232, 245, 233))
-                        .border(1.0)
-                        .border_color(Color::rgb8(129, 199, 132))
-                        .border_radius(4.0)
-                })
+                .style(selector_container_green)
                 .into_any()
             }
         },

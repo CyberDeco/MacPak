@@ -7,11 +7,7 @@ use floem::prelude::*;
 
 use crate::gui::state::{DyesState, GeneratedDyeEntry};
 use crate::gui::utils::{generate_uuid, UuidFormat};
-use super::generators::hex_to_fvec3;
-
-
-/// Default color value - colors matching this are skipped in export
-const DEFAULT_COLOR: &str = "808080";
+use super::super::shared::{generate_color_nodes, DEFAULT_COLOR, parse_hex_color};
 
 /// Check which required colors are still at default value
 pub fn check_required_colors_at_default(state: &DyesState) -> Vec<&'static str> {
@@ -370,7 +366,7 @@ fn write_color_presets_lsx(
     let entries: Vec<String> = dyes
         .iter()
         .map(|dye| {
-            let color_nodes = generate_color_nodes_from_hashmap(&dye.colors);
+            let color_nodes = generate_color_nodes(&dye.colors);
             format!(
                 r#"				<node id="Resource">
 					<attribute id="ID" type="FixedString" value="{preset_uuid}" />
@@ -418,32 +414,6 @@ fn write_color_presets_lsx(
         mod_name
     ));
     fs::write(path, content)
-}
-
-/// Generate color nodes from a HashMap of colors
-/// Skips colors that are unchanged from the default (#808080)
-fn generate_color_nodes_from_hashmap(colors: &std::collections::HashMap<String, String>) -> String {
-    colors
-        .iter()
-        .filter(|(_, hex)| {
-            // Skip colors that match the default
-            let normalized = hex.trim_start_matches('#').to_lowercase();
-            normalized != DEFAULT_COLOR
-        })
-        .map(|(name, hex)| {
-            let fvec3 = hex_to_fvec3(hex);
-            format!(
-                r#"								<node id="Vector3Parameters">
-									<attribute id="Color" type="bool" value="True" />
-									<attribute id="Custom" type="bool" value="False" />
-									<attribute id="Enabled" type="bool" value="True" />
-									<attribute id="Parameter" type="FixedString" value="{name}" />
-									<attribute id="Value" type="fvec3" value="{fvec3}" />
-								</node>"#
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 /// Write TextureAtlasInfo LSX (icon atlas metadata) for all dyes
@@ -637,12 +607,10 @@ fn create_dds_data(width: u32, height: u32, dyes: &[GeneratedDyeEntry]) -> Vec<u
     let colors: Vec<(u8, u8, u8)> = dyes
         .iter()
         .map(|dye| {
-            // Use the Cloth_Primary color as the icon color
-            if let Some(hex) = dye.colors.get("Cloth_Primary") {
-                parse_hex_color(hex)
-            } else {
-                (255, 0, 255) // Default magenta
-            }
+            // Use the Cloth_Primary color as the icon color (magenta if missing/invalid)
+            dye.colors.get("Cloth_Primary")
+                .and_then(|hex| parse_hex_color(hex))
+                .unwrap_or((255, 0, 255))
         })
         .collect();
 
@@ -706,17 +674,4 @@ fn create_single_icon_dds() -> Vec<u8> {
     }
 
     dds_data
-}
-
-/// Parse hex color string to RGB tuple
-fn parse_hex_color(hex: &str) -> (u8, u8, u8) {
-    let hex = hex.trim_start_matches('#');
-    if hex.len() >= 6 {
-        let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255);
-        let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
-        let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255);
-        (r, g, b)
-    } else {
-        (255, 0, 255) // Default magenta
-    }
 }

@@ -6,7 +6,10 @@ use floem::prelude::*;
 use walkdir::WalkDir;
 
 use crate::gui::state::DyesState;
-use super::super::shared::{ParsedDyeEntry, parse_item_combos, parse_object_txt, parse_lsx_dye_presets};
+use super::super::shared::{
+    ParsedDyeEntry, parse_item_combos, parse_object_txt, parse_lsx_dye_presets,
+    generate_all_color_nodes, collect_all_colors, reset_colors_to_default, load_colors_from_map,
+};
 
 // MacLarian imports for LSF conversion (via MacPak re-export)
 use crate::MacLarian::formats::lsf;
@@ -339,81 +342,10 @@ pub fn load_lsf_entry(
             imported_template_uuid.set(entry.root_template_uuid.clone().unwrap_or_default());
 
             // Reset all color pickers to default gray before applying imported colors
-            let default_color = "808080".to_string();
-            // Required colors
-            state.cloth_primary.hex.set(default_color.clone());
-            state.cloth_secondary.hex.set(default_color.clone());
-            state.cloth_tertiary.hex.set(default_color.clone());
-            state.leather_primary.hex.set(default_color.clone());
-            state.leather_secondary.hex.set(default_color.clone());
-            state.leather_tertiary.hex.set(default_color.clone());
-            state.metal_primary.hex.set(default_color.clone());
-            state.metal_secondary.hex.set(default_color.clone());
-            state.metal_tertiary.hex.set(default_color.clone());
-            state.color_01.hex.set(default_color.clone());
-            state.color_02.hex.set(default_color.clone());
-            state.color_03.hex.set(default_color.clone());
-            state.custom_1.hex.set(default_color.clone());
-            state.custom_2.hex.set(default_color.clone());
-            // Recommended colors
-            state.accent_color.hex.set(default_color.clone());
-            state.glow_color.hex.set(default_color.clone());
-            state.glow_colour.hex.set(default_color.clone());
-            // Common colors
-            state.added_color.hex.set(default_color.clone());
-            state.highlight_color.hex.set(default_color.clone());
-            state.base_color.hex.set(default_color.clone());
-            state.inner_color.hex.set(default_color.clone());
-            state.outer_color.hex.set(default_color.clone());
-            state.primary_color.hex.set(default_color.clone());
-            state.secondary_color.hex.set(default_color.clone());
-            state.tetriary_color.hex.set(default_color.clone());
-            state.primary.hex.set(default_color.clone());
-            state.secondary.hex.set(default_color.clone());
-            state.tertiary.hex.set(default_color.clone());
-            state.primary_color_underscore.hex.set(default_color.clone());
-            state.secondary_color_underscore.hex.set(default_color.clone());
-            state.tertiary_color_underscore.hex.set(default_color.clone());
+            reset_colors_to_default(&state);
 
-            // Set colors in the shared color pickers (this is the main purpose of LSF import)
-            for (param_name, hex_color) in &entry.colors {
-                match param_name.as_str() {
-                    "Cloth_Primary" => state.cloth_primary.hex.set(hex_color.clone()),
-                    "Cloth_Secondary" => state.cloth_secondary.hex.set(hex_color.clone()),
-                    "Cloth_Tertiary" => state.cloth_tertiary.hex.set(hex_color.clone()),
-                    "Leather_Primary" => state.leather_primary.hex.set(hex_color.clone()),
-                    "Leather_Secondary" => state.leather_secondary.hex.set(hex_color.clone()),
-                    "Leather_Tertiary" => state.leather_tertiary.hex.set(hex_color.clone()),
-                    "Metal_Primary" => state.metal_primary.hex.set(hex_color.clone()),
-                    "Metal_Secondary" => state.metal_secondary.hex.set(hex_color.clone()),
-                    "Metal_Tertiary" => state.metal_tertiary.hex.set(hex_color.clone()),
-                    "Accent_Color" => state.accent_color.hex.set(hex_color.clone()),
-                    "Color_01" => state.color_01.hex.set(hex_color.clone()),
-                    "Color_02" => state.color_02.hex.set(hex_color.clone()),
-                    "Color_03" => state.color_03.hex.set(hex_color.clone()),
-                    "Custom_1" => state.custom_1.hex.set(hex_color.clone()),
-                    "Custom_2" => state.custom_2.hex.set(hex_color.clone()),
-                    // Recommended colors
-                    "GlowColor" => state.glow_color.hex.set(hex_color.clone()),
-                    "GlowColour" => state.glow_colour.hex.set(hex_color.clone()),
-                    // Common colors
-                    "AddedColor" => state.added_color.hex.set(hex_color.clone()),
-                    "Highlight_Color" => state.highlight_color.hex.set(hex_color.clone()),
-                    "BaseColor" => state.base_color.hex.set(hex_color.clone()),
-                    "InnerColor" => state.inner_color.hex.set(hex_color.clone()),
-                    "OuterColor" => state.outer_color.hex.set(hex_color.clone()),
-                    "PrimaryColor" => state.primary_color.hex.set(hex_color.clone()),
-                    "SecondaryColor" => state.secondary_color.hex.set(hex_color.clone()),
-                    "TetriaryColor" => state.tetriary_color.hex.set(hex_color.clone()),
-                    "Primary" => state.primary.hex.set(hex_color.clone()),
-                    "Secondary" => state.secondary.hex.set(hex_color.clone()),
-                    "Tertiary" => state.tertiary.hex.set(hex_color.clone()),
-                    "Primary_Color" => state.primary_color_underscore.hex.set(hex_color.clone()),
-                    "Secondary_Color" => state.secondary_color_underscore.hex.set(hex_color.clone()),
-                    "Tertiary_Color" => state.tertiary_color_underscore.hex.set(hex_color.clone()),
-                    _ => {} // Unknown parameter, ignore
-                }
-            }
+            // Load colors from the imported entry
+            load_colors_from_map(&state, &entry.colors);
 
             state.status_message.set(format!("Loaded: {}", entry.name));
         }
@@ -426,7 +358,7 @@ pub fn update_lsf_entry(state: DyesState) {
     let mut entries = state.imported_lsf_entries.get();
     if idx < entries.len() {
         let name = entries[idx].name.clone();
-        entries[idx].colors = collect_current_colors(&state);
+        entries[idx].colors = collect_all_colors(&state);
         state.imported_lsf_entries.set(entries);
         state.status_message.set(format!("Updated '{}'", name));
     }
@@ -478,7 +410,7 @@ fn generate_color_presets_lsx(entries: &[crate::gui::state::ImportedDyeEntry]) -
     let dye_nodes: Vec<String> = entries
         .iter()
         .map(|entry| {
-            let color_nodes = generate_color_nodes(&entry.colors);
+            let color_nodes = generate_all_color_nodes(&entry.colors);
             let preset_uuid = entry.preset_uuid.clone().unwrap_or_default();
             format!(
                 r#"				<node id="Resource">
@@ -523,95 +455,3 @@ fn generate_color_presets_lsx(entries: &[crate::gui::state::ImportedDyeEntry]) -
     )
 }
 
-/// Generate Vector3Parameters nodes from a color HashMap
-fn generate_color_nodes(colors: &HashMap<String, String>) -> String {
-    colors
-        .iter()
-        .map(|(name, hex)| {
-            let fvec3 = hex_to_fvec3(hex);
-            format!(
-                r#"								<node id="Vector3Parameters">
-									<attribute id="Color" type="bool" value="True" />
-									<attribute id="Custom" type="bool" value="False" />
-									<attribute id="Enabled" type="bool" value="True" />
-									<attribute id="Parameter" type="FixedString" value="{name}" />
-									<attribute id="Value" type="fvec3" value="{fvec3}" />
-								</node>"#
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-/// Convert sRGB color value to linear (inverse gamma correction)
-fn srgb_to_linear(c: f32) -> f32 {
-    if c <= 0.04045 {
-        c / 12.92
-    } else {
-        ((c + 0.055) / 1.055).powf(2.4)
-    }
-}
-
-/// Convert hex color (e.g., "FF0000") to fvec3 string (e.g., "1 0 0")
-/// Applies inverse gamma correction since game expects colors in linear space
-fn hex_to_fvec3(hex: &str) -> String {
-    let hex = hex.trim_start_matches('#');
-    if hex.len() != 6 {
-        return "0.5 0.5 0.5".to_string();
-    }
-
-    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(128) as f32 / 255.0;
-    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(128) as f32 / 255.0;
-    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(128) as f32 / 255.0;
-
-    // Convert from sRGB to linear for game storage
-    let r = srgb_to_linear(r);
-    let g = srgb_to_linear(g);
-    let b = srgb_to_linear(b);
-
-    format!("{:.6} {:.6} {:.6}", r, g, b)
-}
-
-/// Collect current colors from the color pickers into a HashMap
-fn collect_current_colors(state: &DyesState) -> HashMap<String, String> {
-    let mut colors = HashMap::new();
-
-    // Required colors
-    colors.insert("Cloth_Primary".to_string(), state.cloth_primary.hex.get());
-    colors.insert("Cloth_Secondary".to_string(), state.cloth_secondary.hex.get());
-    colors.insert("Cloth_Tertiary".to_string(), state.cloth_tertiary.hex.get());
-    colors.insert("Leather_Primary".to_string(), state.leather_primary.hex.get());
-    colors.insert("Leather_Secondary".to_string(), state.leather_secondary.hex.get());
-    colors.insert("Leather_Tertiary".to_string(), state.leather_tertiary.hex.get());
-    colors.insert("Metal_Primary".to_string(), state.metal_primary.hex.get());
-    colors.insert("Metal_Secondary".to_string(), state.metal_secondary.hex.get());
-    colors.insert("Metal_Tertiary".to_string(), state.metal_tertiary.hex.get());
-    colors.insert("Accent_Color".to_string(), state.accent_color.hex.get());
-    colors.insert("Color_01".to_string(), state.color_01.hex.get());
-    colors.insert("Color_02".to_string(), state.color_02.hex.get());
-    colors.insert("Color_03".to_string(), state.color_03.hex.get());
-    colors.insert("Custom_1".to_string(), state.custom_1.hex.get());
-    colors.insert("Custom_2".to_string(), state.custom_2.hex.get());
-
-    // Recommended colors
-    colors.insert("GlowColor".to_string(), state.glow_color.hex.get());
-    colors.insert("GlowColour".to_string(), state.glow_colour.hex.get());
-
-    // Common colors
-    colors.insert("AddedColor".to_string(), state.added_color.hex.get());
-    colors.insert("Highlight_Color".to_string(), state.highlight_color.hex.get());
-    colors.insert("BaseColor".to_string(), state.base_color.hex.get());
-    colors.insert("InnerColor".to_string(), state.inner_color.hex.get());
-    colors.insert("OuterColor".to_string(), state.outer_color.hex.get());
-    colors.insert("PrimaryColor".to_string(), state.primary_color.hex.get());
-    colors.insert("SecondaryColor".to_string(), state.secondary_color.hex.get());
-    colors.insert("TetriaryColor".to_string(), state.tetriary_color.hex.get());
-    colors.insert("Primary".to_string(), state.primary.hex.get());
-    colors.insert("Secondary".to_string(), state.secondary.hex.get());
-    colors.insert("Tertiary".to_string(), state.tertiary.hex.get());
-    colors.insert("Primary_Color".to_string(), state.primary_color_underscore.hex.get());
-    colors.insert("Secondary_Color".to_string(), state.secondary_color_underscore.hex.get());
-    colors.insert("Tertiary_Color".to_string(), state.tertiary_color_underscore.hex.get());
-
-    colors
-}

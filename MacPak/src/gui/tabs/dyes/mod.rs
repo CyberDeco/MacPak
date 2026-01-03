@@ -3,7 +3,6 @@
 mod color_row;
 mod export;
 mod generate;
-mod helpers;
 mod import;
 mod sections;
 mod shared;
@@ -15,9 +14,10 @@ use crate::gui::state::{AppState, DyesState};
 use crate::gui::utils::meta_dialog::meta_dialog;
 use export::export_section;
 use generate::generate_dye_section;
-use helpers::copy_to_clipboard;
 use import::import_section;
 use sections::{common_section, recommended_section, required_section};
+use shared::copy_to_clipboard;
+use shared::constants::*;
 
 pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
     let status = state.status_message;
@@ -44,13 +44,13 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
                 recommended_section(state.clone(), status),
                 generate_dye_section(state.clone()),
             ))
-            .style(|s| s.flex_grow(1.0).flex_basis(0.0).gap(16.0)),
+            .style(|s| s.flex_grow(1.0).flex_basis(0.0).gap(GAP_LG)),
         ))
         .style(|s| {
             s.width_full()
                 .items_start()
                 .padding(20.0)
-                .gap(16.0)
+                .gap(GAP_LG)
         }),
         // Import and Export sections side by side
         h_stack((
@@ -61,7 +61,7 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
             s.width_full()
                 .padding_horiz(24.0)
                 .padding_bottom(24.0)
-                .gap(16.0)
+                .gap(GAP_LG)
                 .items_start()
         }),
         // Meta.lsx dialog overlay
@@ -70,7 +70,7 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
     .style(|s| {
         s.width_full()
             .height_full()
-            .background(Color::rgb8(250, 250, 250))
+            .background(BG_CARD)
             .position(floem::style::Position::Relative)
     })
 }
@@ -78,7 +78,7 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
 fn header_section(status: RwSignal<String>) -> impl IntoView {
     h_stack((
         label(|| "Dye Lab")
-            .style(|s| s.font_size(18.0).font_weight(Weight::BOLD)),
+            .style(|s| s.font_size(FONT_TITLE).font_weight(Weight::BOLD)),
         empty().style(|s| s.flex_grow(1.0)),
         // Status message
         dyn_container(
@@ -89,12 +89,12 @@ fn header_section(status: RwSignal<String>) -> impl IntoView {
                 } else {
                     label(move || msg.clone())
                         .style(|s| {
-                            s.padding_horiz(12.0)
-                                .padding_vert(6.0)
-                                .border_radius(4.0)
-                                .font_size(12.0)
-                                .background(Color::rgb8(232, 245, 233))
-                                .color(Color::rgb8(46, 125, 50))
+                            s.padding_horiz(PADDING_BTN_H)
+                                .padding_vert(PADDING_BTN_V)
+                                .border_radius(RADIUS_STD)
+                                .font_size(FONT_STATUS)
+                                .background(BG_SUCCESS)
+                                .color(TEXT_SUCCESS)
                         })
                         .into_any()
                 }
@@ -103,11 +103,11 @@ fn header_section(status: RwSignal<String>) -> impl IntoView {
     ))
     .style(|s| {
         s.width_full()
-            .padding(16.0)
-            .gap(8.0)
+            .padding(PADDING_LG)
+            .gap(GAP_STD)
             .items_center()
             .background(Color::WHITE)
             .border_bottom(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
+            .border_color(BORDER_CARD)
     })
 }
