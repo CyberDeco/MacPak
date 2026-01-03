@@ -121,7 +121,17 @@ pub fn parse_object_txt(content: &str) -> Vec<ParsedDyeEntry> {
     entries
 }
 
+/// Convert linear color value to sRGB (gamma correction)
+fn linear_to_srgb(c: f32) -> f32 {
+    if c <= 0.0031308 {
+        c * 12.92
+    } else {
+        1.055 * c.powf(1.0 / 2.4) - 0.055
+    }
+}
+
 /// Convert fvec3 string (e.g., "0.5 0.25 0.75") to hex color (e.g., "804040BF")
+/// Applies sRGB gamma correction since game stores colors in linear space
 pub fn fvec3_to_hex(fvec3: &str) -> String {
     let parts: Vec<f32> = fvec3
         .split_whitespace()
@@ -129,9 +139,10 @@ pub fn fvec3_to_hex(fvec3: &str) -> String {
         .collect();
 
     if parts.len() >= 3 {
-        let r = (parts[0].clamp(0.0, 1.0) * 255.0).round() as u8;
-        let g = (parts[1].clamp(0.0, 1.0) * 255.0).round() as u8;
-        let b = (parts[2].clamp(0.0, 1.0) * 255.0).round() as u8;
+        // Apply gamma correction (linear -> sRGB) for correct display
+        let r = (linear_to_srgb(parts[0].clamp(0.0, 1.0)) * 255.0).round() as u8;
+        let g = (linear_to_srgb(parts[1].clamp(0.0, 1.0)) * 255.0).round() as u8;
+        let b = (linear_to_srgb(parts[2].clamp(0.0, 1.0)) * 255.0).round() as u8;
         format!("{:02X}{:02X}{:02X}", r, g, b)
     } else {
         "808080".to_string() // Default gray

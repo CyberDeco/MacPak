@@ -3,6 +3,7 @@
 use std::fs;
 use std::collections::HashMap;
 use floem::prelude::*;
+use walkdir::WalkDir;
 
 use crate::gui::state::DyesState;
 use super::super::shared::{ParsedDyeEntry, parse_item_combos, parse_object_txt, parse_lsx_dye_presets};
@@ -129,6 +130,181 @@ pub fn import_from_lsf(
     }
 }
 
+/// Import from an extracted mod folder
+/// Automatically discovers _merged.lsf/lsx (colors) and Object.txt (metadata)
+pub fn import_from_mod_folder(
+    state: DyesState,
+    imported_dye_name: RwSignal<String>,
+    imported_preset_uuid: RwSignal<String>,
+    imported_template_uuid: RwSignal<String>,
+) {
+    let dialog = rfd::FileDialog::new()
+        .set_title("Select Extracted Mod Folder");
+
+    if let Some(folder_path) = dialog.pick_folder() {
+        // Clear previous imports
+        state.imported_entries.set(Vec::new());
+        state.selected_import_index.set(None);
+        state.imported_lsf_entries.set(Vec::new());
+        state.selected_lsf_index.set(None);
+        state.imported_lsf_path.set(None);
+        imported_dye_name.set(String::new());
+        imported_preset_uuid.set(String::new());
+        imported_template_uuid.set(String::new());
+
+        let folder_name = folder_path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("mod")
+            .to_string();
+
+        // Search for dye color files
+        let mut color_file: Option<std::path::PathBuf> = None;  // Primary: _merged in [PAK]_DYE_Colors
+        let mut color_files: Vec<std::path::PathBuf> = Vec::new();  // Fallback: individual LSF files
+        let mut object_file: Option<std::path::PathBuf> = None;
+
+        for entry in WalkDir::new(&folder_path)
+            .max_depth(10)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let path = entry.path();
+            let path_str = path.to_string_lossy().to_lowercase();
+            let file_name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+
+            // Look for color preset files
+            // Pattern 1: _merged.lsf in [PAK]_DYE_Colors (ConsortDyes, EngelsDyes, etc.)
+            // Pattern 2: Named preset file like GlowDye_Presets.lsf in [PAK]_* folders
+            // Pattern 3: Individual UUID.lsf files in [PAK]_* folders (FaerunColors, FearTaylor)
+            if file_name.ends_with(".lsf") || file_name.ends_with(".lsx") {
+                let parent_name = path.parent()
+                    .and_then(|p| p.file_name())
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+
+                // Pattern 1: _merged in [PAK]_DYE_Colors - preferred, single file with all dyes
+                if color_file.is_none() && parent_name == "[PAK]_DYE_Colors" {
+                    if file_name == "_merged.lsf" || file_name == "_merged.lsx" {
+                        color_file = Some(path.to_path_buf());
+                    }
+                }
+
+                // Pattern 2 & 3: LSF files in [PAK]_* folders under Content/
+                // These could be preset files or individual dye files
+                if parent_name.starts_with("[PAK]_")
+                    && parent_name != "[PAK]_DYE_Colors"
+                    && path_str.contains("content")
+                    && !path_str.contains("roottemplates")
+                    && !path_str.contains("/ui/")
+                {
+                    color_files.push(path.to_path_buf());
+                }
+            }
+
+            // Look for Object.txt
+            if object_file.is_none() {
+                if file_name == "object.txt"
+                    && path_str.contains("stats")
+                    && path_str.contains("generated")
+                {
+                    object_file = Some(path.to_path_buf());
+                }
+            }
+
+        }
+
+        // Parse color files - prefer _merged from [PAK]_DYE_Colors, fallback to individual files
+        let mut lsf_entries = Vec::new();
+
+        // Helper closure to parse a single LSF/LSX file
+        let parse_color_file = |path: &std::path::PathBuf| -> Vec<crate::gui::state::ImportedDyeEntry> {
+            let ext = path.extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+
+            if ext == "lsf" {
+                if let Ok(lsf_doc) = lsf::read_lsf(path) {
+                    if let Ok(lsx_content) = to_lsx(&lsf_doc) {
+                        return parse_lsx_dye_presets(&lsx_content);
+                    }
+                }
+            } else if ext == "lsx" {
+                if let Ok(lsx_content) = fs::read_to_string(path) {
+                    return parse_lsx_dye_presets(&lsx_content);
+                }
+            }
+            Vec::new()
+        };
+
+        if let Some(ref color_path) = color_file {
+            // Primary: single merged file
+            lsf_entries = parse_color_file(color_path);
+        } else if !color_files.is_empty() {
+            // Fallback: parse all individual color files
+            for color_path in &color_files {
+                let entries = parse_color_file(color_path);
+                lsf_entries.extend(entries);
+            }
+        }
+
+        // Parse the Object.txt file for metadata
+        let mut object_entries: HashMap<String, ParsedDyeEntry> = HashMap::new();
+        if let Some(ref obj_path) = object_file {
+            if let Ok(content) = fs::read_to_string(obj_path) {
+                for entry in parse_object_txt(&content) {
+                    object_entries.insert(entry.name.clone(), entry);
+                }
+            }
+        }
+
+        // Correlate entries: add RootTemplate UUIDs from Object.txt to LSF entries
+        for lsf_entry in &mut lsf_entries {
+            if let Some(obj_entry) = object_entries.get(&lsf_entry.name) {
+                if obj_entry.root_template_uuid.is_some() {
+                    lsf_entry.root_template_uuid = obj_entry.root_template_uuid.clone();
+                }
+            }
+        }
+
+        // Report what we found
+        let color_found = color_file.is_some() || !color_files.is_empty();
+        let object_found = object_file.is_some();
+
+        if lsf_entries.is_empty() {
+            state.status_message.set(format!(
+                "No dyes found in '{}' (colors: {}, metadata: {})",
+                folder_name,
+                if color_found { "found" } else { "not found" },
+                if object_found { "found" } else { "not found" }
+            ));
+            return;
+        }
+
+        // Store the path for re-export (use the color file path)
+        if let Some(ref color_path) = color_file {
+            state.imported_lsf_path.set(Some(color_path.to_string_lossy().to_string()));
+        }
+
+        // Populate the LSF entries
+        let count = lsf_entries.len();
+        state.imported_lsf_entries.set(lsf_entries);
+        state.selected_lsf_index.set(Some(0));
+
+        // Load the first entry
+        load_lsf_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
+
+        // Build status message
+        let mut status_parts = vec![format!("Loaded {} dyes from '{}'", count, folder_name)];
+        if !object_found {
+            status_parts.push("(no Object.txt found)".to_string());
+        }
+        state.status_message.set(status_parts.join(" "));
+    }
+}
+
 /// Load the selected TXT import entry into local display fields
 pub fn load_selected_entry(
     state: DyesState,
@@ -160,7 +336,44 @@ pub fn load_lsf_entry(
             // Set local display fields
             imported_dye_name.set(entry.name.clone());
             imported_preset_uuid.set(entry.preset_uuid.clone().unwrap_or_default());
-            imported_template_uuid.set(String::new()); // LSF doesn't contain template UUID
+            imported_template_uuid.set(entry.root_template_uuid.clone().unwrap_or_default());
+
+            // Reset all color pickers to default gray before applying imported colors
+            let default_color = "808080".to_string();
+            // Required colors
+            state.cloth_primary.hex.set(default_color.clone());
+            state.cloth_secondary.hex.set(default_color.clone());
+            state.cloth_tertiary.hex.set(default_color.clone());
+            state.leather_primary.hex.set(default_color.clone());
+            state.leather_secondary.hex.set(default_color.clone());
+            state.leather_tertiary.hex.set(default_color.clone());
+            state.metal_primary.hex.set(default_color.clone());
+            state.metal_secondary.hex.set(default_color.clone());
+            state.metal_tertiary.hex.set(default_color.clone());
+            state.color_01.hex.set(default_color.clone());
+            state.color_02.hex.set(default_color.clone());
+            state.color_03.hex.set(default_color.clone());
+            state.custom_1.hex.set(default_color.clone());
+            state.custom_2.hex.set(default_color.clone());
+            // Recommended colors
+            state.accent_color.hex.set(default_color.clone());
+            state.glow_color.hex.set(default_color.clone());
+            state.glow_colour.hex.set(default_color.clone());
+            // Common colors
+            state.added_color.hex.set(default_color.clone());
+            state.highlight_color.hex.set(default_color.clone());
+            state.base_color.hex.set(default_color.clone());
+            state.inner_color.hex.set(default_color.clone());
+            state.outer_color.hex.set(default_color.clone());
+            state.primary_color.hex.set(default_color.clone());
+            state.secondary_color.hex.set(default_color.clone());
+            state.tetriary_color.hex.set(default_color.clone());
+            state.primary.hex.set(default_color.clone());
+            state.secondary.hex.set(default_color.clone());
+            state.tertiary.hex.set(default_color.clone());
+            state.primary_color_underscore.hex.set(default_color.clone());
+            state.secondary_color_underscore.hex.set(default_color.clone());
+            state.tertiary_color_underscore.hex.set(default_color.clone());
 
             // Set colors in the shared color pickers (this is the main purpose of LSF import)
             for (param_name, hex_color) in &entry.colors {
@@ -330,7 +543,17 @@ fn generate_color_nodes(colors: &HashMap<String, String>) -> String {
         .join("\n")
 }
 
+/// Convert sRGB color value to linear (inverse gamma correction)
+fn srgb_to_linear(c: f32) -> f32 {
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
 /// Convert hex color (e.g., "FF0000") to fvec3 string (e.g., "1 0 0")
+/// Applies inverse gamma correction since game expects colors in linear space
 fn hex_to_fvec3(hex: &str) -> String {
     let hex = hex.trim_start_matches('#');
     if hex.len() != 6 {
@@ -340,6 +563,11 @@ fn hex_to_fvec3(hex: &str) -> String {
     let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(128) as f32 / 255.0;
     let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(128) as f32 / 255.0;
     let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(128) as f32 / 255.0;
+
+    // Convert from sRGB to linear for game storage
+    let r = srgb_to_linear(r);
+    let g = srgb_to_linear(g);
+    let b = srgb_to_linear(b);
 
     format!("{:.6} {:.6} {:.6}", r, g, b)
 }

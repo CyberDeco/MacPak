@@ -91,6 +91,9 @@ fn load_generated_dye_colors(state: &DyesState) {
     let dyes = state.generated_dyes.get();
     if let Some(idx) = state.selected_generated_index.get() {
         if let Some(dye) = dyes.get(idx) {
+            // Reset all colors to default before applying stored colors
+            reset_colors_to_default(state);
+
             // Load colors from the stored HashMap into the color pickers
             for (param_name, hex_color) in &dye.colors {
                 match param_name.as_str() {

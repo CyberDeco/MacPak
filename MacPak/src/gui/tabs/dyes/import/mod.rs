@@ -10,7 +10,7 @@ use crate::gui::state::DyesState;
 use super::shared::secondary_button_style;
 
 use components::{imported_fields_display, txt_import_selector, lsf_import_selector};
-use operations::{import_from_file, import_from_lsf};
+use operations::{import_from_file, import_from_lsf, import_from_mod_folder};
 
 /// Import section UI for loading existing dye definitions
 pub fn import_section(state: DyesState) -> impl IntoView {
@@ -30,7 +30,18 @@ pub fn import_section(state: DyesState) -> impl IntoView {
                 let imported_dye_name = imported_dye_name;
                 let imported_preset_uuid = imported_preset_uuid;
                 let imported_template_uuid = imported_template_uuid;
-                label(|| "From LSF...")
+                label(|| "Mod Folder...")
+                    .style(secondary_button_style)
+                    .on_click_stop(move |_| {
+                        import_from_mod_folder(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
+                    })
+            },
+            {
+                let state = state.clone();
+                let imported_dye_name = imported_dye_name;
+                let imported_preset_uuid = imported_preset_uuid;
+                let imported_template_uuid = imported_template_uuid;
+                label(|| "LSF...")
                     .style(secondary_button_style)
                     .on_click_stop(move |_| {
                         import_from_lsf(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
@@ -41,7 +52,7 @@ pub fn import_section(state: DyesState) -> impl IntoView {
                 let imported_dye_name = imported_dye_name;
                 let imported_preset_uuid = imported_preset_uuid;
                 let imported_template_uuid = imported_template_uuid;
-                label(|| "From TXT...")
+                label(|| "TXT...")
                     .style(secondary_button_style)
                     .on_click_stop(move |_| {
                         import_from_file(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);

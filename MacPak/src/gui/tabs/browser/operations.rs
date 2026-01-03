@@ -545,3 +545,9 @@ pub fn convert_file_quick(source_path: &str, target_format: &str, state: Browser
         }
     }
 }
+
+/// Clean up temporary files created by the browser
+pub fn cleanup_temp_files() {
+    // Clean up loca preview temp file
+    let _ = std::fs::remove_file("/tmp/temp_loca.xml");
+}

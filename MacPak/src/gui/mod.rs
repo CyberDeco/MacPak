@@ -22,6 +22,7 @@ use floem::window::WindowConfig;
 use state::*;
 use tabs::*;
 use tabs::editor::{open_file_dialog, save_file};
+use tabs::browser::cleanup_temp_files;
 
 /// Run the MacPak GUI application
 pub fn run_app() {
@@ -93,6 +94,8 @@ fn app_view() -> impl IntoView {
         if should_quit {
             // Kill any running preview process before exiting
             kill_preview_process();
+            // Clean up temporary files
+            cleanup_temp_files();
             // Force quit the app when the window is closed (macOS behavior fix)
             // Using process::exit because quit_app() alone doesn't terminate
             // background threads or cleanup all resources on macOS

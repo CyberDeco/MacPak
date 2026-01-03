@@ -126,8 +126,9 @@ pub fn generate_dye_section(state: DyesState) -> impl IntoView {
 /// Collect all color values from state into a HashMap
 fn collect_colors(state: &DyesState) -> HashMap<String, String> {
     let mut colors = HashMap::new();
+    let default = "808080";
 
-    // Required colors
+    // Required colors (always included)
     colors.insert("Cloth_Primary".to_string(), state.cloth_primary.hex.get());
     colors.insert("Cloth_Secondary".to_string(), state.cloth_secondary.hex.get());
     colors.insert("Cloth_Tertiary".to_string(), state.cloth_tertiary.hex.get());
@@ -143,11 +144,33 @@ fn collect_colors(state: &DyesState) -> HashMap<String, String> {
     colors.insert("Custom_1".to_string(), state.custom_1.hex.get());
     colors.insert("Custom_2".to_string(), state.custom_2.hex.get());
 
+    // Helper to add color only if not default
+    let mut add_if_not_default = |name: &str, hex: String| {
+        if hex.to_lowercase() != default {
+            colors.insert(name.to_string(), hex);
+        }
+    };
+
     // Recommended colors (only if not default)
-    let accent = state.accent_color.hex.get();
-    if accent.to_lowercase() != "808080" {
-        colors.insert("Accent_Color".to_string(), accent);
-    }
+    add_if_not_default("Accent_Color", state.accent_color.hex.get());
+    add_if_not_default("GlowColor", state.glow_color.hex.get());
+    add_if_not_default("GlowColour", state.glow_colour.hex.get());
+
+    // Common colors (only if not default)
+    add_if_not_default("AddedColor", state.added_color.hex.get());
+    add_if_not_default("Highlight_Color", state.highlight_color.hex.get());
+    add_if_not_default("BaseColor", state.base_color.hex.get());
+    add_if_not_default("InnerColor", state.inner_color.hex.get());
+    add_if_not_default("OuterColor", state.outer_color.hex.get());
+    add_if_not_default("PrimaryColor", state.primary_color.hex.get());
+    add_if_not_default("SecondaryColor", state.secondary_color.hex.get());
+    add_if_not_default("TetriaryColor", state.tetriary_color.hex.get());
+    add_if_not_default("Primary", state.primary.hex.get());
+    add_if_not_default("Secondary", state.secondary.hex.get());
+    add_if_not_default("Tertiary", state.tertiary.hex.get());
+    add_if_not_default("Primary_Color", state.primary_color_underscore.hex.get());
+    add_if_not_default("Secondary_Color", state.secondary_color_underscore.hex.get());
+    add_if_not_default("Tertiary_Color", state.tertiary_color_underscore.hex.get());
 
     colors
 }

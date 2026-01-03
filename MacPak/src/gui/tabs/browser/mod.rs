@@ -20,6 +20,7 @@ use status_bar::browser_status_bar;
 use toolbar::browser_toolbar;
 
 pub use preview_3d::kill_preview_process;
+pub use operations::cleanup_temp_files;
 
 pub fn browser_tab(
     _app_state: AppState,
