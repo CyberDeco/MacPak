@@ -72,6 +72,9 @@ pub enum Error {
 
     #[error("Invalid index: {0}")]
     InvalidIndex(String),
+
+    #[error("DDS error: {0}")]
+    DdsError(String),
 }
 
 // Add conversion from quick_xml::events::attributes::AttrError

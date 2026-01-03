@@ -10,6 +10,7 @@
 - [x] Working: various QOL things - UUID/TranslatedString generator, color picker/saver, etc.
 - [x] Temporarily working: DDS file previews (it's a little jank because it's a stopgap fix)
 - [x] Working: convert .gr2 files <> .glb or .glTF (same as .glb but .bin is its own file)
+- [x] Working: convert .dds (BC1/BC2/BC3) <> .png
 - [x] Working: decompress and stitch virtual textures
   - Attempted: reverse-engineering compression for .gr2 files, but got to be too annoying for just a QOL implementation
 - [x] Working: local Floem GUI (not yet packaged for production)

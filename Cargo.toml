@@ -14,10 +14,8 @@ license = "PolyForm Noncommercial License 1.0.0"
 # Workspace-wide shared dependencies
 [workspace.dependencies]
 anyhow = "1.0"
-bincode = "2.0"
 serde = "1.0"
 serde_json = { version = "1.0", features = ["preserve_order"] }
-toml = "0.5"
 thiserror = "1.0"
 rfd = "0.14"
 # eframe = { version = "0.28", default-features = false, features = ["accesskit", "wayland", "glow", "x11"] }
@@ -46,6 +44,7 @@ tempfile = "3.14"
 gltf = "1.4.1"
 # collada = "0.16.0" # .dae files, Blender deprecated
 ddsfile = "0.5.2"
+image = { version = "0.25", default-features = false, features = ["png"] }
 # image_dds = "0.7.2" # unsure if needed
 glam = "0.27" # 3D math (vectors, quaternions, matrices)
 half = { version = "2.6", features = ["bytemuck", "serde"] } # IEEE 754 half-precision floats (f16)

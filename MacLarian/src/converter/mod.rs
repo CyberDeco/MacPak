@@ -15,6 +15,7 @@ mod lsf_to_lsj;
 mod lsj_to_lsf;
 mod loca_to_xml;
 mod xml_to_loca;
+mod dds_png;
 
 pub mod gr2_to_gltf;
 pub mod gltf_to_gr2;
@@ -34,6 +35,12 @@ pub use gltf_to_gr2::{convert_gltf_to_gr2, convert_gltf_bytes_to_gr2};
 // LOCA conversion exports
 pub use loca_to_xml::{convert_loca_to_xml, to_xml as loca_to_xml_string};
 pub use xml_to_loca::convert_xml_to_loca;
+
+// DDS/PNG conversion exports
+pub use dds_png::{
+    convert_dds_to_png, convert_png_to_dds, convert_png_to_dds_with_format,
+    dds_bytes_to_png_bytes, png_image_to_dds_bytes, DdsFormat,
+};
 
 // Convenience aliases
 pub use lsf_to_lsx::convert_lsf_to_lsx as lsf_to_lsx;

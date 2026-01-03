@@ -43,8 +43,9 @@ tempfile.workspace = true        # Temp directories for LSF→LSX conversion
 # Logging
 tracing.workspace = true         # Structured logging
 
-# Utilities
-lazy_static.workspace = true     # Static initialization for GR2 magic signatures
+# Image/Texture handling
+ddsfile.workspace = true         # DDS texture file format
+image.workspace = true           # PNG/image format support
 
 [dev-dependencies]
 pretty_assertions.workspace = true
