@@ -7,139 +7,23 @@ use walkdir::WalkDir;
 
 use crate::gui::state::DyesState;
 use super::super::shared::{
-    ParsedDyeEntry, parse_item_combos, parse_object_txt, parse_lsx_dye_presets,
-    generate_all_color_nodes, collect_all_colors, reset_colors_to_default, load_colors_from_map,
+    ParsedDyeEntry, parse_object_txt, parse_lsx_dye_presets,
+    parse_root_templates_localization, parse_localization_xml, parse_meta_lsx,
+    reset_colors_to_default, load_colors_from_map,
 };
 
 // MacLarian imports for LSF conversion (via MacPak re-export)
 use crate::MacLarian::formats::lsf;
-use crate::MacLarian::converter::{to_lsx, from_lsx};
-
-/// Import from a mod file (ItemCombos.txt or Object.txt)
-pub fn import_from_file(
-    state: DyesState,
-    imported_dye_name: RwSignal<String>,
-    imported_preset_uuid: RwSignal<String>,
-    imported_template_uuid: RwSignal<String>,
-) {
-    let dialog = rfd::FileDialog::new()
-        .set_title("Import from Mod File")
-        .add_filter("BG3 Stat Files", &["txt"])
-        .add_filter("All Files", &["*"]);
-
-    if let Some(path) = dialog.pick_file() {
-        match fs::read_to_string(&path) {
-            Ok(content) => {
-                let filename = path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
-
-                // Try to parse based on content
-                let item_combo_entries = parse_item_combos(&content);
-                let object_entries = parse_object_txt(&content);
-
-                // Merge entries by name
-                let mut merged: HashMap<String, ParsedDyeEntry> = HashMap::new();
-
-                for entry in item_combo_entries {
-                    merged.insert(entry.name.clone(), entry);
-                }
-
-                for entry in object_entries {
-                    if let Some(existing) = merged.get_mut(&entry.name) {
-                        if entry.root_template_uuid.is_some() {
-                            existing.root_template_uuid = entry.root_template_uuid;
-                        }
-                    } else {
-                        merged.insert(entry.name.clone(), entry);
-                    }
-                }
-
-                if merged.is_empty() {
-                    state.status_message.set(format!("No dye entries found in {}", filename));
-                    return;
-                }
-
-                // Convert to vector and sort by name
-                let mut entries: Vec<_> = merged.into_values()
-                    .map(|e| (e.name, e.preset_uuid, e.root_template_uuid))
-                    .collect();
-                entries.sort_by(|a, b| a.0.cmp(&b.0));
-
-                let count = entries.len();
-                state.imported_entries.set(entries);
-                state.selected_import_index.set(Some(0));
-                load_selected_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
-                state.status_message.set(format!("Loaded 1 of {} dyes", count));
-            }
-            Err(e) => {
-                state.status_message.set(format!("Error reading file: {}", e));
-            }
-        }
-    }
-}
-
-/// Import from an LSF file (DyeColorPresets)
-pub fn import_from_lsf(
-    state: DyesState,
-    imported_dye_name: RwSignal<String>,
-    imported_preset_uuid: RwSignal<String>,
-    imported_template_uuid: RwSignal<String>,
-) {
-    let dialog = rfd::FileDialog::new()
-        .set_title("Import DyeColorPresets LSF")
-        .add_filter("LSF Files", &["lsf"])
-        .add_filter("All Files", &["*"]);
-
-    if let Some(path) = dialog.pick_file() {
-        let filename = path.file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("file")
-            .to_string();
-
-        // Read and convert LSF to LSX
-        match lsf::read_lsf(&path) {
-            Ok(lsf_doc) => {
-                match to_lsx(&lsf_doc) {
-                    Ok(lsx_content) => {
-                        // Parse the LSX content
-                        let entries = parse_lsx_dye_presets(&lsx_content);
-
-                        if entries.is_empty() {
-                            state.status_message.set(format!("No dye presets found in {}", filename));
-                            return;
-                        }
-
-                        let count = entries.len();
-                        state.imported_lsf_entries.set(entries);
-                        state.selected_lsf_index.set(Some(0));
-                        // Store the path for re-export
-                        state.imported_lsf_path.set(Some(path.to_string_lossy().to_string()));
-
-                        // Load first entry
-                        load_lsf_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
-
-                        state.status_message.set(format!("Loaded 1 of {} dyes from {}", count, filename));
-                    }
-                    Err(e) => {
-                        state.status_message.set(format!("Error converting LSF: {}", e));
-                    }
-                }
-            }
-            Err(e) => {
-                state.status_message.set(format!("Error reading LSF: {}", e));
-            }
-        }
-    }
-}
+use crate::MacLarian::converter::to_lsx;
 
 /// Import from an extracted mod folder
-/// Automatically discovers _merged.lsf/lsx (colors) and Object.txt (metadata)
+/// Automatically discovers _merged.lsf/lsx (colors), Object.txt (metadata), and meta.lsx (mod info)
 pub fn import_from_mod_folder(
     state: DyesState,
     imported_dye_name: RwSignal<String>,
-    imported_preset_uuid: RwSignal<String>,
-    imported_template_uuid: RwSignal<String>,
+    imported_display_name: RwSignal<String>,
+    imported_mod_name: RwSignal<String>,
+    imported_mod_author: RwSignal<String>,
 ) {
     let dialog = rfd::FileDialog::new()
         .set_title("Select Extracted Mod Folder");
@@ -152,8 +36,9 @@ pub fn import_from_mod_folder(
         state.selected_lsf_index.set(None);
         state.imported_lsf_path.set(None);
         imported_dye_name.set(String::new());
-        imported_preset_uuid.set(String::new());
-        imported_template_uuid.set(String::new());
+        imported_display_name.set(String::new());
+        imported_mod_name.set(String::new());
+        imported_mod_author.set(String::new());
 
         let folder_name = folder_path.file_name()
             .and_then(|n| n.to_str())
@@ -164,6 +49,9 @@ pub fn import_from_mod_folder(
         let mut color_file: Option<std::path::PathBuf> = None;  // Primary: _merged in [PAK]_DYE_Colors
         let mut color_files: Vec<std::path::PathBuf> = Vec::new();  // Fallback: individual LSF files
         let mut object_file: Option<std::path::PathBuf> = None;
+        let mut root_templates_files: Vec<std::path::PathBuf> = Vec::new();
+        let mut localization_file: Option<std::path::PathBuf> = None;
+        let mut meta_file: Option<std::path::PathBuf> = None;
 
         for entry in WalkDir::new(&folder_path)
             .max_depth(10)
@@ -213,6 +101,30 @@ pub fn import_from_mod_folder(
                     && path_str.contains("generated")
                 {
                     object_file = Some(path.to_path_buf());
+                }
+            }
+
+            // Look for RootTemplates LSX/LSF files
+            if (file_name.ends_with(".lsx") || file_name.ends_with(".lsf"))
+                && path_str.contains("roottemplates")
+            {
+                root_templates_files.push(path.to_path_buf());
+            }
+
+            // Look for localization XML file (in Localization/English/)
+            if localization_file.is_none() {
+                if file_name.ends_with(".xml")
+                    && path_str.contains("localization")
+                    && path_str.contains("english")
+                {
+                    localization_file = Some(path.to_path_buf());
+                }
+            }
+
+            // Look for meta.lsx (anywhere in the mod folder)
+            if meta_file.is_none() {
+                if file_name == "meta.lsx" || file_name == "meta.lsf" {
+                    meta_file = Some(path.to_path_buf());
                 }
             }
 
@@ -272,6 +184,82 @@ pub fn import_from_mod_folder(
             }
         }
 
+        // Parse RootTemplates to get localization handles
+        let mut localization_handles: HashMap<String, (Option<String>, Option<String>)> = HashMap::new();
+        for rt_path in &root_templates_files {
+            let ext = rt_path.extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+
+            let lsx_content = if ext == "lsf" {
+                lsf::read_lsf(rt_path)
+                    .ok()
+                    .and_then(|doc| to_lsx(&doc).ok())
+            } else {
+                fs::read_to_string(rt_path).ok()
+            };
+
+            if let Some(content) = lsx_content {
+                for info in parse_root_templates_localization(&content) {
+                    localization_handles.insert(
+                        info.name,
+                        (info.display_name_handle, info.description_handle)
+                    );
+                }
+            }
+        }
+
+        // Parse localization XML to get actual text
+        let localization_map: HashMap<String, String> = if let Some(ref loc_path) = localization_file {
+            fs::read_to_string(loc_path)
+                .ok()
+                .map(|content| parse_localization_xml(&content))
+                .unwrap_or_default()
+        } else {
+            HashMap::new()
+        };
+
+        // Correlate localization data with dye entries
+        for lsf_entry in &mut lsf_entries {
+            if let Some((display_handle, desc_handle)) = localization_handles.get(&lsf_entry.name) {
+                // Look up display name
+                if let Some(handle) = display_handle {
+                    if let Some(text) = localization_map.get(handle) {
+                        lsf_entry.display_name = text.clone();
+                    }
+                }
+                // Look up description
+                if let Some(handle) = desc_handle {
+                    if let Some(text) = localization_map.get(handle) {
+                        lsf_entry.description = text.clone();
+                    }
+                }
+            }
+        }
+
+        // Parse meta.lsx to get mod name and author
+        if let Some(ref meta_path) = meta_file {
+            let ext = meta_path.extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+
+            let lsx_content = if ext == "lsf" {
+                lsf::read_lsf(meta_path)
+                    .ok()
+                    .and_then(|doc| to_lsx(&doc).ok())
+            } else {
+                fs::read_to_string(meta_path).ok()
+            };
+
+            if let Some(content) = lsx_content {
+                let metadata = parse_meta_lsx(&content);
+                imported_mod_name.set(metadata.name);
+                imported_mod_author.set(metadata.author);
+            }
+        }
+
         // Report what we found
         let color_found = color_file.is_some() || !color_files.is_empty();
         let object_found = object_file.is_some();
@@ -297,7 +285,7 @@ pub fn import_from_mod_folder(
         state.selected_lsf_index.set(Some(0));
 
         // Load the first entry
-        load_lsf_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid);
+        load_lsf_entry(state.clone(), imported_dye_name, imported_display_name);
 
         // Build status message
         let mut status_parts = vec![format!("Loaded {} dyes from '{}'", count, folder_name)];
@@ -312,15 +300,14 @@ pub fn import_from_mod_folder(
 pub fn load_selected_entry(
     state: DyesState,
     imported_dye_name: RwSignal<String>,
-    imported_preset_uuid: RwSignal<String>,
-    imported_template_uuid: RwSignal<String>,
+    imported_display_name: RwSignal<String>,
 ) {
     let entries = state.imported_entries.get();
     if let Some(index) = state.selected_import_index.get() {
-        if let Some((name, preset_uuid, root_template_uuid)) = entries.get(index) {
+        if let Some((name, _preset_uuid, _root_template_uuid)) = entries.get(index) {
             imported_dye_name.set(name.clone());
-            imported_preset_uuid.set(preset_uuid.clone().unwrap_or_default());
-            imported_template_uuid.set(root_template_uuid.clone().unwrap_or_default());
+            // TXT imports don't have display name
+            imported_display_name.set(String::new());
             state.status_message.set(format!("Loaded: {}", name));
         }
     }
@@ -330,16 +317,14 @@ pub fn load_selected_entry(
 pub fn load_lsf_entry(
     state: DyesState,
     imported_dye_name: RwSignal<String>,
-    imported_preset_uuid: RwSignal<String>,
-    imported_template_uuid: RwSignal<String>,
+    imported_display_name: RwSignal<String>,
 ) {
     let entries = state.imported_lsf_entries.get();
     if let Some(index) = state.selected_lsf_index.get() {
         if let Some(entry) = entries.get(index) {
             // Set local display fields
             imported_dye_name.set(entry.name.clone());
-            imported_preset_uuid.set(entry.preset_uuid.clone().unwrap_or_default());
-            imported_template_uuid.set(entry.root_template_uuid.clone().unwrap_or_default());
+            imported_display_name.set(entry.display_name.clone());
 
             // Reset all color pickers to default gray before applying imported colors
             reset_colors_to_default(&state);
@@ -351,107 +336,3 @@ pub fn load_lsf_entry(
         }
     }
 }
-
-/// Update the selected LSF entry with current color picker values
-pub fn update_lsf_entry(state: DyesState) {
-    let idx = state.selected_lsf_index.get().unwrap_or(0);
-    let mut entries = state.imported_lsf_entries.get();
-    if idx < entries.len() {
-        let name = entries[idx].name.clone();
-        entries[idx].colors = collect_all_colors(&state);
-        state.imported_lsf_entries.set(entries);
-        state.status_message.set(format!("Updated '{}'", name));
-    }
-}
-
-/// Re-export the imported LSF entries back to the original file
-pub fn reexport_lsf(state: DyesState) {
-    let entries = state.imported_lsf_entries.get();
-    if entries.is_empty() {
-        state.status_message.set("No LSF entries to export".to_string());
-        return;
-    }
-
-    let path = match state.imported_lsf_path.get() {
-        Some(p) => p,
-        None => {
-            state.status_message.set("No import path stored - import an LSF file first".to_string());
-            return;
-        }
-    };
-
-    // Generate LSX content from entries
-    let lsx_content = generate_color_presets_lsx(&entries);
-
-    // Convert to LSF and write
-    match from_lsx(&lsx_content) {
-        Ok(lsf_doc) => {
-            match lsf::write_lsf(&lsf_doc, std::path::Path::new(&path)) {
-                Ok(_) => {
-                    let filename = std::path::Path::new(&path)
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("file");
-                    state.status_message.set(format!("Re-exported {} dyes to {}", entries.len(), filename));
-                }
-                Err(e) => {
-                    state.status_message.set(format!("Failed to write LSF: {}", e));
-                }
-            }
-        }
-        Err(e) => {
-            state.status_message.set(format!("Failed to generate LSF: {}", e));
-        }
-    }
-}
-
-/// Generate MaterialPresetBank LSX content from imported dye entries
-fn generate_color_presets_lsx(entries: &[crate::gui::state::ImportedDyeEntry]) -> String {
-    let dye_nodes: Vec<String> = entries
-        .iter()
-        .map(|entry| {
-            let color_nodes = generate_all_color_nodes(&entry.colors);
-            let preset_uuid = entry.preset_uuid.clone().unwrap_or_default();
-            format!(
-                r#"				<node id="Resource">
-					<attribute id="ID" type="FixedString" value="{preset_uuid}" />
-					<attribute id="Name" type="LSString" value="{name}" />
-					<children>
-						<node id="Presets">
-							<attribute id="MaterialResource" type="FixedString" value="" />
-							<children>
-								<node id="ColorPreset">
-									<attribute id="ForcePresetValues" type="bool" value="False" />
-									<attribute id="GroupName" type="FixedString" value="" />
-									<attribute id="MaterialPresetResource" type="FixedString" value="" />
-								</node>
-								<node id="MaterialPresets" />
-{color_nodes}
-							</children>
-						</node>
-					</children>
-				</node>"#,
-                preset_uuid = preset_uuid,
-                name = entry.name,
-                color_nodes = color_nodes,
-            )
-        })
-        .collect();
-
-    format!(
-        r#"<?xml version="1.0" encoding="utf-8"?>
-<save>
-	<version major="4" minor="7" revision="1" build="3" lslib_meta="v1,bswap_guids" />
-	<region id="MaterialPresetBank">
-		<node id="MaterialPresetBank">
-			<children>
-{}
-			</children>
-		</node>
-	</region>
-</save>
-"#,
-        dye_nodes.join("\n")
-    )
-}
-

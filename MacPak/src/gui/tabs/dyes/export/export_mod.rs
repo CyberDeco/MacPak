@@ -6,36 +6,39 @@ use std::path::Path;
 use floem::prelude::*;
 
 use crate::gui::state::{DyesState, GeneratedDyeEntry};
-use crate::gui::utils::{generate_uuid, UuidFormat};
-use super::super::shared::{generate_color_nodes, DEFAULT_COLOR, parse_hex_color};
+use crate::gui::utils::{generate_uuid, generate_meta_lsx, UuidFormat};
+use super::super::shared::{generate_color_nodes, parse_hex_color, required_colors};
+
+/// Base game dye item template that all custom dyes inherit from
+/// This is the "LOOT_Dye_Generic" template from Shared.pak
+const DYE_PARENT_TEMPLATE_ID: &str = "1a750a66-e5c2-40be-9f62-0a4bf3ddb403";
+
+// MacLarian imports for LSF and LOCA conversion
+use crate::MacLarian::converter::{from_lsx, loca_from_xml};
+use crate::MacLarian::formats::lsf::write_lsf;
+use crate::MacLarian::formats::loca::write_loca;
+
+/// Write LSX content as LSF binary file
+fn write_lsx_as_lsf<P: AsRef<Path>>(lsx_content: &str, dest: P) -> std::io::Result<()> {
+    let lsf_doc = from_lsx(lsx_content)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+    write_lsf(&lsf_doc, dest)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+}
+
+/// Write XML content as .loca binary file
+fn write_xml_as_loca<P: AsRef<Path>>(xml_content: &str, dest: P) -> std::io::Result<()> {
+    let loca_resource = loca_from_xml(xml_content)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+    write_loca(dest, &loca_resource)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+}
 
 /// Check which required colors are still at default value
 pub fn check_required_colors_at_default(state: &DyesState) -> Vec<&'static str> {
-    let required = [
-        ("Cloth_Primary", &state.cloth_primary),
-        ("Cloth_Secondary", &state.cloth_secondary),
-        ("Cloth_Tertiary", &state.cloth_tertiary),
-        ("Leather_Primary", &state.leather_primary),
-        ("Leather_Secondary", &state.leather_secondary),
-        ("Leather_Tertiary", &state.leather_tertiary),
-        ("Metal_Primary", &state.metal_primary),
-        ("Metal_Secondary", &state.metal_secondary),
-        ("Metal_Tertiary", &state.metal_tertiary),
-        ("Color_01", &state.color_01),
-        ("Color_02", &state.color_02),
-        ("Color_03", &state.color_03),
-        ("Custom_1", &state.custom_1),
-        ("Custom_2", &state.custom_2),
-    ];
-
-    required
-        .iter()
-        .filter(|(_, entry)| {
-            let hex = entry.hex.get();
-            let normalized = hex.trim_start_matches('#').to_lowercase();
-            normalized == DEFAULT_COLOR
-        })
-        .map(|(name, _)| *name)
+    required_colors()
+        .filter(|def| state.is_color_default(def.name))
+        .map(|def| def.name)
         .collect()
 }
 
@@ -46,13 +49,35 @@ pub fn export_dye_mod(state: &DyesState, output_dir: &Path, mod_name: &str) -> S
         return "Mod name is required".to_string();
     }
 
+    // Append mod_name to output directory
+    let output_dir = output_dir.join(mod_name);
+    let output_dir = output_dir.as_path();
+
     let dyes = state.generated_dyes.get();
     if dyes.is_empty() {
         return "No dyes generated. Use 'Generate Dye' first.".to_string();
     }
 
-    // Generate mod UUID
-    let mod_uuid = generate_uuid(UuidFormat::Larian);
+    // Get mod metadata from state (or generate if empty)
+    let mod_uuid = {
+        let uuid = state.mod_uuid.get();
+        if uuid.is_empty() {
+            generate_uuid(UuidFormat::Standard)
+        } else {
+            uuid
+        }
+    };
+    let author = state.mod_author.get();
+    let description = state.mod_description.get();
+    let version_major = state.mod_version_major.get();
+    let version_minor = state.mod_version_minor.get();
+    let version_patch = state.mod_version_patch.get();
+    let version_build = state.mod_version_build.get();
+
+    // Generate container (pouch) UUIDs and handles
+    let container_template_uuid = generate_uuid(UuidFormat::Standard);
+    let container_name_handle = generate_uuid(UuidFormat::Larian);
+    let container_desc_handle = generate_uuid(UuidFormat::Larian);
 
     // Create directory structure
     if let Err(e) = create_mod_structure(output_dir, mod_name) {
@@ -61,20 +86,22 @@ pub fn export_dye_mod(state: &DyesState, output_dir: &Path, mod_name: &str) -> S
 
     // Generate and write all files
     let results = vec![
-        // Localization (all dyes combined)
-        write_localization_xml(output_dir, mod_name, &dyes),
-        write_placeholder_loca(output_dir, mod_name),
+        // Localization (all dyes combined - XML + .loca binary)
+        write_localization_files(output_dir, mod_name, &dyes,
+            &container_name_handle, &container_desc_handle),
 
         // Meta
-        write_meta_lsx(output_dir, mod_name, &mod_uuid),
+        write_meta_lsx(output_dir, mod_name, &mod_uuid, &author, &description,
+            version_major, version_minor, version_patch, version_build),
 
         // Stats (all dyes combined)
-        write_object_txt(output_dir, mod_name, &dyes),
+        write_object_txt(output_dir, mod_name, &dyes, &container_template_uuid),
         write_item_combos_txt(output_dir, mod_name, &dyes),
-        write_treasure_table_txt(output_dir, mod_name, &dyes),
+        write_treasure_table_txt(output_dir, mod_name, &dyes, &state.selected_vendors.get()),
 
         // RootTemplates (all dyes combined)
-        write_root_templates_lsx(output_dir, mod_name, &dyes),
+        write_root_templates_lsx(output_dir, mod_name, &dyes,
+            &container_template_uuid, &container_name_handle, &container_desc_handle),
 
         // Color Presets (all dyes combined)
         write_color_presets_lsx(output_dir, mod_name, &dyes),
@@ -118,24 +145,36 @@ fn create_mod_structure(output_dir: &Path, mod_name: &str) -> std::io::Result<()
     Ok(())
 }
 
-/// Write localization XML for all dyes
-fn write_localization_xml(
+/// Write localization files (both XML and .loca binary)
+fn write_localization_files(
     output_dir: &Path,
     mod_name: &str,
     dyes: &[GeneratedDyeEntry],
+    container_name_handle: &str,
+    container_desc_handle: &str,
 ) -> std::io::Result<()> {
-    let entries: Vec<String> = dyes
+    // Dye entries
+    let dye_entries: Vec<String> = dyes
         .iter()
         .map(|dye| {
-            let display_name = dye.name.replace('_', " ");
-            let description = format!("A custom dye: {}", display_name);
             format!(
                 r#"	<content contentuid="{}" version="1">{}</content>
 	<content contentuid="{}" version="1">{}</content>"#,
-                dye.name_handle, display_name, dye.desc_handle, description
+                dye.name_handle, dye.display_name, dye.desc_handle, dye.description
             )
         })
         .collect();
+
+    // Container entries
+    let container_entries = format!(
+        r#"	<content contentuid="{}" version="1">{} Dye Pouch</content>
+	<content contentuid="{}" version="1">A pouch containing all {} dyes. Open it to add them to your inventory.</content>"#,
+        container_name_handle, mod_name,
+        container_desc_handle, mod_name
+    );
+
+    let mut all_entries = dye_entries;
+    all_entries.push(container_entries);
 
     let content = format!(
         r#"<?xml version="1.0" encoding="utf-8"?>
@@ -143,84 +182,61 @@ fn write_localization_xml(
 {}
 </contentList>
 "#,
-        entries.join("\n")
+        all_entries.join("\n")
     );
 
-    let path = output_dir.join(format!("Localization/English/{}.xml", mod_name));
-    fs::write(path, content)
+    // Write XML (for reference/editing)
+    let xml_path = output_dir.join(format!("Localization/English/{}.xml", mod_name));
+    fs::write(xml_path, &content)?;
+
+    // Write .loca binary (what the game uses)
+    let loca_path = output_dir.join(format!("Localization/English/{}.loca", mod_name));
+    write_xml_as_loca(&content, loca_path)
 }
 
-/// Write placeholder .loca file (minimal binary format)
-fn write_placeholder_loca(output_dir: &Path, mod_name: &str) -> std::io::Result<()> {
-    // Minimal .loca header - version + empty string count
-    // This is a placeholder; real .loca files should be compiled from XML
-    let placeholder: [u8; 8] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-    let path = output_dir.join(format!("Localization/English/{}.loca", mod_name));
-    fs::write(path, placeholder)
-}
-
-/// Write meta.lsx
-fn write_meta_lsx(output_dir: &Path, mod_name: &str, mod_uuid: &str) -> std::io::Result<()> {
-    let content = format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?>
-<save>
-	<version major="4" minor="7" revision="1" build="3" lslib_meta="v1,bswap_guids" />
-	<region id="Config">
-		<node id="root">
-			<children>
-				<node id="Dependencies" />
-				<node id="ModuleInfo">
-					<attribute id="Author" type="LSString" value="MacPak" />
-					<attribute id="CharacterCreationLevelName" type="FixedString" value="" />
-					<attribute id="Description" type="LSString" value="Custom dye mod created with MacPak" />
-					<attribute id="Folder" type="LSString" value="{mod_name}" />
-					<attribute id="LobbyLevelName" type="FixedString" value="" />
-					<attribute id="MD5" type="LSString" value="" />
-					<attribute id="MainMenuBackgroundVideo" type="FixedString" value="" />
-					<attribute id="MenuLevelName" type="FixedString" value="" />
-					<attribute id="Name" type="LSString" value="{mod_name}" />
-					<attribute id="NumPlayers" type="uint8" value="4" />
-					<attribute id="PhotoBooth" type="FixedString" value="" />
-					<attribute id="StartupLevelName" type="FixedString" value="" />
-					<attribute id="Tags" type="LSString" value="" />
-					<attribute id="Type" type="FixedString" value="Add-on" />
-					<attribute id="UUID" type="FixedString" value="{mod_uuid}" />
-					<attribute id="Version64" type="int64" value="36028797018963968" />
-					<children>
-						<node id="PublishVersion">
-							<attribute id="Version64" type="int64" value="36028797018963968" />
-						</node>
-						<node id="TargetModes">
-							<children>
-								<node id="Target">
-									<attribute id="Object" type="FixedString" value="Story" />
-								</node>
-							</children>
-						</node>
-					</children>
-				</node>
-			</children>
-		</node>
-	</region>
-</save>
-"#
+/// Write meta.lsx using the shared meta generator
+/// Note: meta.lsx is always XML, never binary LSF
+fn write_meta_lsx(
+    output_dir: &Path,
+    mod_name: &str,
+    mod_uuid: &str,
+    author: &str,
+    description: &str,
+    version_major: u32,
+    version_minor: u32,
+    version_patch: u32,
+    version_build: u32,
+) -> std::io::Result<()> {
+    let content = generate_meta_lsx(
+        mod_name,
+        mod_name, // folder = mod_name
+        author,
+        description,
+        mod_uuid,
+        version_major,
+        version_minor,
+        version_patch,
+        version_build,
     );
 
     let path = output_dir.join(format!("Mods/{}/meta.lsx", mod_name));
     fs::write(path, content)
 }
 
-/// Write Object.txt (stats) for all dyes
+/// Write Object.txt (stats) for all dyes + container item
 fn write_object_txt(
     output_dir: &Path,
     mod_name: &str,
     dyes: &[GeneratedDyeEntry],
+    container_template_uuid: &str,
 ) -> std::io::Result<()> {
-    let entries: Vec<String> = dyes
+    // Individual dye entries
+    let dye_entries: Vec<String> = dyes
         .iter()
         .map(|dye| {
             format!(
                 r#"new entry "{}"
+type "Object"
 using "_Dyes"
 data "RootTemplate" "{}""#,
                 dye.name, dye.template_uuid
@@ -228,7 +244,17 @@ data "RootTemplate" "{}""#,
         })
         .collect();
 
-    let content = entries.join("\n\n");
+    // Container item entry (a pouch/bag that contains all dyes)
+    let container_entry = format!(
+        r#"new entry "{mod_name}_DyePouch"
+type "Object"
+using "OBJ_Pouch"
+data "RootTemplate" "{container_template_uuid}""#
+    );
+
+    let mut content = dye_entries.join("\n\n");
+    content.push_str("\n\n");
+    content.push_str(&container_entry);
 
     let path = output_dir.join(format!(
         "Public/{}/Stats/Generated/Data/Object.txt",
@@ -273,41 +299,85 @@ data "ResultAmount 1" "1""#,
     fs::write(path, content)
 }
 
-/// Write TreasureTable.txt for all dyes
+/// Write TreasureTable.txt for all dyes with vendor integration
 fn write_treasure_table_txt(
     output_dir: &Path,
     mod_name: &str,
     dyes: &[GeneratedDyeEntry],
+    selected_vendors: &[bool],
 ) -> std::io::Result<()> {
-    let entries: Vec<String> = dyes
+    use crate::gui::state::VENDOR_DEFS;
+
+    let mut content = String::new();
+
+    // Main treasure table containing all individual dyes
+    let subtables: Vec<String> = dyes
         .iter()
         .map(|dye| {
             format!(
-                r#"new treasuretable "{name}_TT"
-CanMerge 1
-new subtable "1,1"
-object category "I_{name}",1,0,0,0,0,0,0,0"#,
-                name = dye.name
+                r#"new subtable "1,1"
+object category "I_{}",1,0,0,0,0,0,0,0"#,
+                dye.name
             )
         })
         .collect();
 
-    let content = entries.join("\n\n");
+    content.push_str(&format!(
+        r#"new treasuretable "{mod_name}_Dyes"
+{subtables}
+
+"#,
+        subtables = subtables.join("\n")
+    ));
+
+    // Container treasure table (what the pouch spawns)
+    content.push_str(&format!(
+        r#"new treasuretable "{mod_name}_DyePouch_Contents"
+CanMerge 1
+new subtable "1,1"
+object category "I_{mod_name}_DyePouch",1,0,0,0,0,0,0,0
+
+"#
+    ));
+
+    // Add container to selected vendor tables
+    for (idx, vendor) in VENDOR_DEFS.iter().enumerate() {
+        // Include if always enabled OR if selected
+        let is_selected = vendor.always_enabled || selected_vendors.get(idx).copied().unwrap_or(false);
+        if is_selected {
+            content.push_str(&format!(
+                r#"new treasuretable "{}"
+CanMerge 1
+new subtable "1,1"
+object category "I_{mod_name}_DyePouch",1,0,0,0,0,0,0,0
+
+"#,
+                vendor.id
+            ));
+        }
+    }
 
     let path = output_dir.join(format!(
         "Public/{}/Stats/Generated/TreasureTable.txt",
         mod_name
     ));
-    fs::write(path, content)
+    fs::write(path, content.trim_end())
 }
 
-/// Write RootTemplates LSX for all dyes
+/// Base game pouch template that the dye container inherits from
+const POUCH_PARENT_TEMPLATE_ID: &str = "3e6aac21-333b-4812-a554-376c2d157ba9";
+
+/// Write RootTemplates LSX for all dyes + container
 fn write_root_templates_lsx(
     output_dir: &Path,
     mod_name: &str,
     dyes: &[GeneratedDyeEntry],
+    container_template_uuid: &str,
+    container_name_handle: &str,
+    container_desc_handle: &str,
 ) -> std::io::Result<()> {
-    let entries: Vec<String> = dyes
+    // Individual dye entries
+    let dye_entries: Vec<String> = dyes
         .iter()
         .map(|dye| {
             let icon_name = format!("{}_Icon", dye.name);
@@ -317,7 +387,7 @@ fn write_root_templates_lsx(
 					<attribute id="Name" type="LSString" value="{name}" />
 					<attribute id="LevelName" type="FixedString" value="" />
 					<attribute id="Type" type="FixedString" value="item" />
-					<attribute id="ParentTemplateId" type="FixedString" value="1a750a66-e5c2-40be-9f62-0a4bf3ddb403" />
+					<attribute id="ParentTemplateId" type="FixedString" value="{parent_template}" />
 					<attribute id="DisplayName" type="TranslatedString" handle="{name_handle}" version="1" />
 					<attribute id="Icon" type="FixedString" value="{icon_name}" />
 					<attribute id="Stats" type="FixedString" value="{name}" />
@@ -326,6 +396,7 @@ fn write_root_templates_lsx(
 				</node>"#,
                 template_uuid = dye.template_uuid,
                 name = dye.name,
+                parent_template = DYE_PARENT_TEMPLATE_ID,
                 name_handle = dye.name_handle,
                 icon_name = icon_name,
                 desc_handle = dye.desc_handle,
@@ -333,6 +404,26 @@ fn write_root_templates_lsx(
             )
         })
         .collect();
+
+    // Container (pouch) entry with TreasureTable to spawn all dyes
+    let container_entry = format!(
+        r#"				<node id="GameObjects">
+					<attribute id="MapKey" type="FixedString" value="{container_template_uuid}" />
+					<attribute id="Name" type="LSString" value="{mod_name}_DyePouch" />
+					<attribute id="LevelName" type="FixedString" value="" />
+					<attribute id="Type" type="FixedString" value="item" />
+					<attribute id="ParentTemplateId" type="FixedString" value="{pouch_parent}" />
+					<attribute id="DisplayName" type="TranslatedString" handle="{container_name_handle}" version="1" />
+					<attribute id="Icon" type="FixedString" value="Item_LOOT_GEN_Pouch_A" />
+					<attribute id="Stats" type="FixedString" value="{mod_name}_DyePouch" />
+					<attribute id="Description" type="TranslatedString" handle="{container_desc_handle}" version="1" />
+					<attribute id="TreasureTable" type="FixedString" value="{mod_name}_Dyes" />
+				</node>"#,
+        pouch_parent = POUCH_PARENT_TEMPLATE_ID,
+    );
+
+    let mut all_entries = dye_entries;
+    all_entries.push(container_entry);
 
     let content = format!(
         r#"<?xml version="1.0" encoding="utf-8"?>
@@ -347,14 +438,14 @@ fn write_root_templates_lsx(
 	</region>
 </save>
 "#,
-        entries.join("\n")
+        all_entries.join("\n")
     );
 
     let path = output_dir.join(format!(
-        "Public/{}/RootTemplates/{}_Dyes.lsx",
-        mod_name, mod_name
+        "Public/{}/RootTemplates/_merged.lsf",
+        mod_name
     ));
-    fs::write(path, content)
+    write_lsx_as_lsf(&content, path)
 }
 
 /// Write color presets LSX (MaterialPresetBank) for all dyes
@@ -410,10 +501,10 @@ fn write_color_presets_lsx(
     );
 
     let path = output_dir.join(format!(
-        "Public/{}/Content/Assets/Characters/[PAK]_DYE_Colors/_merged.lsx",
+        "Public/{}/Content/Assets/Characters/[PAK]_DYE_Colors/_merged.lsf",
         mod_name
     ));
-    fs::write(path, content)
+    write_lsx_as_lsf(&content, path)
 }
 
 /// Write TextureAtlasInfo LSX (icon atlas metadata) for all dyes
@@ -422,7 +513,7 @@ fn write_texture_atlas_info_lsx(
     mod_name: &str,
     dyes: &[GeneratedDyeEntry],
 ) -> std::io::Result<()> {
-    let atlas_uuid = generate_uuid(UuidFormat::Larian);
+    let atlas_uuid = generate_uuid(UuidFormat::Standard);
     let dye_count = dyes.len();
 
     // Calculate atlas dimensions (arrange icons in a grid)
@@ -491,15 +582,15 @@ fn write_texture_atlas_info_lsx(
     );
 
     let path = output_dir.join(format!(
-        "Public/{}/GUI/{}_TextureAtlasInfo.lsx",
+        "Public/{}/GUI/{}_TextureAtlasInfo.lsf",
         mod_name, mod_name
     ));
-    fs::write(path, content)
+    write_lsx_as_lsf(&content, path)
 }
 
 /// Write TextureBank LSX (UI texture references)
 fn write_texture_bank_lsx(output_dir: &Path, mod_name: &str) -> std::io::Result<()> {
-    let texture_uuid = generate_uuid(UuidFormat::Larian);
+    let texture_uuid = generate_uuid(UuidFormat::Standard);
 
     let content = format!(
         r#"<?xml version="1.0" encoding="utf-8"?>
@@ -526,10 +617,10 @@ fn write_texture_bank_lsx(output_dir: &Path, mod_name: &str) -> std::io::Result<
     );
 
     let path = output_dir.join(format!(
-        "Public/{}/Content/UI/[PAK]_UI/{}_TextureBank.lsx",
-        mod_name, mod_name
+        "Public/{}/Content/UI/[PAK]_UI/_merged.lsf",
+        mod_name
     ));
-    fs::write(path, content)
+    write_lsx_as_lsf(&content, path)
 }
 
 /// Write placeholder DDS files (64x64 magenta for visibility)

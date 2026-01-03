@@ -12,7 +12,7 @@ mod virtual_textures;
 // Re-export all state types
 pub use app::AppState;
 pub use browser::{BrowserState, FileEntry, RawImageData, SortColumn};
-pub use dyes::{DyeColorEntry, DyesState, GeneratedDyeEntry, ImportedDyeEntry};
+pub use dyes::{DyeColorEntry, DyesState, GeneratedDyeEntry, ImportedDyeEntry, VendorDef, VENDOR_DEFS};
 pub use editor::{EditorState, EditorTab, EditorTabsState};
 pub use gr2::Gr2State;
 pub use pak_ops::{PakCompression, PakOpsState};

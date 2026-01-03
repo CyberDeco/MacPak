@@ -8,19 +8,16 @@ use super::super::shared::{
     nav_row, selector_container_green, selector_container_gray, selector_label_style,
 };
 use super::super::shared::constants::*;
-use super::operations::{load_selected_entry, load_lsf_entry, update_lsf_entry, reexport_lsf};
+use super::operations::{load_selected_entry, load_lsf_entry};
 
 /// Display imported fields with editable name
 pub fn imported_fields_display(
     state: DyesState,
     dye_name: RwSignal<String>,
-    preset_uuid: RwSignal<String>,
-    template_uuid: RwSignal<String>,
+    display_name: RwSignal<String>,
+    mod_name: RwSignal<String>,
+    mod_author: RwSignal<String>,
 ) -> impl IntoView {
-    let status = state.status_message;
-    let imported_lsf = state.imported_lsf_entries;
-    let selected_lsf = state.selected_lsf_index;
-
     // Track visibility separately to avoid re-renders when typing
     let has_data: RwSignal<bool> = RwSignal::new(false);
     let _ = floem::reactive::create_effect(move |_| {
@@ -40,45 +37,45 @@ pub fn imported_fields_display(
             } else {
                 v_stack((
                     // Dye Name row - editable
+                    // h_stack((
+                    //     label(|| "Dye Name")
+                    //         .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                    //     text_input(dye_name)
+                    //         .on_event_stop(floem::event::EventListener::FocusLost, move |_| {
+                    //             // Update the name in imported_lsf_entries when focus is lost
+                    //             let new_name = dye_name.get();
+                    //             if let Some(idx) = selected_lsf.get() {
+                    //                 let mut entries = imported_lsf.get();
+                    //                 if idx < entries.len() && !new_name.is_empty() {
+                    //                     entries[idx].name = new_name.clone();
+                    //                     imported_lsf.set(entries);
+                    //                     status.set(format!("Renamed to '{}'", new_name));
+                    //                 }
+                    //             }
+                    //         })
+                    //         .style(|s| {
+                    //             s.flex_grow(1.0)
+                    //                 .flex_basis(0.0)
+                    //                 .width_full()
+                    //                 .min_width(INPUT_MIN_WIDTH)
+                    //                 .padding(PADDING_BTN_V)
+                    //                 .font_size(FONT_BODY)
+                    //                 .font_family("monospace".to_string())
+                    //                 .background(Color::WHITE)
+                    //                 .border(1.0)
+                    //                 .border_color(BORDER_INPUT)
+                    //                 .border_radius(RADIUS_STD)
+                    //         }),
+                    // ))
+                    // .style(|s| s.width_full().items_center().gap(GAP_STD)),
+
+                    // Dye Name row
                     h_stack((
                         label(|| "Dye Name")
                             .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
-                        text_input(dye_name)
-                            .on_event_stop(floem::event::EventListener::FocusLost, move |_| {
-                                // Update the name in imported_lsf_entries when focus is lost
-                                let new_name = dye_name.get();
-                                if let Some(idx) = selected_lsf.get() {
-                                    let mut entries = imported_lsf.get();
-                                    if idx < entries.len() && !new_name.is_empty() {
-                                        entries[idx].name = new_name.clone();
-                                        imported_lsf.set(entries);
-                                        status.set(format!("Renamed to '{}'", new_name));
-                                    }
-                                }
-                            })
-                            .style(|s| {
-                                s.flex_grow(1.0)
-                                    .flex_basis(0.0)
-                                    .width_full()
-                                    .min_width(INPUT_MIN_WIDTH)
-                                    .padding(PADDING_BTN_V)
-                                    .font_size(FONT_BODY)
-                                    .font_family("monospace".to_string())
-                                    .background(Color::WHITE)
-                                    .border(1.0)
-                                    .border_color(BORDER_INPUT)
-                                    .border_radius(RADIUS_STD)
-                            }),
-                    ))
-                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
-                    // Dye UUID row (formerly Preset UUID)
-                    h_stack((
-                        label(|| "Dye UUID")
-                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         label(move || {
-                            let uuid = preset_uuid.get();
-                            if uuid.is_empty() { "(not found)".to_string() } else { uuid }
+                            let new_name = dye_name.get();
+                            if new_name.is_empty() { "(not found)".to_string() } else { new_name }
                         })
                         .style(move |s| {
                             let s = s.flex_grow(1.0)
@@ -89,7 +86,7 @@ pub fn imported_fields_display(
                                 .border(1.0)
                                 .border_color(BORDER_INPUT)
                                 .border_radius(RADIUS_STD);
-                            if preset_uuid.get().is_empty() {
+                            if dye_name.get().is_empty() {
                                 s.color(TEXT_MUTED)
                             } else {
                                 s
@@ -98,24 +95,73 @@ pub fn imported_fields_display(
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
 
-                    // Mod UUID row (formerly Template UUID)
+                    // Display Name row
                     h_stack((
-                        label(|| "Mod UUID")
+                        label(|| "Display Name")
                             .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         label(move || {
-                            let uuid = template_uuid.get();
-                            if uuid.is_empty() { "(not found)".to_string() } else { uuid }
+                            let name = display_name.get();
+                            if name.is_empty() { "(not found)".to_string() } else { name }
                         })
                         .style(move |s| {
                             let s = s.flex_grow(1.0)
                                 .padding(PADDING_BTN_V)
                                 .font_size(FONT_BODY)
-                                .font_family("monospace".to_string())
                                 .background(BG_INPUT_READONLY)
                                 .border(1.0)
                                 .border_color(BORDER_INPUT)
                                 .border_radius(RADIUS_STD);
-                            if template_uuid.get().is_empty() {
+                            if display_name.get().is_empty() {
+                                s.color(TEXT_MUTED)
+                            } else {
+                                s
+                            }
+                        }),
+                    ))
+                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
+
+                    // Mod Name row
+                    h_stack((
+                        label(|| "Mod Name")
+                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        label(move || {
+                            let name = mod_name.get();
+                            if name.is_empty() { "(not found)".to_string() } else { name }
+                        })
+                        .style(move |s| {
+                            let s = s.flex_grow(1.0)
+                                .padding(PADDING_BTN_V)
+                                .font_size(FONT_BODY)
+                                .background(BG_INPUT_READONLY)
+                                .border(1.0)
+                                .border_color(BORDER_INPUT)
+                                .border_radius(RADIUS_STD);
+                            if mod_name.get().is_empty() {
+                                s.color(TEXT_MUTED)
+                            } else {
+                                s
+                            }
+                        }),
+                    ))
+                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
+
+                    // Mod Author row
+                    h_stack((
+                        label(|| "Mod Author")
+                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        label(move || {
+                            let author = mod_author.get();
+                            if author.is_empty() { "(not found)".to_string() } else { author }
+                        })
+                        .style(move |s| {
+                            let s = s.flex_grow(1.0)
+                                .padding(PADDING_BTN_V)
+                                .font_size(FONT_BODY)
+                                .background(BG_INPUT_READONLY)
+                                .border(1.0)
+                                .border_color(BORDER_INPUT)
+                                .border_radius(RADIUS_STD);
+                            if mod_author.get().is_empty() {
                                 s.color(TEXT_MUTED)
                             } else {
                                 s
@@ -135,8 +181,9 @@ pub fn imported_fields_display(
 pub fn txt_import_selector(
     state: DyesState,
     imported_dye_name: RwSignal<String>,
-    imported_preset_uuid: RwSignal<String>,
-    imported_template_uuid: RwSignal<String>,
+    imported_display_name: RwSignal<String>,
+    _imported_mod_name: RwSignal<String>,
+    _imported_mod_author: RwSignal<String>,
 ) -> impl IntoView {
     let state_for_selector = state.clone();
     let imported_entries = state.imported_entries;
@@ -170,11 +217,11 @@ pub fn txt_import_selector(
                         },
                         {
                             let state = state_on_nav.clone();
-                            move || load_selected_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid)
+                            move || load_selected_entry(state.clone(), imported_dye_name, imported_display_name)
                         },
                         {
                             let state = state_on_nav.clone();
-                            move || load_selected_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid)
+                            move || load_selected_entry(state.clone(), imported_dye_name, imported_display_name)
                         },
                     ),
                     // Clear button
@@ -184,12 +231,28 @@ pub fn txt_import_selector(
                         label(|| "Clear")
                             .style(secondary_button_style)
                             .on_click_stop(move |_| {
-                                imported_entries.set(Vec::new());
-                                selected_index.set(None);
-                                imported_dye_name.set(String::new());
-                                imported_preset_uuid.set(String::new());
-                                imported_template_uuid.set(String::new());
-                                state_load.status_message.set("Cleared".to_string());
+                                let count = imported_entries.get().len();
+                                if count == 0 {
+                                    return;
+                                }
+
+                                let result = rfd::MessageDialog::new()
+                                    .set_title("Clear TXT Import")
+                                    .set_description(&format!(
+                                        "Clear {} imported TXT entr{}?",
+                                        count,
+                                        if count == 1 { "y" } else { "ies" }
+                                    ))
+                                    .set_buttons(rfd::MessageButtons::OkCancel)
+                                    .show();
+
+                                if result == rfd::MessageDialogResult::Ok {
+                                    imported_entries.set(Vec::new());
+                                    selected_index.set(None);
+                                    imported_dye_name.set(String::new());
+                                    imported_display_name.set(String::new());
+                                    state_load.status_message.set("Cleared".to_string());
+                                }
                             })
                     },
                 ))
@@ -204,8 +267,9 @@ pub fn txt_import_selector(
 pub fn lsf_import_selector(
     state: DyesState,
     imported_dye_name: RwSignal<String>,
-    imported_preset_uuid: RwSignal<String>,
-    imported_template_uuid: RwSignal<String>,
+    imported_display_name: RwSignal<String>,
+    _imported_mod_name: RwSignal<String>,
+    _imported_mod_author: RwSignal<String>,
 ) -> impl IntoView {
     let state_for_lsf = state.clone();
     let imported_lsf = state.imported_lsf_entries;
@@ -223,7 +287,7 @@ pub fn lsf_import_selector(
                 let selected_lsf_display = selected_lsf;
 
                 h_stack((
-                    label(|| "LSF:").style(selector_label_style),
+                    // label(|| "LSF:").style(selector_label_style),
                     // Navigation row
                     nav_row(
                         selected_lsf,
@@ -239,31 +303,13 @@ pub fn lsf_import_selector(
                         },
                         {
                             let state = state_on_nav.clone();
-                            move || load_lsf_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid)
+                            move || load_lsf_entry(state.clone(), imported_dye_name, imported_display_name)
                         },
                         {
                             let state = state_on_nav.clone();
-                            move || load_lsf_entry(state.clone(), imported_dye_name, imported_preset_uuid, imported_template_uuid)
+                            move || load_lsf_entry(state.clone(), imported_dye_name, imported_display_name)
                         },
                     ),
-                    // Update button
-                    {
-                        let state_update = state_nav.clone();
-                        label(|| "Update")
-                            .style(secondary_button_style)
-                            .on_click_stop(move |_| {
-                                update_lsf_entry(state_update.clone());
-                            })
-                    },
-                    // Re-export button
-                    {
-                        let state_reexport = state_nav.clone();
-                        label(|| "Re-export")
-                            .style(secondary_button_style)
-                            .on_click_stop(move |_| {
-                                reexport_lsf(state_reexport.clone());
-                            })
-                    },
                     // Clear button
                     {
                         let state_clear = state_nav.clone();
@@ -272,12 +318,28 @@ pub fn lsf_import_selector(
                         label(|| "Clear")
                             .style(secondary_button_style)
                             .on_click_stop(move |_| {
-                                imported_lsf.set(Vec::new());
-                                selected_lsf.set(None);
-                                imported_dye_name.set(String::new());
-                                imported_preset_uuid.set(String::new());
-                                imported_template_uuid.set(String::new());
-                                state_clear.status_message.set("Cleared".to_string());
+                                let count = imported_lsf.get().len();
+                                if count == 0 {
+                                    return;
+                                }
+
+                                let result = rfd::MessageDialog::new()
+                                    .set_title("Clear LSF Import")
+                                    .set_description(&format!(
+                                        "Clear {} imported LSF entr{}?",
+                                        count,
+                                        if count == 1 { "y" } else { "ies" }
+                                    ))
+                                    .set_buttons(rfd::MessageButtons::OkCancel)
+                                    .show();
+
+                                if result == rfd::MessageDialogResult::Ok {
+                                    imported_lsf.set(Vec::new());
+                                    selected_lsf.set(None);
+                                    imported_dye_name.set(String::new());
+                                    imported_display_name.set(String::new());
+                                    state_clear.status_message.set("Cleared".to_string());
+                                }
                             })
                     },
                 ))

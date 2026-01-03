@@ -2,6 +2,8 @@
 
 mod export_mod;
 
+pub use export_mod::export_dye_mod;
+
 use floem::prelude::*;
 use floem::text::Weight;
 
@@ -14,11 +16,9 @@ use super::shared::{
 use super::shared::constants::*;
 
 pub use export_mod::check_required_colors_at_default;
-use export_mod::export_dye_mod;
 
 /// Export section for generating mod files
 pub fn export_section(state: DyesState) -> impl IntoView {
-    let mod_name = state.mod_name;
     let generated_dyes = state.generated_dyes;
     let selected_index = state.selected_generated_index;
     let status = state.status_message;
@@ -30,33 +30,20 @@ pub fn export_section(state: DyesState) -> impl IntoView {
                 .style(|s| s.font_size(FONT_HEADER).font_weight(Weight::SEMIBOLD)),
             empty().style(|s| s.flex_grow(1.0)),
             {
-                let state_export = state.clone();
-                let mod_name = mod_name;
                 let generated_dyes = generated_dyes;
                 let status = status;
+                let show_meta = state.show_meta_dialog;
                 label(|| "Export Mod...")
                     .style(secondary_button_style)
                     .on_click_stop(move |_| {
-                        let mod_name_str = mod_name.get();
-                        if mod_name_str.is_empty() {
-                            status.set("Error: Mod name is required".to_string());
-                            return;
-                        }
-
                         let dyes = generated_dyes.get();
                         if dyes.is_empty() {
                             status.set("Error: No dyes generated. Use 'Generate Dye' first.".to_string());
                             return;
                         }
 
-                        // Open folder picker dialog
-                        if let Some(path) = rfd::FileDialog::new()
-                            .set_title("Select output folder for mod")
-                            .pick_folder()
-                        {
-                            let message = export_dye_mod(&state_export, &path, &mod_name_str);
-                            status.set(message);
-                        }
+                        // Show meta dialog for export
+                        show_meta.set(true);
                     })
             },
         ))
@@ -205,10 +192,28 @@ fn generated_dyes_selector(state: DyesState) -> impl IntoView {
                         label(|| "Clear All")
                             .style(secondary_button_style)
                             .on_click_stop(move |_| {
-                                generated_dyes.set(Vec::new());
-                                selected_index.set(None);
-                                reset_colors_to_default(&state_clear);
-                                status.set("Cleared all generated dyes".to_string());
+                                let count = generated_dyes.get().len();
+                                if count == 0 {
+                                    return;
+                                }
+
+                                // Show confirmation dialog
+                                let result = rfd::MessageDialog::new()
+                                    .set_title("Clear All Dyes")
+                                    .set_description(&format!(
+                                        "Delete all {} generated dye{}? This cannot be undone.",
+                                        count,
+                                        if count == 1 { "" } else { "s" }
+                                    ))
+                                    .set_buttons(rfd::MessageButtons::OkCancel)
+                                    .show();
+
+                                if result == rfd::MessageDialogResult::Ok {
+                                    generated_dyes.set(Vec::new());
+                                    selected_index.set(None);
+                                    reset_colors_to_default(&state_clear);
+                                    status.set("Cleared all generated dyes".to_string());
+                                }
                             })
                     },
                 ))
@@ -227,6 +232,8 @@ fn selected_dye_display(
 ) -> impl IntoView {
     // Create local signals for display values
     let edit_name: RwSignal<String> = RwSignal::new(String::new());
+    let display_name: RwSignal<String> = RwSignal::new(String::new());
+    let display_description: RwSignal<String> = RwSignal::new(String::new());
     let display_uuid: RwSignal<String> = RwSignal::new(String::new());
 
     // Sync display values when selection or dyes change
@@ -236,11 +243,13 @@ fn selected_dye_display(
 
         if let Some(i) = idx {
             if let Some(dye) = dyes.get(i) {
-                // Only update edit_name if selection changed (to avoid overwriting user edits)
+                // Only update editable fields if selection changed (to avoid overwriting user edits)
                 if prev_idx != Some(idx) {
                     edit_name.set(dye.name.clone());
+                    display_name.set(dye.display_name.clone());
+                    display_description.set(dye.description.clone());
                 }
-                // Always update UUID (in case dye was just generated or data changed)
+                // Always update UUID (read-only, in case dye was just generated)
                 display_uuid.set(dye.preset_uuid.clone());
             }
         }
@@ -285,7 +294,65 @@ fn selected_dye_display(
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
 
-                    // Dye UUID row
+                    // Display Name row - editable
+                    h_stack((
+                        label(|| "Display Name")
+                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        text_input(display_name)
+                            .on_event_stop(floem::event::EventListener::FocusLost, move |_| {
+                                let new_display_name = display_name.get();
+                                let idx = selected_index.get().unwrap_or(0);
+                                let mut dyes = generated_dyes.get();
+                                if idx < dyes.len() {
+                                    dyes[idx].display_name = new_display_name;
+                                    generated_dyes.set(dyes);
+                                }
+                            })
+                            .style(|s| {
+                                s.flex_grow(1.0)
+                                    .flex_basis(0.0)
+                                    .width_full()
+                                    .min_width(INPUT_MIN_WIDTH)
+                                    .padding(PADDING_BTN_V)
+                                    .font_size(FONT_BODY)
+                                    .background(Color::WHITE)
+                                    .border(1.0)
+                                    .border_color(BORDER_INPUT)
+                                    .border_radius(RADIUS_STD)
+                            }),
+                    ))
+                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
+
+                    // Description row - editable
+                    h_stack((
+                        label(|| "Description")
+                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        text_input(display_description)
+                            .on_event_stop(floem::event::EventListener::FocusLost, move |_| {
+                                let new_description = display_description.get();
+                                let idx = selected_index.get().unwrap_or(0);
+                                let mut dyes = generated_dyes.get();
+                                if idx < dyes.len() {
+                                    dyes[idx].description = new_description;
+                                    generated_dyes.set(dyes);
+                                }
+                            })
+                            .style(|s| {
+                                s.flex_grow(1.0)
+                                    .flex_basis(0.0)
+                                    .width_full()
+                                    .min_width(INPUT_MIN_WIDTH)
+                                    .padding(PADDING_BTN_V)
+                                    .font_size(FONT_BODY)
+                                    .background(Color::WHITE)
+                                    .border(1.0)
+                                    .border_color(BORDER_INPUT)
+                                    .border_radius(RADIUS_STD)
+                            }),
+                    ))
+                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
+
+                    // Dye UUID row (read-only)
                     h_stack((
                         label(|| "Dye UUID")
                             .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
@@ -295,24 +362,6 @@ fn selected_dye_display(
                                     .padding(PADDING_BTN_V)
                                     .font_size(FONT_BODY)
                                     .font_family("monospace".to_string())
-                                    .background(BG_INPUT_READONLY)
-                                    .border(1.0)
-                                    .border_color(BORDER_INPUT)
-                                    .border_radius(RADIUS_STD)
-                            }),
-                    ))
-                    .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
-                    // Mod UUID row - greyed out, will be generated at export
-                    h_stack((
-                        label(|| "Mod UUID")
-                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY).color(TEXT_MUTED)),
-                        label(|| "Will be generated at export")
-                            .style(|s| {
-                                s.flex_grow(1.0)
-                                    .padding(PADDING_BTN_V)
-                                    .font_size(FONT_BODY)
-                                    .color(TEXT_MUTED)
                                     .background(BG_INPUT_READONLY)
                                     .border(1.0)
                                     .border_color(BORDER_INPUT)

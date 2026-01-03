@@ -238,3 +238,135 @@ pub fn parse_lsx_dye_presets(lsx_content: &str) -> Vec<ImportedDyeEntry> {
 
     entries
 }
+
+/// Localization handle info parsed from RootTemplates
+#[derive(Clone, Debug, Default)]
+pub struct DyeLocalizationInfo {
+    pub name: String,
+    pub display_name_handle: Option<String>,
+    pub description_handle: Option<String>,
+}
+
+/// Parse RootTemplates LSX to extract localization handles for dyes
+pub fn parse_root_templates_localization(lsx_content: &str) -> Vec<DyeLocalizationInfo> {
+    let mut entries = Vec::new();
+    let mut current_entry: Option<DyeLocalizationInfo> = None;
+    let mut in_game_objects = false;
+
+    for line in lsx_content.lines() {
+        let line = line.trim();
+
+        // Start of a GameObjects node
+        if line.contains("<node id=\"GameObjects\">") {
+            in_game_objects = true;
+            current_entry = Some(DyeLocalizationInfo::default());
+            continue;
+        }
+
+        // End of GameObjects node
+        if in_game_objects && line == "</node>" {
+            if let Some(entry) = current_entry.take() {
+                if !entry.name.is_empty() {
+                    entries.push(entry);
+                }
+            }
+            in_game_objects = false;
+            continue;
+        }
+
+        if in_game_objects {
+            if let Some(entry) = current_entry.as_mut() {
+                // Name attribute
+                if line.contains("attribute id=\"Name\"") {
+                    if let Some(value) = extract_xml_attribute(line, "value") {
+                        entry.name = value;
+                    }
+                }
+
+                // DisplayName - TranslatedString with handle
+                if line.contains("attribute id=\"DisplayName\"") {
+                    if let Some(handle) = extract_xml_attribute(line, "handle") {
+                        entry.display_name_handle = Some(handle);
+                    }
+                }
+
+                // Description - TranslatedString with handle
+                if line.contains("attribute id=\"Description\"") {
+                    if let Some(handle) = extract_xml_attribute(line, "handle") {
+                        entry.description_handle = Some(handle);
+                    }
+                }
+            }
+        }
+    }
+
+    entries
+}
+
+/// Mod metadata parsed from meta.lsx
+#[derive(Clone, Debug, Default)]
+pub struct ModMetadata {
+    pub name: String,
+    pub author: String,
+}
+
+/// Parse meta.lsx to extract mod name and author
+pub fn parse_meta_lsx(lsx_content: &str) -> ModMetadata {
+    let mut metadata = ModMetadata::default();
+    let mut in_module_info = false;
+
+    for line in lsx_content.lines() {
+        let line = line.trim();
+
+        // Track when we're inside ModuleInfo node
+        if line.contains("<node id=\"ModuleInfo\">") {
+            in_module_info = true;
+        }
+        if in_module_info && line == "</node>" {
+            in_module_info = false;
+        }
+
+        // Only parse Name/Author inside ModuleInfo to avoid picking up wrong attributes
+        if in_module_info {
+            // Look for: <attribute id="Name" ... value="ModName"/>
+            if line.contains("attribute id=\"Name\"") {
+                if let Some(value) = extract_xml_attribute(line, "value") {
+                    metadata.name = value;
+                }
+            }
+
+            // Look for: <attribute id="Author" ... value="AuthorName"/>
+            if line.contains("attribute id=\"Author\"") {
+                if let Some(value) = extract_xml_attribute(line, "value") {
+                    metadata.author = value;
+                }
+            }
+        }
+    }
+
+    metadata
+}
+
+/// Parse localization XML to build a map of contentuid -> text
+pub fn parse_localization_xml(xml_content: &str) -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::new();
+
+    for line in xml_content.lines() {
+        let line = line.trim();
+
+        // Look for: <content contentuid="handle" version="1">Text</content>
+        if line.starts_with("<content ") && line.contains("contentuid=") {
+            if let Some(handle) = extract_xml_attribute(line, "contentuid") {
+                // Extract text between > and </content>
+                if let Some(start) = line.find('>') {
+                    if let Some(end) = line.rfind("</content>") {
+                        let text = &line[start + 1..end];
+                        map.insert(handle, text.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    map
+}

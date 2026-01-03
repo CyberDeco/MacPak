@@ -1,7 +1,7 @@
 //! Content generation functions for dye mod files
 
 use std::collections::HashMap;
-use super::colors::DEFAULT_COLOR;
+use super::registry::DEFAULT_HEX;
 
 /// Convert sRGB color value to linear (inverse gamma correction)
 pub fn srgb_to_linear(c: f32) -> f32 {
@@ -32,48 +32,47 @@ pub fn hex_to_fvec3(hex: &str) -> String {
     format!("{:.6} {:.6} {:.6}", r, g, b)
 }
 
-/// Generate Vector3Parameters XML nodes from a color HashMap
-/// Skips colors matching DEFAULT_COLOR (#808080) - use for new mod exports
-pub fn generate_color_nodes(colors: &HashMap<String, String>) -> String {
-    colors
-        .iter()
-        .filter(|(_, hex)| {
-            let normalized = hex.trim_start_matches('#').to_lowercase();
-            normalized != DEFAULT_COLOR
-        })
-        .map(|(name, hex)| {
-            let fvec3 = hex_to_fvec3(hex);
-            format!(
-                r#"								<node id="Vector3Parameters">
+/// Format a single color as a Vector3Parameters XML node
+fn format_color_node(name: &str, hex: &str) -> String {
+    let fvec3 = hex_to_fvec3(hex);
+    format!(
+        r#"								<node id="Vector3Parameters">
 									<attribute id="Color" type="bool" value="True" />
 									<attribute id="Custom" type="bool" value="False" />
 									<attribute id="Enabled" type="bool" value="True" />
 									<attribute id="Parameter" type="FixedString" value="{name}" />
 									<attribute id="Value" type="fvec3" value="{fvec3}" />
 								</node>"#
-            )
+    )
+}
+
+/// Generate Vector3Parameters XML nodes from a color HashMap
+///
+/// If `include_defaults` is false, skips colors matching DEFAULT_HEX (#808080)
+fn generate_color_nodes_impl(colors: &HashMap<String, String>, include_defaults: bool) -> String {
+    colors
+        .iter()
+        .filter(|(_, hex)| {
+            if include_defaults {
+                true
+            } else {
+                let normalized = hex.trim_start_matches('#').to_lowercase();
+                normalized != DEFAULT_HEX
+            }
         })
+        .map(|(name, hex)| format_color_node(name, hex))
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-/// Generate Vector3Parameters XML nodes from a color HashMap
-/// Includes ALL colors - use for re-exporting imported mods
+/// Generate Vector3Parameters XML nodes, skipping default colors
+/// Use for new mod exports where unchanged colors shouldn't be included
+pub fn generate_color_nodes(colors: &HashMap<String, String>) -> String {
+    generate_color_nodes_impl(colors, false)
+}
+
+/// Generate Vector3Parameters XML nodes, including ALL colors
+/// Use for re-exporting imported mods where all colors should be preserved
 pub fn generate_all_color_nodes(colors: &HashMap<String, String>) -> String {
-    colors
-        .iter()
-        .map(|(name, hex)| {
-            let fvec3 = hex_to_fvec3(hex);
-            format!(
-                r#"								<node id="Vector3Parameters">
-									<attribute id="Color" type="bool" value="True" />
-									<attribute id="Custom" type="bool" value="False" />
-									<attribute id="Enabled" type="bool" value="True" />
-									<attribute id="Parameter" type="FixedString" value="{name}" />
-									<attribute id="Value" type="fvec3" value="{fvec3}" />
-								</node>"#
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+    generate_color_nodes_impl(colors, true)
 }

@@ -34,7 +34,7 @@ pub use gltf_to_gr2::{convert_gltf_to_gr2, convert_gltf_bytes_to_gr2};
 
 // LOCA conversion exports
 pub use loca_to_xml::{convert_loca_to_xml, to_xml as loca_to_xml_string};
-pub use xml_to_loca::convert_xml_to_loca;
+pub use xml_to_loca::{convert_xml_to_loca, from_xml as loca_from_xml};
 
 // DDS/PNG conversion exports
 pub use dds_png::{

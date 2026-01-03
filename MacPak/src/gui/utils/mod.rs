@@ -7,3 +7,4 @@ pub mod meta_generator;
 pub mod uuid;
 
 pub use uuid::{generate_uuid, UuidFormat};
+pub use meta_generator::generate_meta_lsx;

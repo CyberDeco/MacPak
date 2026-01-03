@@ -30,6 +30,7 @@ pub fn generate_meta_lsx(
             <children>
                 <node id="Dependencies"/>
                 <node id="ModuleInfo">
+                    <!-- Generated using MacPak: https://github.com/CyberDeco/MacPak -->
                     <attribute id="Author" type="LSWString" value="{author}"/>
                     <attribute id="CharacterCreationLevelName" type="FixedString" value=""/>
                     <attribute id="Description" type="LSWString" value="{description}"/>
