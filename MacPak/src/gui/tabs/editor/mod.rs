@@ -65,7 +65,7 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
                 if let Some(tab) = maybe_tab {
                     v_stack((
                         search_panel(tab.clone()),
-                        editor_content(tab.clone(), show_line_numbers),
+                        editor_content(tab.clone(), tabs_state_content.clone(), show_line_numbers),
                     ))
                     .style(|s| s.width_full().min_width(0.0).flex_grow(1.0).flex_basis(0.0).min_height(0.0))
                     .into_any()

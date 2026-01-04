@@ -1,10 +1,15 @@
 //! UI components for the editor
 
+use std::time::Duration;
+
+use floem::action::exec_after;
 use floem::event::{Event, EventListener};
 use floem::keyboard::{Key, Modifiers, NamedKey};
 use floem::prelude::*;
 use floem::text::Weight;
-use floem::views::{text_editor, checkbox};
+use floem::views::{text_editor_keys, checkbox};
+use floem::views::editor::command::CommandExecuted;
+use floem::views::editor::keypress::{default_key_handler, key::KeyInput, press::KeyPress};
 
 use crate::gui::state::{EditorTab, EditorTabsState};
 use super::operations::{
@@ -286,8 +291,19 @@ pub fn search_panel(tab: EditorTab) -> impl IntoView {
                         .on_event_stop(EventListener::KeyDown, {
                             let tab = tab_find_enter.clone();
                             move |e| {
-                                // Enter key jumps to next match
                                 if let Event::KeyDown(key_event) = e {
+                                    // CMD+F / Ctrl+F closes the search panel
+                                    let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
+                                        || key_event.modifiers.contains(Modifiers::CONTROL);
+                                    let is_f_key = matches!(
+                                        &key_event.key.logical_key,
+                                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
+                                    );
+                                    if is_cmd_or_ctrl && is_f_key {
+                                        visible.set(false);
+                                        return;
+                                    }
+                                    // Enter key jumps to next match
                                     if key_event.key.logical_key == Key::Named(NamedKey::Enter) {
                                         find_next(tab.clone());
                                     }
@@ -353,6 +369,20 @@ pub fn search_panel(tab: EditorTab) -> impl IntoView {
                                 .border(1.0)
                                 .border_color(Color::rgb8(200, 200, 200))
                                 .border_radius(4.0)
+                        })
+                        .on_event_stop(EventListener::KeyDown, move |e| {
+                            // CMD+F / Ctrl+F closes the search panel
+                            if let Event::KeyDown(key_event) = e {
+                                let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
+                                    || key_event.modifiers.contains(Modifiers::CONTROL);
+                                let is_f_key = matches!(
+                                    &key_event.key.logical_key,
+                                    Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
+                                );
+                                if is_cmd_or_ctrl && is_f_key {
+                                    visible.set(false);
+                                }
+                            }
                         }),
                     button("Replace").action({
                         let tab = tab_replace.clone();
@@ -375,6 +405,20 @@ pub fn search_panel(tab: EditorTab) -> impl IntoView {
                 ))
                 .style(|s| s.width_full().gap(8.0).items_center()),
             ))
+            .on_event_cont(EventListener::KeyDown, move |e| {
+                // CMD+F / Ctrl+F closes the search panel
+                if let Event::KeyDown(key_event) = e {
+                    let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
+                        || key_event.modifiers.contains(Modifiers::CONTROL);
+                    let is_f_key = matches!(
+                        &key_event.key.logical_key,
+                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
+                    );
+                    if is_cmd_or_ctrl && is_f_key {
+                        visible.set(false);
+                    }
+                }
+            })
             .style(|s| {
                 s.width_full()
                     .padding(12.0)
@@ -472,25 +516,73 @@ fn format_badge(tabs_state: EditorTabsState) -> impl IntoView {
     )
 }
 
-pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl IntoView {
+pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_numbers: RwSignal<bool>) -> impl IntoView {
     let content = tab.content;
     let modified = tab.modified;
     let file_format = tab.file_format;
     let file_path = tab.file_path;
     let goto_offset = tab.goto_offset;
     let search_visible = tab.search_visible;
+    let converted_from_lsf = tab.converted_from_lsf;
+    let tab_for_save = tab.clone();
+    let tabs_state_for_open = tabs_state.clone();
 
     // Recreate editor when file changes or line number toggle changes
     // Width/resize is handled automatically by floem's reactive viewport tracking
     dyn_container(
         move || (file_path.get(), show_line_numbers.get(), file_format.get()),
         move |(_path, show_lines, format)| {
-            let text = content.get(); // Get content inside, not as trigger
+            let text = content.get();
             let state_change = modified;
             // Create syntax highlighting based on file format
             let styling = SyntaxStyling::new(&text, &format);
 
-            text_editor(text)
+            // Clone tab and state for the key handler
+            let tab_for_keys = tab_for_save.clone();
+            let tabs_state_for_keys = tabs_state_for_open.clone();
+
+            // Custom key handler that intercepts shortcuts before the default handler
+            let key_handler = move |editor_sig, keypress: &KeyPress, mods: Modifiers| {
+                // Check for CMD/Ctrl modifier
+                let is_cmd_or_ctrl = mods.meta() || mods.control();
+
+                if is_cmd_or_ctrl {
+                    if let KeyInput::Keyboard(Key::Character(c), _) = &keypress.key {
+                        // CMD+F - Find
+                        if c.as_str().eq_ignore_ascii_case("f") {
+                            search_visible.set(!search_visible.get());
+                            return CommandExecuted::Yes;
+                        }
+                        // CMD+S - Save
+                        if c.as_str().eq_ignore_ascii_case("s") {
+                            if modified.get() {
+                                if converted_from_lsf.get() {
+                                    let tab_clone = tab_for_keys.clone();
+                                    exec_after(Duration::from_millis(50), move |_| {
+                                        save_file_as_dialog(tab_clone);
+                                    });
+                                } else {
+                                    save_file(tab_for_keys.clone());
+                                }
+                            }
+                            return CommandExecuted::Yes;
+                        }
+                        // CMD+O - Open
+                        if c.as_str().eq_ignore_ascii_case("o") {
+                            let tabs_clone = tabs_state_for_keys.clone();
+                            exec_after(Duration::from_millis(50), move |_| {
+                                open_file_dialog(tabs_clone);
+                            });
+                            return CommandExecuted::Yes;
+                        }
+                    }
+                }
+
+                // Fall through to default handler (handles CMD+Z, CMD+Shift+Z, etc.)
+                default_key_handler(editor_sig)(keypress, mods)
+            };
+
+            text_editor_keys(text, key_handler)
                 .styling(styling)
                 .editor_style(move |s| s.hide_gutter(!show_lines))
                 .style(move |s| {
@@ -502,22 +594,6 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
                     }
                 })
                 .placeholder("Open a file to start editing...")
-                .on_event_cont(EventListener::KeyDown, move |e| {
-                    // Intercept CMD+F / Ctrl+F before the editor handles it
-                    if let Event::KeyDown(key_event) = e {
-                        let is_named_find = key_event.key.logical_key == Key::Named(NamedKey::Find);
-                        let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
-                            || key_event.modifiers.contains(Modifiers::CONTROL);
-                        let is_f_key = matches!(
-                            &key_event.key.logical_key,
-                            Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
-                        );
-
-                        if is_named_find || (is_cmd_or_ctrl && is_f_key) {
-                            search_visible.set(!search_visible.get());
-                        }
-                    }
-                })
                 .with_editor(move |editor| {
                     let cursor = editor.cursor;
 
