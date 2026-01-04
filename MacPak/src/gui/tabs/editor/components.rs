@@ -520,18 +520,17 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
     let content = tab.content;
     let modified = tab.modified;
     let file_format = tab.file_format;
-    let file_path = tab.file_path;
     let goto_offset = tab.goto_offset;
     let search_visible = tab.search_visible;
     let converted_from_lsf = tab.converted_from_lsf;
     let tab_for_save = tab.clone();
     let tabs_state_for_open = tabs_state.clone();
 
-    // Recreate editor when file changes
+    // Recreate editor only when format changes (for syntax highlighting)
     // Width/resize and line numbers are handled reactively
     dyn_container(
-        move || (file_path.get(), file_format.get()),
-        move |(_path, format)| {
+        move || file_format.get(),
+        move |format| {
             let show_lines = show_line_numbers;
             let text = content.get();
             let state_change = modified;
