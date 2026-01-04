@@ -157,13 +157,28 @@ impl MergedDatabase {
 
     /// Get all visuals that use a specific GR2 file
     pub fn get_visuals_for_gr2(&self, gr2_name: &str) -> Vec<&VisualAsset> {
+        // Extract just the filename
+        let filename = std::path::Path::new(gr2_name)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(gr2_name);
+
         // Try exact match first
-        let ids = self.visuals_by_gr2.get(gr2_name).or_else(|| {
-            // Try just the filename
-            let filename = std::path::Path::new(gr2_name)
-                .file_name()
-                .and_then(|s| s.to_str())?;
-            self.visuals_by_gr2.get(filename)
+        let ids = self.visuals_by_gr2.get(filename).or_else(|| {
+            // Try case-insensitive match (database uses uppercase .GR2)
+            let upper = filename.to_uppercase();
+            // Handle case where filename is lowercase but DB key is uppercase
+            if upper != filename {
+                return self.visuals_by_gr2.get(&upper);
+            }
+
+            // Try with uppercase extension specifically
+            if let Some(stem) = filename.strip_suffix(".gr2") {
+                let with_upper_ext = format!("{}.GR2", stem);
+                return self.visuals_by_gr2.get(&with_upper_ext);
+            }
+
+            None
         });
 
         ids.map(|ids| {

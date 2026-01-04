@@ -2,7 +2,7 @@
 //!
 //! Spawns the macpak-bevy binary as a subprocess to display .glb/.gr2 files
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -41,12 +41,22 @@ pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
         state.status_message.set("Converting GR2 to GLB...".to_string());
 
         match convert_gr2_to_temp_glb(path) {
-            Ok(temp_path) => {
+            Ok(result) => {
                 // Store temp path for cleanup
                 if let Ok(mut handle) = get_temp_path_handle().lock() {
-                    *handle = Some(temp_path.clone());
+                    *handle = Some(result.glb_path.clone());
                 }
-                temp_path.to_string_lossy().to_string()
+
+                // Show any warnings about textures
+                if !result.warnings.is_empty() {
+                    let warning_msg = result.warnings.join("; ");
+                    // Log warnings and show briefly in status
+                    tracing::warn!("GR2 preview warnings: {}", warning_msg);
+                    // Show first warning in status bar
+                    state.status_message.set(format!("Warning: {}", result.warnings[0]));
+                }
+
+                result.glb_path.to_string_lossy().to_string()
             }
             Err(e) => {
                 state.status_message.set(format!("GR2 conversion failed: {}", e));
@@ -116,8 +126,16 @@ pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
     }
 }
 
-/// Convert a GR2 file to a temporary GLB file
-fn convert_gr2_to_temp_glb(gr2_path: &Path) -> Result<std::path::PathBuf, String> {
+/// Result of GR2 to GLB conversion
+struct Gr2ConversionResult {
+    /// Path to the generated temp GLB file
+    glb_path: PathBuf,
+    /// Warnings to display (e.g., "textures not found")
+    warnings: Vec<String>,
+}
+
+/// Convert a GR2 file to a temporary GLB file (geometry only for now)
+fn convert_gr2_to_temp_glb(gr2_path: &Path) -> Result<Gr2ConversionResult, String> {
     // Create temp file path based on original filename
     let file_stem = gr2_path
         .file_stem()
@@ -127,11 +145,14 @@ fn convert_gr2_to_temp_glb(gr2_path: &Path) -> Result<std::path::PathBuf, String
     let temp_dir = std::env::temp_dir();
     let temp_glb = temp_dir.join(format!("{}_preview.glb", file_stem));
 
-    // Convert using MacLarian
+    // Use geometry-only conversion (texture matching temporarily disabled)
     MacLarian::converter::convert_gr2_to_glb(gr2_path, &temp_glb)
         .map_err(|e| e.to_string())?;
 
-    Ok(temp_glb)
+    Ok(Gr2ConversionResult {
+        glb_path: temp_glb,
+        warnings: vec![],
+    })
 }
 
 /// Kill any running preview process (called on app exit)

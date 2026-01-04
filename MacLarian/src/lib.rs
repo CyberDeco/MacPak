@@ -36,6 +36,9 @@ pub mod prelude {
         Gr2ExtractionOptions, Gr2ExtractionResult,
         process_extracted_gr2, extract_gr2_with_textures,
     };
+    pub use crate::converter::gr2_to_gltf::{
+        convert_gr2_bytes_to_glb_with_textures, TexturedGlbResult,
+    };
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

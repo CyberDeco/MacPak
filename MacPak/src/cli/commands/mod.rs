@@ -144,6 +144,20 @@ pub enum Gr2Commands {
         #[arg(long)]
         no_textures: bool,
     },
+
+    /// Convert GR2 to GLB with embedded textures (test command)
+    ToGlbTextured {
+        /// Source GR2 file
+        path: PathBuf,
+
+        /// Path to Textures.pak
+        #[arg(long)]
+        textures_pak: PathBuf,
+
+        /// Output GLB file (defaults to same name with .textured.glb extension)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
 }
 
 /// Virtual Texture (GTS/GTP) commands
@@ -249,6 +263,9 @@ impl Gr2Commands {
                     *no_glb,
                     *no_textures,
                 )
+            }
+            Gr2Commands::ToGlbTextured { path, textures_pak, output } => {
+                gr2::convert_to_glb_textured(path, textures_pak, output.as_deref())
             }
         }
     }

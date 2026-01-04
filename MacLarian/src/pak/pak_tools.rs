@@ -250,6 +250,72 @@ impl PakOperations {
         Ok(())
     }
 
+    /// Read a single file's bytes from a PAK without writing to disk
+    ///
+    /// Returns the decompressed file contents, or an error if the file is not found.
+    pub fn read_file_bytes<P: AsRef<Path>>(pak_path: P, file_path: &str) -> Result<Vec<u8>> {
+        let file = File::open(pak_path.as_ref())?;
+        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
+
+        // Get file list
+        let entries = reader.list_files()?;
+
+        // Find the requested file
+        let entry = entries
+            .into_iter()
+            .find(|e| e.path.to_string_lossy() == file_path)
+            .ok_or_else(|| Error::FileNotFoundInPak(file_path.to_string()))?;
+
+        // Decompress and return
+        reader.decompress_file(&entry)
+    }
+
+    /// Read multiple files' bytes from a PAK without writing to disk
+    ///
+    /// Returns a map of file paths to their decompressed contents.
+    /// Files that fail to decompress are skipped with a warning.
+    pub fn read_files_bytes<P: AsRef<Path>, S: AsRef<str>>(
+        pak_path: P,
+        file_paths: &[S],
+    ) -> Result<std::collections::HashMap<String, Vec<u8>>> {
+        use std::collections::HashMap;
+
+        if file_paths.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let file = File::open(pak_path.as_ref())?;
+        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
+
+        // Build a set of requested paths
+        let requested: std::collections::HashSet<&str> = file_paths
+            .iter()
+            .map(|p| p.as_ref())
+            .collect();
+
+        // Get file list and filter
+        let all_entries = reader.list_files()?;
+        let entries_to_read: Vec<_> = all_entries
+            .into_iter()
+            .filter(|e| requested.contains(e.path.to_string_lossy().as_ref()))
+            .collect();
+
+        let mut results = HashMap::new();
+
+        for entry in &entries_to_read {
+            match reader.decompress_file(entry) {
+                Ok(data) => {
+                    results.insert(entry.path.to_string_lossy().to_string(), data);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
+                }
+            }
+        }
+
+        Ok(results)
+    }
+
     /// Extract meta.lsx from a PAK
     pub fn extract_meta<P: AsRef<Path>>(pak_path: P) -> Result<String> {
         let file = File::open(pak_path.as_ref())?;

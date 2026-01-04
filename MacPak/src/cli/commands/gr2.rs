@@ -5,6 +5,7 @@
 use std::path::Path;
 use crate::operations::gr2 as gr2_ops;
 use MacLarian::gr2_extraction::{process_extracted_gr2, Gr2ExtractionOptions};
+use MacLarian::converter::gr2_to_gltf::convert_gr2_bytes_to_glb_with_textures;
 
 /// Inspect a GR2 file and display its structure.
 pub fn inspect(path: &Path) -> anyhow::Result<()> {
@@ -148,6 +149,53 @@ pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     println!();
     println!("Conversion complete!");
     println!("  Output size: {} bytes", output_size);
+
+    Ok(())
+}
+
+/// Convert GR2 to GLB with embedded textures (for testing).
+pub fn convert_to_glb_textured(
+    path: &Path,
+    textures_pak: &Path,
+    output: Option<&Path>,
+) -> anyhow::Result<()> {
+    let output_path = if let Some(out) = output {
+        out.to_path_buf()
+    } else {
+        path.with_extension("textured.glb")
+    };
+
+    println!("Converting GR2 to textured GLB...");
+    println!("  Source:       {}", path.display());
+    println!("  Textures PAK: {}", textures_pak.display());
+    println!("  Destination:  {}", output_path.display());
+    println!();
+
+    // Read GR2 bytes
+    let gr2_data = std::fs::read(path)?;
+    let gr2_filename = path.file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown.GR2");
+
+    println!("  GR2 filename for lookup: {}", gr2_filename);
+
+    // Convert with textures
+    let result = convert_gr2_bytes_to_glb_with_textures(&gr2_data, gr2_filename, textures_pak)?;
+
+    // Write output
+    std::fs::write(&output_path, &result.glb_data)?;
+
+    println!();
+    println!("Conversion complete!");
+    println!("  Output size: {} bytes", result.glb_data.len());
+
+    if !result.warnings.is_empty() {
+        println!();
+        println!("Warnings:");
+        for warning in &result.warnings {
+            println!("  - {}", warning);
+        }
+    }
 
     Ok(())
 }
