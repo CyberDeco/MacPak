@@ -157,11 +157,12 @@ pub fn progress_overlay(state: PakOpsState) -> impl IntoView {
     })
 }
 
-/// Dialog for PAK creation options (compression, priority)
+/// Dialog for PAK creation options (compression, priority, info.json)
 pub fn create_options_dialog(state: PakOpsState) -> impl IntoView {
     let show = state.show_create_options;
     let compression = state.compression;
     let priority = state.priority;
+    let generate_info_json = state.generate_info_json;
     let pending = state.pending_create;
     let state_confirm = state.clone();
     let state_cancel = state.clone();
@@ -172,6 +173,7 @@ pub fn create_options_dialog(state: PakOpsState) -> impl IntoView {
             if visible {
                 let compression = compression;
                 let priority = priority;
+                let generate_info_json = generate_info_json;
                 let state_confirm = state_confirm.clone();
                 let state_cancel = state_cancel.clone();
 
@@ -194,11 +196,26 @@ pub fn create_options_dialog(state: PakOpsState) -> impl IntoView {
                         priority_input(priority),
                     ))
                     .style(|s| s.width_full().items_center().margin_bottom(12.0)),
+                    // Generate info.json checkbox
+                    h_stack((
+                        checkbox(move || generate_info_json.get())
+                            .on_update(move |checked| {
+                                generate_info_json.set(checked);
+                            })
+                            .style(|s| s.margin_right(8.0)),
+                        label(|| "Generate info.json (for BaldursModManager)".to_string())
+                            .on_click_stop(move |_| {
+                                generate_info_json.set(!generate_info_json.get());
+                            })
+                            .style(|s| s.cursor(floem::style::CursorStyle::Pointer)),
+                    ))
+                    .style(|s| s.width_full().items_center().margin_bottom(12.0)),
                     // Help text
                     label(|| {
                         "lz4hc = best compression (default)\n\
-                         lz4 = fast compression\n\
-                         Priority 0 = normal mod, 50+ = override mod"
+                         lz4 = fast compression, none = no compression\n\
+                         Priority 0 = normal mod, 50+ = override mod\n\
+                         info.json enables drag-and-drop import in BaldursModManager"
                             .to_string()
                     })
                     .style(|s| {

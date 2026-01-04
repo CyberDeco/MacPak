@@ -9,8 +9,6 @@ use std::collections::HashSet;
 pub enum PakCompression {
     Lz4Hc,
     Lz4,
-    Zlib,
-    ZlibFast,
     None,
 }
 
@@ -19,8 +17,6 @@ impl PakCompression {
         match self {
             PakCompression::Lz4Hc => "lz4hc",
             PakCompression::Lz4 => "lz4",
-            PakCompression::Zlib => "zlib",
-            PakCompression::ZlibFast => "zlibfast",
             PakCompression::None => "none",
         }
     }
@@ -30,8 +26,6 @@ impl PakCompression {
         match self {
             PakCompression::Lz4Hc => "Best compression (default)",
             PakCompression::Lz4 => "Fast compression",
-            PakCompression::Zlib => "Standard compression",
-            PakCompression::ZlibFast => "Fast zlib",
             PakCompression::None => "No compression",
         }
     }
@@ -64,6 +58,7 @@ pub struct PakOpsState {
     pub compression: RwSignal<PakCompression>,
     pub priority: RwSignal<i32>,
     pub show_create_options: RwSignal<bool>,
+    pub generate_info_json: RwSignal<bool>,
 
     // Pending create operation (source, dest)
     pub pending_create: RwSignal<Option<(String, String)>>,
@@ -101,6 +96,7 @@ impl PakOpsState {
             compression: RwSignal::new(PakCompression::Lz4Hc),
             priority: RwSignal::new(0),
             show_create_options: RwSignal::new(false),
+            generate_info_json: RwSignal::new(true), // Default to true for BaldursModManager compatibility
             pending_create: RwSignal::new(None),
 
             working_dir: RwSignal::new(None),

@@ -409,6 +409,7 @@ pub fn rebuild_pak_file(state: PakOpsState) {
 pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
     let compression = state.compression.get();
     let priority = state.priority.get();
+    let generate_info_json = state.generate_info_json.get();
 
     let source_name = Path::new(&source)
         .file_name()
@@ -426,6 +427,9 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
         compression.as_str(),
         priority
     ));
+    if generate_info_json {
+        state.add_result("Will generate info.json for BaldursModManager");
+    }
 
     state.is_creating.set(true);
     state.show_progress.set(true);
@@ -453,11 +457,20 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
         let result = MacLarian::pak::PakOperations::create(&source, &dest);
 
         let pak_result = match result {
-            Ok(_) => PakResult::CreateDone {
-                success: true,
-                message: String::new(),
-                files,
-                pak_name: pak_name_clone,
+            Ok(_) => {
+                let mut info_json_result = None;
+
+                // Generate info.json if requested
+                if generate_info_json {
+                    info_json_result = Some(generate_info_json_file(&source, &dest));
+                }
+
+                PakResult::CreateDone {
+                    success: true,
+                    message: info_json_result.unwrap_or_default(),
+                    files,
+                    pak_name: pak_name_clone,
+                }
             },
             Err(e) => PakResult::CreateDone {
                 success: false,
@@ -469,6 +482,136 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
 
         send(pak_result);
     });
+}
+
+/// Generate info.json file for BaldursModManager compatibility
+fn generate_info_json_file(source_dir: &str, pak_path: &str) -> String {
+    // Find meta.lsx in the source directory
+    let meta_lsx_content = find_and_read_meta_lsx(source_dir);
+
+    let Some(lsx_content) = meta_lsx_content else {
+        return "Warning: No meta.lsx found, skipped info.json generation".to_string();
+    };
+
+    // Parse the metadata using MacLarian
+    let metadata = MacLarian::formats::parse_meta_lsx(&lsx_content);
+
+    if metadata.uuid.is_empty() {
+        return "Warning: meta.lsx missing UUID, skipped info.json generation".to_string();
+    }
+
+    // Calculate MD5 of the PAK file (streaming to avoid memory issues with large files)
+    let pak_md5 = calculate_file_md5(pak_path).unwrap_or_default();
+
+    // Generate the info.json content
+    let info_json = generate_info_json_content(&metadata, &pak_md5);
+
+    // Write info.json next to the PAK file (don't move the PAK - user already chose location)
+    let pak_path = Path::new(pak_path);
+    let info_json_path = pak_path.parent()
+        .map(|p| p.join("info.json"))
+        .unwrap_or_else(|| Path::new("info.json").to_path_buf());
+
+    match std::fs::write(&info_json_path, &info_json) {
+        Ok(_) => format!("Generated {}", info_json_path.display()),
+        Err(e) => format!("Warning: Failed to write info.json: {}", e),
+    }
+}
+
+/// Find and read meta.lsx from a mod source directory
+fn find_and_read_meta_lsx(source_dir: &str) -> Option<String> {
+    let source_path = Path::new(source_dir);
+
+    // Look for Mods/*/meta.lsx pattern
+    let mods_dir = source_path.join("Mods");
+    if mods_dir.exists() && mods_dir.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(&mods_dir) {
+            for entry in entries.flatten() {
+                let meta_path = entry.path().join("meta.lsx");
+                if meta_path.exists() {
+                    if let Ok(content) = std::fs::read_to_string(&meta_path) {
+                        return Some(content);
+                    }
+                }
+            }
+        }
+    }
+
+    // Also check for meta.lsx directly in source (some mod structures)
+    let direct_meta = source_path.join("meta.lsx");
+    if direct_meta.exists() {
+        if let Ok(content) = std::fs::read_to_string(&direct_meta) {
+            return Some(content);
+        }
+    }
+
+    None
+}
+
+/// Calculate MD5 hash of a file
+fn calculate_file_md5(file_path: &str) -> Option<String> {
+    use std::io::Read;
+
+    let mut file = std::fs::File::open(file_path).ok()?;
+    let mut hasher = md5::Context::new();
+    let mut buffer = [0u8; 8192];
+
+    loop {
+        let bytes_read = file.read(&mut buffer).ok()?;
+        if bytes_read == 0 {
+            break;
+        }
+        hasher.consume(&buffer[..bytes_read]);
+    }
+
+    let digest = hasher.compute();
+    // Convert digest bytes to hex string manually to avoid Display trait issues
+    let hex: String = digest.iter().map(|b| format!("{:02x}", b)).collect();
+    Some(hex)
+}
+
+/// Generate info.json content from metadata
+fn generate_info_json_content(metadata: &MacLarian::formats::ModMetadata, pak_md5: &str) -> String {
+    // Use raw Version64 integer as string (matches BG3 Modder's Multitool format)
+    let version_json = match metadata.version64 {
+        Some(v) => format!("\"{}\"", v),
+        None => "null".to_string(),
+    };
+
+    // Escape strings for JSON
+    let name = escape_json_string(&metadata.name);
+    let folder = escape_json_string(&metadata.folder);
+    let author = escape_json_string(&metadata.author);
+    let description = escape_json_string(&metadata.description);
+
+    // Get current timestamp in ISO format
+    let now = chrono::Utc::now();
+    let created = now.to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
+
+    // Generate a random Group UUID
+    let group_uuid = uuid::Uuid::new_v4().to_string();
+
+    format!(
+        r#"{{"Mods":[{{"Author":"{}","Name":"{}","Folder":"{}","Version":{},"Description":"{}","UUID":"{}","Created":"{}","Dependencies":[],"Group":"{}"}}],"MD5":"{}"}}"#,
+        author,
+        name,
+        folder,
+        version_json,
+        description,
+        metadata.uuid,
+        created,
+        group_uuid,
+        pak_md5
+    )
+}
+
+/// Escape a string for JSON
+fn escape_json_string(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
 }
 
 /// Validate mod structure

@@ -6,6 +6,7 @@ pub mod lsx;
 pub mod lsj;
 pub mod loca;
 pub mod gr2;
+pub mod meta;
 pub mod virtual_texture;
 
 // Re-export common types for convenience
@@ -16,6 +17,7 @@ pub use lsf::{LsfDocument, LsfNode, LsfAttribute};
 pub use lsx::{LsxDocument, LsxRegion, LsxNode, LsxAttribute};
 pub use lsj::{LsjDocument, LsjNode, LsjAttribute};
 pub use loca::{LocaResource, LocalizedText, read_loca, write_loca};
+pub use meta::{ModMetadata, parse_meta_lsx};
 
 // Re-export GR2 decompression utilities
 pub use gr2::decompress_gr2;

@@ -39,8 +39,6 @@ pub fn compression_selector(compression: RwSignal<PakCompression>) -> impl IntoV
     h_stack((
         compression_button(compression, PakCompression::Lz4Hc),
         compression_button(compression, PakCompression::Lz4),
-        compression_button(compression, PakCompression::Zlib),
-        compression_button(compression, PakCompression::ZlibFast),
         compression_button(compression, PakCompression::None),
     ))
     .style(|s| s.gap(4.0))

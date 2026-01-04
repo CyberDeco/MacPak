@@ -303,49 +303,8 @@ pub fn parse_root_templates_localization(lsx_content: &str) -> Vec<DyeLocalizati
     entries
 }
 
-/// Mod metadata parsed from meta.lsx
-#[derive(Clone, Debug, Default)]
-pub struct ModMetadata {
-    pub name: String,
-    pub author: String,
-}
-
-/// Parse meta.lsx to extract mod name and author
-pub fn parse_meta_lsx(lsx_content: &str) -> ModMetadata {
-    let mut metadata = ModMetadata::default();
-    let mut in_module_info = false;
-
-    for line in lsx_content.lines() {
-        let line = line.trim();
-
-        // Track when we're inside ModuleInfo node
-        if line.contains("<node id=\"ModuleInfo\">") {
-            in_module_info = true;
-        }
-        if in_module_info && line == "</node>" {
-            in_module_info = false;
-        }
-
-        // Only parse Name/Author inside ModuleInfo to avoid picking up wrong attributes
-        if in_module_info {
-            // Look for: <attribute id="Name" ... value="ModName"/>
-            if line.contains("attribute id=\"Name\"") {
-                if let Some(value) = extract_xml_attribute(line, "value") {
-                    metadata.name = value;
-                }
-            }
-
-            // Look for: <attribute id="Author" ... value="AuthorName"/>
-            if line.contains("attribute id=\"Author\"") {
-                if let Some(value) = extract_xml_attribute(line, "value") {
-                    metadata.author = value;
-                }
-            }
-        }
-    }
-
-    metadata
-}
+// Re-export from MacLarian for backwards compatibility
+pub use MacLarian::formats::{ModMetadata, parse_meta_lsx};
 
 /// Parse localization XML to build a map of contentuid -> text
 pub fn parse_localization_xml(xml_content: &str) -> std::collections::HashMap<String, String> {
