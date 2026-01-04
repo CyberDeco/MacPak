@@ -48,7 +48,7 @@ pub fn execute(
             println!("Converting LSF → LSX");
             MacLarian::converter::lsf_to_lsx(source, destination)?;
         }
-        ("lsf", "lsj") => {
+        ("lsf" | "lsbc" | "lsbs" | "lsfx", "lsj") => {
             println!("Converting LSF → LSJ");
             MacLarian::converter::lsf_to_lsj(source, destination)?;
         }
@@ -68,7 +68,7 @@ pub fn execute(
             println!("Converting LSJ → LSX");
             MacLarian::converter::lsj_to_lsx(source, destination)?;
         }
-        ("lsj", "lsf") => {
+        ("lsj", "lsf" | "lsbc" | "lsbs" | "lsfx") => {
             println!("Converting LSJ → LSF");
             MacLarian::converter::lsj_to_lsf(source, destination)?;
         }
