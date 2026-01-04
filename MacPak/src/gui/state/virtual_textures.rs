@@ -3,6 +3,16 @@
 use floem::prelude::*;
 use im::Vector as ImVector;
 
+use crate::gui::shared::{BatchOperationState, SharedProgress};
+
+/// Global shared progress instance for Virtual Textures operations
+static VT_SHARED_PROGRESS: std::sync::OnceLock<SharedProgress> = std::sync::OnceLock::new();
+
+/// Get or create the global shared progress instance for Virtual Textures
+pub fn get_shared_progress() -> &'static SharedProgress {
+    VT_SHARED_PROGRESS.get_or_init(SharedProgress::new)
+}
+
 /// Virtual Textures extraction state
 #[derive(Clone)]
 pub struct VirtualTexturesState {
@@ -66,5 +76,35 @@ impl VirtualTexturesState {
 impl Default for VirtualTexturesState {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl BatchOperationState for VirtualTexturesState {
+    fn is_processing(&self) -> RwSignal<bool> {
+        self.is_extracting
+    }
+
+    fn results_log(&self) -> RwSignal<ImVector<String>> {
+        self.results_log
+    }
+
+    fn status_message(&self) -> RwSignal<String> {
+        self.status_message
+    }
+
+    fn add_result(&self, message: &str) {
+        VirtualTexturesState::add_result(self, message);
+    }
+
+    fn add_results_batch(&self, messages: Vec<String>) {
+        VirtualTexturesState::add_results_batch(self, messages);
+    }
+
+    fn clear_results(&self) {
+        VirtualTexturesState::clear_results(self);
+    }
+
+    fn get_shared_progress(&self) -> &'static SharedProgress {
+        get_shared_progress()
     }
 }

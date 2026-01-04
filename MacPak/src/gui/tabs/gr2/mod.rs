@@ -6,30 +6,27 @@
 //! - Drag & drop support
 
 mod conversion;
-mod dialogs;
-mod results;
 mod sections;
 pub mod types;
 
 use floem::prelude::*;
 use floem::style::Position;
 
+use crate::gui::shared::{header_section, progress_overlay, results_section};
 use crate::gui::state::{AppState, Gr2State};
-use dialogs::progress_overlay;
-use results::results_section;
-use sections::{header_section, operations_row};
+use sections::operations_row;
 
 pub fn gr2_tab(_app_state: AppState, gr2_state: Gr2State) -> impl IntoView {
     let state = gr2_state.clone();
 
     v_stack((
-        // Header with title and status message
-        header_section(gr2_state.clone()),
+        // Header with title and status message (using shared component)
+        header_section("GR2 Conversion", gr2_state.clone()),
         // Main content area
         v_stack((
             // Operations row - 3 columns
             operations_row(gr2_state.clone()),
-            // Results area
+            // Results area (using shared component)
             results_section(gr2_state.clone()),
         ))
         .style(|s| {
@@ -41,7 +38,7 @@ pub fn gr2_tab(_app_state: AppState, gr2_state: Gr2State) -> impl IntoView {
                 .padding(24.0)
                 .gap(16.0)
         }),
-        // Progress overlay (shown when converting) - absolutely positioned
+        // Progress overlay (using shared component)
         progress_overlay(state),
     ))
     .style(|s| {

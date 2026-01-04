@@ -9,6 +9,7 @@
 //! - UUID generator for modding
 
 mod native_menu;
+pub mod shared;
 pub mod state;
 pub mod tabs;
 pub mod utils;

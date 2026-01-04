@@ -4,6 +4,7 @@ use std::path::Path;
 
 use floem_reactive::{SignalGet, SignalUpdate};
 
+use crate::gui::shared::SharedProgress;
 use crate::gui::state::VirtualTexturesState;
 use super::types::{VtResult, create_result_sender, get_shared_progress};
 
@@ -229,7 +230,7 @@ fn find_base_name(name: &str) -> Option<&str> {
 fn extract_gts_file(
     input_path: &str,
     output_dir: Option<&str>,
-    progress: &super::types::SharedProgress,
+    progress: &SharedProgress,
 ) -> Result<usize, String> {
     use crate::operations::virtual_texture::{self, GtsFile};
 

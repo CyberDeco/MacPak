@@ -1,20 +1,29 @@
-//! Results log section for GR2 conversion tab
+//! Shared results log section for batch operations
 
 use floem::prelude::*;
 use floem::text::Weight;
-use floem::views::{VirtualDirection, VirtualItemSize, virtual_list};
+use floem::views::{virtual_list, VirtualDirection, VirtualItemSize};
 use im::Vector as ImVector;
 
-use crate::gui::state::Gr2State;
-use super::sections::card_style;
+use super::styles::card_style;
+use super::BatchOperationState;
 
-pub fn results_section(state: Gr2State) -> impl IntoView {
-    let state_clear = state.clone();
+/// Generic results log section that works with any BatchOperationState.
+///
+/// Displays a scrollable, virtualized list of operation results with:
+/// - Color-coded success (green) and failure (red) messages
+/// - "Show Failures Only" filter toggle with failure count badge
+/// - Clear button to reset the log
+pub fn results_section<S: BatchOperationState>(state: S) -> impl IntoView {
+    let state_for_clear = state.clone();
+    let state_for_log = state.clone();
+    let state_for_filter = state.clone();
+    let state_for_filter2 = state.clone();
     let show_failures_only = RwSignal::new(false);
 
     // Filtered results based on toggle
     let filtered_results = move || {
-        let log = state.results_log.get();
+        let log = state_for_log.results_log().get();
         let filter = show_failures_only.get();
         if filter {
             log.into_iter()
@@ -25,22 +34,18 @@ pub fn results_section(state: Gr2State) -> impl IntoView {
         }
     };
 
-    // Count failures for badge
-    let failure_count = move || {
-        state.results_log.get()
-            .iter()
-            .filter(|msg| msg.starts_with("Error") || msg.starts_with("Failed"))
-            .count()
-    };
-
     v_stack((
         h_stack((
-            label(|| "Results Log")
-                .style(|s| s.font_size(14.0).font_weight(Weight::SEMIBOLD)),
+            label(|| "Results Log").style(|s| s.font_size(14.0).font_weight(Weight::SEMIBOLD)),
             empty().style(|s| s.flex_grow(1.0)),
             // Show Failures Only toggle button
             button(label(move || {
-                let count = failure_count();
+                let count = state_for_filter
+                    .results_log()
+                    .get()
+                    .iter()
+                    .filter(|msg| msg.starts_with("Error") || msg.starts_with("Failed"))
+                    .count();
                 if show_failures_only.get() {
                     "Show All".to_string()
                 } else if count > 0 {
@@ -51,7 +56,11 @@ pub fn results_section(state: Gr2State) -> impl IntoView {
             }))
             .style(move |s| {
                 let is_active = show_failures_only.get();
-                let has_failures = failure_count() > 0;
+                let has_failures = state_for_filter2
+                    .results_log()
+                    .get()
+                    .iter()
+                    .any(|msg| msg.starts_with("Error") || msg.starts_with("Failed"));
                 let s = s
                     .padding_horiz(10.0)
                     .padding_vert(4.0)
@@ -60,8 +69,7 @@ pub fn results_section(state: Gr2State) -> impl IntoView {
                     .margin_right(8.0);
 
                 if is_active {
-                    s.background(Color::rgb8(211, 47, 47))
-                        .color(Color::WHITE)
+                    s.background(Color::rgb8(211, 47, 47)).color(Color::WHITE)
                 } else if has_failures {
                     s.background(Color::rgb8(255, 235, 235))
                         .color(Color::rgb8(180, 30, 30))
@@ -84,7 +92,7 @@ pub fn results_section(state: Gr2State) -> impl IntoView {
                         .hover(|s| s.background(Color::rgb8(220, 220, 220)))
                 })
                 .action(move || {
-                    state_clear.clear_results();
+                    state_for_clear.clear_results();
                     show_failures_only.set(false);
                 }),
         ))
@@ -98,19 +106,18 @@ pub fn results_section(state: Gr2State) -> impl IntoView {
                 |msg| {
                     let is_error = msg.starts_with("Error") || msg.starts_with("Failed");
                     container(
-                        label(move || msg.clone())
-                            .style(move |s| {
-                                let s = s.font_size(11.0)
-                                    .font_family("monospace".to_string());
-                                if is_error {
-                                    s.color(Color::rgb8(180, 30, 30))
-                                } else {
-                                    s.color(Color::rgb8(46, 125, 50))
-                                }
-                            }),
+                        label(move || msg.clone()).style(move |s| {
+                            let s = s.font_size(11.0).font_family("monospace".to_string());
+                            if is_error {
+                                s.color(Color::rgb8(180, 30, 30))
+                            } else {
+                                s.color(Color::rgb8(46, 125, 50))
+                            }
+                        }),
                     )
                     .style(move |s| {
-                        let s = s.width_full()
+                        let s = s
+                            .width_full()
                             .height(22.0)
                             .padding_vert(2.0)
                             .padding_horiz(4.0);

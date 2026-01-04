@@ -4,61 +4,9 @@ use floem::event::{Event, EventListener};
 use floem::prelude::*;
 use floem::text::Weight;
 
+use crate::gui::shared::operation_button;
 use crate::gui::state::Gr2State;
 use super::conversion::{convert_batch_with_options, convert_single_with_options};
-
-pub fn card_style(s: floem::style::Style) -> floem::style::Style {
-    s.width_full()
-        .padding(16.0)
-        .background(Color::WHITE)
-        .border(1.0)
-        .border_color(Color::rgb8(220, 220, 220))
-        .border_radius(6.0)
-}
-
-pub fn header_section(state: Gr2State) -> impl IntoView {
-    h_stack((
-        label(|| "GR2 Conversion")
-            .style(|s| s.font_size(18.0).font_weight(Weight::BOLD)),
-        empty().style(|s| s.flex_grow(1.0)),
-        // Status message
-        dyn_container(
-            move || state.status_message.get(),
-            move |msg| {
-                if msg.is_empty() {
-                    empty().into_any()
-                } else {
-                    let is_error = msg.contains("Failed") || msg.contains("Error");
-                    label(move || msg.clone())
-                        .style(move |s| {
-                            let s = s
-                                .padding_horiz(12.0)
-                                .padding_vert(6.0)
-                                .border_radius(4.0)
-                                .font_size(12.0);
-                            if is_error {
-                                s.background(Color::rgb8(255, 235, 235))
-                                    .color(Color::rgb8(180, 30, 30))
-                            } else {
-                                s.background(Color::rgb8(232, 245, 233))
-                                    .color(Color::rgb8(46, 125, 50))
-                            }
-                        })
-                        .into_any()
-                }
-            },
-        ),
-    ))
-    .style(|s| {
-        s.width_full()
-            .padding(16.0)
-            .gap(8.0)
-            .items_center()
-            .background(Color::WHITE)
-            .border_bottom(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
-    })
-}
 
 /// Main operations row with 3 columns
 pub fn operations_row(state: Gr2State) -> impl IntoView {
@@ -207,22 +155,6 @@ fn drop_zone(state: Gr2State) -> impl IntoView {
             .border(2.0)
             .border_color(Color::rgb8(204, 204, 204))
             .border_radius(8.0)
-    })
-}
-
-fn operation_button(text: &'static str, on_click: impl Fn() + 'static) -> impl IntoView {
-    button(text).action(on_click).style(|s| {
-        s.width_full()
-            .padding_vert(10.0)
-            .padding_horiz(16.0)
-            .background(Color::rgb8(245, 245, 245))
-            .border(1.0)
-            .border_color(Color::rgb8(200, 200, 200))
-            .border_radius(6.0)
-            .hover(|s| {
-                s.background(Color::rgb8(230, 230, 230))
-                    .border_color(Color::rgb8(180, 180, 180))
-            })
     })
 }
 

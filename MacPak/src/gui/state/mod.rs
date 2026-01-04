@@ -4,10 +4,10 @@ mod app;
 mod browser;
 mod dyes;
 mod editor;
-mod gr2;
+pub mod gr2;
 mod pak_ops;
 mod search;
-mod virtual_textures;
+pub mod virtual_textures;
 
 // Re-export all state types
 pub use app::AppState;

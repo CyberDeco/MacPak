@@ -5,31 +5,28 @@
 //! - Batch extraction of directories
 //! - Drag & drop support
 
-mod dialogs;
 mod extraction;
-mod results;
 mod sections;
 pub mod types;
 
 use floem::prelude::*;
 use floem::style::Position;
 
+use crate::gui::shared::{header_section, progress_overlay, results_section};
 use crate::gui::state::{AppState, VirtualTexturesState};
-use dialogs::progress_overlay;
-use results::results_section;
-use sections::{header_section, operations_row};
+use sections::operations_row;
 
 pub fn virtual_textures_tab(_app_state: AppState, vt_state: VirtualTexturesState) -> impl IntoView {
     let state = vt_state.clone();
 
     v_stack((
-        // Header with title and status message
-        header_section(vt_state.clone()),
+        // Header with title and status message (using shared component)
+        header_section("Virtual Textures", vt_state.clone()),
         // Main content area
         v_stack((
             // Operations row
             operations_row(vt_state.clone()),
-            // Results area
+            // Results area (using shared component)
             results_section(vt_state.clone()),
         ))
         .style(|s| {
@@ -41,7 +38,7 @@ pub fn virtual_textures_tab(_app_state: AppState, vt_state: VirtualTexturesState
                 .padding(24.0)
                 .gap(16.0)
         }),
-        // Progress overlay (shown when extracting) - absolutely positioned
+        // Progress overlay (using shared component)
         progress_overlay(state),
     ))
     .style(|s| {
