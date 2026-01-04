@@ -9,6 +9,8 @@ mod conversion;
 mod sections;
 pub mod types;
 
+pub use sections::open_gr2_file;
+
 use floem::prelude::*;
 use floem::style::Position;
 

@@ -10,6 +10,8 @@ mod sections;
 mod types;
 mod widgets;
 
+pub use operations::extract_pak_file;
+
 use floem::prelude::*;
 use floem::style::Position;
 

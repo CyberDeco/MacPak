@@ -1,7 +1,7 @@
 //! PAK archive operations
 
 use crate::error::{Error, Result};
-use super::lspk::{LspkReader, LspkWriter};
+use super::lspk::{CompressionMethod, LspkReader, LspkWriter};
 use std::fs::File;
 use std::path::Path;
 
@@ -110,6 +110,28 @@ impl PakOperations {
         progress: ProgressCallback,
     ) -> Result<()> {
         let writer = LspkWriter::new(source_dir.as_ref())?;
+        writer.write_with_progress(output_pak.as_ref(), progress)?;
+        Ok(())
+    }
+
+    /// Create a PAK file from a directory with specified compression
+    pub fn create_with_compression<P: AsRef<Path>>(
+        source_dir: P,
+        output_pak: P,
+        compression: CompressionMethod,
+    ) -> Result<()> {
+        Self::create_with_compression_and_progress(source_dir, output_pak, compression, &|_, _, _| {})
+    }
+
+    /// Create a PAK file from a directory with compression and progress callback
+    pub fn create_with_compression_and_progress<P: AsRef<Path>>(
+        source_dir: P,
+        output_pak: P,
+        compression: CompressionMethod,
+        progress: ProgressCallback,
+    ) -> Result<()> {
+        let writer = LspkWriter::new(source_dir.as_ref())?
+            .with_compression(compression);
         writer.write_with_progress(output_pak.as_ref(), progress)?;
         Ok(())
     }

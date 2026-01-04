@@ -91,3 +91,41 @@ pub fn common_section(state: DyesState, status: RwSignal<String>) -> impl IntoVi
 
     color_section("Commonly Used", entries, status)
 }
+
+/// Header section with title and status message
+pub fn header_section(status: RwSignal<String>) -> impl IntoView {
+    h_stack((
+        label(|| "Dye Lab")
+            .style(|s| s.font_size(FONT_TITLE).font_weight(Weight::BOLD)),
+        empty().style(|s| s.flex_grow(1.0)),
+        // Status message
+        dyn_container(
+            move || status.get(),
+            move |msg| {
+                if msg.is_empty() {
+                    empty().into_any()
+                } else {
+                    label(move || msg.clone())
+                        .style(|s| {
+                            s.padding_horiz(PADDING_BTN_H)
+                                .padding_vert(PADDING_BTN_V)
+                                .border_radius(RADIUS_STD)
+                                .font_size(FONT_STATUS)
+                                .background(BG_SUCCESS)
+                                .color(TEXT_SUCCESS)
+                        })
+                        .into_any()
+                }
+            },
+        ),
+    ))
+    .style(|s| {
+        s.width_full()
+            .padding(PADDING_LG)
+            .gap(GAP_STD)
+            .items_center()
+            .background(Color::WHITE)
+            .border_bottom(1.0)
+            .border_color(BORDER_CARD)
+    })
+}

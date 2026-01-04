@@ -23,7 +23,11 @@ use floem::window::WindowConfig;
 use state::*;
 use tabs::*;
 use tabs::editor::{open_file_dialog, save_file};
-use tabs::browser::cleanup_temp_files;
+use tabs::browser::{cleanup_temp_files, open_folder_dialog};
+use tabs::pak_ops::extract_pak_file;
+use tabs::gr2::open_gr2_file;
+use tabs::virtual_textures::open_gts_file;
+use tabs::dyes::import_from_mod_folder;
 
 /// Run the MacPak GUI application
 pub fn run_app() {
@@ -57,6 +61,11 @@ fn app_view() -> impl IntoView {
 
     let editor_tabs_for_keyboard = editor_tabs_state.clone();
     let editor_tabs_for_close = editor_tabs_state.clone();
+    let browser_state_for_keyboard = browser_state.clone();
+    let pak_ops_state_for_keyboard = pak_ops_state.clone();
+    let gr2_state_for_keyboard = gr2_state.clone();
+    let vt_state_for_keyboard = vt_state.clone();
+    let dyes_state_for_keyboard = dyes_state.clone();
 
     v_stack((
         // Tab bar
@@ -106,51 +115,79 @@ fn app_view() -> impl IntoView {
         EventPropagation::Stop
     })
     .on_event_cont(EventListener::KeyDown, move |e| {
-        // Global keyboard shortcuts for Editor tab
+        // Global keyboard shortcuts - context-aware based on active tab
         if let Event::KeyDown(key_event) = e {
             let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
                 || key_event.modifiers.contains(Modifiers::CONTROL);
+            let current_tab = active_tab.get();
 
-            // Only handle when Editor tab is active (tab index 1)
-            if active_tab.get() != 1 {
-                return;
-            }
-
-            // CMD+F / Ctrl+F - Find
+            // CMD+F / Ctrl+F - Find (Editor tab only)
             let is_named_find = key_event.key.logical_key == Key::Named(NamedKey::Find);
             let is_f_key = matches!(
                 &key_event.key.logical_key,
                 Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
             );
             if is_named_find || (is_cmd_or_ctrl && is_f_key) {
-                if let Some(tab) = editor_tabs_for_keyboard.active_tab() {
-                    tab.search_visible.set(!tab.search_visible.get());
+                if current_tab == 1 {
+                    // Editor tab - toggle search panel
+                    if let Some(tab) = editor_tabs_for_keyboard.active_tab() {
+                        tab.search_visible.set(!tab.search_visible.get());
+                    }
                 }
                 return;
             }
 
-            // CMD+O / Ctrl+O - Open
+            // CMD+O / Ctrl+O - Open (context-aware)
             let is_o_key = matches!(
                 &key_event.key.logical_key,
                 Key::Character(c) if c.as_str().eq_ignore_ascii_case("o")
             );
             if is_cmd_or_ctrl && is_o_key {
-                open_file_dialog(editor_tabs_for_keyboard.clone());
+                match current_tab {
+                    0 => open_folder_dialog(browser_state_for_keyboard.clone()), // Browser - open folder
+                    1 => open_file_dialog(editor_tabs_for_keyboard.clone()),     // Editor - open file
+                    2 => extract_pak_file(pak_ops_state_for_keyboard.clone()),   // PAK Ops - extract PAK
+                    3 => open_gr2_file(gr2_state_for_keyboard.clone()),          // GR2 - open GR2 file
+                    4 => open_gts_file(vt_state_for_keyboard.clone()),           // Textures - open GTS file
+                    5 => {
+                        // Dyes - import from mod folder
+                        // Create temporary signals for display (actual data stored in state)
+                        let temp_name = RwSignal::new(String::new());
+                        let temp_display = RwSignal::new(String::new());
+                        let temp_mod_name = RwSignal::new(String::new());
+                        let temp_author = RwSignal::new(String::new());
+                        import_from_mod_folder(
+                            dyes_state_for_keyboard.clone(),
+                            temp_name, temp_display, temp_mod_name, temp_author
+                        );
+                    }
+                    _ => {} // Other tabs - no action
+                }
                 return;
             }
 
-            // CMD+S / Ctrl+S - Save
+            // CMD+S / Ctrl+S - Save (Editor tab only)
             let is_s_key = matches!(
                 &key_event.key.logical_key,
                 Key::Character(c) if c.as_str().eq_ignore_ascii_case("s")
             );
             if is_cmd_or_ctrl && is_s_key {
-                if let Some(tab) = editor_tabs_for_keyboard.active_tab() {
-                    // Only save if modified and not converted from LSF
-                    if tab.modified.get() && !tab.converted_from_lsf.get() {
-                        save_file(tab);
+                if current_tab == 1 {
+                    if let Some(tab) = editor_tabs_for_keyboard.active_tab() {
+                        // Only save if modified and not converted from LSF
+                        if tab.modified.get() && !tab.converted_from_lsf.get() {
+                            save_file(tab);
+                        }
                     }
                 }
+                return;
+            }
+
+            // Escape - close dialogs/overlays (handled by individual components)
+            // This provides a global hook point for future escape handling
+            if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
+                // Currently handled by individual dialog components
+                // Can add global escape handling here if needed
             }
         }
     })
@@ -167,7 +204,7 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
         tab_button("🔍 Search", 6, active_tab),
         empty().style(|s| s.flex_grow(1.0)),
         // App info
-        label(|| "MacPak v0.1.0")
+        label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION")))
             .style(|s| s.color(Color::rgb8(128, 128, 128)).font_size(12.0)),
     ))
     .style(|s| {

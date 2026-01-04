@@ -443,6 +443,13 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
 
     let pak_name_clone = pak_name.clone();
 
+    // Convert GUI compression enum to MacLarian compression enum
+    let mac_compression = match compression {
+        crate::gui::state::PakCompression::Lz4Hc => MacLarian::pak::CompressionMethod::Lz4, // LZ4 HC not yet supported, fall back to LZ4
+        crate::gui::state::PakCompression::Lz4 => MacLarian::pak::CompressionMethod::Lz4,
+        crate::gui::state::PakCompression::None => MacLarian::pak::CompressionMethod::None,
+    };
+
     thread::spawn(move || {
         // Collect source files for listing
         let source_path = std::path::Path::new(&source);
@@ -453,8 +460,7 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
             .filter_map(|e| e.path().strip_prefix(source_path).ok().map(|p| p.to_string_lossy().to_string()))
             .collect();
 
-        // TODO: Use compression and priority options when MacLarian supports them
-        let result = MacLarian::pak::PakOperations::create(&source, &dest);
+        let result = MacLarian::pak::PakOperations::create_with_compression(&source, &dest, mac_compression);
 
         let pak_result = match result {
             Ok(_) => {

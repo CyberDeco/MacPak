@@ -6,7 +6,7 @@ use std::io::{Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
-use super::{MAGIC, MAX_VERSION, PATH_LENGTH, TABLE_ENTRY_SIZE};
+use super::{CompressionMethod, MAGIC, MAX_VERSION, PATH_LENGTH, TABLE_ENTRY_SIZE};
 
 /// Progress callback type for write operations
 pub type WriteProgressCallback<'a> = &'a dyn Fn(usize, usize, &str);
@@ -35,6 +35,8 @@ pub struct LspkWriter {
     files: Vec<FileEntry>,
     /// PAK version to write
     version: u32,
+    /// Compression method to use
+    compression: CompressionMethod,
 }
 
 impl LspkWriter {
@@ -47,12 +49,19 @@ impl LspkWriter {
             root_path,
             files,
             version: MAX_VERSION, // Use latest supported version
+            compression: CompressionMethod::Lz4, // Default to LZ4
         })
     }
 
     /// Set the PAK version to write
     pub fn with_version(mut self, version: u32) -> Self {
         self.version = version;
+        self
+    }
+
+    /// Set the compression method to use
+    pub fn with_compression(mut self, compression: CompressionMethod) -> Self {
+        self.compression = compression;
         self
     }
 
@@ -139,10 +148,25 @@ impl LspkWriter {
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_else(|| file.relative_path.to_string_lossy().to_string());
 
-            progress(i + 1, total_files, &format!("Compressing {}", file_name));
+            let compress_label = match self.compression {
+                CompressionMethod::None => "Storing",
+                CompressionMethod::Lz4 => "Compressing",
+                CompressionMethod::Zlib => "Compressing",
+            };
+            progress(i + 1, total_files, &format!("{} {}", compress_label, file_name));
 
             let size_decompressed = file.data.len();
-            let compressed = lz4_flex::block::compress(&file.data);
+            let compressed = match self.compression {
+                CompressionMethod::None => file.data.clone(),
+                CompressionMethod::Lz4 => lz4_flex::block::compress(&file.data),
+                CompressionMethod::Zlib => {
+                    use flate2::write::ZlibEncoder;
+                    use flate2::Compression;
+                    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+                    encoder.write_all(&file.data)?;
+                    encoder.finish()?
+                }
+            };
             let size_compressed = compressed.len();
 
             // Validate sizes fit in u32

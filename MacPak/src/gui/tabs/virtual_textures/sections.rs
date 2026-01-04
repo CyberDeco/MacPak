@@ -194,3 +194,8 @@ fn select_and_extract_batch(state: VirtualTexturesState) {
         extract_batch(state);
     }
 }
+
+/// Public function to open a GTS file for extraction (CMD+O shortcut)
+pub fn open_gts_file(state: VirtualTexturesState) {
+    select_and_extract_single(state);
+}

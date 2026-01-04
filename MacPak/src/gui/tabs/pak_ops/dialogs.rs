@@ -1,6 +1,8 @@
 //! Dialog overlays for PAK operations
 
 use floem::action::exec_after;
+use floem::event::{Event, EventListener};
+use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::text::Weight;
 use floem::views::{text_input, virtual_list, VirtualDirection, VirtualItemSize};
@@ -287,6 +289,15 @@ pub fn create_options_dialog(state: PakOpsState) -> impl IntoView {
             s.display(floem::style::Display::None)
         }
     })
+    .on_event_stop(EventListener::KeyDown, move |e| {
+        if let Event::KeyDown(key_event) = e {
+            if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
+                state.show_create_options.set(false);
+                state.pending_create.set(None);
+            }
+        }
+    })
+    .keyboard_navigable()
 }
 
 /// Dialog shown when a file is dropped, asking what action to take
@@ -398,6 +409,15 @@ pub fn drop_action_dialog(state: PakOpsState) -> impl IntoView {
             s.display(floem::style::Display::None)
         }
     })
+    .on_event_stop(EventListener::KeyDown, move |e| {
+        if let Event::KeyDown(key_event) = e {
+            if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
+                state.show_drop_dialog.set(false);
+                state.dropped_file.set(None);
+            }
+        }
+    })
+    .keyboard_navigable()
 }
 
 /// Dialog for selecting individual files to extract from a PAK
@@ -414,6 +434,7 @@ pub fn file_select_dialog(state: PakOpsState) -> impl IntoView {
     let state_cancel = state.clone();
     let state_select_all = state.clone();
     let state_deselect = state.clone();
+    let state_escape = state.clone();
 
     // Filtered file list based on extension
     let filtered_files = move || {
@@ -653,4 +674,16 @@ pub fn file_select_dialog(state: PakOpsState) -> impl IntoView {
             s.display(floem::style::Display::None)
         }
     })
+    .on_event_stop(EventListener::KeyDown, move |e| {
+        if let Event::KeyDown(key_event) = e {
+            if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
+                state_escape.show_file_select.set(false);
+                state_escape.file_select_pak.set(None);
+                state_escape.file_select_list.set(Vec::new());
+                state_escape.file_select_selected.set(std::collections::HashSet::new());
+                state_escape.clear_results();
+            }
+        }
+    })
+    .keyboard_navigable()
 }

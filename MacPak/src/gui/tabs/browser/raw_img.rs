@@ -55,10 +55,7 @@ impl View for RawImg {
 
     fn layout(&mut self, cx: &mut floem::context::LayoutCx) -> taffy::tree::NodeId {
         cx.layout_node(self.id(), true, |_cx| {
-            if self.content_node.is_none() {
-                self.content_node = Some(self.id.new_taffy_node());
-            }
-            let content_node = self.content_node.unwrap();
+            let content_node = *self.content_node.get_or_insert_with(|| self.id.new_taffy_node());
 
             let (width, height) = self
                 .img

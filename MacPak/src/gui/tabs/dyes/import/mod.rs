@@ -11,7 +11,7 @@ use super::shared::secondary_button_style;
 use super::shared::constants::*;
 
 use components::{imported_fields_display, txt_import_selector, lsf_import_selector};
-use operations::import_from_mod_folder;
+pub use operations::import_from_mod_folder;
 
 /// Import section UI for loading existing dye definitions
 pub fn import_section(state: DyesState) -> impl IntoView {

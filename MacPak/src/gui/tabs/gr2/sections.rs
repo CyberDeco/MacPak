@@ -324,3 +324,8 @@ fn select_and_convert_gltf(state: Gr2State, batch: bool) {
         }
     }
 }
+
+/// Public function to open a GR2 file for conversion (CMD+O shortcut)
+pub fn open_gr2_file(state: Gr2State) {
+    select_and_convert_gr2(state, true, false);
+}

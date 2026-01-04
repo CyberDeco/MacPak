@@ -21,6 +21,7 @@ use toolbar::browser_toolbar;
 
 pub use preview_3d::kill_preview_process;
 pub use operations::cleanup_temp_files;
+pub use operations::open_folder_dialog;
 
 pub fn browser_tab(
     _app_state: AppState,

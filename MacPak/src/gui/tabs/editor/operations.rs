@@ -5,6 +5,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::gui::state::{EditorTab, EditorTabsState};
+use crate::gui::utils::show_file_error;
 use super::formatting::{format_json, format_xml};
 
 /// Threshold for large file warning (50,000 lines)
@@ -43,10 +44,13 @@ fn check_large_file(content: &str, path: &Path) -> Option<bool> {
 pub fn open_file_dialog(tabs_state: EditorTabsState) {
     let dialog = rfd::FileDialog::new()
         .set_title("Open File")
-        .add_filter("Larian Files", &["lsx", "lsf", "lsj"])
+        .add_filter("Larian Files", &["lsx", "lsf", "lsj", "lsfx", "loca"])
         .add_filter("LSX (XML)", &["lsx"])
         .add_filter("LSF (Binary)", &["lsf"])
         .add_filter("LSJ (JSON)", &["lsj"])
+        .add_filter("LOCA (XML)", &["loca"])
+        .add_filter("XML", &["xml"])
+        .add_filter("TXT", &["txt", "scene"])
         .add_filter("All Files", &["*"]);
 
     if let Some(path) = dialog.pick_file() {
@@ -58,16 +62,12 @@ pub fn open_file_dialog(tabs_state: EditorTabsState) {
         }
 
         // Check if current tab is empty (new, unmodified, no content)
-        let use_current = tabs_state.active_tab().map_or(false, |tab| {
-            tab.file_path.get().is_none()
-                && tab.content.get().is_empty()
-                && !tab.modified.get()
-        });
-
-        let tab = if use_current {
-            tabs_state.active_tab().unwrap()
-        } else {
-            tabs_state.new_tab()
+        // If so, reuse it; otherwise create a new tab
+        let tab = match tabs_state.active_tab() {
+            Some(active) if active.file_path.get().is_none()
+                && active.content.get().is_empty()
+                && !active.modified.get() => active,
+            _ => tabs_state.new_tab(),
         };
 
         load_file(&path, tab);
@@ -83,17 +83,13 @@ pub fn load_file_in_tab(path: &Path, tabs_state: EditorTabsState) {
         return;
     }
 
-    // Check if current tab is empty
-    let use_current = tabs_state.active_tab().map_or(false, |tab| {
-        tab.file_path.get().is_none()
-            && tab.content.get().is_empty()
-            && !tab.modified.get()
-    });
-
-    let tab = if use_current {
-        tabs_state.active_tab().unwrap()
-    } else {
-        tabs_state.new_tab()
+    // Check if current tab is empty (new, unmodified, no content)
+    // If so, reuse it; otherwise create a new tab
+    let tab = match tabs_state.active_tab() {
+        Some(active) if active.file_path.get().is_none()
+            && active.content.get().is_empty()
+            && !active.modified.get() => active,
+        _ => tabs_state.new_tab(),
     };
 
     load_file(path, tab);
@@ -135,8 +131,8 @@ pub fn load_file(path: &Path, tab: EditorTab) {
 
                     finalize_tab(formatted, false);
                 }
-                Err(_e) => {
-                    finalize_tab(String::new(), false);
+                Err(e) => {
+                    show_file_error(path, "Opening", &e.to_string());
                 }
             }
         }
@@ -156,12 +152,12 @@ pub fn load_file(path: &Path, tab: EditorTab) {
 
                     finalize_tab(formatted, false);
                 }
-                Err(_e) => {
-                    finalize_tab(String::new(), false);
+                Err(e) => {
+                    show_file_error(path, "Opening", &e.to_string());
                 }
             }
         }
-        "LSF" => {
+        "LSF" | "LSFX" => {
             // Binary format - convert to LSX for display using MacLarian
             match MacLarian::formats::lsf::read_lsf(path) {
                 Ok(lsf_doc) => match MacLarian::converter::to_lsx(&lsf_doc) {
@@ -231,8 +227,13 @@ pub fn load_file(path: &Path, tab: EditorTab) {
 
                     finalize_tab(content, false);
                 }
-                Err(_) => {
-                    finalize_tab("[Binary file - cannot display]".to_string(), false);
+                Err(e) => {
+                    // Check if it's a binary file (contains invalid UTF-8)
+                    if e.kind() == std::io::ErrorKind::InvalidData {
+                        show_file_error(path, "Opening", "This appears to be a binary file and cannot be displayed as text.");
+                    } else {
+                        show_file_error(path, "Opening", &e.to_string());
+                    }
                 }
             }
         }
@@ -240,14 +241,37 @@ pub fn load_file(path: &Path, tab: EditorTab) {
 }
 
 pub fn save_file(tab: EditorTab) {
-    if let Some(path) = tab.file_path.get() {
+    if let Some(path_str) = tab.file_path.get() {
+        let path = Path::new(&path_str);
         let content = tab.content.get();
-        match fs::write(&path, &content) {
+        let format = tab.file_format.get().to_uppercase();
+        let converted_from_binary = tab.converted_from_lsf.get();
+
+        let result = if (format == "LSF" || format == "LSFX") && converted_from_binary {
+            // Convert XML back to LSF binary
+            match MacLarian::converter::from_lsx(&content) {
+                Ok(lsf_doc) => MacLarian::formats::lsf::write_lsf(&lsf_doc, path)
+                    .map_err(|e| e.to_string()),
+                Err(e) => Err(format!("Failed to parse LSX: {}", e)),
+            }
+        } else if format == "LOCA" && converted_from_binary {
+            // Convert XML back to LOCA binary
+            match MacLarian::converter::loca_from_xml(&content) {
+                Ok(resource) => MacLarian::formats::loca::write_loca(path, &resource)
+                    .map_err(|e| e.to_string()),
+                Err(e) => Err(format!("Failed to parse LOCA XML: {}", e)),
+            }
+        } else {
+            // Write as plain text
+            fs::write(path, &content).map_err(|e| e.to_string())
+        };
+
+        match result {
             Ok(_) => {
                 tab.modified.set(false);
             }
-            Err(_e) => {
-                // Error handling without status_message on tab
+            Err(e) => {
+                show_file_error(path, "Saving", &e);
             }
         }
     }
@@ -273,8 +297,8 @@ pub fn save_file_as_dialog(tab: EditorTab) {
                     tab.file_format.set(ext.to_uppercase());
                 }
             }
-            Err(_e) => {
-                // Error handling
+            Err(e) => {
+                show_file_error(&path, "Saving", &e.to_string());
             }
         }
     }
@@ -291,7 +315,7 @@ pub fn validate_content(tab: EditorTab, status_message: RwSignal<String>) {
     }
 
     let result = match format.as_str() {
-        "LSX" | "LSF" => match roxmltree::Document::parse(&content) {
+        "LSX" | "LSF" | "LSFX" | "LOCA" => match roxmltree::Document::parse(&content) {
             Ok(_) => Ok("Valid XML structure"),
             Err(e) => Err(format!("Invalid XML: {}", e)),
         },

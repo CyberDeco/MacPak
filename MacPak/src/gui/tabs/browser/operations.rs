@@ -7,6 +7,7 @@ use floem::prelude::*;
 
 use crate::gui::state::{BrowserState, EditorTabsState, FileEntry, RawImageData, SortColumn};
 use crate::gui::tabs::load_file_in_tab;
+use crate::gui::utils::show_file_error;
 
 /// Format file size for display
 pub fn format_size(bytes: u64) -> String {
@@ -474,7 +475,7 @@ pub fn perform_rename(old_path: &str, new_name: &str, state: BrowserState) {
             refresh(state);
         }
         Err(e) => {
-            state.status_message.set(format!("Rename failed: {}", e));
+            show_file_error(old_path_obj, "Renaming", &e.to_string());
         }
     }
 }
@@ -496,7 +497,7 @@ pub fn delete_file(path: &str, state: BrowserState) {
             refresh(state);
         }
         Err(e) => {
-            state.status_message.set(format!("Delete failed: {}", e));
+            show_file_error(path_obj, "Deleting", &e.to_string());
         }
     }
 }

@@ -9,6 +9,8 @@ mod extraction;
 mod sections;
 pub mod types;
 
+pub use sections::open_gts_file;
+
 use floem::prelude::*;
 use floem::style::Position;
 

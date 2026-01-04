@@ -2,11 +2,28 @@
 //!
 //! A reusable dialog for generating meta.lsx files.
 
+use floem::event::{Event, EventListener};
+use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::text::Weight;
 use floem::views::PlaceholderTextClass;
 
 use super::{meta_generator, generate_uuid, UuidFormat};
+
+/// Check if a string is a valid UUID format (8-4-4-4-12 hex chars with dashes)
+fn is_valid_uuid(s: &str) -> bool {
+    let parts: Vec<&str> = s.split('-').collect();
+    if parts.len() != 5 {
+        return false;
+    }
+    let expected_lens = [8, 4, 4, 4, 12];
+    for (part, &expected_len) in parts.iter().zip(expected_lens.iter()) {
+        if part.len() != expected_len || !part.chars().all(|c| c.is_ascii_hexdigit()) {
+            return false;
+        }
+    }
+    true
+}
 
 /// Convert a string to snake_case format
 fn to_snake_case(s: &str) -> String {
@@ -190,6 +207,13 @@ where
                                         .border_color(Color::rgb8(200, 200, 200))
                                         .border_radius(4.0)
                                         .font_family("monospace".to_string())
+                                })
+                                .on_event(floem::event::EventListener::FocusLost, move |_| {
+                                    // Validate UUID format on focus lost, regenerate if invalid
+                                    if !is_valid_uuid(&uuid.get()) {
+                                        uuid.set(generate_uuid(UuidFormat::Standard));
+                                    }
+                                    floem::event::EventPropagation::Continue
                                 }),
                             {
                                 let uuid = uuid;
@@ -334,6 +358,15 @@ where
             s.display(floem::style::Display::None)
         }
     })
+    .on_event_stop(EventListener::KeyDown, move |e| {
+        // Close dialog on Escape key
+        if let Event::KeyDown(key_event) = e {
+            if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
+                show.set(false);
+            }
+        }
+    })
+    .keyboard_navigable()
 }
 
 fn meta_text_field(
