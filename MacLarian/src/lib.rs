@@ -15,6 +15,7 @@ pub mod compression;
 pub mod converter;
 pub mod utils;
 pub mod merged;
+pub mod gr2_extraction;
 
 // Re-exports for convenience
 pub use error::{Error, Result};
@@ -31,6 +32,10 @@ pub mod prelude {
     pub use crate::pak::PakOperations;
     pub use crate::converter;
     pub use crate::merged::{MergedResolver, MergedDatabase, VisualAsset};
+    pub use crate::gr2_extraction::{
+        Gr2ExtractionOptions, Gr2ExtractionResult,
+        process_extracted_gr2, extract_gr2_with_textures,
+    };
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

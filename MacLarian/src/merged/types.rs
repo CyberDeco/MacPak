@@ -105,6 +105,9 @@ pub struct MaterialDef {
     pub source_pak: String,
     /// Texture parameter IDs (GUID references to TextureBank)
     pub texture_ids: Vec<TextureParam>,
+    /// Virtual texture parameter IDs (GUID references to VirtualTextureBank)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub virtual_texture_ids: Vec<String>,
 }
 
 /// A texture parameter within a material
@@ -247,9 +250,17 @@ impl MergedDatabase {
                 }
             }
 
-            // Find virtual texture by EXACT name match
-            if let Some(vt) = virtual_textures.values().find(|vt| vt.name == visual.name) {
-                resolved_vts.push(vt.clone());
+            // Resolve virtual textures through material's virtual_texture_ids
+            for mat_id in &visual.material_ids {
+                if let Some(material) = materials.get(mat_id) {
+                    for vt_id in &material.virtual_texture_ids {
+                        if let Some(vt) = virtual_textures.get(vt_id) {
+                            if !resolved_vts.iter().any(|v: &VirtualTextureRef| v.id == vt.id) {
+                                resolved_vts.push(vt.clone());
+                            }
+                        }
+                    }
+                }
             }
 
             visual.textures = resolved_textures;

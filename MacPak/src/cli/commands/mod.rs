@@ -118,6 +118,32 @@ pub enum Gr2Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
+
+    /// Convert GR2 to GLB and extract associated textures
+    Bundle {
+        /// Source GR2 file
+        path: PathBuf,
+
+        /// Output directory (defaults to same directory as GR2)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Path to BG3 game data folder (for Textures.pak)
+        #[arg(long)]
+        game_data: Option<PathBuf>,
+
+        /// Path to pre-extracted virtual textures (GTP/GTS files)
+        #[arg(long)]
+        virtual_textures: Option<PathBuf>,
+
+        /// Skip GLB conversion (only extract textures)
+        #[arg(long)]
+        no_glb: bool,
+
+        /// Skip texture extraction (only convert to GLB)
+        #[arg(long)]
+        no_textures: bool,
+    },
 }
 
 /// Virtual Texture (GTS/GTP) commands
@@ -213,6 +239,16 @@ impl Gr2Commands {
             }
             Gr2Commands::FromGltf { path, output } => {
                 gr2::convert_to_gr2(path, output.as_deref())
+            }
+            Gr2Commands::Bundle { path, output, game_data, virtual_textures, no_glb, no_textures } => {
+                gr2::bundle(
+                    path,
+                    output.as_deref(),
+                    game_data.as_deref(),
+                    virtual_textures.as_deref(),
+                    *no_glb,
+                    *no_textures,
+                )
             }
         }
     }

@@ -110,6 +110,7 @@ fn parse_material_resource(node: &LsxNode) -> Option<MaterialDef> {
     let mut name = String::new();
     let mut source_file = String::new();
     let mut texture_ids = Vec::new();
+    let mut virtual_texture_ids = Vec::new();
 
     for attr in &node.attributes {
         match attr.id.as_str() {
@@ -140,6 +141,15 @@ fn parse_material_resource(node: &LsxNode) -> Option<MaterialDef> {
                     texture_id: tex_id,
                 });
             }
+        } else if child.id == "VirtualTextureParameters" {
+            // Extract virtual texture references
+            for attr in &child.attributes {
+                if attr.id == "ID" && !attr.value.is_empty() {
+                    if !virtual_texture_ids.contains(&attr.value) {
+                        virtual_texture_ids.push(attr.value.clone());
+                    }
+                }
+            }
         }
     }
 
@@ -153,6 +163,7 @@ fn parse_material_resource(node: &LsxNode) -> Option<MaterialDef> {
         source_file,
         source_pak: String::new(),
         texture_ids,
+        virtual_texture_ids,
     })
 }
 
@@ -289,9 +300,17 @@ pub fn resolve_references(db: &mut MergedDatabase) {
             }
         }
 
-        // Find virtual texture by EXACT name match
-        if let Some(vt) = virtual_textures.values().find(|vt| vt.name == visual.name) {
-            resolved_vts.push(vt.clone());
+        // Resolve virtual textures through material's virtual_texture_ids
+        for mat_id in &visual.material_ids {
+            if let Some(material) = materials.get(mat_id) {
+                for vt_id in &material.virtual_texture_ids {
+                    if let Some(vt) = virtual_textures.get(vt_id) {
+                        if !resolved_vts.iter().any(|v: &VirtualTextureRef| v.id == vt.id) {
+                            resolved_vts.push(vt.clone());
+                        }
+                    }
+                }
+            }
         }
 
         visual.textures = resolved_textures;

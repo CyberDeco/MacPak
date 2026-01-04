@@ -4,6 +4,7 @@
 
 use std::path::Path;
 use crate::operations::gr2 as gr2_ops;
+use MacLarian::gr2_extraction::{process_extracted_gr2, Gr2ExtractionOptions};
 
 /// Inspect a GR2 file and display its structure.
 pub fn inspect(path: &Path) -> anyhow::Result<()> {
@@ -147,6 +148,95 @@ pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     println!();
     println!("Conversion complete!");
     println!("  Output size: {} bytes", output_size);
+
+    Ok(())
+}
+
+/// Bundle a GR2 file: convert to GLB and extract associated textures.
+pub fn bundle(
+    path: &Path,
+    output: Option<&Path>,
+    game_data: Option<&Path>,
+    virtual_textures: Option<&Path>,
+    no_glb: bool,
+    no_textures: bool,
+) -> anyhow::Result<()> {
+    // Determine output directory
+    let output_dir = if let Some(out) = output {
+        out.to_path_buf()
+    } else {
+        path.parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+    };
+
+    println!("Bundling GR2 file with textures...");
+    println!("  Source:     {}", path.display());
+    println!("  Output dir: {}", output_dir.display());
+
+    // Build options
+    let mut options = Gr2ExtractionOptions::default();
+
+    if no_glb {
+        options = options.no_conversion();
+        println!("  GLB conversion: disabled");
+    }
+
+    if no_textures {
+        options = options.no_textures();
+        println!("  Texture extraction: disabled");
+    }
+
+    if let Some(gd) = game_data {
+        options = options.with_game_data_path(gd);
+        println!("  Game data: {}", gd.display());
+    }
+
+    if let Some(vt) = virtual_textures {
+        options = options.with_virtual_textures_path(vt);
+        println!("  Virtual textures: {}", vt.display());
+    }
+
+    println!();
+
+    // If output dir is different from source dir, copy GR2 there first
+    let gr2_in_output = if output_dir != path.parent().unwrap_or(Path::new("")) {
+        std::fs::create_dir_all(&output_dir)?;
+        let dest = output_dir.join(path.file_name().unwrap_or_default());
+        std::fs::copy(path, &dest)?;
+        dest
+    } else {
+        path.to_path_buf()
+    };
+
+    // Process the GR2
+    let result = process_extracted_gr2(&gr2_in_output, &options)?;
+
+    // Report results
+    println!("Bundle complete!");
+    println!();
+
+    if let Some(glb) = &result.glb_path {
+        let size = std::fs::metadata(glb).map(|m| m.len()).unwrap_or(0);
+        println!("  GLB: {} ({} bytes)", glb.file_name().unwrap_or_default().to_string_lossy(), size);
+    }
+
+    if !result.texture_paths.is_empty() {
+        println!("  Textures extracted: {}", result.texture_paths.len());
+        for tex_path in &result.texture_paths {
+            println!("    - {}", tex_path.file_name().unwrap_or_default().to_string_lossy());
+        }
+    } else if !no_textures {
+        println!("  Textures: none found in database");
+    }
+
+    if !result.warnings.is_empty() {
+        println!();
+        println!("Warnings:");
+        for warning in &result.warnings {
+            println!("  - {}", warning);
+        }
+    }
 
     Ok(())
 }
