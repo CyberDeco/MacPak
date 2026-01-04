@@ -1,134 +1,18 @@
-//! glTF 2.0 structures and builder.
+//! glTF 2.0 document builder.
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-use serde::Serialize;
-
 use crate::error::{Error, Result};
-use super::gr2_reader::{MeshData, Skeleton};
-use super::utils::decode_qtangent;
+use crate::converter::gr2_to_gltf::gr2_reader::{MeshData, Skeleton};
+use crate::converter::gr2_to_gltf::utils::decode_qtangent;
 
-// ============================================================================
-// glTF Structures
-// ============================================================================
+use super::types::*;
+use super::materials::*;
 
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfAsset {
-    pub version: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub generator: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfScene {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub nodes: Vec<usize>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfNode {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mesh: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub skin: Option<usize>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub children: Vec<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub translation: Option<[f32; 3]>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rotation: Option<[f32; 4]>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scale: Option<[f32; 3]>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfSkin {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(rename = "inverseBindMatrices")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub inverse_bind_matrices: Option<usize>,
-    pub joints: Vec<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub skeleton: Option<usize>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfMesh {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    pub primitives: Vec<GltfPrimitive>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfPrimitive {
-    pub attributes: HashMap<String, usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indices: Option<usize>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfAccessor {
-    #[serde(rename = "bufferView")]
-    pub buffer_view: usize,
-    #[serde(rename = "componentType")]
-    pub component_type: u32,
-    pub count: usize,
-    #[serde(rename = "type")]
-    pub accessor_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub min: Option<Vec<f32>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub max: Option<Vec<f32>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub normalized: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfBufferView {
-    pub buffer: usize,
-    #[serde(rename = "byteOffset")]
-    pub byte_offset: usize,
-    #[serde(rename = "byteLength")]
-    pub byte_length: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub target: Option<u32>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfBuffer {
-    #[serde(rename = "byteLength")]
-    pub byte_length: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub uri: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct GltfDocument {
-    pub asset: GltfAsset,
-    pub scene: usize,
-    pub scenes: Vec<GltfScene>,
-    pub nodes: Vec<GltfNode>,
-    pub meshes: Vec<GltfMesh>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub skins: Vec<GltfSkin>,
-    pub accessors: Vec<GltfAccessor>,
-    #[serde(rename = "bufferViews")]
-    pub buffer_views: Vec<GltfBufferView>,
-    pub buffers: Vec<GltfBuffer>,
-}
-
-// ============================================================================
-// glTF Builder
-// ============================================================================
-
+/// Builder for constructing glTF documents.
 pub struct GltfBuilder {
     buffer: Vec<u8>,
     buffer_views: Vec<GltfBufferView>,
@@ -136,6 +20,10 @@ pub struct GltfBuilder {
     meshes: Vec<GltfMesh>,
     nodes: Vec<GltfNode>,
     skins: Vec<GltfSkin>,
+    images: Vec<GltfImage>,
+    textures: Vec<GltfTexture>,
+    samplers: Vec<GltfSampler>,
+    materials: Vec<GltfMaterial>,
     pub bone_node_offset: usize,
 }
 
@@ -148,6 +36,10 @@ impl GltfBuilder {
             meshes: Vec::new(),
             nodes: Vec::new(),
             skins: Vec::new(),
+            images: Vec::new(),
+            textures: Vec::new(),
+            samplers: Vec::new(),
+            materials: Vec::new(),
             bone_node_offset: 0,
         }
     }
@@ -156,6 +48,10 @@ impl GltfBuilder {
         let padding = (alignment - (self.buffer.len() % alignment)) % alignment;
         self.buffer.extend(std::iter::repeat(0u8).take(padding));
     }
+
+    // ========================================================================
+    // Vertex Attribute Methods
+    // ========================================================================
 
     fn add_positions(&mut self, positions: &[[f32; 3]]) -> usize {
         self.align(4);
@@ -459,6 +355,153 @@ impl GltfBuilder {
         acc_idx
     }
 
+    // ========================================================================
+    // Image/Texture/Material Methods
+    // ========================================================================
+
+    /// Add an embedded image (PNG bytes) to the GLB.
+    /// Returns the image index.
+    pub fn add_embedded_image(&mut self, png_data: &[u8], name: Option<String>) -> usize {
+        // Images don't need specific alignment, but we align to 4 for consistency
+        self.align(4);
+        let byte_offset = self.buffer.len();
+        self.buffer.extend_from_slice(png_data);
+
+        let bv_idx = self.buffer_views.len();
+        self.buffer_views.push(GltfBufferView {
+            buffer: 0,
+            byte_offset,
+            byte_length: png_data.len(),
+            target: None, // No target for images
+        });
+
+        let img_idx = self.images.len();
+        self.images.push(GltfImage {
+            buffer_view: bv_idx,
+            mime_type: "image/png".to_string(),
+            name,
+        });
+
+        img_idx
+    }
+
+    /// Add a texture sampler with default settings (linear filtering, repeat wrap).
+    /// Returns the sampler index.
+    pub fn add_sampler(&mut self) -> usize {
+        let sampler_idx = self.samplers.len();
+        self.samplers.push(GltfSampler::default());
+        sampler_idx
+    }
+
+    /// Add a custom texture sampler.
+    /// Returns the sampler index.
+    pub fn add_sampler_custom(&mut self, sampler: GltfSampler) -> usize {
+        let sampler_idx = self.samplers.len();
+        self.samplers.push(sampler);
+        sampler_idx
+    }
+
+    /// Add a texture referencing an image and optionally a sampler.
+    /// Returns the texture index.
+    pub fn add_texture(
+        &mut self,
+        image_index: usize,
+        sampler_index: Option<usize>,
+        name: Option<String>,
+    ) -> usize {
+        let tex_idx = self.textures.len();
+        self.textures.push(GltfTexture {
+            source: image_index,
+            sampler: sampler_index,
+            name,
+        });
+        tex_idx
+    }
+
+    /// Add a PBR material with optional textures.
+    ///
+    /// # Arguments
+    /// * `name` - Optional material name
+    /// * `base_color_texture` - Albedo/diffuse texture index
+    /// * `normal_texture` - Normal map texture index
+    /// * `metallic_roughness_texture` - Combined metallic-roughness texture index
+    /// * `occlusion_texture` - Ambient occlusion texture index
+    ///
+    /// Returns the material index.
+    pub fn add_material(
+        &mut self,
+        name: Option<String>,
+        base_color_texture: Option<usize>,
+        normal_texture: Option<usize>,
+        metallic_roughness_texture: Option<usize>,
+        occlusion_texture: Option<usize>,
+    ) -> usize {
+        let pbr = GltfPbrMetallicRoughness {
+            base_color_factor: Some([1.0, 1.0, 1.0, 1.0]),
+            base_color_texture: base_color_texture.map(|idx| GltfTextureInfo {
+                index: idx,
+                tex_coord: None,
+            }),
+            metallic_factor: Some(1.0),
+            roughness_factor: Some(1.0),
+            metallic_roughness_texture: metallic_roughness_texture.map(|idx| GltfTextureInfo {
+                index: idx,
+                tex_coord: None,
+            }),
+        };
+
+        let mat_idx = self.materials.len();
+        self.materials.push(GltfMaterial {
+            name,
+            pbr_metallic_roughness: Some(pbr),
+            normal_texture: normal_texture.map(|idx| GltfNormalTextureInfo {
+                index: idx,
+                scale: Some(1.0),
+                tex_coord: None,
+            }),
+            occlusion_texture: occlusion_texture.map(|idx| GltfOcclusionTextureInfo {
+                index: idx,
+                strength: Some(1.0),
+                tex_coord: None,
+            }),
+            emissive_texture: None,
+            emissive_factor: None,
+            alpha_mode: None,
+            alpha_cutoff: None,
+            double_sided: None,
+        });
+
+        mat_idx
+    }
+
+    /// Add a simple material with just a base color texture.
+    /// Returns the material index.
+    pub fn add_simple_material(
+        &mut self,
+        name: Option<String>,
+        base_color_texture: usize,
+    ) -> usize {
+        self.add_material(name, Some(base_color_texture), None, None, None)
+    }
+
+    /// Convenience method to add an image, create a texture for it, and return the texture index.
+    /// Also creates a default sampler if none exists.
+    pub fn add_image_as_texture(&mut self, png_data: &[u8], name: Option<String>) -> usize {
+        // Ensure we have at least one sampler
+        let sampler_idx = if self.samplers.is_empty() {
+            Some(self.add_sampler())
+        } else {
+            Some(0)
+        };
+
+        let image_idx = self.add_embedded_image(png_data, name.clone());
+        self.add_texture(image_idx, sampler_idx, name)
+    }
+
+    // ========================================================================
+    // Skeleton Methods
+    // ========================================================================
+
     pub fn add_skeleton(&mut self, skeleton: &Skeleton) -> usize {
         self.bone_node_offset = self.nodes.len();
 
@@ -514,7 +557,31 @@ impl GltfBuilder {
         skin_idx
     }
 
+    // ========================================================================
+    // Mesh Methods
+    // ========================================================================
+
     pub fn add_mesh(&mut self, mesh_data: &MeshData, skin_idx: Option<usize>) -> usize {
+        self.add_mesh_internal(mesh_data, skin_idx, None)
+    }
+
+    /// Add a mesh with an associated material.
+    /// Returns the node index.
+    pub fn add_mesh_with_material(
+        &mut self,
+        mesh_data: &MeshData,
+        skin_idx: Option<usize>,
+        material_idx: Option<usize>,
+    ) -> usize {
+        self.add_mesh_internal(mesh_data, skin_idx, material_idx)
+    }
+
+    fn add_mesh_internal(
+        &mut self,
+        mesh_data: &MeshData,
+        skin_idx: Option<usize>,
+        material_idx: Option<usize>,
+    ) -> usize {
         // Extract vertex attributes with X-axis negation for coordinate system conversion
         let positions: Vec<[f32; 3]> = mesh_data.vertices.iter()
             .map(|v| [-v.position[0], v.position[1], v.position[2]])
@@ -587,6 +654,7 @@ impl GltfBuilder {
             primitives: vec![GltfPrimitive {
                 attributes,
                 indices: indices_idx,
+                material: material_idx,
             }],
         });
 
@@ -604,6 +672,19 @@ impl GltfBuilder {
 
         node_idx
     }
+
+    /// Set material for an existing mesh (by mesh index).
+    pub fn set_mesh_material(&mut self, mesh_idx: usize, material_idx: usize) {
+        if let Some(mesh) = self.meshes.get_mut(mesh_idx) {
+            for prim in &mut mesh.primitives {
+                prim.material = Some(material_idx);
+            }
+        }
+    }
+
+    // ========================================================================
+    // Export Methods
+    // ========================================================================
 
     fn build_document(self, root_bone_idx: Option<usize>, buffer_uri: Option<String>) -> (GltfDocument, Vec<u8>) {
         let mut scene_nodes = Vec::new();
@@ -631,6 +712,10 @@ impl GltfBuilder {
             nodes: self.nodes,
             meshes: self.meshes,
             skins: self.skins,
+            materials: self.materials,
+            textures: self.textures,
+            images: self.images,
+            samplers: self.samplers,
             accessors: self.accessors,
             buffer_views: self.buffer_views,
             buffers: vec![GltfBuffer {

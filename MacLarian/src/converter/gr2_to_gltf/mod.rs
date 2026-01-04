@@ -3,11 +3,11 @@
 //! Converts Granny2 GR2 files to glTF 2.0 format.
 
 mod gr2_reader;
-mod gltf_builder;
+mod gltf;
 mod utils;
 
 pub use gr2_reader::{Gr2Reader, MeshData, Vertex, Skeleton, Bone, Transform, Gr2ContentInfo};
-pub use gltf_builder::GltfBuilder;
+pub use gltf::GltfBuilder;
 pub use utils::{half_to_f32, decode_qtangent};
 
 use std::path::Path;
