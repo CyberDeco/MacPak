@@ -489,12 +489,12 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
             // Create syntax highlighting based on file format
             let styling = SyntaxStyling::new(&text, &format);
 
-            container(
-                text_editor(text)
+            {
+                let editor_view = text_editor(text)
                     .styling(styling)
                     .editor_style(move |s| s.hide_gutter(!show_lines))
                     .style(move |s| {
-                        let s = s.width_full().flex_grow(1.0);
+                        let s = s.width_full().height_full();
                         if show_lines {
                             s
                         } else {
@@ -547,12 +547,18 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
                             }
                             current_rev
                         });
-                    })
-            )
-            .style(|s| s.width_full().flex_grow(1.0))
+                    });
+
+                // Get the editor view ID and request layout on resize
+                let editor_id = editor_view.id();
+                editor_view.on_resize(move |_rect| {
+                    editor_id.request_layout();
+                })
+            }
+            .style(|s| s.size_full().flex_grow(1.0))
         },
     )
-    .style(|s| s.width_full().flex_grow(1.0))
+    .style(|s| s.size_full().flex_grow(1.0))
 }
 
 pub fn editor_status_bar(tabs_state: EditorTabsState) -> impl IntoView {

@@ -467,8 +467,8 @@ pub struct SyntaxStyling {
 impl SyntaxStyling {
     pub fn new(text: &str, format: &str) -> Self {
         let tokens = match format.to_uppercase().as_str() {
-            "LSX" | "LSF" | "LSFX" | "LOCA" => tokenize_xml(text),
-            "LSJ" => tokenize_json(text),
+            "LSX" | "LSF" | "LSFX" | "LOCA" | "XML" => tokenize_xml(text),
+            "LSJ" | "JSON" => tokenize_json(text),
             _ => Vec::new(),
         };
 

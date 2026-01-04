@@ -67,7 +67,7 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
                         search_panel(tab.clone()),
                         editor_content(tab.clone(), show_line_numbers),
                     ))
-                    .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).min_height(0.0))
+                    .style(|s| s.width_full().min_width(0.0).flex_grow(1.0).flex_basis(0.0).min_height(0.0))
                     .into_any()
                 } else {
                     // Empty state with drop hint
@@ -80,6 +80,7 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
                     .style(|s| {
                         s.flex_grow(1.0)
                             .width_full()
+                            .min_width(0.0)
                             .items_center()
                             .justify_center()
                             .gap(8.0)
@@ -88,7 +89,7 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
                 }
             },
         )
-        .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).min_height(0.0)),
+        .style(|s| s.width_full().min_width(0.0).flex_grow(1.0).flex_basis(0.0).min_height(0.0)),
         editor_status_bar(tabs_state_status),
         // Dialog overlay - uses shared meta_dialog from utils
         meta_dialog(tabs_state.show_meta_dialog, None, on_meta_create, Some(tabs_state.status_message)),

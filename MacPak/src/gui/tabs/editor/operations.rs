@@ -51,6 +51,7 @@ pub fn open_file_dialog(tabs_state: EditorTabsState) {
         .add_filter("LOCA (XML)", &["loca"])
         .add_filter("XML", &["xml"])
         .add_filter("TXT", &["txt", "scene"])
+        .add_filter("JSON", &["json"])
         .add_filter("All Files", &["*"]);
 
     if let Some(path) = dialog.pick_file() {
@@ -176,11 +177,11 @@ pub fn load_file(path: &Path, tab: EditorTab) {
                         finalize_tab(formatted, true);
                     }
                     Err(e) => {
-                        finalize_tab(format!("<!-- Error converting LSF to LSX: {} -->", e), false);
+                        finalize_tab(format!("<!-- Error converting {} to LSX: {} -->", ext, e), false);
                     }
                 },
                 Err(e) => {
-                    finalize_tab(format!("<!-- Error reading LSF: {} -->", e), false);
+                    finalize_tab(format!("<!-- Error reading {}: {} -->", ext, e), false);
                 }
             }
         }
@@ -208,11 +209,11 @@ pub fn load_file(path: &Path, tab: EditorTab) {
                         tab.converted_from_lsf.set(true); // Reuse flag for "converted from binary"
                     }
                     Err(e) => {
-                        finalize_tab(format!("<!-- Error converting LOCA to XML: {} -->", e), false);
+                        finalize_tab(format!("<!-- Error converting {} to XML: {} -->", ext, e), false);
                     }
                 },
                 Err(e) => {
-                    finalize_tab(format!("<!-- Error reading LOCA: {} -->", e), false);
+                    finalize_tab(format!("<!-- Error reading {}: {} -->", ext, e), false);
                 }
             }
         }
