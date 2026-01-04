@@ -480,7 +480,8 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
     let goto_offset = tab.goto_offset;
     let search_visible = tab.search_visible;
 
-    // Track file path + format to know when to recreate editor (not on every content change)
+    // Recreate editor when file changes or line number toggle changes
+    // Width/resize is handled automatically by floem's reactive viewport tracking
     dyn_container(
         move || (file_path.get(), show_line_numbers.get(), file_format.get()),
         move |(_path, show_lines, format)| {
@@ -489,73 +490,84 @@ pub fn editor_content(tab: EditorTab, show_line_numbers: RwSignal<bool>) -> impl
             // Create syntax highlighting based on file format
             let styling = SyntaxStyling::new(&text, &format);
 
-            {
-                let editor_view = text_editor(text)
-                    .styling(styling)
-                    .editor_style(move |s| s.hide_gutter(!show_lines))
-                    .style(move |s| {
-                        let s = s.width_full().height_full();
-                        if show_lines {
-                            s
-                        } else {
-                            s.padding_left(12.0)
-                        }
-                    })
-                    .placeholder("Open a file to start editing...")
-                    .on_event_cont(EventListener::KeyDown, move |e| {
-                        // Intercept CMD+F / Ctrl+F before the editor handles it
-                        if let Event::KeyDown(key_event) = e {
-                            let is_named_find = key_event.key.logical_key == Key::Named(NamedKey::Find);
-                            let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
-                                || key_event.modifiers.contains(Modifiers::CONTROL);
-                            let is_f_key = matches!(
-                                &key_event.key.logical_key,
-                                Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
-                            );
+            text_editor(text)
+                .styling(styling)
+                .editor_style(move |s| s.hide_gutter(!show_lines))
+                .style(move |s| {
+                    let s = s.width_full().height_full();
+                    if show_lines {
+                        s
+                    } else {
+                        s.padding_left(12.0)
+                    }
+                })
+                .placeholder("Open a file to start editing...")
+                .on_event_cont(EventListener::KeyDown, move |e| {
+                    // Intercept CMD+F / Ctrl+F before the editor handles it
+                    if let Event::KeyDown(key_event) = e {
+                        let is_named_find = key_event.key.logical_key == Key::Named(NamedKey::Find);
+                        let is_cmd_or_ctrl = key_event.modifiers.contains(Modifiers::META)
+                            || key_event.modifiers.contains(Modifiers::CONTROL);
+                        let is_f_key = matches!(
+                            &key_event.key.logical_key,
+                            Key::Character(c) if c.as_str().eq_ignore_ascii_case("f")
+                        );
 
-                            if is_named_find || (is_cmd_or_ctrl && is_f_key) {
-                                search_visible.set(!search_visible.get());
+                        if is_named_find || (is_cmd_or_ctrl && is_f_key) {
+                            search_visible.set(!search_visible.get());
+                        }
+                    }
+                })
+                .with_editor(move |editor| {
+                    let cursor = editor.cursor;
+
+                    // Workaround for floem text_editor not re-wrapping on width expansion.
+                    // Watch parent_size (which tracks the container) and update viewport
+                    // when it expands. Floem's internal effect will handle the rest.
+                    let parent_size = editor.parent_size;
+                    let viewport = editor.viewport;
+                    floem::reactive::create_effect(move |prev_width: Option<f64>| {
+                        let current_width = parent_size.get().width();
+                        if let Some(prev) = prev_width {
+                            if current_width > prev {
+                                // Container expanded - update viewport to match parent
+                                let mut vp = viewport.get();
+                                vp = vp.with_size((current_width, vp.height()));
+                                viewport.set(vp);
                             }
                         }
-                    })
-                    .with_editor(move |editor| {
-                        // Set up reactive effect to jump to offset when goto_offset changes
-                        let cursor = editor.cursor;
-                        let editor_clone = editor.clone();
-                        floem::reactive::create_effect(move |_| {
-                            if let Some(offset) = goto_offset.get() {
-                                // Move cursor to the match offset
-                                cursor.update(|c| c.set_offset(offset, false, false));
-                                // Center the view on the new cursor position
-                                editor_clone.center_window();
-                                // Clear the goto_offset so it doesn't keep triggering
-                                goto_offset.set(None);
-                            }
-                        });
-
-                        // Sync editor content back to tab.content when document changes
-                        let doc = editor.doc();
-                        let cache_rev = doc.cache_rev();
-                        let editor_for_sync = editor.clone();
-                        floem::reactive::create_effect(move |prev_rev: Option<u64>| {
-                            let current_rev = cache_rev.get();
-                            // Only sync if revision changed (actual edit occurred)
-                            if prev_rev.is_some() && prev_rev != Some(current_rev) {
-                                let new_text = editor_for_sync.doc().text().to_string();
-                                content.set(new_text);
-                                state_change.set(true);
-                            }
-                            current_rev
-                        });
+                        current_width
                     });
 
-                // Get the editor view ID and request layout on resize
-                let editor_id = editor_view.id();
-                editor_view.on_resize(move |_rect| {
-                    editor_id.request_layout();
+                    // Set up reactive effect to jump to offset when goto_offset changes
+                    let editor_clone = editor.clone();
+                    floem::reactive::create_effect(move |_| {
+                        if let Some(offset) = goto_offset.get() {
+                            // Move cursor to the match offset
+                            cursor.update(|c| c.set_offset(offset, false, false));
+                            // Center the view on the new cursor position
+                            editor_clone.center_window();
+                            // Clear the goto_offset so it doesn't keep triggering
+                            goto_offset.set(None);
+                        }
+                    });
+
+                    // Sync editor content back to tab.content when document changes
+                    let doc = editor.doc();
+                    let cache_rev = doc.cache_rev();
+                    let editor_for_sync = editor.clone();
+                    floem::reactive::create_effect(move |prev_rev: Option<u64>| {
+                        let current_rev = cache_rev.get();
+                        // Only sync if revision changed (actual edit occurred)
+                        if prev_rev.is_some() && prev_rev != Some(current_rev) {
+                            let new_text = editor_for_sync.doc().text().to_string();
+                            content.set(new_text);
+                            state_change.set(true);
+                        }
+                        current_rev
+                    });
                 })
-            }
-            .style(|s| s.size_full().flex_grow(1.0))
+                .style(|s| s.size_full().flex_grow(1.0))
         },
     )
     .style(|s| s.size_full().flex_grow(1.0))
