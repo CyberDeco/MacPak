@@ -527,11 +527,12 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
     let tab_for_save = tab.clone();
     let tabs_state_for_open = tabs_state.clone();
 
-    // Recreate editor when file changes or line number toggle changes
-    // Width/resize is handled automatically by floem's reactive viewport tracking
+    // Recreate editor when file changes
+    // Width/resize and line numbers are handled reactively
     dyn_container(
-        move || (file_path.get(), show_line_numbers.get(), file_format.get()),
-        move |(_path, show_lines, format)| {
+        move || (file_path.get(), file_format.get()),
+        move |(_path, format)| {
+            let show_lines = show_line_numbers;
             let text = content.get();
             let state_change = modified;
             // Create syntax highlighting based on file format
@@ -584,10 +585,10 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
 
             text_editor_keys(text, key_handler)
                 .styling(styling)
-                .editor_style(move |s| s.hide_gutter(!show_lines))
+                .editor_style(move |s| s.hide_gutter(!show_lines.get()))
                 .style(move |s| {
                     let s = s.width_full().height_full();
-                    if show_lines {
+                    if show_lines.get() {
                         s
                     } else {
                         s.padding_left(12.0)

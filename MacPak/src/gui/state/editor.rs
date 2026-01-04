@@ -27,6 +27,12 @@ pub struct EditorTab {
     pub goto_offset: RwSignal<Option<usize>>,
 }
 
+impl PartialEq for EditorTab {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 impl EditorTab {
     pub fn new(id: u64) -> Self {
         Self {
