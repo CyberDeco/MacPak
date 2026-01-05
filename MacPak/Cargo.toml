@@ -41,6 +41,8 @@ gui = [
     "dep:md5",
     "dep:roxmltree",
     "dep:im",
+    "dep:muda",
+    "dep:dispatch",
 ]
 cli = [
     "dep:clap",
@@ -81,6 +83,8 @@ sha2 = { version = "0.10", optional = true }
 md5 = { version = "0.7", optional = true }
 roxmltree = { version = "0.20", optional = true }
 im = { version = "15.1", optional = true }
+muda = { version = "0.15", optional = true }
+dispatch = { version = "0.2", optional = true }
 
 # CLI dependencies (optional)
 clap = { version = "4.4", features = ["derive", "cargo"], optional = true }
