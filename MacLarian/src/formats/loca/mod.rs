@@ -6,7 +6,7 @@
 mod reader;
 mod writer;
 
-pub use reader::read_loca;
+pub use reader::{read_loca, parse_loca_bytes};
 pub use writer::write_loca;
 
 /// "LOCA" magic signature (little-endian)

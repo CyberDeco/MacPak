@@ -28,6 +28,7 @@ use tabs::pak_ops::extract_pak_file;
 use tabs::gr2::open_gr2_file;
 use tabs::virtual_textures::open_gts_file;
 use tabs::dyes::import_from_mod_folder;
+use utils::config_dialog;
 
 /// Run the MacPak GUI application
 pub fn run_app() {
@@ -46,6 +47,7 @@ pub fn run_app() {
 fn app_view() -> impl IntoView {
     // Initialize all state
     let app_state = AppState::new();
+    let config_state = ConfigState::new();
     let editor_tabs_state = EditorTabsState::new();
     let browser_state = BrowserState::new();
     let pak_ops_state = PakOpsState::new();
@@ -53,11 +55,13 @@ fn app_view() -> impl IntoView {
     let gr2_state = Gr2State::new();
     let vt_state = VirtualTexturesState::new();
     let dyes_state = DyesState::new();
+    let dialogue_state = DialogueState::new();
 
     let active_tab = app_state.active_tab;
+    let config_state_for_keyboard = config_state.clone();
 
-    // Set up native macOS menu with CMD+F shortcut
-    native_menu::setup_native_menu(editor_tabs_state.clone(), active_tab);
+    // Set up native macOS menu with Preferences
+    native_menu::setup_native_menu(editor_tabs_state.clone(), active_tab, config_state.clone());
 
     let editor_tabs_for_keyboard = editor_tabs_state.clone();
     let editor_tabs_for_close = editor_tabs_state.clone();
@@ -66,6 +70,7 @@ fn app_view() -> impl IntoView {
     let gr2_state_for_keyboard = gr2_state.clone();
     let vt_state_for_keyboard = vt_state.clone();
     let dyes_state_for_keyboard = dyes_state.clone();
+    let dialogue_state_for_keyboard = dialogue_state.clone();
 
     v_stack((
         // Tab bar
@@ -82,10 +87,20 @@ fn app_view() -> impl IntoView {
             vt_state,
             dyes_state,
             search_state,
+            dialogue_state,
         ),
+
+        // Config dialog (overlays when visible)
+        config_dialog(config_state.clone()),
     ))
-    .style(|s| s.width_full().height_full())
+    .style(|s| s.width_full().height_full().position(floem::style::Position::Relative))
     .window_title(|| "MacPak".to_string())
+    // Signal that app is ready once the view is rendered
+    .on_event_cont(EventListener::WindowGotFocus, move |_| {
+        if !config_state.is_ready() {
+            config_state.set_ready();
+        }
+    })
     .on_event(EventListener::WindowClosed, move |_| {
         use floem::event::EventPropagation;
 
@@ -161,6 +176,10 @@ fn app_view() -> impl IntoView {
                             temp_name, temp_display, temp_mod_name, temp_author
                         );
                     }
+                    7 => {
+                        // Dialogue - open folder
+                        tabs::dialogue::open_dialog_folder(dialogue_state_for_keyboard.clone());
+                    }
                     _ => {} // Other tabs - no action
                 }
                 return;
@@ -183,11 +202,23 @@ fn app_view() -> impl IntoView {
                 return;
             }
 
-            // Escape - close dialogs/overlays (handled by individual components)
-            // This provides a global hook point for future escape handling
+            // CMD+, / Ctrl+, - Preferences (toggle config dialog)
+            let is_comma_key = matches!(
+                &key_event.key.logical_key,
+                Key::Character(c) if c.as_str() == ","
+            );
+            if is_cmd_or_ctrl && is_comma_key {
+                let current = config_state_for_keyboard.show_dialog.get();
+                config_state_for_keyboard.show_dialog.set(!current);
+                return;
+            }
+
+            // Escape - close config dialog if open
             if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
-                // Currently handled by individual dialog components
-                // Can add global escape handling here if needed
+                if config_state_for_keyboard.show_dialog.get() {
+                    config_state_for_keyboard.show_dialog.set(false);
+                    return;
+                }
             }
         }
     })
@@ -202,6 +233,7 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
         tab_button("🖼️ Textures", 4, active_tab),
         tab_button("🧪 Dyes", 5, active_tab),
         tab_button("🔍 Search", 6, active_tab),
+        tab_button("💬 Dialogue", 7, active_tab),
         empty().style(|s| s.flex_grow(1.0)),
         // App info
         label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION")))
@@ -254,6 +286,7 @@ fn tab_content(
     vt_state: VirtualTexturesState,
     dyes_state: DyesState,
     search_state: SearchState,
+    dialogue_state: DialogueState,
 ) -> impl IntoView {
     dyn_container(
         move || active_tab.get(),
@@ -266,6 +299,7 @@ fn tab_content(
                 4 => virtual_textures_tab(app_state.clone(), vt_state.clone()).into_any(),
                 5 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
                 6 => search_tab(app_state.clone(), search_state.clone()).into_any(),
+                7 => dialogue_tab(app_state.clone(), dialogue_state.clone()).into_any(),
                 _ => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
             }
         },

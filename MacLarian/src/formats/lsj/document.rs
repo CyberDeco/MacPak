@@ -18,7 +18,6 @@ pub struct LsjSave {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LsjHeader {
-    pub time: u32,
     pub version: String, // "4.0.0.100" format
 }
 
@@ -231,7 +230,6 @@ impl LsjDocument {
         LsjDocument {
             save: LsjSave {
                 header: LsjHeader {
-                    time: 0,
                     version: format!("{}.{}.{}.{}", major, minor, revision, build),
                 },
                 regions: HashMap::new(),

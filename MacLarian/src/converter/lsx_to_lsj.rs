@@ -43,7 +43,6 @@ pub fn to_lsj(lsx: &LsxDocument) -> Result<LsjDocument> {
     Ok(LsjDocument {
         save: LsjSave {
             header: LsjHeader {
-                time: 0,
                 version: format!("{}.{}.{}.{}", lsx.major, lsx.minor, lsx.revision, lsx.build),
             },
             regions,

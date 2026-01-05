@@ -80,3 +80,5 @@ Core MacPak functionality is derived from (and wouldn't be possible without):
   - PAK handling
 - [Knit](https://github.com/neptuwunium/Knit)
   - GR2 decompression
+- [BG3 Dialog Reader](https://github.com/angaityel/bg3-dialog-reader)
+  - Character dialogue handling

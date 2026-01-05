@@ -29,6 +29,10 @@ pub mod prelude {
     pub use crate::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
     pub use crate::formats::gr2::decompress_gr2;
     pub use crate::formats::virtual_texture::{VirtualTextureExtractor, GtsFile, GtpFile};
+    pub use crate::formats::dialog::{
+        Dialog, DialogNode, NodeConstructor, LocalizationCache,
+        parse_dialog, parse_dialog_bytes, parse_dialog_file,
+    };
     pub use crate::pak::PakOperations;
     pub use crate::converter;
     pub use crate::merged::{MergedResolver, MergedDatabase, VisualAsset};

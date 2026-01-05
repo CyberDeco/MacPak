@@ -31,6 +31,8 @@
 **/benches/
 /examples/
 **/examples/
+/scripts/
+**/scripts/
 
 # ==========================
 # IDEs and Editors

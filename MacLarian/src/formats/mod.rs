@@ -8,6 +8,7 @@ pub mod loca;
 pub mod gr2;
 pub mod meta;
 pub mod virtual_texture;
+pub mod dialog;
 
 // Re-export common types for convenience
 pub use common::{TypeId, get_type_name, type_name_to_id};
@@ -24,3 +25,13 @@ pub use gr2::decompress_gr2;
 
 // Re-export virtual texture types
 pub use virtual_texture::{VirtualTextureExtractor, GtsFile, GtpFile};
+
+// Re-export dialog types
+pub use dialog::{
+    Dialog, DialogNode, NodeConstructor, DialogEditorData,
+    TaggedText, TagTextEntry, RuleGroup, Rule,
+    FlagGroup, FlagType, Flag, SpeakerInfo, GameData,
+    parse_dialog, parse_dialog_bytes, parse_dialog_file, parse_dialog_lsf,
+    DialogParseError, LocalizationCache, LocalizedEntry, LocalizationError,
+    get_available_languages,
+};
