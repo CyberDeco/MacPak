@@ -178,27 +178,34 @@ fn dialog_header(state: DialogueState) -> impl IntoView {
 /// The scrollable tree of nodes using virtual_list for performance
 fn node_tree(state: DialogueState) -> impl IntoView {
     let display_nodes = state.display_nodes;
-    let selected = state.selected_node_index;
+    let selected_uuid = state.selected_node_uuid;
     let max_content_width = state.max_content_width;
+    let tree_version = state.tree_version;
 
     clip(
         scroll(
             virtual_list(
                 VirtualDirection::Vertical,
-                VirtualItemSize::Fixed(Box::new(|| NODE_ROW_HEIGHT)),
+                // Use variable heights: visible items get full height, invisible get 0
+                // This keeps the item count constant across expand/collapse, preserving scroll
+                VirtualItemSize::Fn(Box::new(move |node: &DisplayNode| {
+                    // Subscribe to tree_version for batched updates
+                    let _version = tree_version.get();
+                    if node.is_visible.get_untracked() {
+                        NODE_ROW_HEIGHT
+                    } else {
+                        0.0
+                    }
+                })),
                 move || {
-                    // Return all nodes - visibility is handled per-row via styling
-                    let all_nodes = display_nodes.get();
-                    all_nodes
-                        .iter()
-                        .enumerate()
-                        .map(|(idx, node)| (idx, node.clone()))
-                        .collect::<ImVector<_>>()
+                    // Return ALL nodes - visibility is handled via height
+                    // This keeps the item list stable, only heights change
+                    display_nodes.get().into_iter().collect::<ImVector<_>>()
                 },
                 // Use only UUID as key - stable across expand/collapse
-                |(_, node)| node.uuid.clone(),
-                move |(idx, node)| {
-                    node_row(node, idx, selected, display_nodes, max_content_width.get())
+                |node| node.uuid.clone(),
+                move |node| {
+                    node_row(node, selected_uuid, display_nodes, tree_version, max_content_width.get())
                 },
             )
             .style(|s| s.flex_col())
@@ -218,29 +225,36 @@ fn node_tree(state: DialogueState) -> impl IntoView {
 }
 
 /// Update visibility of all descendants when a node is expanded/collapsed
+/// Uses untracked read to avoid creating reactive subscriptions in click handlers
 fn update_descendant_visibility(
     parent_uuid: &str,
     parent_expanded: bool,
     display_nodes: RwSignal<Vec<DisplayNode>>,
+    tree_version: RwSignal<u64>,
 ) {
-    let nodes = display_nodes.get();
+    // Use with_untracked to avoid creating reactive subscriptions
+    // This prevents the browser panel from re-rendering when we expand/collapse nodes
+    display_nodes.with_untracked(|nodes| {
+        // When expanding: direct children become visible
+        // When collapsing: all descendants become invisible
+        for node in nodes.iter() {
+            if node.parent_uuid.as_deref() == Some(parent_uuid) {
+                // Direct children: visible if parent is expanded
+                node.is_visible.set(parent_expanded);
 
-    // When expanding: direct children become visible
-    // When collapsing: all descendants become invisible
-    for node in nodes.iter() {
-        if node.parent_uuid.as_deref() == Some(parent_uuid) {
-            // Direct children: visible if parent is expanded
-            node.is_visible.set(parent_expanded);
-
-            // Recursively update all descendants
-            if node.child_count > 0 {
-                // If we're collapsing the parent, hide all descendants
-                // If we're expanding, children of this node are only visible if this node is also expanded
-                let descendants_visible = parent_expanded && node.is_expanded.get();
-                update_descendants_recursive(&node.uuid, descendants_visible, &nodes);
+                // Recursively update all descendants
+                if node.child_count > 0 {
+                    // If we're collapsing the parent, hide all descendants
+                    // If we're expanding, children of this node are only visible if this node is also expanded
+                    let descendants_visible = parent_expanded && node.is_expanded.get_untracked();
+                    update_descendants_recursive(&node.uuid, descendants_visible, nodes);
+                }
             }
         }
-    }
+    });
+
+    // Increment version to trigger a single batched re-render
+    tree_version.update(|v| *v = v.wrapping_add(1));
 }
 
 /// Recursively update visibility of descendants
@@ -251,7 +265,8 @@ fn update_descendants_recursive(parent_uuid: &str, parent_visible: bool, all_nod
 
             // Continue recursion - children are visible only if this node is also expanded
             if node.child_count > 0 {
-                let child_visible = parent_visible && node.is_expanded.get();
+                // Use untracked read to avoid reactive subscriptions
+                let child_visible = parent_visible && node.is_expanded.get_untracked();
                 update_descendants_recursive(&node.uuid, child_visible, all_nodes);
             }
         }
@@ -261,9 +276,9 @@ fn update_descendants_recursive(parent_uuid: &str, parent_visible: bool, all_nod
 /// Single node row in the tree
 fn node_row(
     node: DisplayNode,
-    index: usize,
-    selected: RwSignal<Option<usize>>,
+    selected_uuid: RwSignal<Option<String>>,
     display_nodes: RwSignal<Vec<DisplayNode>>,
+    tree_version: RwSignal<u64>,
     max_content_width: f32,
 ) -> impl IntoView {
     let constructor = node.constructor.clone();
@@ -275,6 +290,8 @@ fn node_row(
     let is_expanded = node.is_expanded;
     let is_visible = node.is_visible;
     let node_uuid = node.uuid.clone();
+    let node_uuid_for_select = node.uuid.clone();
+    let node_uuid_for_style = node.uuid.clone();
     let roll_success = node.roll_success;
     let constructor_for_roll = node.constructor.clone();
     // Get NodeContext (the primary dev note field) if available
@@ -303,8 +320,8 @@ fn node_row(
                     .on_click_stop(move |_| {
                         let new_expanded = !is_expanded.get();
                         is_expanded.set(new_expanded);
-                        // Update visibility of all descendants
-                        update_descendant_visibility(&uuid_for_click, new_expanded, display_nodes);
+                        // Update visibility of all descendants and trigger re-render
+                        update_descendant_visibility(&uuid_for_click, new_expanded, display_nodes, tree_version);
                     })
                     .into_any()
             } else {
@@ -437,16 +454,21 @@ fn node_row(
         },
     ))
     .on_click_stop(move |_| {
-        selected.set(Some(index));
+        // Only handle clicks for visible nodes
+        if is_visible.get_untracked() {
+            selected_uuid.set(Some(node_uuid_for_select.clone()));
+        }
     })
     .style(move |s| {
-        // Check visibility directly from signal - no expensive lookup needed
-        if !is_visible.get() {
-            // Hidden row - collapse to zero height
-            return s.height(0.0).padding(0.0).border(0.0).display(floem::style::Display::None);
+        // Subscribe to tree_version for batched visibility updates
+        let _version = tree_version.get();
+
+        // Check visibility - invisible rows get collapsed to 0 height
+        if !is_visible.get_untracked() {
+            return s.height(0.0).display(floem::style::Display::None);
         }
 
-        let is_selected = selected.get() == Some(index);
+        let is_selected = selected_uuid.get().as_ref() == Some(&node_uuid_for_style);
 
         // Use max_content_width so all rows are same width for proper scrolling
         let base = s

@@ -150,4 +150,5 @@ fn process_loaded_dialog(state: DialogueState, dialog: Dialog) {
     state.visible_node_indices.set(visible_indices);
     state.current_dialog.set(Some(Arc::new(dialog)));
     state.selected_node_index.set(None);
+    state.selected_node_uuid.set(None);
 }

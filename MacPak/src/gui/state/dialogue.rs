@@ -126,8 +126,10 @@ pub struct DialogueState {
     pub display_nodes: RwSignal<Vec<DisplayNode>>,
     /// Flat list of visible node indices (for virtual scrolling)
     pub visible_node_indices: RwSignal<Vec<usize>>,
-    /// Selected node index
+    /// Selected node index (deprecated, use selected_node_uuid)
     pub selected_node_index: RwSignal<Option<usize>>,
+    /// Selected node UUID (preferred - stable across visibility changes)
+    pub selected_node_uuid: RwSignal<Option<String>>,
 
     // UI state
     /// Search query within the dialog
@@ -146,6 +148,8 @@ pub struct DialogueState {
     pub browser_panel_width: RwSignal<f64>,
     /// Maximum content width across all nodes (for horizontal scroll)
     pub max_content_width: RwSignal<f32>,
+    /// Version counter to trigger tree re-renders without creating per-node subscriptions
+    pub tree_version: RwSignal<u64>,
 
     // Status
     /// Status message
@@ -181,6 +185,7 @@ impl DialogueState {
             display_nodes: RwSignal::new(Vec::new()),
             visible_node_indices: RwSignal::new(Vec::new()),
             selected_node_index: RwSignal::new(None),
+            selected_node_uuid: RwSignal::new(None),
 
             // UI state
             node_search: RwSignal::new(String::new()),
@@ -192,6 +197,7 @@ impl DialogueState {
             // UI layout
             browser_panel_width: RwSignal::new(400.0),
             max_content_width: RwSignal::new(0.0),
+            tree_version: RwSignal::new(0),
 
             // Status
             status_message: RwSignal::new("Ready".to_string()),
@@ -211,13 +217,14 @@ impl DialogueState {
         self.display_nodes.set(Vec::new());
         self.visible_node_indices.set(Vec::new());
         self.selected_node_index.set(None);
+        self.selected_node_uuid.set(None);
     }
 
     /// Get the currently selected display node
     pub fn selected_display_node(&self) -> Option<DisplayNode> {
-        let index = self.selected_node_index.get()?;
+        let uuid = self.selected_node_uuid.get()?;
         let nodes = self.display_nodes.get();
-        nodes.get(index).cloned()
+        nodes.iter().find(|n| n.uuid == uuid).cloned()
     }
 
     /// Get the currently selected dialog node
