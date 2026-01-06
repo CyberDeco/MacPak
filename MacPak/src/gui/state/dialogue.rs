@@ -2,13 +2,14 @@
 
 use floem::prelude::*;
 use floem::reactive::SignalGet;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use MacLarian::formats::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache};
 use crate::gui::tabs::dialogue::operations::SpeakerNameCache;
 
 /// Source of a dialog file
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DialogSource {
     /// File extracted on disk
     LocalFile(PathBuf),
@@ -20,7 +21,7 @@ pub enum DialogSource {
 }
 
 /// Entry in the dialog file browser
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DialogEntry {
     /// Display name (filename without path)
     pub name: String,
@@ -67,6 +68,10 @@ pub struct DisplayNode {
     pub jump_target_uuid: Option<String>,
     /// Jump/Alias target text handle (for localization)
     pub jump_target_handle: Option<String>,
+    /// Editor data key-value pairs for this node (dev notes)
+    pub editor_data: HashMap<String, String>,
+    /// For RollResult nodes: true = success path, false = failure path
+    pub roll_success: Option<bool>,
 }
 
 impl DisplayNode {
@@ -89,6 +94,8 @@ impl DisplayNode {
             text_handle: None,
             jump_target_uuid: None,
             jump_target_handle: None,
+            editor_data: HashMap::new(),
+            roll_success: None,
         }
     }
 }

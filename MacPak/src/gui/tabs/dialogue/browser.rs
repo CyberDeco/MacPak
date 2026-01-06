@@ -51,17 +51,20 @@ pub fn browser_panel(state: DialogueState) -> impl IntoView {
 fn search_box(state: DialogueState) -> impl IntoView {
     let search_text = state.dialog_search;
 
-    text_input(search_text)
-        .placeholder("Search dialogs...")
-        .style(|s| {
-            s.width_full()
-                .padding(8.0)
-                .margin(8.0)
-                .border(1.0)
-                .border_radius(4.0)
-                .border_color(Color::rgb8(200, 200, 200))
-                .font_size(13.0)
-        })
+    // Wrap in container with padding to prevent overflow
+    container(
+        text_input(search_text)
+            .placeholder("Search dialogs...")
+            .style(|s| {
+                s.width_full()
+                    .padding(8.0)
+                    .border(1.0)
+                    .border_radius(4.0)
+                    .border_color(Color::rgb8(200, 200, 200))
+                    .font_size(13.0)
+            })
+    )
+    .style(|s| s.width_full().padding(8.0))
 }
 
 /// List of dialog files
@@ -126,7 +129,7 @@ fn dialog_row(entry: DialogEntry, selected_path: RwSignal<Option<String>>, panel
         .map(|i| entry.path[..i].to_string())
         .unwrap_or_default();
 
-    // Define selection check as closure - better reactive isolation
+    // Selection check - needs to be reactive for highlight updates
     let is_selected = move || selected_path.get().as_ref() == Some(&path);
 
     h_stack((

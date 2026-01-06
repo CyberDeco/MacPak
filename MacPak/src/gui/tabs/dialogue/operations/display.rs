@@ -74,14 +74,24 @@ fn build_node_tree(
             if let Some(speaker) = dialog.get_speaker(speaker_idx) {
                 // The speaker_list contains GlobalTemplate UUIDs that map to RootTemplates
                 // Store them as special marker for resolution in resolve_speaker_names()
-                if !speaker.speaker_list.is_empty() {
+                // Filter out invalid entries like "@" or empty strings
+                let valid_uuids: Vec<_> = speaker.speaker_list.iter()
+                    .filter(|s| !s.is_empty() && *s != "@" && s.len() > 8)
+                    .cloned()
+                    .collect();
+
+                if !valid_uuids.is_empty() {
                     // Join multiple UUIDs with semicolon for resolution
-                    display.speaker_name = format!("__UUID__:{}", speaker.speaker_list.join(";"));
-                } else if !speaker.speaker_mapping_id.is_empty() {
-                    // Fallback to speaker_mapping_id if no list
+                    display.speaker_name = format!("__UUID__:{}", valid_uuids.join(";"));
+                } else if !speaker.speaker_mapping_id.is_empty()
+                    && speaker.speaker_mapping_id != "@"
+                    && speaker.speaker_mapping_id.len() > 8
+                {
+                    // Fallback to speaker_mapping_id if no list (and it's a valid UUID)
                     display.speaker_name = format!("__UUID__:{}", speaker.speaker_mapping_id);
                 } else {
-                    display.speaker_name = format!("Speaker {}", speaker_idx);
+                    // No valid speaker info, leave empty (don't show placeholder)
+                    display.speaker_name = String::new();
                 }
             } else {
                 display.speaker_name = format!("Speaker {}", speaker_idx);
@@ -125,12 +135,44 @@ fn build_node_tree(
         }
     }
 
+    // Copy editor data (dev notes) from the dialog node
+    display.editor_data = node.editor_data.clone();
+
+    // For RollResult nodes, capture the success/failure flag
+    if node.constructor == NodeConstructor::RollResult {
+        display.roll_success = node.success;
+    }
+
     // Handle Jump nodes - store target info for resolution
     if node.constructor == NodeConstructor::Jump {
         if let Some(ref target_uuid) = node.jump_target {
             display.jump_target_uuid = Some(target_uuid.clone());
-            // Try to get the target node's text handle
+            // Try to get the target node's text and speaker
             if let Some(target_node) = dialog.get_node(target_uuid) {
+                // Copy speaker from target if Jump node doesn't have its own
+                if display.speaker_name.is_empty() {
+                    if let Some(speaker_idx) = target_node.speaker {
+                        if speaker_idx == -666 {
+                            display.speaker_name = "Narrator".to_string();
+                        } else if speaker_idx >= 0 {
+                            if let Some(speaker) = dialog.get_speaker(speaker_idx) {
+                                let valid_uuids: Vec<_> = speaker.speaker_list.iter()
+                                    .filter(|s| !s.is_empty() && *s != "@" && s.len() > 8)
+                                    .cloned()
+                                    .collect();
+                                if !valid_uuids.is_empty() {
+                                    display.speaker_name = format!("__UUID__:{}", valid_uuids.join(";"));
+                                } else if !speaker.speaker_mapping_id.is_empty()
+                                    && speaker.speaker_mapping_id != "@"
+                                    && speaker.speaker_mapping_id.len() > 8
+                                {
+                                    display.speaker_name = format!("__UUID__:{}", speaker.speaker_mapping_id);
+                                }
+                            }
+                        }
+                    }
+                }
+                // Copy text from target
                 if let Some(text_entry) = dialog.get_node_text(target_node) {
                     display.jump_target_handle = Some(text_entry.handle.clone());
                     // If we have inline text, use it directly
@@ -153,8 +195,32 @@ fn build_node_tree(
     if node.constructor == NodeConstructor::Alias {
         if let Some(ref source_uuid) = node.source_node {
             display.jump_target_uuid = Some(source_uuid.clone());
-            // Try to get the source node's text handle
+            // Try to get the source node's text and speaker
             if let Some(source_node) = dialog.get_node(source_uuid) {
+                // Copy speaker from source if Alias node doesn't have its own
+                if display.speaker_name.is_empty() {
+                    if let Some(speaker_idx) = source_node.speaker {
+                        if speaker_idx == -666 {
+                            display.speaker_name = "Narrator".to_string();
+                        } else if speaker_idx >= 0 {
+                            if let Some(speaker) = dialog.get_speaker(speaker_idx) {
+                                let valid_uuids: Vec<_> = speaker.speaker_list.iter()
+                                    .filter(|s| !s.is_empty() && *s != "@" && s.len() > 8)
+                                    .cloned()
+                                    .collect();
+                                if !valid_uuids.is_empty() {
+                                    display.speaker_name = format!("__UUID__:{}", valid_uuids.join(";"));
+                                } else if !speaker.speaker_mapping_id.is_empty()
+                                    && speaker.speaker_mapping_id != "@"
+                                    && speaker.speaker_mapping_id.len() > 8
+                                {
+                                    display.speaker_name = format!("__UUID__:{}", speaker.speaker_mapping_id);
+                                }
+                            }
+                        }
+                    }
+                }
+                // Copy text from source
                 if let Some(text_entry) = dialog.get_node_text(source_node) {
                     display.jump_target_handle = Some(text_entry.handle.clone());
                     // If we have inline text, use it directly
@@ -245,20 +311,40 @@ pub fn resolve_localized_text(state: &DialogueState, nodes: &mut [DisplayNode]) 
             }
         }
 
-        // Resolve jump/alias target text if we have a handle but only a UUID shown
+        // Resolve jump/alias target text if we have a handle
         if let Some(ref handle) = node.jump_target_handle {
-            // Check if text is still showing just the UUID reference
-            if node.text.starts_with("→ (") || node.text.starts_with("= (") {
-                if let Some(text) = loca_cache.get_text_opt(handle) {
-                    let prefix = if node.constructor == NodeConstructor::Jump { "→" } else { "=" };
-                    node.text = format!("{} {}", prefix, text);
+            let is_jump = node.constructor == NodeConstructor::Jump;
+            let is_alias = node.constructor == NodeConstructor::Alias;
+
+            if is_jump || is_alias {
+                let prefix = if is_jump { "→" } else { "=" };
+
+                // Try to resolve if text shows UUID reference, handle, or node type placeholder
+                let needs_resolution = node.text.starts_with(&format!("{} (", prefix))
+                    || node.text.starts_with(&format!("{} Handle:", prefix))
+                    || node.text == "[Jump node]"
+                    || node.text == "[Alias node]";
+
+                if needs_resolution {
+                    if let Some(text) = loca_cache.get_text_opt(handle) {
+                        node.text = format!("{} {}", prefix, text);
+                    }
                 }
             }
-            // Also check if text starts with "→ Handle:" or "= Handle:"
-            else if node.text.starts_with("→ Handle:") || node.text.starts_with("= Handle:") {
+        }
+
+        // Also try to resolve the primary text handle if text is still showing as a placeholder
+        if node.text.contains("Handle:") || node.text.starts_with("[") {
+            if let Some(handle) = &node.text_handle {
                 if let Some(text) = loca_cache.get_text_opt(handle) {
-                    let prefix = if node.constructor == NodeConstructor::Jump { "→" } else { "=" };
-                    node.text = format!("{} {}", prefix, text);
+                    // For Jump/Alias, keep the prefix
+                    if node.constructor == NodeConstructor::Jump {
+                        node.text = format!("→ {}", text);
+                    } else if node.constructor == NodeConstructor::Alias {
+                        node.text = format!("= {}", text);
+                    } else {
+                        node.text = text;
+                    }
                 }
             }
         }

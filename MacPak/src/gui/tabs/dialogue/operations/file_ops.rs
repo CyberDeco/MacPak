@@ -15,64 +15,64 @@ enum ScanResult {
     Error(String),
 }
 
-/// Open a PAK file directly
-/// Note: File dialog must run on main thread on macOS
-pub fn open_pak_file(state: DialogueState) {
-    let dialog = rfd::FileDialog::new()
-        .set_title("Select PAK File")
-        .add_filter("PAK files", &["pak"]);
+/// Load a PAK file directly from a path (no file dialog)
+/// Used by the Gustav.pak and Shared.pak buttons
+pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
+    if !pak_path.exists() {
+        state.status_message.set(format!("PAK not found: {}", pak_path.display()));
+        state.error_message.set(Some(format!("File not found: {}", pak_path.display())));
+        return;
+    }
 
-    if let Some(pak_path) = dialog.pick_file() {
-        state.status_message.set("Scanning PAK...".to_string());
-        state.is_loading.set(true);
+    state.status_message.set("Scanning PAK...".to_string());
+    state.is_loading.set(true);
 
-        let pak_display = pak_path.display().to_string();
-        let loca_cache = state.localization_cache.clone();
+    let pak_display = pak_path.display().to_string();
+    let loca_cache = state.localization_cache.clone();
 
-        // Create ext_action to send results back to main thread
-        let send = create_ext_action(Scope::new(), move |result: ScanResult| {
-            match result {
-                ScanResult::Success { entries, count, loca_count } => {
-                    if count == 0 {
-                        state.status_message.set(format!("No dialogs found in {}", pak_display));
+    // Create ext_action to send results back to main thread
+    let send = create_ext_action(Scope::new(), move |result: ScanResult| {
+        match result {
+            ScanResult::Success { entries, count, loca_count } => {
+                if count == 0 {
+                    state.status_message.set(format!("No dialogs found in {}", pak_display));
+                } else {
+                    state.available_dialogs.set(entries);
+                    if loca_count > 0 {
+                        state.localization_loaded.set(true);
+                        state.status_message.set(format!("Found {} dialogs, {} localization strings", count, loca_count));
                     } else {
-                        state.available_dialogs.set(entries);
-                        if loca_count > 0 {
-                            state.localization_loaded.set(true);
-                            state.status_message.set(format!("Found {} dialogs, {} localization strings", count, loca_count));
-                        } else {
-                            state.status_message.set(format!("Found {} dialogs in PAK", count));
-                        }
+                        state.status_message.set(format!("Found {} dialogs in PAK", count));
                     }
                 }
-                ScanResult::Error(e) => {
-                    state.status_message.set(format!("Error: {}", e));
-                    state.error_message.set(Some(e));
-                }
             }
-            state.is_loading.set(false);
-        });
-
-        // Spawn thread for loading
-        std::thread::spawn(move || {
-            // Load localization first (updates Arc<RwLock<>> directly)
-            let loca_count = load_localization(&loca_cache, &pak_path);
-
-            // Scan for dialog files
-            let mut entries = Vec::new();
-
-            match scan_pak_for_dialogs(&pak_path, &mut entries) {
-                Ok(_) => {
-                    let count = entries.len();
-                    entries.sort_by(|a, b| a.path.cmp(&b.path));
-                    send(ScanResult::Success { entries, count, loca_count });
-                }
-                Err(e) => {
-                    send(ScanResult::Error(e));
-                }
+            ScanResult::Error(e) => {
+                state.status_message.set(format!("Error: {}", e));
+                state.error_message.set(Some(e));
             }
-        });
-    }
+        }
+        state.is_loading.set(false);
+    });
+
+    // Spawn thread for loading
+    std::thread::spawn(move || {
+        // Load localization first (updates Arc<RwLock<>> directly)
+        let loca_count = load_localization(&loca_cache, &pak_path);
+
+        // Scan for dialog files
+        let mut entries = Vec::new();
+
+        match scan_pak_for_dialogs(&pak_path, &mut entries) {
+            Ok(_) => {
+                let count = entries.len();
+                entries.sort_by(|a, b| a.path.cmp(&b.path));
+                send(ScanResult::Success { entries, count, loca_count });
+            }
+            Err(e) => {
+                send(ScanResult::Error(e));
+            }
+        }
+    });
 }
 
 /// Load localization from the English.pak sibling to the given PAK
@@ -311,7 +311,7 @@ fn find_pak_files(path: &Path) -> Vec<PathBuf> {
 }
 
 /// Scan inside a PAK file for dialog files
-/// Prefers .lsf files (smaller, faster) over .lsj files
+/// Prefers .lsj files (has editorData with NodeContext/dev notes) over .lsf files
 pub(super) fn scan_pak_for_dialogs(pak_path: &Path, entries: &mut Vec<DialogEntry>) -> Result<(), String> {
     let file_list = PakOperations::list(pak_path)
         .map_err(|e| format!("Failed to list PAK: {}", e))?;
@@ -323,17 +323,17 @@ pub(super) fn scan_pak_for_dialogs(pak_path: &Path, entries: &mut Vec<DialogEntr
     // Collect dialog files, tracking which base names we've seen
     let mut seen_dialogs = std::collections::HashSet::new();
 
-    // First pass: collect all .lsf dialog files (preferred - smaller/faster)
-    // LSF files are in DialogsBinary folder
+    // First pass: collect all .lsj dialog files (preferred - has editorData with NodeContext)
+    // LSJ files are in Dialogs folder
     for internal_path in &file_list {
         let lower_path = internal_path.to_lowercase();
-        if lower_path.contains("story/dialogsbinary/") && lower_path.ends_with(".lsf") {
+        if lower_path.contains("story/dialogs/") && lower_path.ends_with(".lsj") {
             let name = internal_path.split('/').last()
                 .unwrap_or(internal_path)
                 .to_string();
 
             // Track the base name (without extension) to avoid duplicates
-            let base_name = name.trim_end_matches(".lsf").trim_end_matches(".LSF");
+            let base_name = name.trim_end_matches(".lsj").trim_end_matches(".LSJ");
             seen_dialogs.insert(base_name.to_lowercase());
 
             let display_path = format!("[{}] {}", pak_name, internal_path);
@@ -349,18 +349,18 @@ pub(super) fn scan_pak_for_dialogs(pak_path: &Path, entries: &mut Vec<DialogEntr
         }
     }
 
-    // Second pass: add .lsj files only if no .lsf version exists
-    // LSJ files are in Dialogs folder
+    // Second pass: add .lsf files only if no .lsj version exists
+    // LSF files are in DialogsBinary folder (smaller but lacks editorData)
     for internal_path in &file_list {
         let lower_path = internal_path.to_lowercase();
-        if lower_path.contains("story/dialogs/") && lower_path.ends_with(".lsj") {
+        if lower_path.contains("story/dialogsbinary/") && lower_path.ends_with(".lsf") {
             let name = internal_path.split('/').last()
                 .unwrap_or(internal_path)
                 .to_string();
 
-            let base_name = name.trim_end_matches(".lsj").trim_end_matches(".LSJ");
+            let base_name = name.trim_end_matches(".lsf").trim_end_matches(".LSF");
 
-            // Skip if we already have the .lsf version
+            // Skip if we already have the .lsj version
             if seen_dialogs.contains(&base_name.to_lowercase()) {
                 continue;
             }

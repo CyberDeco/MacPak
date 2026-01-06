@@ -1,8 +1,9 @@
 //! Dialogue tab toolbar
 
+use std::path::PathBuf;
 use floem::prelude::*;
 use floem::reactive::SignalGet;
-use crate::gui::state::DialogueState;
+use crate::gui::state::{ConfigState, DialogueState};
 use super::operations;
 
 /// Expand all nodes in the tree
@@ -25,16 +26,18 @@ fn collapse_all_nodes(state: &DialogueState) {
 }
 
 /// Toolbar with open, language, and export controls
-pub fn toolbar(state: DialogueState) -> impl IntoView {
-    let state_for_open_folder = state.clone();
-    let state_for_open_pak = state.clone();
+pub fn toolbar(state: DialogueState, config: ConfigState) -> impl IntoView {
+    let state_for_gustav = state.clone();
+    let state_for_shared = state.clone();
+    let config_for_gustav = config.clone();
+    let config_for_shared = config.clone();
     let state_for_expand = state.clone();
     let state_for_collapse = state.clone();
     let state_for_status = state.clone();
 
     h_stack((
-        // Open PAK button
-        button("Open PAK")
+        // Load from Gustav.pak button
+        button("Load from Gustav.pak")
             .style(|s| {
                 s.padding_horiz(12.0)
                     .padding_vert(6.0)
@@ -45,11 +48,17 @@ pub fn toolbar(state: DialogueState) -> impl IntoView {
                     .hover(|s| s.background(Color::rgb8(37, 99, 235)))
             })
             .action(move || {
-                operations::open_pak_file(state_for_open_pak.clone());
+                let bg3_path = config_for_gustav.bg3_data_path.get();
+                if !bg3_path.is_empty() {
+                    let gustav_path = PathBuf::from(&bg3_path).join("Gustav.pak");
+                    operations::load_pak_directly(state_for_gustav.clone(), gustav_path);
+                } else {
+                    state_for_gustav.status_message.set("BG3 path not configured. Set it in Preferences (⌘,)".to_string());
+                }
             }),
 
-        // Open folder button
-        button("Open Folder")
+        // Load from Shared.pak button
+        button("Load from Shared.pak")
             .style(|s| {
                 s.padding_horiz(12.0)
                     .padding_vert(6.0)
@@ -60,7 +69,13 @@ pub fn toolbar(state: DialogueState) -> impl IntoView {
                     .hover(|s| s.background(Color::rgb8(75, 85, 99)))
             })
             .action(move || {
-                operations::open_dialog_folder(state_for_open_folder.clone());
+                let bg3_path = config_for_shared.bg3_data_path.get();
+                if !bg3_path.is_empty() {
+                    let shared_path = PathBuf::from(&bg3_path).join("Shared.pak");
+                    operations::load_pak_directly(state_for_shared.clone(), shared_path);
+                } else {
+                    state_for_shared.status_message.set("BG3 path not configured. Set it in Preferences (⌘,)".to_string());
+                }
             }),
 
         // Language selector
@@ -115,8 +130,9 @@ pub fn toolbar(state: DialogueState) -> impl IntoView {
     ))
     .style(|s| {
         s.width_full()
-            .height(48.0)
+            .min_height(56.0)
             .padding_horiz(12.0)
+            .padding_vert(8.0)
             .gap(8.0)
             .items_center()
             .background(Color::rgb8(245, 245, 245))

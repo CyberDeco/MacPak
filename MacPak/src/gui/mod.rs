@@ -70,7 +70,7 @@ fn app_view() -> impl IntoView {
     let gr2_state_for_keyboard = gr2_state.clone();
     let vt_state_for_keyboard = vt_state.clone();
     let dyes_state_for_keyboard = dyes_state.clone();
-    let dialogue_state_for_keyboard = dialogue_state.clone();
+    let config_state_for_dialogue = config_state.clone();
 
     v_stack((
         // Tab bar
@@ -88,6 +88,7 @@ fn app_view() -> impl IntoView {
             dyes_state,
             search_state,
             dialogue_state,
+            config_state_for_dialogue,
         ),
 
         // Config dialog (overlays when visible)
@@ -176,10 +177,7 @@ fn app_view() -> impl IntoView {
                             temp_name, temp_display, temp_mod_name, temp_author
                         );
                     }
-                    7 => {
-                        // Dialogue - open folder
-                        tabs::dialogue::open_dialog_folder(dialogue_state_for_keyboard.clone());
-                    }
+                    // Dialogue tab (7) - no CMD+O action, use toolbar buttons instead
                     _ => {} // Other tabs - no action
                 }
                 return;
@@ -287,6 +285,7 @@ fn tab_content(
     dyes_state: DyesState,
     search_state: SearchState,
     dialogue_state: DialogueState,
+    config_state: ConfigState,
 ) -> impl IntoView {
     dyn_container(
         move || active_tab.get(),
@@ -299,7 +298,7 @@ fn tab_content(
                 4 => virtual_textures_tab(app_state.clone(), vt_state.clone()).into_any(),
                 5 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
                 6 => search_tab(app_state.clone(), search_state.clone()).into_any(),
-                7 => dialogue_tab(app_state.clone(), dialogue_state.clone()).into_any(),
+                7 => dialogue_tab(app_state.clone(), dialogue_state.clone(), config_state.clone()).into_any(),
                 _ => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
             }
         },

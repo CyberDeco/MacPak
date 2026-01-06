@@ -14,17 +14,17 @@ pub mod operations;
 use floem::prelude::*;
 use floem::style::FlexDirection;
 use floem::text::Weight;
-use crate::gui::state::{AppState, DialogueState};
+use crate::gui::state::{AppState, ConfigState, DialogueState};
 
 pub use operations::{open_dialog_folder, load_dialog_from_pak};
 
 /// Main dialogue tab view
-pub fn dialogue_tab(_app_state: AppState, state: DialogueState) -> impl IntoView {
+pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigState) -> impl IntoView {
     let state_for_content = state.clone();
 
     v_stack((
         // Toolbar
-        toolbar::toolbar(state.clone()),
+        toolbar::toolbar(state.clone(), config),
 
         // Main content area - horizontal split with adjustable divider
         dialogue_content(state.clone(), state_for_content),
