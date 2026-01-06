@@ -1,7 +1,7 @@
 //! Dialog tree view panel
 
 use floem::prelude::*;
-use floem::text::{Attrs, AttrsList, Style as FontStyle, TextLayout, Weight};
+use floem::text::{Attrs, AttrsList, Style as FontStyle, TextLayout, Weight, Wrap};
 use floem::views::{clip, rich_text, virtual_list, VirtualDirection, VirtualItemSize};
 use im::Vector as ImVector;
 use MacLarian::formats::dialog::NodeConstructor;
@@ -118,53 +118,55 @@ pub fn tree_view_panel(state: DialogueState) -> impl IntoView {
 fn dialog_header(state: DialogueState) -> impl IntoView {
     let dialog = state.current_dialog;
 
-    h_stack((
-        dyn_container(
-            move || dialog.get(),
-            move |d| {
-                if let Some(dialog) = d {
-                    let node_count = dialog.node_count();
-                    let root_count = dialog.root_nodes.len();
-                    let synopsis = dialog.editor_data.synopsis.clone()
-                        .unwrap_or_else(|| "No synopsis".to_string());
+    dyn_container(
+        move || dialog.get(),
+        move |d| {
+            if let Some(dialog) = d {
+                let node_count = dialog.node_count();
+                let root_count = dialog.root_nodes.len();
+                let synopsis = dialog.editor_data.synopsis.clone()
+                    .unwrap_or_else(|| "No synopsis".to_string());
 
-                    v_stack((
-                        h_stack((
-                            label(move || format!("{} nodes", node_count))
-                                .style(|s| {
-                                    s.font_size(12.0)
-                                        .color(Color::rgb8(100, 100, 100))
-                                        .padding_horiz(8.0)
-                                        .padding_vert(2.0)
-                                        .background(Color::rgb8(240, 240, 240))
-                                        .border_radius(4.0)
-                                }),
-                            label(move || format!("{} roots", root_count))
-                                .style(|s| {
-                                    s.font_size(12.0)
-                                        .color(Color::rgb8(100, 100, 100))
-                                        .padding_horiz(8.0)
-                                        .padding_vert(2.0)
-                                        .background(Color::rgb8(240, 240, 240))
-                                        .border_radius(4.0)
-                                }),
-                        ))
-                        .style(|s| s.gap(8.0)),
-
-                        label(move || synopsis.clone())
+                v_stack((
+                    h_stack((
+                        label(move || format!("{} nodes", node_count))
                             .style(|s| {
                                 s.font_size(12.0)
-                                    .color(Color::rgb8(80, 80, 80))
-                                                                }),
+                                    .color(Color::rgb8(100, 100, 100))
+                                    .padding_horiz(8.0)
+                                    .padding_vert(2.0)
+                                    .background(Color::rgb8(240, 240, 240))
+                                    .border_radius(4.0)
+                            }),
+                        label(move || format!("{} roots", root_count))
+                            .style(|s| {
+                                s.font_size(12.0)
+                                    .color(Color::rgb8(100, 100, 100))
+                                    .padding_horiz(8.0)
+                                    .padding_vert(2.0)
+                                    .background(Color::rgb8(240, 240, 240))
+                                    .border_radius(4.0)
+                            }),
                     ))
-                    .style(|s| s.gap(4.0))
-                    .into_any()
-                } else {
-                    empty().into_any()
-                }
-            },
-        ),
-    ))
+                    .style(|s| s.gap(8.0)),
+
+                    rich_text(move || {
+                        let mut layout = TextLayout::new();
+                        let attrs = Attrs::new()
+                            .font_size(12.0)
+                            .color(floem::peniko::Color::rgba8(80, 80, 80, 255));
+                        layout.set_text(&synopsis, AttrsList::new(attrs));
+                        layout.set_wrap(Wrap::Word);
+                        layout
+                    }),
+                ))
+                .style(|s| s.gap(4.0).width_full())
+                .into_any()
+            } else {
+                empty().into_any()
+            }
+        },
+    )
     .style(|s| {
         s.width_full()
             .padding(12.0)
@@ -273,6 +275,14 @@ fn node_row(
     let is_expanded = node.is_expanded;
     let is_visible = node.is_visible;
     let node_uuid = node.uuid.clone();
+    let roll_success = node.roll_success;
+    let constructor_for_roll = node.constructor.clone();
+    // Get NodeContext (the primary dev note field) if available
+    let node_context = node.editor_data.get("NodeContext")
+        .filter(|s| !s.is_empty())
+        .cloned()
+        .unwrap_or_default();
+    let has_dev_notes = !node_context.is_empty();
 
     h_stack((
         // Indentation
@@ -374,6 +384,57 @@ fn node_row(
                 }
             },
         ),
+
+        // Roll success/failure indicator for RollResult nodes
+        dyn_container(
+            move || constructor_for_roll == NodeConstructor::RollResult && roll_success.is_some(),
+            move |show_indicator| {
+                if show_indicator {
+                    let is_success = roll_success.unwrap_or(false);
+                    let (indicator, bg_color) = if is_success {
+                        ("✓", Color::rgb8(34, 197, 94))  // Green for success
+                    } else {
+                        ("✗", Color::rgb8(239, 68, 68))  // Red for failure
+                    };
+                    label(move || indicator)
+                        .style(move |s| {
+                            s.font_size(10.0)
+                                .font_weight(Weight::BOLD)
+                                .padding_horiz(4.0)
+                                .padding_vert(1.0)
+                                .background(bg_color)
+                                .color(Color::WHITE)
+                                .border_radius(2.0)
+                        })
+                        .into_any()
+                } else {
+                    empty().into_any()
+                }
+            },
+        ),
+
+        // Dev notes indicator - shows NodeContext when available
+        {
+            let notes = node_context.clone();
+            dyn_container(
+                move || has_dev_notes,
+                move |show_notes| {
+                    let notes_inner = notes.clone();
+                    if show_notes {
+                        label(move || format!("📝 {}", notes_inner.clone()))
+                            .style(|s| {
+                                s.font_size(10.0)
+                                    .color(Color::rgb8(100, 100, 100))
+                                    .font_style(floem::text::Style::Italic)
+                                    .max_width(400.0)
+                            })
+                            .into_any()
+                    } else {
+                        empty().into_any()
+                    }
+                },
+            )
+        },
     ))
     .on_click_stop(move |_| {
         selected.set(Some(index));
