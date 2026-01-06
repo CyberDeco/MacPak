@@ -102,8 +102,6 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
 
                     dialog_row(entry, selected, panel_width)
                         .on_click_stop(move |_| {
-                            // Load the dialog directly using the entry we already have
-                            // This avoids re-reading available_dialogs which could trigger reactivity
                             operations::load_dialog_entry(state_click.clone(), entry_for_load.clone());
                         })
                 }

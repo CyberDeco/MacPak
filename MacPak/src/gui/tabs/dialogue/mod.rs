@@ -132,21 +132,35 @@ fn divider_handle(
 }
 
 /// Dialog content area (tree view + details)
+/// Uses a stack with CSS visibility instead of dyn_container to prevent
+/// tree view recreation which was causing browser scroll reset
 fn dialog_content(state: DialogueState) -> impl IntoView {
     let state_for_tree = state.clone();
-    let state_for_empty = state.clone();
+    let current_dialog = state.current_dialog;
 
-    dyn_container(
-        move || state_for_empty.current_dialog.get().is_some(),
-        move |has_dialog| {
-            if has_dialog {
-                tree_view::tree_view_panel(state_for_tree.clone()).into_any()
-            } else {
-                empty_state().into_any()
-            }
-        },
+    // Stack both views - only one is visible at a time via CSS
+    // This prevents recreating tree_view_panel when switching dialogs
+    (
+        // Empty state - shown when no dialog loaded
+        empty_state()
+            .style(move |s| {
+                if current_dialog.get().is_some() {
+                    s.display(floem::style::Display::None)
+                } else {
+                    s.width_full().height_full()
+                }
+            }),
+        // Tree view - shown when dialog is loaded
+        tree_view::tree_view_panel(state_for_tree)
+            .style(move |s| {
+                if current_dialog.get().is_some() {
+                    s.width_full().height_full()
+                } else {
+                    s.display(floem::style::Display::None)
+                }
+            }),
     )
-    .style(|s| s.width_full().height_full().min_width(0.0))
+        .style(|s| s.width_full().height_full().min_width(0.0))
 }
 
 /// Empty state when no dialog is loaded
