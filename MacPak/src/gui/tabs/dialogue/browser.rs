@@ -120,7 +120,11 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
 }
 
 /// Single dialog row in the list
-fn dialog_row(entry: DialogEntry, selected_path: RwSignal<Option<String>>, panel_width: RwSignal<f64>) -> impl IntoView {
+fn dialog_row(
+    entry: DialogEntry,
+    selected_path: RwSignal<Option<String>>,
+    panel_width: RwSignal<f64>,
+) -> impl IntoView {
     let path = entry.path.clone();
     let name = entry.name.clone();
     // Show only the directory path, not the filename (already shown above)
@@ -129,7 +133,7 @@ fn dialog_row(entry: DialogEntry, selected_path: RwSignal<Option<String>>, panel
         .map(|i| entry.path[..i].to_string())
         .unwrap_or_default();
 
-    // Selection check - needs to be reactive for highlight updates
+    // Selection check - each row subscribes to selected_path
     let is_selected = move || selected_path.get().as_ref() == Some(&path);
 
     h_stack((
@@ -139,7 +143,7 @@ fn dialog_row(entry: DialogEntry, selected_path: RwSignal<Option<String>>, panel
                 let name_for_label = name.clone();
                 label(move || {
                     let width = panel_width.get();
-                    let available = width - ROW_PADDING - 8.0; // 8 for border
+                    let available = width - ROW_PADDING - 8.0;
                     let max_chars = (available / CHAR_WIDTH).max(10.0) as usize;
                     truncate_middle(&name_for_label, max_chars)
                 })
@@ -157,7 +161,7 @@ fn dialog_row(entry: DialogEntry, selected_path: RwSignal<Option<String>>, panel
                 label(move || {
                     let width = panel_width.get();
                     let available = width - ROW_PADDING - 8.0;
-                    let max_chars = (available / 6.0).max(10.0) as usize; // smaller font = narrower chars
+                    let max_chars = (available / 6.0).max(10.0) as usize;
                     truncate_middle(&path_for_label, max_chars)
                 })
                 .style(move |s| {

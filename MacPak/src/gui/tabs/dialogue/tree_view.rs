@@ -186,21 +186,15 @@ fn node_tree(state: DialogueState) -> impl IntoView {
         scroll(
             virtual_list(
                 VirtualDirection::Vertical,
-                // Use variable heights: visible items get full height, invisible get 0
-                // This keeps the item count constant across expand/collapse, preserving scroll
-                VirtualItemSize::Fn(Box::new(move |node: &DisplayNode| {
-                    // Subscribe to tree_version for batched updates
-                    let _version = tree_version.get();
-                    if node.is_visible.get_untracked() {
-                        NODE_ROW_HEIGHT
-                    } else {
-                        0.0
-                    }
-                })),
+                VirtualItemSize::Fixed(Box::new(|| NODE_ROW_HEIGHT)),
                 move || {
-                    // Return ALL nodes - visibility is handled via height
-                    // This keeps the item list stable, only heights change
-                    display_nodes.get().into_iter().collect::<ImVector<_>>()
+                    // Subscribe to tree_version so we re-run when visibility changes
+                    let _ = tree_version.get();
+                    // Filter to only visible nodes - don't rely on CSS to hide
+                    // This ensures virtual_list scroll math is correct
+                    display_nodes.get().into_iter()
+                        .filter(|node| node.is_visible.get_untracked())
+                        .collect::<ImVector<_>>()
                 },
                 // Use only UUID as key - stable across expand/collapse
                 |node| node.uuid.clone(),
@@ -230,10 +224,9 @@ fn update_descendant_visibility(
     parent_uuid: &str,
     parent_expanded: bool,
     display_nodes: RwSignal<Vec<DisplayNode>>,
-    tree_version: RwSignal<u64>,
 ) {
     // Use with_untracked to avoid creating reactive subscriptions
-    // This prevents the browser panel from re-rendering when we expand/collapse nodes
+    // This prevents other panels from re-rendering when we expand/collapse nodes
     display_nodes.with_untracked(|nodes| {
         // When expanding: direct children become visible
         // When collapsing: all descendants become invisible
@@ -252,9 +245,6 @@ fn update_descendant_visibility(
             }
         }
     });
-
-    // Increment version to trigger a single batched re-render
-    tree_version.update(|v| *v = v.wrapping_add(1));
 }
 
 /// Recursively update visibility of descendants
@@ -288,7 +278,6 @@ fn node_row(
     let is_end = node.is_end_node;
     let child_count = node.child_count;
     let is_expanded = node.is_expanded;
-    let is_visible = node.is_visible;
     let node_uuid = node.uuid.clone();
     let node_uuid_for_select = node.uuid.clone();
     let node_uuid_for_style = node.uuid.clone();
@@ -320,8 +309,10 @@ fn node_row(
                     .on_click_stop(move |_| {
                         let new_expanded = !is_expanded.get();
                         is_expanded.set(new_expanded);
-                        // Update visibility of all descendants and trigger re-render
-                        update_descendant_visibility(&uuid_for_click, new_expanded, display_nodes, tree_version);
+                        // Update visibility of all descendants
+                        update_descendant_visibility(&uuid_for_click, new_expanded, display_nodes);
+                        // Bump version to trigger virtual_list re-filter
+                        tree_version.update(|v| *v += 1);
                     })
                     .into_any()
             } else {
@@ -454,20 +445,12 @@ fn node_row(
         },
     ))
     .on_click_stop(move |_| {
-        // Only handle clicks for visible nodes
-        if is_visible.get_untracked() {
-            selected_uuid.set(Some(node_uuid_for_select.clone()));
-        }
+        // All rendered rows are visible (filtered at data source level)
+        selected_uuid.set(Some(node_uuid_for_select.clone()));
     })
     .style(move |s| {
-        // Subscribe to tree_version for batched visibility updates
-        let _version = tree_version.get();
-
-        // Check visibility - invisible rows get collapsed to 0 height
-        if !is_visible.get_untracked() {
-            return s.height(0.0).display(floem::style::Display::None);
-        }
-
+        // Visibility is handled by filtering at virtual_list data source level
+        // No need for CSS hiding which caused scroll position bugs
         let is_selected = selected_uuid.get().as_ref() == Some(&node_uuid_for_style);
 
         // Use max_content_width so all rows are same width for proper scrolling

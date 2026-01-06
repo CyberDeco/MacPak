@@ -150,6 +150,8 @@ pub struct DialogueState {
     pub max_content_width: RwSignal<f32>,
     /// Version counter to trigger tree re-renders without creating per-node subscriptions
     pub tree_version: RwSignal<u64>,
+    /// Version counter to trigger browser re-renders for selection updates
+    pub browser_version: RwSignal<u64>,
 
     // Status
     /// Status message
@@ -198,6 +200,7 @@ impl DialogueState {
             browser_panel_width: RwSignal::new(400.0),
             max_content_width: RwSignal::new(0.0),
             tree_version: RwSignal::new(0),
+            browser_version: RwSignal::new(0),
 
             // Status
             status_message: RwSignal::new("Ready".to_string()),
