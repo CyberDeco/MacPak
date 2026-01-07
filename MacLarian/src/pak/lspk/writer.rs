@@ -1,15 +1,21 @@
 //! LSPK PAK file writer with progress callbacks
+//!
+//! Uses parallel compression for improved performance on multi-core systems.
 
 use std::collections::VecDeque;
 use std::fs::OpenOptions;
 use std::io::{Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use rayon::prelude::*;
 
 use crate::error::{Error, Result};
 use super::{CompressionMethod, MAGIC, MAX_VERSION, PATH_LENGTH, TABLE_ENTRY_SIZE};
 
 /// Progress callback type for write operations
-pub type WriteProgressCallback<'a> = &'a dyn Fn(usize, usize, &str);
+/// Must be Sync + Send to support parallel compression.
+pub type WriteProgressCallback<'a> = &'a (dyn Fn(usize, usize, &str) + Sync + Send);
 
 /// File to be written to the PAK
 struct FileEntry {
@@ -24,6 +30,13 @@ struct WrittenEntry {
     path: PathBuf,
     offset: u64,
     size_compressed: u32,
+    size_decompressed: u32,
+}
+
+/// Compressed file ready for writing
+struct CompressedEntry {
+    path: PathBuf,
+    compressed_data: Vec<u8>,
     size_decompressed: u32,
 }
 
@@ -115,6 +128,10 @@ impl LspkWriter {
     }
 
     /// Write the PAK file with progress callback
+    ///
+    /// Uses parallel compression for improved performance on multi-core systems.
+    /// Files are compressed in parallel, then written sequentially to maintain
+    /// correct file offsets in the PAK.
     pub fn write_with_progress(
         self,
         output_path: impl AsRef<Path>,
@@ -126,6 +143,76 @@ impl LspkWriter {
         if let Some(parent) = output_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
+
+        let total_files = self.files.len();
+        let processed = AtomicUsize::new(0);
+        let compression = self.compression;
+
+        let compress_label = match compression {
+            CompressionMethod::None => "Storing",
+            CompressionMethod::Lz4 => "Compressing",
+            CompressionMethod::Zlib => "Compressing",
+        };
+
+        // Phase 1: Compress all files in parallel
+        progress(0, total_files, "Compressing files...");
+
+        let compression_results: Vec<std::result::Result<CompressedEntry, String>> = self
+            .files
+            .par_iter()
+            .map(|file| {
+                let file_name = file
+                    .relative_path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| file.relative_path.to_string_lossy().to_string());
+
+                // Update progress (atomic)
+                let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
+                progress(current, total_files, &format!("{} {}", compress_label, file_name));
+
+                let size_decompressed = file.data.len();
+
+                // Validate size fits in u32
+                let size_decompressed: u32 = size_decompressed
+                    .try_into()
+                    .map_err(|_| format!("File {} is too large: {} bytes", file_name, size_decompressed))?;
+
+                let compressed_data = match compression {
+                    CompressionMethod::None => file.data.clone(),
+                    CompressionMethod::Lz4 => lz4_flex::block::compress(&file.data),
+                    CompressionMethod::Zlib => {
+                        use flate2::write::ZlibEncoder;
+                        use flate2::Compression;
+                        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+                        encoder
+                            .write_all(&file.data)
+                            .map_err(|e| format!("Failed to compress {}: {}", file_name, e))?;
+                        encoder
+                            .finish()
+                            .map_err(|e| format!("Failed to finish compression for {}: {}", file_name, e))?
+                    }
+                };
+
+                Ok(CompressedEntry {
+                    path: file.relative_path.clone(),
+                    compressed_data,
+                    size_decompressed,
+                })
+            })
+            .collect();
+
+        // Check for compression errors
+        let mut compressed_entries = Vec::with_capacity(total_files);
+        for result in compression_results {
+            match result {
+                Ok(entry) => compressed_entries.push(entry),
+                Err(e) => return Err(Error::ConversionError(e)),
+            }
+        }
+
+        // Phase 2: Write compressed data sequentially (to maintain correct offsets)
+        progress(total_files, total_files, "Writing PAK file...");
 
         let mut output = OpenOptions::new()
             .create(true)
@@ -139,54 +226,25 @@ impl LspkWriter {
         // Placeholder for footer offset (will be filled in later)
         output.write_all(&0u64.to_le_bytes())?;
 
-        let total_files = self.files.len();
-        let mut written_entries = Vec::with_capacity(total_files);
+        let mut written_entries = Vec::with_capacity(compressed_entries.len());
 
-        // Write compressed file data
-        for (i, file) in self.files.iter().enumerate() {
-            let file_name = file.relative_path.file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| file.relative_path.to_string_lossy().to_string());
-
-            let compress_label = match self.compression {
-                CompressionMethod::None => "Storing",
-                CompressionMethod::Lz4 => "Compressing",
-                CompressionMethod::Zlib => "Compressing",
-            };
-            progress(i + 1, total_files, &format!("{} {}", compress_label, file_name));
-
-            let size_decompressed = file.data.len();
-            let compressed = match self.compression {
-                CompressionMethod::None => file.data.clone(),
-                CompressionMethod::Lz4 => lz4_flex::block::compress(&file.data),
-                CompressionMethod::Zlib => {
-                    use flate2::write::ZlibEncoder;
-                    use flate2::Compression;
-                    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-                    encoder.write_all(&file.data)?;
-                    encoder.finish()?
-                }
-            };
-            let size_compressed = compressed.len();
-
-            // Validate sizes fit in u32
-            let size_decompressed: u32 = size_decompressed.try_into()
-                .map_err(|_| Error::ConversionError(format!(
-                    "File {} is too large: {} bytes", file_name, size_decompressed
-                )))?;
-            let size_compressed: u32 = size_compressed.try_into()
-                .map_err(|_| Error::ConversionError(format!(
-                    "Compressed file {} is too large: {} bytes", file_name, size_compressed
-                )))?;
+        for entry in compressed_entries {
+            let size_compressed: u32 = entry.compressed_data.len().try_into().map_err(|_| {
+                Error::ConversionError(format!(
+                    "Compressed file {} is too large: {} bytes",
+                    entry.path.display(),
+                    entry.compressed_data.len()
+                ))
+            })?;
 
             let offset = output.stream_position()?;
-            output.write_all(&compressed)?;
+            output.write_all(&entry.compressed_data)?;
 
             written_entries.push(WrittenEntry {
-                path: file.relative_path.clone(),
+                path: entry.path,
                 offset,
                 size_compressed,
-                size_decompressed,
+                size_decompressed: entry.size_decompressed,
             });
         }
 
@@ -194,10 +252,9 @@ impl LspkWriter {
         let footer_offset = output.stream_position()?;
 
         // Write footer: number of files
-        let num_files: u32 = written_entries.len().try_into()
-            .map_err(|_| Error::ConversionError(format!(
-                "Too many files: {}", written_entries.len()
-            )))?;
+        let num_files: u32 = written_entries.len().try_into().map_err(|_| {
+            Error::ConversionError(format!("Too many files: {}", written_entries.len()))
+        })?;
         output.write_all(&num_files.to_le_bytes())?;
 
         // Build file table
@@ -225,10 +282,12 @@ impl LspkWriter {
 
         // Compress and write file table
         let compressed_table = lz4_flex::block::compress(&table_data);
-        let table_size: u32 = compressed_table.len().try_into()
-            .map_err(|_| Error::ConversionError(format!(
-                "File table too large: {} bytes", compressed_table.len()
-            )))?;
+        let table_size: u32 = compressed_table.len().try_into().map_err(|_| {
+            Error::ConversionError(format!(
+                "File table too large: {} bytes",
+                compressed_table.len()
+            ))
+        })?;
 
         output.write_all(&table_size.to_le_bytes())?;
         output.write_all(&compressed_table)?;

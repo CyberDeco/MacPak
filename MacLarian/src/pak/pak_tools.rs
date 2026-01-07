@@ -1,13 +1,17 @@
 //! PAK archive operations
 
 use crate::error::{Error, Result};
-use super::lspk::{CompressionMethod, LspkReader, LspkWriter};
+use super::lspk::{CompressionMethod, FileTableEntry, LspkReader, LspkWriter};
+use rayon::prelude::*;
 use std::fs::File;
-use std::path::Path;
+use std::io::{Read, Seek, SeekFrom};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Progress callback for PAK operations
 /// Arguments: (current, total, description)
-pub type ProgressCallback<'a> = &'a dyn Fn(usize, usize, &str);
+/// Must be Sync + Send to support parallel decompression.
+pub type ProgressCallback<'a> = &'a (dyn Fn(usize, usize, &str) + Sync + Send);
 
 pub struct PakOperations;
 
@@ -20,76 +24,124 @@ impl PakOperations {
     /// Extract a PAK file to a directory with progress callback
     ///
     /// The callback receives (current, total, filename) during file extraction.
-    /// Files are decompressed and written one at a time for smooth progress updates.
+    /// Uses parallel decompression for improved performance on multi-core systems.
     pub fn extract_with_progress<P: AsRef<Path>>(
         pak_path: P,
         output_dir: P,
         progress: ProgressCallback,
     ) -> Result<()> {
-        let file = File::open(pak_path.as_ref())?;
+        let pak_path = pak_path.as_ref();
+        let output_dir = output_dir.as_ref();
 
-        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
+        let mut file = File::open(pak_path)?;
+        let mut reader = LspkReader::with_path(File::open(pak_path)?, pak_path);
 
         // Get file list without decompressing
         let entries = reader.list_files()?;
         let total_files = entries.len();
 
-        std::fs::create_dir_all(&output_dir)?;
+        std::fs::create_dir_all(output_dir)?;
 
-        let mut errors: Vec<(std::path::PathBuf, String)> = Vec::new();
+        progress(0, total_files, "Reading compressed data...");
 
-        // Decompress and write each file one at a time
-        for (index, entry) in entries.iter().enumerate() {
-            // Skip .DS_Store files
-            if entry.path.file_name() == Some(std::ffi::OsStr::new(".DS_Store")) {
-                tracing::debug!("Skipping .DS_Store file: {:?}", entry.path);
-                continue;
-            }
-
-            let file_name = entry.path.file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| entry.path.to_string_lossy().to_string());
-
-            progress(index + 1, total_files, &file_name);
-
-            // Decompress the file
-            let data = match reader.decompress_file(entry) {
-                Ok(data) => data,
-                Err(e) => {
-                    tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
-                    errors.push((entry.path.clone(), e.to_string()));
-                    continue;
+        // Phase 1: Read all compressed data sequentially (PAK is a single file)
+        let compressed_files: Vec<CompressedFile> = entries
+            .iter()
+            .filter(|entry| {
+                // Skip .DS_Store files
+                entry.path.file_name() != Some(std::ffi::OsStr::new(".DS_Store"))
+            })
+            .filter_map(|entry| {
+                // Seek and read compressed data
+                if file.seek(SeekFrom::Start(entry.offset)).is_err() {
+                    tracing::warn!("Failed to seek to {}", entry.path.display());
+                    return None;
                 }
-            };
 
-            // For virtual texture files (.gts/.gtp), organize into subfolders
-            let output_path = if is_virtual_texture_file(&file_name) {
-                if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
-                    // Insert subfolder before the filename
-                    if let Some(parent) = entry.path.parent() {
-                        output_dir.as_ref().join(parent).join(&subfolder).join(&file_name)
+                let mut compressed_data = vec![0u8; entry.size_compressed as usize];
+                if file.read_exact(&mut compressed_data).is_err() {
+                    tracing::warn!("Failed to read {}", entry.path.display());
+                    return None;
+                }
+
+                Some(CompressedFile {
+                    entry: entry.clone(),
+                    compressed_data,
+                })
+            })
+            .collect();
+
+        let files_to_process = compressed_files.len();
+        let processed = AtomicUsize::new(0);
+        let error_count = AtomicUsize::new(0);
+
+        // Phase 2: Decompress and write in parallel
+        let errors: Vec<(PathBuf, String)> = compressed_files
+            .par_iter()
+            .filter_map(|cf| {
+                let file_name = cf
+                    .entry
+                    .path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| cf.entry.path.to_string_lossy().to_string());
+
+                // Update progress (atomic)
+                let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
+                progress(current, files_to_process, &file_name);
+
+                // Decompress
+                let data = match decompress_data(
+                    &cf.compressed_data,
+                    cf.entry.compression,
+                    cf.entry.size_decompressed,
+                ) {
+                    Ok(data) => data,
+                    Err(e) => {
+                        error_count.fetch_add(1, Ordering::SeqCst);
+                        tracing::warn!("Failed to decompress {}: {}", cf.entry.path.display(), e);
+                        return Some((cf.entry.path.clone(), e.to_string()));
+                    }
+                };
+
+                // Calculate output path (handle virtual texture subfolders)
+                let output_path = if is_virtual_texture_file(&file_name) {
+                    if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
+                        if let Some(parent) = cf.entry.path.parent() {
+                            output_dir.join(parent).join(&subfolder).join(&file_name)
+                        } else {
+                            output_dir.join(&subfolder).join(&file_name)
+                        }
                     } else {
-                        output_dir.as_ref().join(&subfolder).join(&file_name)
+                        output_dir.join(&cf.entry.path)
                     }
                 } else {
-                    output_dir.as_ref().join(&entry.path)
+                    output_dir.join(&cf.entry.path)
+                };
+
+                // Create parent directories (idempotent)
+                if let Some(parent) = output_path.parent() {
+                    if let Err(e) = std::fs::create_dir_all(parent) {
+                        error_count.fetch_add(1, Ordering::SeqCst);
+                        return Some((cf.entry.path.clone(), format!("Failed to create dir: {e}")));
+                    }
                 }
-            } else {
-                output_dir.as_ref().join(&entry.path)
-            };
 
-            if let Some(parent) = output_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
+                // Write file
+                if let Err(e) = std::fs::write(&output_path, &data) {
+                    error_count.fetch_add(1, Ordering::SeqCst);
+                    return Some((cf.entry.path.clone(), format!("Failed to write: {e}")));
+                }
 
-            std::fs::write(&output_path, &data)?;
-        }
+                None
+            })
+            .collect();
 
         // If there were errors, return a summary error
         if !errors.is_empty() {
             return Err(Error::ConversionError(format!(
                 "Extracted {} files with {} errors. First error: {}",
-                total_files - errors.len(),
+                files_to_process - errors.len(),
                 errors.len(),
                 errors[0].1
             )));
@@ -177,6 +229,7 @@ impl PakOperations {
     ///
     /// Takes a list of file paths (as they appear in the PAK) and extracts only those files.
     /// The callback receives (current, total, filename) during extraction.
+    /// Uses parallel decompression for improved performance on multi-core systems.
     pub fn extract_files_with_progress<P: AsRef<Path>, S: AsRef<str>>(
         pak_path: P,
         output_dir: P,
@@ -187,8 +240,8 @@ impl PakOperations {
             return Ok(());
         }
 
-        let file = File::open(pak_path.as_ref())?;
-        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
+        let mut file = File::open(pak_path.as_ref())?;
+        let mut reader = LspkReader::with_path(File::open(pak_path.as_ref())?, pak_path.as_ref());
 
         // Build a set of requested paths for fast lookup
         let requested: std::collections::HashSet<&str> = file_paths
@@ -200,7 +253,13 @@ impl PakOperations {
         let all_entries = reader.list_files()?;
         let entries_to_extract: Vec<_> = all_entries
             .into_iter()
-            .filter(|e| requested.contains(e.path.to_string_lossy().as_ref()))
+            .filter(|e| {
+                // Skip .DS_Store files
+                if e.path.file_name() == Some(std::ffi::OsStr::new(".DS_Store")) {
+                    return false;
+                }
+                requested.contains(e.path.to_string_lossy().as_ref())
+            })
             .collect();
 
         if entries_to_extract.is_empty() {
@@ -211,59 +270,99 @@ impl PakOperations {
 
         std::fs::create_dir_all(&output_dir)?;
 
-        let total_files = entries_to_extract.len();
-        let mut errors: Vec<(std::path::PathBuf, String)> = Vec::new();
+        progress(0, entries_to_extract.len(), "Reading compressed data...");
 
-        for (index, entry) in entries_to_extract.iter().enumerate() {
-            // Skip .DS_Store files
-            if entry.path.file_name() == Some(std::ffi::OsStr::new(".DS_Store")) {
-                tracing::debug!("Skipping .DS_Store file: {:?}", entry.path);
-                continue;
-            }
-
-            let file_name = entry.path.file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| entry.path.to_string_lossy().to_string());
-
-            progress(index + 1, total_files, &file_name);
-
-            // Decompress the file
-            let data = match reader.decompress_file(entry) {
-                Ok(data) => data,
-                Err(e) => {
-                    tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
-                    errors.push((entry.path.clone(), e.to_string()));
-                    continue;
+        // Phase 1: Read all compressed data sequentially (PAK is a single file)
+        let compressed_files: Vec<CompressedFile> = entries_to_extract
+            .iter()
+            .filter_map(|entry| {
+                // Seek and read compressed data
+                if file.seek(SeekFrom::Start(entry.offset)).is_err() {
+                    tracing::warn!("Failed to seek to {}", entry.path.display());
+                    return None;
                 }
-            };
 
-            // For virtual texture files (.gts/.gtp), organize into subfolders
-            let output_path = if is_virtual_texture_file(&file_name) {
-                if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
-                    if let Some(parent) = entry.path.parent() {
-                        output_dir.as_ref().join(parent).join(&subfolder).join(&file_name)
+                let mut compressed_data = vec![0u8; entry.size_compressed as usize];
+                if file.read_exact(&mut compressed_data).is_err() {
+                    tracing::warn!("Failed to read {}", entry.path.display());
+                    return None;
+                }
+
+                Some(CompressedFile {
+                    entry: entry.clone(),
+                    compressed_data,
+                })
+            })
+            .collect();
+
+        let files_to_process = compressed_files.len();
+        let processed = AtomicUsize::new(0);
+        let output_dir = output_dir.as_ref();
+
+        // Phase 2: Decompress and write in parallel
+        let errors: Vec<(PathBuf, String)> = compressed_files
+            .par_iter()
+            .filter_map(|cf| {
+                let file_name = cf
+                    .entry
+                    .path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| cf.entry.path.to_string_lossy().to_string());
+
+                // Update progress (atomic)
+                let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
+                progress(current, files_to_process, &file_name);
+
+                // Decompress
+                let data = match decompress_data(
+                    &cf.compressed_data,
+                    cf.entry.compression,
+                    cf.entry.size_decompressed,
+                ) {
+                    Ok(data) => data,
+                    Err(e) => {
+                        tracing::warn!("Failed to decompress {}: {}", cf.entry.path.display(), e);
+                        return Some((cf.entry.path.clone(), e.to_string()));
+                    }
+                };
+
+                // Calculate output path (handle virtual texture subfolders)
+                let output_path = if is_virtual_texture_file(&file_name) {
+                    if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
+                        if let Some(parent) = cf.entry.path.parent() {
+                            output_dir.join(parent).join(&subfolder).join(&file_name)
+                        } else {
+                            output_dir.join(&subfolder).join(&file_name)
+                        }
                     } else {
-                        output_dir.as_ref().join(&subfolder).join(&file_name)
+                        output_dir.join(&cf.entry.path)
                     }
                 } else {
-                    output_dir.as_ref().join(&entry.path)
+                    output_dir.join(&cf.entry.path)
+                };
+
+                // Create parent directories (idempotent)
+                if let Some(parent) = output_path.parent() {
+                    if let Err(e) = std::fs::create_dir_all(parent) {
+                        return Some((cf.entry.path.clone(), format!("Failed to create dir: {e}")));
+                    }
                 }
-            } else {
-                output_dir.as_ref().join(&entry.path)
-            };
 
-            if let Some(parent) = output_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
+                // Write file
+                if let Err(e) = std::fs::write(&output_path, &data) {
+                    return Some((cf.entry.path.clone(), format!("Failed to write: {e}")));
+                }
 
-            std::fs::write(&output_path, &data)?;
-        }
+                None
+            })
+            .collect();
 
         // If there were errors, return a summary error
         if !errors.is_empty() {
             return Err(Error::ConversionError(format!(
                 "Extracted {} files with {} errors. First error: {}",
-                total_files - errors.len(),
+                files_to_process - errors.len(),
                 errors.len(),
                 errors[0].1
             )));
@@ -296,6 +395,7 @@ impl PakOperations {
     ///
     /// Returns a map of file paths to their decompressed contents.
     /// Files that fail to decompress are skipped with a warning.
+    /// Uses parallel decompression for improved performance on multi-core systems.
     pub fn read_files_bytes<P: AsRef<Path>, S: AsRef<str>>(
         pak_path: P,
         file_paths: &[S],
@@ -306,8 +406,8 @@ impl PakOperations {
             return Ok(HashMap::new());
         }
 
-        let file = File::open(pak_path.as_ref())?;
-        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
+        let mut file = File::open(pak_path.as_ref())?;
+        let mut reader = LspkReader::with_path(File::open(pak_path.as_ref())?, pak_path.as_ref());
 
         // Build a set of requested paths
         let requested: std::collections::HashSet<&str> = file_paths
@@ -322,20 +422,52 @@ impl PakOperations {
             .filter(|e| requested.contains(e.path.to_string_lossy().as_ref()))
             .collect();
 
-        let mut results = HashMap::new();
-
-        for entry in &entries_to_read {
-            match reader.decompress_file(entry) {
-                Ok(data) => {
-                    results.insert(entry.path.to_string_lossy().to_string(), data);
+        // Phase 1: Read all compressed data sequentially (PAK is a single file)
+        let compressed_files: Vec<(String, CompressedFile)> = entries_to_read
+            .iter()
+            .filter_map(|entry| {
+                // Seek and read compressed data
+                if file.seek(SeekFrom::Start(entry.offset)).is_err() {
+                    tracing::warn!("Failed to seek to {}", entry.path.display());
+                    return None;
                 }
-                Err(e) => {
-                    tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
-                }
-            }
-        }
 
-        Ok(results)
+                let mut compressed_data = vec![0u8; entry.size_compressed as usize];
+                if file.read_exact(&mut compressed_data).is_err() {
+                    tracing::warn!("Failed to read {}", entry.path.display());
+                    return None;
+                }
+
+                Some((
+                    entry.path.to_string_lossy().to_string(),
+                    CompressedFile {
+                        entry: entry.clone(),
+                        compressed_data,
+                    },
+                ))
+            })
+            .collect();
+
+        // Phase 2: Decompress in parallel and collect results
+        let decompressed: Vec<(String, Vec<u8>)> = compressed_files
+            .par_iter()
+            .filter_map(|(path, cf)| {
+                match decompress_data(
+                    &cf.compressed_data,
+                    cf.entry.compression,
+                    cf.entry.size_decompressed,
+                ) {
+                    Ok(data) => Some((path.clone(), data)),
+                    Err(e) => {
+                        tracing::warn!("Failed to decompress {}: {}", path, e);
+                        None
+                    }
+                }
+            })
+            .collect();
+
+        // Collect into HashMap
+        Ok(decompressed.into_iter().collect())
     }
 
     /// Extract meta.lsx from a PAK
@@ -367,6 +499,76 @@ impl PakOperations {
 
         String::from_utf8(meta_file.data.clone())
             .map_err(|e| Error::ConversionError(format!("Invalid UTF-8 in meta.lsx: {}", e)))
+    }
+}
+
+/// Compressed file data ready for parallel decompression
+struct CompressedFile {
+    entry: FileTableEntry,
+    compressed_data: Vec<u8>,
+}
+
+
+/// Standalone LZ4 decompression (for parallel use)
+fn decompress_lz4_standalone(compressed: &[u8], expected_size: usize) -> Result<Vec<u8>> {
+    // Try standard block decompression first
+    if let Ok(data) = lz4_flex::block::decompress(compressed, expected_size) {
+        return Ok(data);
+    }
+
+    // Try with a larger buffer
+    let larger_size = expected_size.saturating_mul(2).max(65536);
+    if let Ok(data) = lz4_flex::block::decompress(compressed, larger_size) {
+        return Ok(data);
+    }
+
+    // Try decompressing without size hint
+    if let Ok(data) = lz4_flex::decompress_size_prepended(compressed) {
+        return Ok(data);
+    }
+
+    // Try treating it as a frame
+    let mut decoder = lz4_flex::frame::FrameDecoder::new(compressed);
+    let mut decompressed = Vec::with_capacity(expected_size);
+    if decoder.read_to_end(&mut decompressed).is_ok() && !decompressed.is_empty() {
+        return Ok(decompressed);
+    }
+
+    Err(Error::DecompressionError(format!(
+        "Failed to decompress LZ4 data: all methods failed (compressed: {} bytes, expected: {} bytes)",
+        compressed.len(),
+        expected_size
+    )))
+}
+
+/// Standalone Zlib decompression (for parallel use)
+fn decompress_zlib_standalone(compressed: &[u8], expected_size: usize) -> Result<Vec<u8>> {
+    use flate2::read::ZlibDecoder;
+
+    let mut decoder = ZlibDecoder::new(compressed);
+    let mut decompressed = Vec::with_capacity(expected_size);
+
+    decoder
+        .read_to_end(&mut decompressed)
+        .map_err(|e| Error::DecompressionError(format!("Failed to decompress Zlib data: {e}")))?;
+
+    Ok(decompressed)
+}
+
+/// Decompress data based on compression method (standalone for parallel use)
+fn decompress_data(
+    compressed: &[u8],
+    compression: CompressionMethod,
+    size_decompressed: u32,
+) -> Result<Vec<u8>> {
+    if compression == CompressionMethod::None || size_decompressed == 0 {
+        return Ok(compressed.to_vec());
+    }
+
+    match compression {
+        CompressionMethod::None => Ok(compressed.to_vec()),
+        CompressionMethod::Lz4 => decompress_lz4_standalone(compressed, size_decompressed as usize),
+        CompressionMethod::Zlib => decompress_zlib_standalone(compressed, size_decompressed as usize),
     }
 }
 
