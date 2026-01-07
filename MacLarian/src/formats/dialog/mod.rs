@@ -38,6 +38,7 @@ mod types;
 mod parser;
 mod localization;
 mod embedded;
+mod flags;
 
 pub use types::*;
 pub use parser::{parse_dialog, DialogParseError};
@@ -50,6 +51,10 @@ pub use localization::{
 pub use embedded::{
     embedded_speakers,
     EmbeddedSpeakers,
+};
+pub use flags::{
+    FlagCache,
+    FlagCacheError,
 };
 
 /// Parse dialog from LSJ bytes

@@ -315,6 +315,23 @@ fn node_row(
         .unwrap_or_default();
     let has_dev_notes = !node_context.is_empty();
 
+    // Format check flags for display
+    let check_flags_str = if node.check_flags.is_empty() {
+        String::new()
+    } else {
+        node.check_flags.iter()
+            .map(|f| {
+                if f.value {
+                    f.name.clone()
+                } else {
+                    format!("{} = False", f.name)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let has_check_flags = !check_flags_str.is_empty();
+
     h_stack((
         // Indentation
         empty().style(move |s| s.width((depth * 20) as f32)),
@@ -360,6 +377,29 @@ fn node_row(
                                 s.font_size(12.0)
                                     .color(Color::rgb8(79, 70, 229))
                                     .font_weight(Weight::MEDIUM)
+                                    .margin_right(4.0)
+                            })
+                            .into_any()
+                    } else {
+                        empty().into_any()
+                    }
+                },
+            )
+        },
+
+        // Check flags (conditions) - show inline before the text
+        {
+            let flags_display = check_flags_str.clone();
+            dyn_container(
+                move || has_check_flags,
+                move |show_flags| {
+                    let flags_inner = flags_display.clone();
+                    if show_flags {
+                        label(move || format!("[{}]", flags_inner.clone()))
+                            .style(|s| {
+                                s.font_size(11.0)
+                                    .color(Color::rgb8(180, 100, 60)) // Orange-brown for conditions
+                                    .font_style(floem::text::Style::Italic)
                                     .margin_right(4.0)
                             })
                             .into_any()

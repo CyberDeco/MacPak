@@ -5,7 +5,7 @@ use std::sync::Arc;
 use floem::ext_event::create_ext_action;
 use floem::reactive::SignalUpdate;
 use floem_reactive::Scope;
-use MacLarian::formats::dialog::LocalizationCache;
+use MacLarian::formats::dialog::{LocalizationCache, FlagCache};
 use MacLarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogEntry, DialogSource};
 
@@ -29,6 +29,7 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
 
     let pak_display = pak_path.display().to_string();
     let loca_cache = state.localization_cache.clone();
+    let flag_cache = state.flag_cache.clone();
 
     // Create ext_action to send results back to main thread
     let send = create_ext_action(Scope::new(), move |result: ScanResult| {
@@ -40,10 +41,9 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
                     state.available_dialogs.set(entries);
                     if loca_count > 0 {
                         state.localization_loaded.set(true);
-                        state.status_message.set(format!("Found {} dialogs, {} localization strings", count, loca_count));
-                    } else {
-                        state.status_message.set(format!("Found {} dialogs in PAK", count));
                     }
+                    let status = format!("Found {} dialogs, {} loca strings", count, loca_count);
+                    state.status_message.set(status);
                 }
             }
             ScanResult::Error(e) => {
@@ -58,6 +58,9 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
     std::thread::spawn(move || {
         // Load localization first (updates Arc<RwLock<>> directly)
         let loca_count = load_localization(&loca_cache, &pak_path);
+
+        // Configure flag cache and build index (one-time cost)
+        configure_flags(&flag_cache, &pak_path);
 
         // Scan for dialog files
         let mut entries = Vec::new();
@@ -178,6 +181,53 @@ fn load_localization_from_pak(cache: &Arc<std::sync::RwLock<LocalizationCache>>,
     total_count
 }
 
+/// Configure flag cache and build index from PAK sources
+fn configure_flags(cache: &Arc<std::sync::RwLock<FlagCache>>, pak_path: &Path) {
+    let Some(data_dir) = pak_path.parent() else {
+        return;
+    };
+
+    let Ok(mut cache) = cache.write() else {
+        return;
+    };
+
+    // Skip if already indexed
+    if cache.is_indexed() {
+        return;
+    }
+
+    // Configure PAK sources and build the index
+    cache.configure_from_game_data(data_dir);
+    if let Err(e) = cache.build_index() {
+        tracing::warn!("Failed to build flag index: {}", e);
+    }
+}
+
+/// Configure flag cache from a folder that may contain PAK files
+fn configure_flags_from_folder(cache: &Arc<std::sync::RwLock<FlagCache>>, folder: &Path) {
+    let Ok(mut cache) = cache.write() else {
+        return;
+    };
+
+    // Skip if already indexed
+    if cache.is_indexed() {
+        return;
+    }
+
+    // Look for PAK files in the folder and add them as sources
+    for entry in std::fs::read_dir(folder).into_iter().flatten().flatten() {
+        let path = entry.path();
+        if path.extension().map(|e| e == "pak").unwrap_or(false) {
+            cache.add_pak_source(&path);
+        }
+    }
+
+    // Build the index after adding all sources
+    if let Err(e) = cache.build_index() {
+        tracing::warn!("Failed to build flag index: {}", e);
+    }
+}
+
 /// Open a folder containing dialog files
 /// Note: File dialog must run on main thread on macOS
 pub fn open_dialog_folder(state: DialogueState) {
@@ -190,6 +240,7 @@ pub fn open_dialog_folder(state: DialogueState) {
 
         let path_display = path.display().to_string();
         let loca_cache = state.localization_cache.clone();
+        let flag_cache = state.flag_cache.clone();
 
         // Create ext_action to send results back to main thread
         let send = create_ext_action(Scope::new(), move |result: ScanResult| {
@@ -201,10 +252,9 @@ pub fn open_dialog_folder(state: DialogueState) {
                         state.available_dialogs.set(entries);
                         if loca_count > 0 {
                             state.localization_loaded.set(true);
-                            state.status_message.set(format!("Found {} dialogs, {} localization strings", count, loca_count));
-                        } else {
-                            state.status_message.set(format!("Found {} dialogs", count));
                         }
+                        let status = format!("Found {} dialogs, {} loca strings", count, loca_count);
+                        state.status_message.set(status);
                     }
                 }
                 ScanResult::Error(e) => {
@@ -219,6 +269,9 @@ pub fn open_dialog_folder(state: DialogueState) {
         std::thread::spawn(move || {
             // Try to load localization from PAK files in the folder
             let loca_count = load_localization_from_folder(&loca_cache, &path);
+
+            // Configure flag cache and build index
+            configure_flags_from_folder(&flag_cache, &path);
 
             match scan_dialog_folder(&path) {
                 Ok(entries) => {

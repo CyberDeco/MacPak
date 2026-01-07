@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use floem::prelude::RwSignal;
 use MacLarian::formats::dialog::{Dialog, NodeConstructor, embedded_speakers};
-use crate::gui::state::{DialogueState, DisplayNode};
+use crate::gui::state::{DialogueState, DisplayNode, DisplayFlag};
 
 /// Build display nodes from a dialog
 pub fn build_display_nodes(dialog: &Dialog) -> Vec<DisplayNode> {
@@ -53,6 +53,29 @@ fn build_node_tree(
     display.child_count = node.children.len();
     display.is_end_node = node.end_node;
     display.has_flags = !node.check_flags.is_empty() || !node.set_flags.is_empty();
+
+    // Copy check_flags - store UUIDs for later resolution
+    for flag_group in &node.check_flags {
+        for flag in &flag_group.flags {
+            display.check_flags.push(DisplayFlag {
+                // Store UUID for now, will be resolved to name later
+                name: flag.name.clone().unwrap_or_else(|| format!("__UUID__:{}", flag.uuid)),
+                value: flag.value,
+                param_val: flag.param_val,
+            });
+        }
+    }
+
+    // Copy set_flags - store UUIDs for later resolution
+    for flag_group in &node.set_flags {
+        for flag in &flag_group.flags {
+            display.set_flags.push(DisplayFlag {
+                name: flag.name.clone().unwrap_or_else(|| format!("__UUID__:{}", flag.uuid)),
+                value: flag.value,
+                param_val: flag.param_val,
+            });
+        }
+    }
 
     // Set visibility based on parent's expansion state
     // Root nodes (depth 0) are always visible
@@ -345,6 +368,47 @@ pub fn resolve_localized_text(state: &DialogueState, nodes: &mut [DisplayNode]) 
                     } else {
                         node.text = text;
                     }
+                }
+            }
+        }
+    }
+}
+
+/// Resolve flag UUIDs to human-readable names using the flag cache
+/// Uses pre-indexed lookups (O(1) per flag)
+pub fn resolve_flag_names(state: &DialogueState, nodes: &mut [DisplayNode]) {
+    let flag_cache = state.flag_cache.clone();
+
+    let flag_cache = match flag_cache.read() {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    for node in nodes.iter_mut() {
+        // Resolve check_flags
+        for flag in node.check_flags.iter_mut() {
+            if flag.name.starts_with("__UUID__:") {
+                let uuid = flag.name[9..].to_string(); // Skip "__UUID__:" prefix
+                if let Some(name) = flag_cache.get_name(&uuid) {
+                    flag.name = name.to_string();
+                } else {
+                    // Fallback to shortened UUID
+                    let short_id = &uuid[..8.min(uuid.len())];
+                    flag.name = format!("({}...)", short_id);
+                }
+            }
+        }
+
+        // Resolve set_flags
+        for flag in node.set_flags.iter_mut() {
+            if flag.name.starts_with("__UUID__:") {
+                let uuid = flag.name[9..].to_string(); // Skip "__UUID__:" prefix
+                if let Some(name) = flag_cache.get_name(&uuid) {
+                    flag.name = name.to_string();
+                } else {
+                    // Fallback to shortened UUID
+                    let short_id = &uuid[..8.min(uuid.len())];
+                    flag.name = format!("({}...)", short_id);
                 }
             }
         }

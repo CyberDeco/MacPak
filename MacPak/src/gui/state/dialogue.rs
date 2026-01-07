@@ -5,7 +5,7 @@ use floem::reactive::SignalGet;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use MacLarian::formats::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache};
+use MacLarian::formats::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache};
 use crate::gui::tabs::dialogue::operations::SpeakerNameCache;
 
 /// Source of a dialog file
@@ -18,6 +18,17 @@ pub enum DialogSource {
         pak_path: PathBuf,
         internal_path: String,
     },
+}
+
+/// A resolved flag for display
+#[derive(Clone, Debug)]
+pub struct DisplayFlag {
+    /// The flag's name (resolved from cache, or UUID if not found)
+    pub name: String,
+    /// The flag's value (true/false)
+    pub value: bool,
+    /// Parameter value (for non-boolean checks)
+    pub param_val: Option<i32>,
 }
 
 /// Entry in the dialog file browser
@@ -60,6 +71,10 @@ pub struct DisplayNode {
     pub is_end_node: bool,
     /// Whether this has flags
     pub has_flags: bool,
+    /// Check flags (conditions that must be met)
+    pub check_flags: Vec<DisplayFlag>,
+    /// Set flags (flags set when this node is reached)
+    pub set_flags: Vec<DisplayFlag>,
     /// Roll info summary (if applicable)
     pub roll_info: Option<String>,
     /// Handle for localization lookup
@@ -90,6 +105,8 @@ impl DisplayNode {
             is_visible: RwSignal::new(true), // Root nodes start visible
             is_end_node: false,
             has_flags: false,
+            check_flags: Vec::new(),
+            set_flags: Vec::new(),
             roll_info: None,
             text_handle: None,
             jump_target_uuid: None,
@@ -167,6 +184,8 @@ pub struct DialogueState {
     pub localization_cache: Arc<RwLock<LocalizationCache>>,
     /// Speaker name cache for resolving UUIDs to names
     pub speaker_cache: Arc<RwLock<SpeakerNameCache>>,
+    /// Flag cache for resolving flag UUIDs to names
+    pub flag_cache: Arc<RwLock<FlagCache>>,
 }
 
 impl DialogueState {
@@ -211,6 +230,7 @@ impl DialogueState {
             localization_loaded: RwSignal::new(false),
             localization_cache: Arc::new(RwLock::new(LocalizationCache::new())),
             speaker_cache: Arc::new(RwLock::new(SpeakerNameCache::new())),
+            flag_cache: Arc::new(RwLock::new(FlagCache::new())),
         }
     }
 

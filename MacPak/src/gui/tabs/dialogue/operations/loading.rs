@@ -9,7 +9,7 @@ use MacLarian::converter::{to_lsx, to_lsj};
 use MacLarian::formats::lsx::parse_lsx;
 use MacLarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogSource, DialogEntry, DisplayNode};
-use super::display::{build_display_nodes, resolve_speaker_names, resolve_localized_text};
+use super::display::{build_display_nodes, resolve_speaker_names, resolve_localized_text, resolve_flag_names};
 
 /// Load a dialog from a PAK file (runs synchronously for UI updates)
 /// Handles both .lsf (binary) and .lsj (JSON) formats
@@ -139,6 +139,9 @@ fn process_loaded_dialog(state: DialogueState, dialog: Dialog) {
 
     // Resolve localized text (runtime loca)
     resolve_localized_text(&state, &mut display_nodes);
+
+    // Resolve flag UUIDs to names (flag cache)
+    resolve_flag_names(&state, &mut display_nodes);
 
     // Calculate max content width for horizontal scroll
     let max_width = display_nodes.iter()

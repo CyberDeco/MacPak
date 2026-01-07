@@ -15,7 +15,7 @@ pub mod virtual_textures;
 pub use app::AppState;
 pub use browser::{BrowserState, FileEntry, RawImageData, SortColumn};
 pub use config::ConfigState;
-pub use dialogue::{DialogueState, DialogEntry, DialogSource, DisplayNode, NODE_TYPE_OPTIONS};
+pub use dialogue::{DialogueState, DialogEntry, DialogSource, DisplayNode, DisplayFlag, NODE_TYPE_OPTIONS};
 pub use dyes::{DyeColorEntry, DyesState, GeneratedDyeEntry, ImportedDyeEntry, VendorDef, VENDOR_DEFS};
 pub use editor::{EditorState, EditorTab, EditorTabsState};
 pub use gr2::Gr2State;
