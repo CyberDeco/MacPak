@@ -144,7 +144,8 @@ fn dialog_content(state: DialogueState) -> impl IntoView {
         // Empty state - shown when no dialog loaded
         empty_state()
             .style(move |s| {
-                if current_dialog.get().is_some() {
+                let has_dialog = current_dialog.get().is_some();
+                if has_dialog {
                     s.display(floem::style::Display::None)
                 } else {
                     s.width_full().height_full()
@@ -153,7 +154,8 @@ fn dialog_content(state: DialogueState) -> impl IntoView {
         // Tree view - shown when dialog is loaded
         tree_view::tree_view_panel(state_for_tree)
             .style(move |s| {
-                if current_dialog.get().is_some() {
+                let has_dialog = current_dialog.get().is_some();
+                if has_dialog {
                     s.width_full().height_full()
                 } else {
                     s.display(floem::style::Display::None)

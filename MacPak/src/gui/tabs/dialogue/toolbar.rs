@@ -9,20 +9,25 @@ use super::operations;
 /// Expand all nodes in the tree
 fn expand_all_nodes(state: &DialogueState) {
     let nodes = state.display_nodes.get();
+
     for node in nodes.iter() {
         node.is_expanded.set(true);
-        node.is_visible.set(true); // All nodes visible when fully expanded
+        node.is_visible.set(true);
     }
+
+    state.tree_version.update(|v| *v += 1);
 }
 
 /// Collapse all nodes in the tree
 fn collapse_all_nodes(state: &DialogueState) {
     let nodes = state.display_nodes.get();
+
     for node in nodes.iter() {
         node.is_expanded.set(false);
-        // Only root nodes (depth 0) remain visible when collapsed
         node.is_visible.set(node.depth == 0);
     }
+
+    state.tree_version.update(|v| *v += 1);
 }
 
 /// Toolbar with open, language, and export controls

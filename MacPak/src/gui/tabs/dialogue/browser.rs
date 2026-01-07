@@ -74,6 +74,12 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
     let selected = state.selected_dialog_path;
     let state_for_items = state.clone();
 
+    // Cache the filtered results to avoid returning a new collection on every call
+    // which could cause floem to think data changed and reset scroll
+    let cached_result: std::rc::Rc<std::cell::RefCell<(Vec<DialogEntry>, String, ImVector<DialogEntry>)>> =
+        std::rc::Rc::new(std::cell::RefCell::new((Vec::new(), String::new(), ImVector::new())));
+    let cache = cached_result.clone();
+
     // virtual_list handles empty data gracefully
     scroll(
         virtual_list(
@@ -82,17 +88,34 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
             move || {
                 let dialogs = available.get();
                 let search = search_filter.get();
-                let filtered: Vec<DialogEntry> = if search.is_empty() {
-                    dialogs
-                } else {
-                    let search_lower = search.to_lowercase();
-                    dialogs
-                        .into_iter()
-                        .filter(|d| d.name.to_lowercase().contains(&search_lower) ||
-                                    d.path.to_lowercase().contains(&search_lower))
-                        .collect()
-                };
-                filtered.into_iter().collect::<ImVector<_>>()
+
+                // Check if we need to recompute
+                let mut cache_ref = cache.borrow_mut();
+                let (cached_dialogs, cached_search, cached_im) = &mut *cache_ref;
+
+                // Only recompute if source data or search changed
+                let dialogs_changed = cached_dialogs.len() != dialogs.len() ||
+                    cached_dialogs.first().map(|d| &d.path) != dialogs.first().map(|d| &d.path);
+                let search_changed = cached_search != &search;
+
+                if dialogs_changed || search_changed {
+                    let filtered: Vec<DialogEntry> = if search.is_empty() {
+                        dialogs.clone()
+                    } else {
+                        let search_lower = search.to_lowercase();
+                        dialogs.iter()
+                            .filter(|d| d.name.to_lowercase().contains(&search_lower) ||
+                                        d.path.to_lowercase().contains(&search_lower))
+                            .cloned()
+                            .collect()
+                    };
+
+                    *cached_dialogs = dialogs;
+                    *cached_search = search;
+                    *cached_im = filtered.into_iter().collect();
+                }
+
+                cached_im.clone()
             },
             |entry: &DialogEntry| entry.path.clone(),
             {
@@ -101,6 +124,9 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
                     let entry_for_load = entry.clone();
 
                     dialog_row(entry, selected, panel_width)
+                        // Stop PointerDown propagation to prevent scroll container from
+                        // resetting scroll position when clicking on rows
+                        .on_event_stop(floem::event::EventListener::PointerDown, |_| {})
                         .on_click_stop(move |_| {
                             operations::load_dialog_entry(state_click.clone(), entry_for_load.clone());
                         })
@@ -131,49 +157,45 @@ fn dialog_row(
         .map(|i| entry.path[..i].to_string())
         .unwrap_or_default();
 
-    // Selection check - each row subscribes to selected_path
-    let is_selected = move || selected_path.get().as_ref() == Some(&path);
+    // Capture panel width once - don't create reactive subscriptions in each row
+    // Using get_untracked to avoid subscriptions that could cause scroll resets
+    let initial_width = panel_width.get_untracked();
 
     h_stack((
-        // Name and path
+        // Name and path - use fixed width to avoid reactive updates
         v_stack((
             {
                 let name_for_label = name.clone();
-                label(move || {
-                    let width = panel_width.get();
-                    let available = width - ROW_PADDING - 8.0;
-                    let max_chars = (available / CHAR_WIDTH).max(10.0) as usize;
-                    truncate_middle(&name_for_label, max_chars)
-                })
-                .style(move |s| {
-                    let width = panel_width.get();
-                    let available = width - ROW_PADDING - 8.0;
-                    s.font_size(13.0)
-                        .font_weight(Weight::MEDIUM)
-                        .color(Color::rgb8(40, 40, 40))
-                        .width(available as f32)
-                })
+                let available = initial_width - ROW_PADDING - 8.0;
+                let max_chars = (available / CHAR_WIDTH).max(10.0) as usize;
+                let truncated = truncate_middle(&name_for_label, max_chars);
+                label(move || truncated.clone())
+                    .style(move |s| {
+                        s.font_size(13.0)
+                            .font_weight(Weight::MEDIUM)
+                            .color(Color::rgb8(40, 40, 40))
+                            .width(available as f32)
+                    })
             },
             {
                 let path_for_label = display_path.clone();
-                label(move || {
-                    let width = panel_width.get();
-                    let available = width - ROW_PADDING - 8.0;
-                    let max_chars = (available / 6.0).max(10.0) as usize;
-                    truncate_middle(&path_for_label, max_chars)
-                })
-                .style(move |s| {
-                    let width = panel_width.get();
-                    let available = width - ROW_PADDING - 8.0;
-                    s.font_size(11.0)
-                        .color(Color::rgb8(120, 120, 120))
-                        .width(available as f32)
-                })
+                let available = initial_width - ROW_PADDING - 8.0;
+                let max_chars = (available / 6.0).max(10.0) as usize;
+                let truncated = truncate_middle(&path_for_label, max_chars);
+                label(move || truncated.clone())
+                    .style(move |s| {
+                        s.font_size(11.0)
+                            .color(Color::rgb8(120, 120, 120))
+                            .width(available as f32)
+                    })
             },
         ))
         .style(|s| s.flex_grow(1.0).min_width(0.0)),
     ))
     .style(move |s| {
+        let selected = selected_path.get();
+        let is_sel = selected.as_ref() == Some(&path);
+
         let base = s
             .width_full()
             .height(ROW_HEIGHT)
@@ -184,7 +206,7 @@ fn dialog_row(
             .border_color(Color::rgb8(245, 245, 245))
             .cursor(floem::style::CursorStyle::Pointer);
 
-        if is_selected() {
+        if is_sel {
             base.background(Color::rgb8(227, 242, 253))
         } else {
             base.background(Color::WHITE)

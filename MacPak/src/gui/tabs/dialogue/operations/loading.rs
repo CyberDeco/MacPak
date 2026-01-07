@@ -144,8 +144,8 @@ fn process_loaded_dialog(state: DialogueState, dialog: Dialog) {
     let max_width = display_nodes.iter()
         .map(|node| calculate_node_content_width(node))
         .fold(0.0f32, |a, b| a.max(b));
-    state.max_content_width.set(max_width);
 
+    state.max_content_width.set(max_width);
     state.display_nodes.set(display_nodes);
     state.visible_node_indices.set(visible_indices);
     state.current_dialog.set(Some(Arc::new(dialog)));

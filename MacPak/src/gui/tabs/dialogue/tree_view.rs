@@ -182,22 +182,48 @@ fn node_tree(state: DialogueState) -> impl IntoView {
     let max_content_width = state.max_content_width;
     let tree_version = state.tree_version;
 
+    // Cache the filtered results to avoid returning a new collection on every call
+    use std::rc::Rc;
+    use std::cell::RefCell;
+    let cached_result: Rc<RefCell<(u64, usize, ImVector<DisplayNode>)>> =
+        Rc::new(RefCell::new((u64::MAX, 0, ImVector::new())));
+    let cache = cached_result.clone();
+
     clip(
         scroll(
             virtual_list(
                 VirtualDirection::Vertical,
                 VirtualItemSize::Fixed(Box::new(|| NODE_ROW_HEIGHT)),
                 move || {
-                    // Subscribe to tree_version so we re-run when visibility changes
-                    let _ = tree_version.get();
-                    // Filter to only visible nodes - don't rely on CSS to hide
-                    // This ensures virtual_list scroll math is correct
-                    display_nodes.get().into_iter()
-                        .filter(|node| node.is_visible.get_untracked())
-                        .collect::<ImVector<_>>()
+                    let version = tree_version.get();
+                    let all_nodes = display_nodes.get();
+                    let total_count = all_nodes.len();
+
+                    // Check if we need to recompute
+                    let mut cache_ref = cache.borrow_mut();
+                    let (cached_version, cached_total, cached_im) = &mut *cache_ref;
+
+                    // Recompute if version changed OR total nodes changed (new dialog loaded)
+                    if *cached_version != version || *cached_total != total_count {
+                        // Filter to only visible nodes - don't rely on CSS to hide
+                        // This ensures virtual_list scroll math is correct
+                        let filtered: ImVector<_> = all_nodes.into_iter()
+                            .filter(|node| node.is_visible.get_untracked())
+                            .collect();
+
+                        *cached_version = version;
+                        *cached_total = total_count;
+                        *cached_im = filtered;
+                    }
+
+                    cached_im.clone()
                 },
                 // Use only UUID as key - stable across expand/collapse
-                |node| node.uuid.clone(),
+                |node| {
+                    // DEBUG: Track key generation (can be noisy, uncomment if needed)
+                    // eprintln!("[DEBUG node_tree] Key function called for node uuid={}", &node.uuid[..8.min(node.uuid.len())]);
+                    node.uuid.clone()
+                },
                 move |node| {
                     node_row(node, selected_uuid, display_nodes, tree_version, max_content_width.get())
                 },
@@ -237,9 +263,8 @@ fn update_descendant_visibility(
 
                 // Recursively update all descendants
                 if node.child_count > 0 {
-                    // If we're collapsing the parent, hide all descendants
-                    // If we're expanding, children of this node are only visible if this node is also expanded
-                    let descendants_visible = parent_expanded && node.is_expanded.get_untracked();
+                    let node_is_expanded = node.is_expanded.get_untracked();
+                    let descendants_visible = parent_expanded && node_is_expanded;
                     update_descendants_recursive(&node.uuid, descendants_visible, nodes);
                 }
             }
@@ -255,8 +280,8 @@ fn update_descendants_recursive(parent_uuid: &str, parent_visible: bool, all_nod
 
             // Continue recursion - children are visible only if this node is also expanded
             if node.child_count > 0 {
-                // Use untracked read to avoid reactive subscriptions
-                let child_visible = parent_visible && node.is_expanded.get_untracked();
+                let node_is_expanded = node.is_expanded.get_untracked();
+                let child_visible = parent_visible && node_is_expanded;
                 update_descendants_recursive(&node.uuid, child_visible, all_nodes);
             }
         }
@@ -309,9 +334,7 @@ fn node_row(
                     .on_click_stop(move |_| {
                         let new_expanded = !is_expanded.get();
                         is_expanded.set(new_expanded);
-                        // Update visibility of all descendants
                         update_descendant_visibility(&uuid_for_click, new_expanded, display_nodes);
-                        // Bump version to trigger virtual_list re-filter
                         tree_version.update(|v| *v += 1);
                     })
                     .into_any()
