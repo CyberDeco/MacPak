@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use floem::prelude::*;
 use crate::gui::state::DyesState;
-use super::registry::{COLOR_REGISTRY, DEFAULT_HEX};
+use super::{COLOR_REGISTRY, DEFAULT_HEX};
 
 /// Collect all color values from state into a HashMap.
 /// Always includes all colors regardless of their value.

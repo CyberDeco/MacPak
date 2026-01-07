@@ -5,6 +5,7 @@
 
 mod format;
 mod decompress;
+pub mod inspect;
 
 pub use format::{
     Gr2File, Gr2Magic, Gr2Header, SectionHeader, SectionRef,
@@ -12,6 +13,10 @@ pub use format::{
     magic, tags,
 };
 pub use decompress::decompress_bitknit;
+pub use inspect::{
+    inspect_gr2, extract_gr2_info,
+    Gr2Info, SectionInfo, Gr2MeshInfo, Gr2SkeletonInfo, Gr2BoneInfo, Gr2ModelInfo,
+};
 
 use crate::error::{Error, Result};
 

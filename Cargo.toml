@@ -41,6 +41,9 @@ rayon = "1.10"
 crc32fast = "1.4"
 lazy_static = "1.4"
 tempfile = "3.14"
+md5 = "0.7"
+chrono = "0.4"
+uuid = { version = "1.0", features = ["v4"] }
 
 # For 3D model/mesh/texture handling
 gltf = "1.4.1"

@@ -8,6 +8,7 @@ use rayon::prelude::*;
 
 use crate::gui::shared::SharedProgress;
 use crate::gui::state::VirtualTexturesState;
+use crate::operations::virtual_texture::find_gts_path;
 use super::types::{VtResult, create_result_sender, get_shared_progress};
 
 /// Extract textures from a single GTS file
@@ -123,117 +124,6 @@ pub fn extract_batch(state: VirtualTexturesState) {
     });
 }
 
-/// Find the GTS file for a given path (handles both .gts and .gtp files)
-fn find_gts_path(input_path: &str) -> Result<String, String> {
-    let path = Path::new(input_path);
-    let ext = path.extension()
-        .map(|e| e.to_string_lossy().to_lowercase())
-        .unwrap_or_default();
-
-    let parent = path.parent().unwrap_or(Path::new("."));
-
-    if ext == "gts" {
-        // Check if this GTS file has valid GRPG header
-        if let Ok(data) = std::fs::read(input_path) {
-            if data.len() >= 4 && &data[0..4] == b"GRPG" {
-                return Ok(input_path.to_string());
-            }
-            // NULL-padded GTS - try to find the _0.gts version
-            let stem = path.file_stem()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_default();
-            if let Some(base) = find_base_name(&stem) {
-                let gts_0_path = parent.join(format!("{}_0.gts", base));
-                if gts_0_path.exists() {
-                    return Ok(gts_0_path.to_string_lossy().to_string());
-                }
-            }
-        }
-        return Ok(input_path.to_string());
-    }
-
-    if ext == "gtp" {
-        // Find associated GTS file
-        let stem = path.file_stem()
-            .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_default();
-
-        // GTP files have pattern: BaseName_N_<hash>.gtp where N is index, hash is 32 hex chars
-        // Example: Albedo_Normal_Physical_0_0a0d1854395eb40436bec69fe14aa92b.gtp
-        // Each tile set index has its own GTS file: BaseName_N.gts
-
-        // Strip the hash suffix first
-        let name_without_hash = if let Some(last_underscore) = stem.rfind('_') {
-            let suffix = &stem[last_underscore + 1..];
-            if suffix.len() == 32 && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
-                &stem[..last_underscore]
-            } else {
-                stem.as_str()
-            }
-        } else {
-            stem.as_str()
-        };
-
-        // First try the exact matching GTS file (e.g., Albedo_Normal_Physical_1.gts for _1_*.gtp)
-        let gts_path = parent.join(format!("{}.gts", name_without_hash));
-        if gts_path.exists() {
-            // Check if it has a valid GRPG header
-            if let Ok(data) = std::fs::read(&gts_path) {
-                if data.len() >= 4 && &data[0..4] == b"GRPG" {
-                    return Ok(gts_path.to_string_lossy().to_string());
-                }
-                // NULL-padded GTS - can't use it directly, try _0.gts instead
-            }
-        }
-
-        // Try _0.gts as fallback (has full metadata but may not list this GTP)
-        if let Some(base) = find_base_name(name_without_hash) {
-            let gts_0_path = parent.join(format!("{}_0.gts", base));
-            if gts_0_path.exists() {
-                return Ok(gts_0_path.to_string_lossy().to_string());
-            }
-        }
-
-        // Look for any valid GTS file in the same directory that shares the base prefix
-        if let Ok(entries) = std::fs::read_dir(parent) {
-            let gtp_prefix = stem.split('_').take(3).collect::<Vec<_>>().join("_");
-            for entry in entries.flatten() {
-                let entry_path = entry.path();
-                if entry_path.extension().map(|e| e.to_string_lossy().to_lowercase()) == Some("gts".to_string()) {
-                    if let Some(gts_stem) = entry_path.file_stem() {
-                        let gts_name = gts_stem.to_string_lossy();
-                        if gts_name.starts_with(&gtp_prefix) {
-                            // Check for valid GRPG header
-                            if let Ok(data) = std::fs::read(&entry_path) {
-                                if data.len() >= 4 && &data[0..4] == b"GRPG" {
-                                    return Ok(entry_path.to_string_lossy().to_string());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return Err(format!("Could not find associated GTS file for {}", input_path));
-    }
-
-    Err(format!("Unsupported file type: {}", ext))
-}
-
-/// Extract the base name from a virtual texture filename
-/// e.g., "Albedo_Normal_Physical_1" -> Some("Albedo_Normal_Physical")
-fn find_base_name(name: &str) -> Option<&str> {
-    // Check if name ends with _N where N is a digit
-    if let Some(last_underscore) = name.rfind('_') {
-        let suffix = &name[last_underscore + 1..];
-        if suffix.chars().all(|c| c.is_ascii_digit()) {
-            return Some(&name[..last_underscore]);
-        }
-    }
-    None
-}
-
 /// Extract textures from a GTS/GTP file to the output directory
 fn extract_gts_file(
     input_path: &str,
@@ -250,7 +140,7 @@ fn extract_gts_file(
     let is_single_gtp = input_ext == "gtp";
 
     // Find the GTS file (handles both .gts and .gtp inputs)
-    let gts_path = find_gts_path(input_path)?;
+    let gts_path = find_gts_path(input_path).map_err(|e| e.to_string())?;
 
     // Determine output directory
     let output_path = match output_dir {

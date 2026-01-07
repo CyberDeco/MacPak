@@ -76,3 +76,41 @@ pub fn generate_color_nodes(colors: &HashMap<String, String>) -> String {
 pub fn generate_all_color_nodes(colors: &HashMap<String, String>) -> String {
     generate_color_nodes_impl(colors, true)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hex_to_fvec3() {
+        // Pure white
+        let fvec = hex_to_fvec3("FFFFFF");
+        assert!(fvec.starts_with("1.000000"));
+
+        // Pure black
+        let fvec = hex_to_fvec3("000000");
+        assert!(fvec.starts_with("0.000000"));
+    }
+
+    #[test]
+    fn test_generate_color_nodes_skips_defaults() {
+        let mut colors = HashMap::new();
+        colors.insert("Cloth_Primary".to_string(), "FF0000".to_string());
+        colors.insert("Cloth_Secondary".to_string(), "808080".to_string()); // Default
+
+        let result = generate_color_nodes(&colors);
+        assert!(result.contains("Cloth_Primary"));
+        assert!(!result.contains("Cloth_Secondary")); // Skipped because default
+    }
+
+    #[test]
+    fn test_generate_all_color_nodes_includes_defaults() {
+        let mut colors = HashMap::new();
+        colors.insert("Cloth_Primary".to_string(), "FF0000".to_string());
+        colors.insert("Cloth_Secondary".to_string(), "808080".to_string()); // Default
+
+        let result = generate_all_color_nodes(&colors);
+        assert!(result.contains("Cloth_Primary"));
+        assert!(result.contains("Cloth_Secondary")); // Included
+    }
+}

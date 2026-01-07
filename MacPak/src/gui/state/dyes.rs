@@ -3,8 +3,10 @@
 use floem::prelude::*;
 use std::collections::HashMap;
 
-// Import from the dyes tab shared module
-use crate::gui::tabs::dyes::shared::{ColorCategory, COLOR_REGISTRY, DEFAULT_HEX};
+// Import from MacLarian dyes module
+use MacLarian::dyes::{ColorCategory, COLOR_REGISTRY, DEFAULT_HEX};
+// Re-export ImportedDyeEntry from MacLarian for public use
+pub use MacLarian::dyes::ImportedDyeEntry;
 
 /// Vendor table definition for dye distribution
 #[derive(Clone, Debug)]
@@ -89,21 +91,7 @@ impl DyeColorEntry {
     }
 }
 
-/// A fully parsed dye entry from LSF/LSX files with all color data
-#[derive(Clone, Debug, Default)]
-pub struct ImportedDyeEntry {
-    pub name: String,
-    /// Display name from localization
-    pub display_name: String,
-    /// Description from localization
-    pub description: String,
-    /// The Resource ID from the LSF - this is the Preset UUID used in ItemCombos.txt
-    pub preset_uuid: Option<String>,
-    /// The RootTemplate UUID from Object.txt (used for the dye item)
-    pub root_template_uuid: Option<String>,
-    /// Color parameters: parameter name -> hex color (e.g., "Cloth_Primary" -> "FF0000")
-    pub colors: HashMap<String, String>,
-}
+// ImportedDyeEntry is now imported from MacLarian::dyes
 
 /// A generated dye entry created in the current session
 #[derive(Clone, Debug)]

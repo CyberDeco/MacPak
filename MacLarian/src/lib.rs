@@ -16,6 +16,8 @@ pub mod converter;
 pub mod utils;
 pub mod merged;
 pub mod gr2_extraction;
+pub mod dyes;
+pub mod mods;
 
 // Re-exports for convenience
 pub use error::{Error, Result};
@@ -43,6 +45,25 @@ pub mod prelude {
     pub use crate::converter::gr2_to_gltf::{
         convert_gr2_bytes_to_glb_with_textures, TexturedGlbResult,
     };
+
+    // Dyes module exports
+    pub use crate::dyes::{
+        ColorDef, ColorCategory, COLOR_REGISTRY, DEFAULT_HEX,
+        colors_by_category, required_colors, find_color,
+        ParsedDyeEntry, DyeLocalizationInfo, ImportedDyeEntry,
+        parse_item_combos, parse_object_txt, parse_lsx_dye_presets,
+        parse_root_templates_localization, parse_localization_xml,
+        generate_color_nodes, generate_all_color_nodes, hex_to_fvec3,
+    };
+
+    // Mods module exports
+    pub use crate::mods::{
+        generate_info_json, InfoJsonResult,
+        validate_mod_structure, ModValidationResult,
+    };
+
+    // Dialog export
+    pub use crate::formats::dialog::export::generate_html as generate_dialog_html;
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

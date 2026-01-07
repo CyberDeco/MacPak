@@ -46,6 +46,28 @@
     - [x] Mimic Official Toolkit's dye menu... thing... and improve it + use built-in macOS Color Picker
     - [ ] Preview on a GR2 + mesh ?
     - [x] Auto-populate mod structure based on Padme4000's template
+     
+- [ ] GENERAL: Parallelization with Rayon
+    - [x] Dialogue backend (Voice Meta, Flag Cache, Localization, 
+
+ New Module
+
+  - MacLarian/src/formats/voice_meta.rs - Moved voice meta loading from MacPak to MacLarian with parallel soundbank parsing
+
+  Parallelized Locations
+
+  | Target         | File                                                | Pattern                                           |
+  |----------------|-----------------------------------------------------|---------------------------------------------------|
+  | Voice Meta     | MacLarian/formats/voice_meta.rs                     | par_iter on soundbank files, collect → merge      |
+  | GR2 Batch      | MacPak/gui/tabs/gr2/conversion.rs                   | par_iter().map().collect() + atomics              |
+  | GTS Extraction | MacPak/gui/tabs/virtual_textures/extraction.rs      | par_iter on GTS files (outer loop only)           |
+  | Flag Cache     | MacLarian/formats/dialog/flags.rs                   | par_iter on flag parsing, collect → merge         |
+  | Localization   | MacPak/gui/tabs/dialogue/operations/localization.rs | Batch read + par_iter on loca parsing             |
+  | PAK Extract    | MacPak/gui/tabs/pak_ops/operations.rs:856           | par_iter + AtomicUsize counters                   |
+  | PAK Create     | MacPak/gui/tabs/pak_ops/operations.rs:999           | par_iter + AtomicUsize counters                   |
+  | Audio Index    | MacLarian/formats/wem/cache.rs                      | walkdir + par_iter for dir scan; par_iter for PAK |
+
+- [ ] GENERAL: Replacing writing temp lsx files with new extract_as_bytes (for both .pak and .lsf)
 
 ### Known Bugs
 

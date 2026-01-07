@@ -47,6 +47,7 @@ pub use voice_meta::{
 };
 
 // Re-export WEM/audio types
+#[cfg(feature = "audio")]
 pub use wem::{WemError, WemHeader, DecodedAudio, WwiseVorbisHeader, parse_wem_header, parse_wwise_vorbis_header};
 
 #[cfg(feature = "audio")]

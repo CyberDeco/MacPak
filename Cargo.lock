@@ -10,6 +10,7 @@ dependencies = [
  "base64 0.22.1",
  "bytemuck",
  "byteorder",
+ "chrono",
  "crc32fast",
  "ddsfile",
  "fastlz-rs",
@@ -20,6 +21,7 @@ dependencies = [
  "image",
  "indexmap",
  "lz4_flex",
+ "md5",
  "pretty_assertions",
  "quick-xml 0.31.0",
  "rayon",
@@ -29,6 +31,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tracing",
  "tracing-subscriber",
+ "uuid",
  "walkdir",
 ]
 
@@ -2033,7 +2036,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "145052bdd345b87320e369255277e3fb5152762ad123a901ef5c262dd38fe8d2"
 dependencies = [
  "iana-time-zone",
+ "js-sys",
  "num-traits",
+ "wasm-bindgen",
  "windows-link 0.2.1",
 ]
 

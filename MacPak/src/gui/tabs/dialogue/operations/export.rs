@@ -1,8 +1,6 @@
 //! Export operations - HTML and DE2 export
 
-use std::collections::HashSet;
 use floem::reactive::{SignalGet, SignalUpdate};
-use MacLarian::formats::dialog::{Dialog, NodeConstructor};
 use crate::gui::state::DialogueState;
 
 /// Export dialog to HTML format
@@ -20,7 +18,8 @@ pub fn export_html(state: DialogueState) {
         {
             state.status_message.set("Exporting to HTML...".to_string());
 
-            match generate_html_export(&dialog) {
+            // Use MacLarian's HTML export
+            match MacLarian::formats::dialog::export::generate_html(&dialog) {
                 Ok(html) => {
                     match std::fs::write(&path, html) {
                         Ok(_) => {
@@ -60,102 +59,4 @@ pub fn export_de2(state: DialogueState) {
     });
 }
 
-/// Generate HTML export
-fn generate_html_export(dialog: &Dialog) -> Result<String, String> {
-    let mut html = String::new();
-
-    html.push_str("<!DOCTYPE html>\n<html>\n<head>\n");
-    html.push_str("<meta charset=\"UTF-8\">\n");
-    html.push_str("<title>Dialog Export</title>\n");
-    html.push_str("<style>\n");
-    html.push_str("body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 20px; background: #f5f5f5; }\n");
-    html.push_str(".node { margin: 4px 0; padding: 8px; background: white; border-radius: 4px; border-left: 3px solid #ddd; }\n");
-    html.push_str(".node-question { border-left-color: #3b82f6; }\n");
-    html.push_str(".node-answer { border-left-color: #22c55e; }\n");
-    html.push_str(".node-roll { border-left-color: #f97316; }\n");
-    html.push_str(".speaker { color: #4f46e5; font-weight: 500; }\n");
-    html.push_str(".text { margin-left: 8px; }\n");
-    html.push_str(".meta { color: #9ca3af; font-size: 12px; margin-top: 4px; }\n");
-    html.push_str(".children { margin-left: 20px; border-left: 1px solid #e5e7eb; padding-left: 12px; }\n");
-    html.push_str("</style>\n</head>\n<body>\n");
-
-    // Dialog info
-    html.push_str(&format!("<h1>Dialog: {}</h1>\n", dialog.uuid));
-    if let Some(ref synopsis) = dialog.editor_data.synopsis {
-        html.push_str(&format!("<p><em>{}</em></p>\n", html_escape(synopsis)));
-    }
-    html.push_str(&format!("<p>Nodes: {}</p>\n", dialog.node_count()));
-
-    // Build tree from roots
-    for root_uuid in &dialog.root_nodes {
-        render_node_html(dialog, root_uuid, &mut html, &mut HashSet::new());
-    }
-
-    html.push_str("</body>\n</html>\n");
-
-    Ok(html)
-}
-
-fn render_node_html(dialog: &Dialog, uuid: &str, html: &mut String, visited: &mut HashSet<String>) {
-    if visited.contains(uuid) {
-        return;
-    }
-    visited.insert(uuid.to_string());
-
-    let Some(node) = dialog.get_node(uuid) else {
-        return;
-    };
-
-    let class = match node.constructor {
-        NodeConstructor::TagQuestion => "node node-question",
-        NodeConstructor::TagAnswer => "node node-answer",
-        NodeConstructor::ActiveRoll | NodeConstructor::PassiveRoll => "node node-roll",
-        _ => "node",
-    };
-
-    html.push_str(&format!("<div class=\"{}\">\n", class));
-
-    // Type badge
-    html.push_str(&format!("<strong>[{}]</strong> ", node.constructor.display_name()));
-
-    // Speaker
-    if let Some(speaker_idx) = node.speaker {
-        if speaker_idx >= 0 {
-            html.push_str(&format!("<span class=\"speaker\">Speaker {}</span>: ", speaker_idx));
-        }
-    }
-
-    // Text
-    if let Some(text_entry) = dialog.get_node_text(node) {
-        let text = text_entry.value.as_ref()
-            .map(|s| html_escape(s))
-            .unwrap_or_else(|| format!("[{}]", text_entry.handle));
-        html.push_str(&format!("<span class=\"text\">{}</span>\n", text));
-    }
-
-    // Meta info
-    html.push_str("<div class=\"meta\">");
-    html.push_str(&format!("UUID: {} ", uuid));
-    if node.end_node {
-        html.push_str("[END] ");
-    }
-    html.push_str("</div>\n");
-
-    // Children
-    if !node.children.is_empty() {
-        html.push_str("<div class=\"children\">\n");
-        for child_uuid in &node.children {
-            render_node_html(dialog, child_uuid, html, visited);
-        }
-        html.push_str("</div>\n");
-    }
-
-    html.push_str("</div>\n");
-}
-
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
+// HTML export logic is now in MacLarian::formats::dialog::export

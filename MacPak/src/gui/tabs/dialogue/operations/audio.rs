@@ -167,35 +167,27 @@ pub fn play_node_audio(
     text_handle: &str,
     node_uuid: &str,
 ) -> Result<(), AudioError> {
-    eprintln!("[DEBUG] play_node_audio: handle={}", text_handle);
 
     // Get voice meta for this handle (to get the .wem filename)
     let voice_meta = state.get_voice_meta(text_handle)
         .ok_or_else(|| AudioError::VoiceMetaNotFound(text_handle.to_string()))?;
 
     let wem_filename = voice_meta.source_file.clone();
-    eprintln!("[DEBUG] Found voice meta, wem_filename={}", wem_filename);
 
     // Get or load audio from cache
     let audio = {
         let mut cache = state.audio_cache.write()
             .map_err(|_| AudioError::CacheLockFailed)?;
 
-        eprintln!("[DEBUG] Audio cache: indexed={}, voice_path={:?}",
-            cache.is_indexed(), cache.voice_path());
-
         // Use cache's get_or_load which handles decoding and caching
         let cached = cache.get_or_load(text_handle, &wem_filename)?;
-        eprintln!("[DEBUG] Got cached audio: {} samples", cached.audio.samples.len());
 
         // Clone the audio data for playback (cache retains its copy)
         cached.audio.clone()
     };
 
     // Play the audio
-    eprintln!("[DEBUG] Playing audio...");
     player.play(audio)?;
-    eprintln!("[DEBUG] Audio play() returned Ok");
 
     // Update state to show which node is playing
     state.playing_audio_node.set(Some(node_uuid.to_string()));

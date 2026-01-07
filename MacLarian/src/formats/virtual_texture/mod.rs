@@ -21,9 +21,14 @@ pub mod types;
 pub mod gts;
 pub mod gtp;
 pub mod extractor;
+pub mod utils;
 
 // Re-exports
 pub use types::*;
 pub use gts::GtsFile;
 pub use gtp::GtpFile;
 pub use extractor::{VirtualTextureExtractor, DdsWriter};
+pub use utils::{
+    list_gts, gtp_info, get_subfolder_name, find_base_name, find_gts_path, extract_all,
+    GtsInfo, PageFileInfo, GtpInfo, ExtractResult,
+};

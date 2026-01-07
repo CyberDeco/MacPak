@@ -1,14 +1,7 @@
 //! Parsing functions for dye mod files
 
-use crate::gui::state::ImportedDyeEntry;
-
-/// Parsed dye entry from TXT mod files
-#[derive(Clone, Debug)]
-pub struct ParsedDyeEntry {
-    pub name: String,
-    pub preset_uuid: Option<String>,
-    pub root_template_uuid: Option<String>,
-}
+use std::collections::HashMap;
+use super::types::{ParsedDyeEntry, DyeLocalizationInfo, ImportedDyeEntry};
 
 /// Parse ItemCombos.txt to extract dye entries
 pub fn parse_item_combos(content: &str) -> Vec<ParsedDyeEntry> {
@@ -239,14 +232,6 @@ pub fn parse_lsx_dye_presets(lsx_content: &str) -> Vec<ImportedDyeEntry> {
     entries
 }
 
-/// Localization handle info parsed from RootTemplates
-#[derive(Clone, Debug, Default)]
-pub struct DyeLocalizationInfo {
-    pub name: String,
-    pub display_name_handle: Option<String>,
-    pub description_handle: Option<String>,
-}
-
 /// Parse RootTemplates LSX to extract localization handles for dyes
 pub fn parse_root_templates_localization(lsx_content: &str) -> Vec<DyeLocalizationInfo> {
     let mut entries = Vec::new();
@@ -303,12 +288,9 @@ pub fn parse_root_templates_localization(lsx_content: &str) -> Vec<DyeLocalizati
     entries
 }
 
-// Re-export from MacLarian for backwards compatibility
-pub use MacLarian::formats::{ModMetadata, parse_meta_lsx};
-
 /// Parse localization XML to build a map of contentuid -> text
-pub fn parse_localization_xml(xml_content: &str) -> std::collections::HashMap<String, String> {
-    let mut map = std::collections::HashMap::new();
+pub fn parse_localization_xml(xml_content: &str) -> HashMap<String, String> {
+    let mut map = HashMap::new();
 
     for line in xml_content.lines() {
         let line = line.trim();
@@ -328,4 +310,28 @@ pub fn parse_localization_xml(xml_content: &str) -> std::collections::HashMap<St
     }
 
     map
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fvec3_to_hex() {
+        // Pure white in linear should be white in sRGB
+        assert_eq!(fvec3_to_hex("1 1 1"), "FFFFFF");
+        // Black
+        assert_eq!(fvec3_to_hex("0 0 0"), "000000");
+        // Mid gray (linear 0.5 -> sRGB ~0.735)
+        let hex = fvec3_to_hex("0.5 0.5 0.5");
+        assert!(hex.starts_with("BC")); // Approximately 188
+    }
+
+    #[test]
+    fn test_extract_xml_attribute() {
+        let line = r#"<attribute id="Name" type="LSString" value="TestDye" />"#;
+        assert_eq!(extract_xml_attribute(line, "value"), Some("TestDye".to_string()));
+        assert_eq!(extract_xml_attribute(line, "id"), Some("Name".to_string()));
+        assert_eq!(extract_xml_attribute(line, "missing"), None);
+    }
 }

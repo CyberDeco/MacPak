@@ -39,6 +39,7 @@ mod parser;
 mod localization;
 mod embedded;
 mod flags;
+pub mod export;
 
 pub use types::*;
 pub use parser::{parse_dialog, DialogParseError};

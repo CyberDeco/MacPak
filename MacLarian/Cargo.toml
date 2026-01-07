@@ -37,6 +37,13 @@ base64.workspace = true          # Base64 encoding for ScratchBuffer type
 
 # Hashing
 crc32fast.workspace = true       # CRC32 checksums for PAK files
+md5.workspace = true             # MD5 checksums for info.json
+
+# Time
+chrono.workspace = true          # Timestamps for info.json
+
+# UUID generation
+uuid.workspace = true            # UUID generation for mod files
 
 # File system
 walkdir.workspace = true         # Recursive directory traversal
