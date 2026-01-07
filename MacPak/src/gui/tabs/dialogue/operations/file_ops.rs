@@ -6,8 +6,10 @@ use floem::ext_event::create_ext_action;
 use floem::reactive::SignalUpdate;
 use floem_reactive::Scope;
 use MacLarian::formats::dialog::{LocalizationCache, FlagCache};
+use MacLarian::formats::wem::AudioCache;
 use MacLarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogEntry, DialogSource};
+use super::voice::{load_voice_meta, find_voice_files_path};
 
 /// Result from background dialog scanning
 enum ScanResult {
@@ -30,6 +32,8 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
     let pak_display = pak_path.display().to_string();
     let loca_cache = state.localization_cache.clone();
     let flag_cache = state.flag_cache.clone();
+    let voice_meta_cache = state.voice_meta_cache.clone();
+    let audio_cache = state.audio_cache.clone();
 
     // Clone state for the result handler
     let state_for_result = state.clone();
@@ -57,20 +61,44 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
         state_for_result.is_loading.set(false);
     });
 
-    // Clone state for flag index overlay
-    let state_for_flag_start = state.clone();
-    let state_for_flag_end = state.clone();
+    // Clone state for progress overlay messages (separate ext_action per call since FnOnce)
+    let state_flag_start = state.clone();
+    let state_flag_end = state.clone();
+    let state_voice_start = state.clone();
+    let state_voice_end = state.clone();
+    let state_audio_start = state.clone();
 
-    // Create separate ext_actions for flag index overlay (FnOnce can only be called once)
     let send_flag_started = create_ext_action(Scope::new(), move |msg: String| {
-        state_for_flag_start.flag_index_message.set(msg);
-        state_for_flag_start.is_building_flag_index.set(true);
+        state_flag_start.flag_index_message.set(msg);
+        state_flag_start.is_building_flag_index.set(true);
     });
 
-    let send_flag_finished = create_ext_action(Scope::new(), move |count: usize| {
-        state_for_flag_end.is_building_flag_index.set(false);
+    let send_flag_finished = create_ext_action(Scope::new(), move |_count: usize| {
+        state_flag_end.is_building_flag_index.set(false);
+    });
+
+    let send_voice_started = create_ext_action(Scope::new(), move |msg: String| {
+        state_voice_start.flag_index_message.set(msg);
+        state_voice_start.is_building_flag_index.set(true);
+    });
+
+    let send_voice_finished = create_ext_action(Scope::new(), move |_count: usize| {
+        state_voice_end.is_building_flag_index.set(false);
+    });
+
+    let send_audio_started = create_ext_action(Scope::new(), move |msg: String| {
+        state_audio_start.flag_index_message.set(msg);
+    });
+
+    // Clone state for voice meta result
+    let state_for_voice = state.clone();
+    let send_voice_loaded = create_ext_action(Scope::new(), move |(count, voice_path): (usize, Option<PathBuf>)| {
+        state_for_voice.voice_meta_loaded.set(count > 0);
+        if let Some(path) = voice_path {
+            state_for_voice.voice_files_path.set(Some(path));
+        }
         if count > 0 {
-            tracing::info!("Flag index ready: {} flags", count);
+            tracing::info!("Voice meta ready: {} entries", count);
         }
     });
 
@@ -83,6 +111,23 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
         send_flag_started("Building flag index...".to_string());
         let flag_count = configure_flags(&flag_cache, &pak_path);
         send_flag_finished(flag_count);
+
+        // Load voice metadata (for audio playback)
+        if let Some(data_dir) = pak_path.parent() {
+            send_voice_started("Loading voice metadata...".to_string());
+            let voice_count = load_voice_meta(&voice_meta_cache, data_dir);
+            let voice_path = find_voice_files_path(data_dir);
+
+            // Configure audio cache and build WEM file index
+            if let Some(ref path) = voice_path {
+                send_audio_started("Indexing audio files...".to_string());
+                let wem_count = configure_audio_cache(&audio_cache, path);
+                tracing::info!("Audio cache indexed {} WEM files", wem_count);
+            }
+
+            send_voice_finished(voice_count);
+            send_voice_loaded((voice_count, voice_path));
+        }
 
         // Scan for dialog files
         let mut entries = Vec::new();
@@ -260,6 +305,29 @@ fn configure_flags_from_folder(cache: &Arc<std::sync::RwLock<FlagCache>>, folder
     }
 }
 
+/// Configure audio cache with the voice files path and build file index
+/// Similar to configure_flags, this sets up the cache for on-demand loading
+/// Returns the number of WEM files indexed
+fn configure_audio_cache(cache: &Arc<std::sync::RwLock<AudioCache>>, voice_path: &Path) -> usize {
+    let Ok(mut cache) = cache.write() else {
+        return 0;
+    };
+
+    // Skip if already indexed
+    if cache.is_indexed() {
+        return 0;
+    }
+
+    // Configure the cache path first
+    if !cache.is_configured() {
+        cache.configure(voice_path);
+        tracing::info!("Audio cache configured with voice path: {:?}", voice_path);
+    }
+
+    // Build the file index for O(1) WEM lookups
+    cache.build_index()
+}
+
 /// Open a folder containing dialog files
 /// Note: File dialog must run on main thread on macOS
 pub fn open_dialog_folder(state: DialogueState) {
@@ -273,6 +341,8 @@ pub fn open_dialog_folder(state: DialogueState) {
         let path_display = path.display().to_string();
         let loca_cache = state.localization_cache.clone();
         let flag_cache = state.flag_cache.clone();
+        let voice_meta_cache = state.voice_meta_cache.clone();
+        let audio_cache = state.audio_cache.clone();
 
         // Clone state for the result handler
         let state_for_result = state.clone();
@@ -300,20 +370,44 @@ pub fn open_dialog_folder(state: DialogueState) {
             state_for_result.is_loading.set(false);
         });
 
-        // Clone state for flag index overlay
-        let state_for_flag_start = state.clone();
-        let state_for_flag_end = state.clone();
+        // Clone state for progress overlay messages (separate ext_action per call since FnOnce)
+        let state_flag_start = state.clone();
+        let state_flag_end = state.clone();
+        let state_voice_start = state.clone();
+        let state_voice_end = state.clone();
+        let state_audio_start = state.clone();
 
-        // Create separate ext_actions for flag index overlay (FnOnce can only be called once)
         let send_flag_started = create_ext_action(Scope::new(), move |msg: String| {
-            state_for_flag_start.flag_index_message.set(msg);
-            state_for_flag_start.is_building_flag_index.set(true);
+            state_flag_start.flag_index_message.set(msg);
+            state_flag_start.is_building_flag_index.set(true);
         });
 
-        let send_flag_finished = create_ext_action(Scope::new(), move |count: usize| {
-            state_for_flag_end.is_building_flag_index.set(false);
+        let send_flag_finished = create_ext_action(Scope::new(), move |_count: usize| {
+            state_flag_end.is_building_flag_index.set(false);
+        });
+
+        let send_voice_started = create_ext_action(Scope::new(), move |msg: String| {
+            state_voice_start.flag_index_message.set(msg);
+            state_voice_start.is_building_flag_index.set(true);
+        });
+
+        let send_voice_finished = create_ext_action(Scope::new(), move |_count: usize| {
+            state_voice_end.is_building_flag_index.set(false);
+        });
+
+        let send_audio_started = create_ext_action(Scope::new(), move |msg: String| {
+            state_audio_start.flag_index_message.set(msg);
+        });
+
+        // Clone state for voice meta result
+        let state_for_voice = state.clone();
+        let send_voice_loaded = create_ext_action(Scope::new(), move |(count, voice_path): (usize, Option<PathBuf>)| {
+            state_for_voice.voice_meta_loaded.set(count > 0);
+            if let Some(p) = voice_path {
+                state_for_voice.voice_files_path.set(Some(p));
+            }
             if count > 0 {
-                tracing::info!("Flag index ready: {} flags", count);
+                tracing::info!("Voice meta ready: {} entries", count);
             }
         });
 
@@ -326,6 +420,21 @@ pub fn open_dialog_folder(state: DialogueState) {
             send_flag_started("Building flag index...".to_string());
             let flag_count = configure_flags_from_folder(&flag_cache, &path);
             send_flag_finished(flag_count);
+
+            // Load voice metadata (for audio playback)
+            send_voice_started("Loading voice metadata...".to_string());
+            let voice_count = load_voice_meta(&voice_meta_cache, &path);
+            let voice_path = find_voice_files_path(&path);
+
+            // Configure audio cache and build WEM file index
+            if let Some(ref vp) = voice_path {
+                send_audio_started("Indexing audio files...".to_string());
+                let wem_count = configure_audio_cache(&audio_cache, vp);
+                tracing::info!("Audio cache indexed {} WEM files", wem_count);
+            }
+
+            send_voice_finished(voice_count);
+            send_voice_loaded((voice_count, voice_path));
 
             match scan_dialog_folder(&path) {
                 Ok(entries) => {

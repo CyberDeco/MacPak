@@ -9,6 +9,8 @@ pub mod gr2;
 pub mod meta;
 pub mod virtual_texture;
 pub mod dialog;
+#[cfg(feature = "audio")]
+pub mod wem;
 
 // Re-export common types for convenience
 pub use common::{TypeId, get_type_name, type_name_to_id};
@@ -35,3 +37,9 @@ pub use dialog::{
     DialogParseError, LocalizationCache, LocalizedEntry, LocalizationError,
     get_available_languages,
 };
+
+// Re-export WEM/audio types
+pub use wem::{WemError, WemHeader, DecodedAudio, WwiseVorbisHeader, parse_wem_header, parse_wwise_vorbis_header};
+
+#[cfg(feature = "audio")]
+pub use wem::{load_wem_file_vgmstream, decode_wwise_vorbis_fallback};

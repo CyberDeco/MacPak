@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use MacLarian::formats::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache};
+use MacLarian::formats::wem::AudioCache;
 use crate::gui::tabs::dialogue::operations::SpeakerNameCache;
 
 /// Source of a dialog file
@@ -30,6 +31,22 @@ pub struct DisplayFlag {
     /// Parameter value (for non-boolean checks)
     pub param_val: Option<i32>,
 }
+
+/// Voice metadata entry for audio playback
+#[derive(Clone, Debug)]
+pub struct VoiceMetaEntry {
+    /// Source .wem filename (e.g., "v518fab8f2d1d46c8..._h35f3e7db....wem")
+    pub source_file: String,
+    /// Audio length in seconds
+    pub length: f32,
+    /// Audio codec (typically "VORBIS")
+    pub codec: String,
+    /// Speaker UUID this audio belongs to
+    pub speaker_uuid: String,
+}
+
+/// Cache mapping text handles to voice metadata
+pub type VoiceMetaCache = HashMap<String, VoiceMetaEntry>;
 
 /// Entry in the dialog file browser
 #[derive(Clone, Debug, PartialEq)]
@@ -190,6 +207,18 @@ pub struct DialogueState {
     pub speaker_cache: Arc<RwLock<SpeakerNameCache>>,
     /// Flag cache for resolving flag UUIDs to names
     pub flag_cache: Arc<RwLock<FlagCache>>,
+
+    // Voice/Audio
+    /// Voice metadata cache mapping text handles to .wem file info
+    pub voice_meta_cache: Arc<RwLock<VoiceMetaCache>>,
+    /// Whether voice metadata has been loaded
+    pub voice_meta_loaded: RwSignal<bool>,
+    /// Path to Voice.pak or extracted voice files directory
+    pub voice_files_path: RwSignal<Option<PathBuf>>,
+    /// Currently playing audio node UUID (if any)
+    pub playing_audio_node: RwSignal<Option<String>>,
+    /// Audio cache for decoded WEM files (avoids re-decoding on replay)
+    pub audio_cache: Arc<RwLock<AudioCache>>,
 }
 
 impl DialogueState {
@@ -237,6 +266,13 @@ impl DialogueState {
             localization_cache: Arc::new(RwLock::new(LocalizationCache::new())),
             speaker_cache: Arc::new(RwLock::new(SpeakerNameCache::new())),
             flag_cache: Arc::new(RwLock::new(FlagCache::new())),
+
+            // Voice/Audio
+            voice_meta_cache: Arc::new(RwLock::new(HashMap::new())),
+            voice_meta_loaded: RwSignal::new(false),
+            voice_files_path: RwSignal::new(None),
+            playing_audio_node: RwSignal::new(None),
+            audio_cache: Arc::new(RwLock::new(AudioCache::new())),
         }
     }
 
@@ -261,6 +297,21 @@ impl DialogueState {
         let display_node = self.selected_display_node()?;
         let dialog = self.current_dialog.get()?;
         dialog.get_node(&display_node.uuid).cloned()
+    }
+
+    /// Get voice metadata for a text handle
+    /// The handle should be in the format "hXXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+    /// It will be normalized to the VoiceMeta format (dashes replaced with 'g')
+    pub fn get_voice_meta(&self, text_handle: &str) -> Option<VoiceMetaEntry> {
+        // Normalize the handle: replace dashes with 'g' to match VoiceMeta format
+        let normalized = text_handle.replace('-', "g");
+        let cache = self.voice_meta_cache.read().ok()?;
+        cache.get(&normalized).cloned()
+    }
+
+    /// Check if a text handle has associated audio
+    pub fn has_audio(&self, text_handle: &str) -> bool {
+        self.get_voice_meta(text_handle).is_some()
     }
 }
 

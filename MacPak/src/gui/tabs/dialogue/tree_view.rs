@@ -1,11 +1,13 @@
 //! Dialog tree view panel
 
+use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::text::{Attrs, AttrsList, Style as FontStyle, TextLayout, Weight, Wrap};
 use floem::views::{clip, rich_text, virtual_list, VirtualDirection, VirtualItemSize};
 use im::Vector as ImVector;
 use MacLarian::formats::dialog::NodeConstructor;
 use crate::gui::state::{DialogueState, DisplayNode};
+use super::context_menu::show_node_context_menu;
 
 const NODE_ROW_HEIGHT: f64 = 32.0;
 
@@ -253,8 +255,11 @@ fn node_tree(state: DialogueState) -> impl IntoView {
                 |node| {
                     node.uuid.clone()
                 },
-                move |node| {
-                    node_row(node, selected_uuid, display_nodes, tree_version, max_content_width.get())
+                {
+                    let state_for_row = state.clone();
+                    move |node| {
+                        node_row(node, selected_uuid, display_nodes, tree_version, max_content_width.get(), state_for_row.clone())
+                    }
                 },
             )
             .style(|s| s.flex_col())
@@ -324,6 +329,7 @@ fn node_row(
     display_nodes: RwSignal<Vec<DisplayNode>>,
     tree_version: RwSignal<u64>,
     max_content_width: f32,
+    state: DialogueState,
 ) -> impl IntoView {
     let constructor = node.constructor.clone();
     let text = node.text.clone();
@@ -335,6 +341,7 @@ fn node_row(
     let node_uuid = node.uuid.clone();
     let node_uuid_for_select = node.uuid.clone();
     let node_uuid_for_style = node.uuid.clone();
+    let node_for_ctx = node.clone();
     let roll_success = node.roll_success;
     let constructor_for_roll = node.constructor.clone();
     // Get NodeContext (the primary dev note field) if available
@@ -539,6 +546,11 @@ fn node_row(
     .on_click_stop(move |_| {
         // All rendered rows are visible (filtered at data source level)
         selected_uuid.set(Some(node_uuid_for_select.clone()));
+    })
+    .on_secondary_click(move |_| {
+        // Right-click: show context menu
+        show_node_context_menu(&node_for_ctx, state.clone());
+        EventPropagation::Stop
     })
     .style(move |s| {
         // Visibility is handled by filtering at virtual_list data source level

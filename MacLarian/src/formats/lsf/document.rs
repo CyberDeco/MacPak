@@ -100,3 +100,110 @@ impl Default for LsfDocument {
         Self::new()
     }
 }
+
+// Query helpers for direct LSF access (avoids XML conversion overhead)
+impl LsfDocument {
+    /// Get the name of a node
+    pub fn node_name(&self, node_idx: usize) -> Option<&str> {
+        let node = self.nodes.get(node_idx)?;
+        self.get_name(node.name_index_outer, node.name_index_inner).ok()
+    }
+
+    /// Get indices of all children of a node
+    pub fn children_of(&self, parent_idx: usize) -> Vec<usize> {
+        self.nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.parent_index == parent_idx as i32)
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+
+    /// Get indices of root nodes (parent_index == -1)
+    pub fn root_nodes(&self) -> Vec<usize> {
+        self.nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.parent_index == -1)
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+
+    /// Iterate over attributes of a node, yielding (name, type_id, value_offset, value_length)
+    pub fn attributes_of(&self, node_idx: usize) -> Vec<(usize, &str, u32, usize, usize)> {
+        let Some(node) = self.nodes.get(node_idx) else {
+            return Vec::new();
+        };
+
+        if node.first_attribute_index < 0 {
+            return Vec::new();
+        }
+
+        let mut result = Vec::new();
+        let mut attr_idx = node.first_attribute_index as usize;
+
+        loop {
+            let Some(attr) = self.attributes.get(attr_idx) else {
+                break;
+            };
+
+            let name = self.get_name(attr.name_index_outer, attr.name_index_inner)
+                .unwrap_or("");
+            let type_id = attr.type_info & 0x3F;
+            let value_length = (attr.type_info >> 6) as usize;
+
+            result.push((attr_idx, name, type_id, attr.offset, value_length));
+
+            if attr.next_index < 0 {
+                break;
+            }
+            attr_idx = attr.next_index as usize;
+        }
+
+        result
+    }
+
+    /// Get a FixedString attribute value directly (type_id 22)
+    pub fn get_fixed_string_attr(&self, node_idx: usize, attr_name: &str) -> Option<String> {
+        for (_, name, type_id, offset, length) in self.attributes_of(node_idx) {
+            if name == attr_name && type_id == 22 {
+                // FixedString: null-terminated string (NOT length-prefixed)
+                if offset + length > self.values.len() {
+                    return None;
+                }
+                let bytes = &self.values[offset..offset + length];
+                // Find null terminator
+                let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
+                return String::from_utf8(bytes[..end].to_vec()).ok();
+            }
+        }
+        None
+    }
+
+    /// Get a float attribute value directly (type_id 6)
+    pub fn get_float_attr(&self, node_idx: usize, attr_name: &str) -> Option<f32> {
+        for (_, name, type_id, offset, _length) in self.attributes_of(node_idx) {
+            if name == attr_name && type_id == 6 {
+                if offset + 4 > self.values.len() {
+                    return None;
+                }
+                let bytes = [
+                    self.values[offset],
+                    self.values[offset + 1],
+                    self.values[offset + 2],
+                    self.values[offset + 3],
+                ];
+                return Some(f32::from_le_bytes(bytes));
+            }
+        }
+        None
+    }
+
+    /// Find child nodes with a specific name
+    pub fn find_children_by_name(&self, parent_idx: usize, name: &str) -> Vec<usize> {
+        self.children_of(parent_idx)
+            .into_iter()
+            .filter(|&idx| self.node_name(idx) == Some(name))
+            .collect()
+    }
+}

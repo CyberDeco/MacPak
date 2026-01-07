@@ -24,6 +24,8 @@ fastlz-rs.workspace = true      # FastLZ compression (virtual textures)
 # Binary I/O
 byteorder.workspace = true       # Reading/writing little-endian data
 
+# Audio decoding (WEM files use vgmstream-cli externally)
+
 # 3D Math & Vertex Processing
 glam.workspace = true            # SIMD-optimized vectors, quaternions, matrices
 half.workspace = true            # IEEE 754 half-precision floats (f16)
@@ -46,6 +48,10 @@ tracing.workspace = true         # Structured logging
 # Image/Texture handling
 ddsfile.workspace = true         # DDS texture file format
 image.workspace = true           # PNG/image format support
+
+[features]
+default = []
+audio = []  # Enables vgmstream-based WEM decoding
 
 [dev-dependencies]
 pretty_assertions.workspace = true

@@ -4,11 +4,12 @@
 //! - Browse dialogs from PAK files or extracted folders
 //! - View dialog tree structure with localized text
 //! - Export to HTML and DE2 formats
-//! - Audio extraction
+//! - Audio playback via right-click context menu
 
 mod toolbar;
 mod browser;
 mod tree_view;
+mod context_menu;
 pub mod operations;
 
 use floem::prelude::*;

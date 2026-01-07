@@ -6,6 +6,7 @@ pub mod create;
 pub mod list;
 pub mod gr2;
 pub mod virtual_texture;
+pub mod wem;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -68,6 +69,12 @@ pub enum Commands {
     VirtualTexture {
         #[command(subcommand)]
         command: VirtualTextureCommands,
+    },
+
+    /// WEM audio file operations
+    Wem {
+        #[command(subcommand)]
+        command: WemCommands,
     },
 }
 
@@ -160,6 +167,30 @@ pub enum Gr2Commands {
     },
 }
 
+/// WEM audio commands
+#[derive(Subcommand)]
+pub enum WemCommands {
+    /// Inspect a WEM file header
+    Inspect {
+        /// WEM file to inspect
+        path: PathBuf,
+    },
+
+    /// Decode a WEM file to WAV (requires vgmstream-cli)
+    Decode {
+        /// Source WEM file
+        path: PathBuf,
+
+        /// Output WAV file (optional)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Use silent fallback if vgmstream unavailable (outputs silence with correct duration)
+        #[arg(long)]
+        silent: bool,
+    },
+}
+
 /// Virtual Texture (GTS/GTP) commands
 #[derive(Subcommand)]
 pub enum VirtualTextureCommands {
@@ -232,6 +263,9 @@ impl Commands {
             Commands::VirtualTexture { command } => {
                 command.execute()
             }
+            Commands::Wem { command } => {
+                command.execute()
+            }
         }
     }
 }
@@ -289,6 +323,19 @@ impl VirtualTextureCommands {
             }
             VirtualTextureCommands::GtpInfo { path, gts } => {
                 virtual_texture::gtp_info(path, gts.as_deref())
+            }
+        }
+    }
+}
+
+impl WemCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            WemCommands::Inspect { path } => {
+                wem::inspect(path)
+            }
+            WemCommands::Decode { path, output, silent } => {
+                wem::decode(path, output.as_deref(), *silent)
             }
         }
     }
