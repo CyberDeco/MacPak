@@ -9,6 +9,7 @@ use super::operations::{
     batch_create_paks, batch_extract_paks, create_pak_file, extract_individual_files,
     extract_pak_file, list_pak_contents, rebuild_pak_file, validate_mod_structure,
 };
+use super::results::is_error_message;
 
 pub fn header_section(state: PakOpsState) -> impl IntoView {
     h_stack((
@@ -22,7 +23,7 @@ pub fn header_section(state: PakOpsState) -> impl IntoView {
                 if msg.is_empty() {
                     empty().into_any()
                 } else {
-                    let is_error = msg.contains("Failed") || msg.contains("Error");
+                    let is_error = is_error_message(&msg);
                     label(move || msg.clone())
                         .style(move |s| {
                             let s = s

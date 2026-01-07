@@ -10,6 +10,28 @@ use crate::gui::state::PakOpsState;
 
 const LOG_ITEM_HEIGHT: f64 = 22.0;
 
+/// Check if a message indicates an error/failure (not just containing the word in a filename).
+/// Matches actual error patterns from MacLarian errors and GUI status messages.
+pub fn is_error_message(msg: &str) -> bool {
+    // Check for emoji indicators (most reliable)
+    if msg.starts_with('❌') || msg.starts_with('⚠') {
+        return true;
+    }
+
+    // GUI status message patterns
+    if msg.contains("Error: ") || msg.contains("Failed: ") || msg.contains("Failed to ") {
+        return true;
+    }
+
+    // MacLarian error patterns (from error.rs #[error("...")] attributes)
+    msg.contains(" error: ")         // "IO error: ", "XML parse error: ", "JSON error: ", etc.
+        || msg.contains(" failed: ") // "Decompression failed: ", "Compression failed: "
+        || msg.starts_with("Invalid ")
+        || msg.starts_with("Unsupported ")
+        || msg.starts_with("Unexpected ")
+        || msg.starts_with("File not found ")
+}
+
 /// Results area - unified log showing operations and file listings
 pub fn results_area(state: PakOpsState) -> impl IntoView {
     results_log_section(state)
@@ -32,12 +54,7 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
             .filter(|msg| {
                 // Apply failure filter
                 if filter_failures {
-                    let is_failure = msg.contains("Error")
-                        || msg.contains("Failed")
-                        || msg.contains("error")
-                        || msg.starts_with('❌')
-                        || msg.starts_with('⚠');
-                    if !is_failure {
+                    if !is_error_message(msg) {
                         return false;
                     }
                 }
@@ -58,13 +75,7 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
     let failure_count = move || {
         state.results_log.get()
             .iter()
-            .filter(|msg| {
-                msg.contains("Error")
-                    || msg.contains("Failed")
-                    || msg.contains("error")
-                    || msg.starts_with('❌')
-                    || msg.starts_with('⚠')
-            })
+            .filter(|msg| is_error_message(msg))
             .count()
     };
 
@@ -164,11 +175,7 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
                 filtered_results,
                 |msg: &String| msg.clone(),
                 |msg| {
-                    let is_error = msg.contains("Error")
-                        || msg.contains("Failed")
-                        || msg.contains("error")
-                        || msg.starts_with('❌')
-                        || msg.starts_with('⚠');
+                    let is_error = is_error_message(&msg);
                     let is_success = msg.starts_with('✅') || msg.starts_with('✓');
 
                     container(
