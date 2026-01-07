@@ -1,8 +1,10 @@
 //! Virtual Texture extraction operations
 
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use floem_reactive::{SignalGet, SignalUpdate};
+use rayon::prelude::*;
 
 use crate::gui::shared::SharedProgress;
 use crate::gui::state::VirtualTexturesState;
@@ -78,38 +80,44 @@ pub fn extract_batch(state: VirtualTexturesState) {
         progress.reset();
 
         let total = files.len();
-        let mut success_count = 0;
-        let mut error_count = 0;
-        let mut texture_count = 0;
-        let mut results = Vec::new();
+        let success_counter = AtomicUsize::new(0);
+        let error_counter = AtomicUsize::new(0);
+        let texture_counter = AtomicUsize::new(0);
+        let processed = AtomicUsize::new(0);
 
-        for (i, gts_path) in files.iter().enumerate() {
-            let gts_name = Path::new(&gts_path)
-                .file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| "unknown".to_string());
+        // Parallel GTS extraction
+        let results: Vec<String> = files
+            .par_iter()
+            .map(|gts_path| {
+                let gts_name = Path::new(gts_path)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "unknown".to_string());
 
-            progress.update(i, total, &gts_name);
+                // Update progress (atomic)
+                let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
+                progress.update(current, total, &gts_name);
 
-            match extract_gts_file(gts_path, output_dir.as_deref(), progress) {
-                Ok(count) => {
-                    results.push(format!("Extracted {} textures from {}", count, gts_name));
-                    success_count += 1;
-                    texture_count += count;
+                match extract_gts_file(gts_path, output_dir.as_deref(), progress) {
+                    Ok(count) => {
+                        success_counter.fetch_add(1, Ordering::SeqCst);
+                        texture_counter.fetch_add(count, Ordering::SeqCst);
+                        format!("Extracted {} textures from {}", count, gts_name)
+                    }
+                    Err(e) => {
+                        error_counter.fetch_add(1, Ordering::SeqCst);
+                        format!("Failed {}: {}", gts_name, e)
+                    }
                 }
-                Err(e) => {
-                    results.push(format!("Failed {}: {}", gts_name, e));
-                    error_count += 1;
-                }
-            }
-        }
+            })
+            .collect();
 
         progress.update(total, total, "Complete");
 
         send_result(VtResult::BatchDone {
-            success_count,
-            error_count,
-            texture_count,
+            success_count: success_counter.load(Ordering::SeqCst),
+            error_count: error_counter.load(Ordering::SeqCst),
+            texture_count: texture_counter.load(Ordering::SeqCst),
             results,
         });
     });

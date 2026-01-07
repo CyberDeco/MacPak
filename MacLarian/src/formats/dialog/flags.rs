@@ -6,6 +6,7 @@
 use crate::formats::lsf::parse_lsf_bytes;
 use crate::formats::common::extract_value;
 use crate::pak::PakOperations;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -113,12 +114,16 @@ impl FlagCache {
             let file_data = PakOperations::read_files_bytes(&pak_path, &flag_files)
                 .map_err(|e| FlagCacheError::PakError(e.to_string()))?;
 
-            // Parse each flag file and extract UUID + Name
-            for (_path, data) in file_data {
-                if let Some((uuid, name)) = self.extract_flag_name_from_lsf(&data) {
-                    self.names.insert(uuid, name);
-                    total_count += 1;
-                }
+            // Parse flag files in parallel and collect results
+            let parsed_flags: Vec<Option<(String, String)>> = file_data
+                .par_iter()
+                .map(|(_path, data)| Self::extract_flag_name_from_lsf_static(data))
+                .collect();
+
+            // Merge results sequentially
+            for flag in parsed_flags.into_iter().flatten() {
+                self.names.insert(flag.0, flag.1);
+                total_count += 1;
             }
         }
 
@@ -127,12 +132,13 @@ impl FlagCache {
         Ok(total_count)
     }
 
-    /// Extract just UUID and Name from flag LSF bytes
-    fn extract_flag_name_from_lsf(&self, data: &[u8]) -> Option<(String, String)> {
+    /// Extract just UUID and Name from flag LSF bytes (static version for parallel use)
+    fn extract_flag_name_from_lsf_static(data: &[u8]) -> Option<(String, String)> {
         let doc = parse_lsf_bytes(data).ok()?;
 
         for node in doc.nodes.iter() {
-            let node_name = doc.get_name(node.name_index_outer, node.name_index_inner)
+            let node_name = doc
+                .get_name(node.name_index_outer, node.name_index_inner)
                 .unwrap_or("");
 
             if node_name != "Flags" {
@@ -150,21 +156,26 @@ impl FlagCache {
                     }
 
                     let attr = &doc.attributes[attr_idx];
-                    let attr_name = doc.get_name(attr.name_index_outer, attr.name_index_inner)
+                    let attr_name = doc
+                        .get_name(attr.name_index_outer, attr.name_index_inner)
                         .unwrap_or("");
                     let type_id = attr.type_info & 0x3F;
                     let value_length = (attr.type_info >> 6) as usize;
 
                     match attr_name {
                         "Name" => {
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id) {
+                            if let Ok(val) =
+                                extract_value(&doc.values, attr.offset, value_length, type_id)
+                            {
                                 if !val.is_empty() {
                                     flag_name = Some(val);
                                 }
                             }
                         }
                         "UUID" => {
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id) {
+                            if let Ok(val) =
+                                extract_value(&doc.values, attr.offset, value_length, type_id)
+                            {
                                 if !val.is_empty() {
                                     flag_uuid = Some(val);
                                 }

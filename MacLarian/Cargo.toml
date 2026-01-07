@@ -42,6 +42,9 @@ crc32fast.workspace = true       # CRC32 checksums for PAK files
 walkdir.workspace = true         # Recursive directory traversal
 tempfile.workspace = true        # Temp directories for LSF→LSX conversion
 
+# Parallelism
+rayon.workspace = true           # Data parallelism for batch operations
+
 # Logging
 tracing.workspace = true         # Structured logging
 

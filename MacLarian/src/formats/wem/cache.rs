@@ -19,6 +19,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use rayon::prelude::*;
+use walkdir::WalkDir;
+
 use super::decoder::{DecodedAudio, WemError};
 use crate::pak::PakOperations;
 
@@ -220,15 +223,42 @@ impl AudioCache {
         count
     }
 
-    /// Build index from an extracted directory
+    /// Build index from an extracted directory (parallel with walkdir + rayon)
     fn build_directory_index(&mut self, voice_path: &Path) -> usize {
         tracing::info!("Building WEM file index from directory {:?}...", voice_path);
         self.file_index.clear();
-        self.index_directory_recursive(voice_path);
+
+        // Collect all WEM files using walkdir
+        let wem_files: Vec<PathBuf> = WalkDir::new(voice_path)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.path()
+                    .extension()
+                    .map(|ext| ext == "wem")
+                    .unwrap_or(false)
+            })
+            .map(|e| e.into_path())
+            .collect();
+
+        // Process files in parallel to extract filenames
+        let entries: Vec<(String, PathBuf)> = wem_files
+            .par_iter()
+            .filter_map(|path| {
+                path.file_name()
+                    .map(|n| (n.to_string_lossy().to_string(), path.clone()))
+            })
+            .collect();
+
+        // Insert into index (sequential)
+        for (filename, path) in entries {
+            self.file_index.insert(filename, path);
+        }
+
         self.file_index.len()
     }
 
-    /// Build index from a PAK file
+    /// Build index from a PAK file (parallel filtering)
     fn build_pak_index(&mut self, pak_path: &Path) -> usize {
         tracing::info!("Building WEM file index from PAK {:?}...", pak_path);
         self.pak_index.clear();
@@ -242,38 +272,24 @@ impl AudioCache {
             }
         };
 
-        // Index all .wem files
-        for internal_path in entries {
-            if internal_path.to_lowercase().ends_with(".wem") {
-                // Extract filename from internal path
-                if let Some(filename) = internal_path.rsplit('/').next() {
-                    self.pak_index.insert(filename.to_string(), internal_path);
-                }
-            }
+        // Filter and extract WEM entries in parallel
+        let wem_entries: Vec<(String, String)> = entries
+            .par_iter()
+            .filter(|path| path.to_lowercase().ends_with(".wem"))
+            .filter_map(|internal_path| {
+                internal_path
+                    .rsplit('/')
+                    .next()
+                    .map(|filename| (filename.to_string(), internal_path.clone()))
+            })
+            .collect();
+
+        // Insert into index (sequential)
+        for (filename, internal_path) in wem_entries {
+            self.pak_index.insert(filename, internal_path);
         }
 
         self.pak_index.len()
-    }
-
-    /// Recursively scan a directory and add all .wem files to the index
-    fn index_directory_recursive(&mut self, dir: &Path) {
-        let Ok(entries) = std::fs::read_dir(dir) else {
-            return;
-        };
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                self.index_directory_recursive(&path);
-            } else if let Some(ext) = path.extension() {
-                if ext == "wem" {
-                    if let Some(filename) = path.file_name() {
-                        let filename_str = filename.to_string_lossy().to_string();
-                        self.file_index.insert(filename_str, path);
-                    }
-                }
-            }
-        }
     }
 
     /// Look up a WEM file path from the index (O(1))

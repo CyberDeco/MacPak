@@ -9,6 +9,7 @@ pub mod gr2;
 pub mod meta;
 pub mod virtual_texture;
 pub mod dialog;
+pub mod voice_meta;
 #[cfg(feature = "audio")]
 pub mod wem;
 
@@ -36,6 +37,13 @@ pub use dialog::{
     parse_dialog, parse_dialog_bytes, parse_dialog_file, parse_dialog_lsf,
     DialogParseError, LocalizationCache, LocalizedEntry, LocalizationError,
     get_available_languages,
+};
+
+// Re-export voice meta types
+pub use voice_meta::{
+    VoiceMetaEntry, VoiceMetaCache,
+    load_voice_meta_from_pak, load_voice_meta_from_folder,
+    find_voice_files_path, find_voice_meta_path,
 };
 
 // Re-export WEM/audio types

@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use MacLarian::formats::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache};
+pub use MacLarian::formats::voice_meta::{VoiceMetaEntry, VoiceMetaCache};
 use MacLarian::formats::wem::AudioCache;
 use crate::gui::tabs::dialogue::operations::SpeakerNameCache;
 
@@ -31,22 +32,6 @@ pub struct DisplayFlag {
     /// Parameter value (for non-boolean checks)
     pub param_val: Option<i32>,
 }
-
-/// Voice metadata entry for audio playback
-#[derive(Clone, Debug)]
-pub struct VoiceMetaEntry {
-    /// Source .wem filename (e.g., "v518fab8f2d1d46c8..._h35f3e7db....wem")
-    pub source_file: String,
-    /// Audio length in seconds
-    pub length: f32,
-    /// Audio codec (typically "VORBIS")
-    pub codec: String,
-    /// Speaker UUID this audio belongs to
-    pub speaker_uuid: String,
-}
-
-/// Cache mapping text handles to voice metadata
-pub type VoiceMetaCache = HashMap<String, VoiceMetaEntry>;
 
 /// Entry in the dialog file browser
 #[derive(Clone, Debug, PartialEq)]

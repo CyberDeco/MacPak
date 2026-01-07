@@ -2,10 +2,14 @@
 //!
 //! These functions are used for on-demand localization loading and may be
 //! called when switching languages or loading dialogs that need text resolution.
+//!
+//! Optimized for performance with parallel .loca file parsing.
 
 use std::path::Path;
 use floem::reactive::SignalUpdate;
+use rayon::prelude::*;
 use MacLarian::formats::dialog::{LocalizationCache, get_available_languages};
+use MacLarian::formats::loca::parse_loca_bytes;
 use MacLarian::pak::PakOperations;
 use crate::gui::state::DialogueState;
 
@@ -69,12 +73,19 @@ pub fn try_load_localization(state: &DialogueState, pak_path: &Path) {
     }
 }
 
-/// Load localization entries from a language PAK file
+/// Parsed localization entry for merging into cache
+struct ParsedEntry {
+    key: String,
+    text: String,
+    version: u16,
+}
+
+/// Load localization entries from a language PAK file (parallel parsing)
 #[allow(dead_code)]
 fn load_localization_from_pak(cache: &mut LocalizationCache, pak_path: &Path) -> Result<usize, String> {
     // List all .loca files in the PAK
     let entries = PakOperations::list(pak_path)
-        .map_err(|e| format!("Failed to list PAK: {}", e))?;
+        .map_err(|e| format!("Failed to list PAK: {e}"))?;
 
     let loca_files: Vec<_> = entries
         .iter()
@@ -83,19 +94,52 @@ fn load_localization_from_pak(cache: &mut LocalizationCache, pak_path: &Path) ->
         .collect();
 
     println!("[Dialogue] Found {} .loca files in language PAK", loca_files.len());
+    let start = std::time::Instant::now();
 
+    // Batch read all .loca files from PAK
+    let file_data = PakOperations::read_files_bytes(pak_path, &loca_files)
+        .map_err(|e| format!("Failed to batch read files: {e}"))?;
+
+    // Parse .loca files in parallel
+    let parsed_results: Vec<Result<Vec<ParsedEntry>, String>> = file_data
+        .par_iter()
+        .map(|(path, data)| {
+            parse_loca_bytes(data)
+                .map(|resource| {
+                    resource
+                        .entries
+                        .into_iter()
+                        .map(|e| ParsedEntry {
+                            key: e.key,
+                            text: e.text,
+                            version: e.version,
+                        })
+                        .collect()
+                })
+                .map_err(|e| format!("Failed to parse {path}: {e}"))
+        })
+        .collect();
+
+    // Merge results sequentially into cache
     let mut total_count = 0;
-
-    for loca_path in loca_files {
-        match cache.load_from_pak(pak_path, &loca_path) {
-            Ok(count) => {
-                total_count += count;
+    for result in parsed_results {
+        match result {
+            Ok(entries) => {
+                for entry in entries {
+                    cache.insert(entry.key, entry.text, entry.version);
+                    total_count += 1;
+                }
             }
-            Err(e) => {
-                println!("[Dialogue] Failed to load {}: {}", loca_path, e);
-            }
+            Err(e) => println!("[Dialogue] {e}"),
         }
     }
+
+    let elapsed = start.elapsed();
+    println!(
+        "[Dialogue] Parsed {} localization entries in {:.2}s",
+        total_count,
+        elapsed.as_secs_f64()
+    );
 
     Ok(total_count)
 }

@@ -1,7 +1,9 @@
 //! File operations for PAK handling
 
 use floem::prelude::*;
+use rayon::prelude::*;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use walkdir::WalkDir;
 
@@ -842,66 +844,64 @@ pub fn batch_extract_paks(state: PakOpsState) {
     get_shared_progress().reset();
 
     let send = create_result_sender(state.clone());
-    let progress = create_progress_sender(state.clone());
 
     thread::spawn(move || {
-        let mut success_count = 0;
-        let mut fail_count = 0;
-        let mut results = Vec::new();
+        let success_counter = AtomicUsize::new(0);
+        let fail_counter = AtomicUsize::new(0);
+        let processed = AtomicUsize::new(0);
         let source_base = Path::new(&source_path);
+        let shared_progress = get_shared_progress();
 
-        for (i, pak_path) in pak_files.iter().enumerate() {
-            let _pak_name = pak_path
-                .file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_default();
+        // Parallel PAK extraction
+        let results: Vec<String> = pak_files
+            .par_iter()
+            .map(|pak_path| {
+                // Calculate relative path for display and output structure
+                let relative_path = pak_path
+                    .strip_prefix(source_base)
+                    .unwrap_or(pak_path.as_path());
+                let display_path = relative_path.to_string_lossy();
 
-            // Calculate relative path for display and output structure
-            let relative_path = pak_path
-                .strip_prefix(source_base)
-                .unwrap_or(pak_path.as_path());
-            let display_path = relative_path.to_string_lossy();
+                // Update progress (atomic)
+                let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
+                shared_progress.update(current, pak_count, &display_path);
 
-            // Update progress
-            progress(i + 1, pak_count, &display_path);
+                // Preserve directory structure: create subfolder matching relative path
+                let relative_parent = relative_path.parent().unwrap_or(Path::new(""));
+                let pak_stem = pak_path
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
 
-            // Preserve directory structure: create subfolder matching relative path
-            // e.g., source/subdir/file.pak -> dest/subdir/file/
-            let relative_parent = relative_path.parent().unwrap_or(Path::new(""));
-            let pak_stem = pak_path
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string();
+                let pak_dest = Path::new(&dest_path)
+                    .join(relative_parent)
+                    .join(&pak_stem);
 
-            let pak_dest = Path::new(&dest_path)
-                .join(relative_parent)
-                .join(&pak_stem);
-
-            if let Err(e) = std::fs::create_dir_all(&pak_dest) {
-                results.push(format!("Failed to create folder for {}: {}", display_path, e));
-                fail_count += 1;
-                continue;
-            }
-
-            let pak_str = pak_path.to_string_lossy().to_string();
-            let dest_str = pak_dest.to_string_lossy().to_string();
-
-            match MacLarian::pak::PakOperations::extract(&pak_str, &dest_str) {
-                Ok(_) => {
-                    results.push(format!("Extracted: {}", display_path));
-                    success_count += 1;
+                if let Err(e) = std::fs::create_dir_all(&pak_dest) {
+                    fail_counter.fetch_add(1, Ordering::SeqCst);
+                    return format!("Failed to create folder for {}: {}", display_path, e);
                 }
-                Err(e) => {
-                    results.push(format!("Failed {}: {}", display_path, e));
-                    fail_count += 1;
+
+                let pak_str = pak_path.to_string_lossy().to_string();
+                let dest_str = pak_dest.to_string_lossy().to_string();
+
+                match MacLarian::pak::PakOperations::extract(&pak_str, &dest_str) {
+                    Ok(()) => {
+                        success_counter.fetch_add(1, Ordering::SeqCst);
+                        format!("Extracted: {}", display_path)
+                    }
+                    Err(e) => {
+                        fail_counter.fetch_add(1, Ordering::SeqCst);
+                        format!("Failed {}: {}", display_path, e)
+                    }
                 }
-            }
-        }
+            })
+            .collect();
 
         send(PakResult::BatchExtractDone {
-            success_count,
-            fail_count,
+            success_count: success_counter.load(Ordering::SeqCst),
+            fail_count: fail_counter.load(Ordering::SeqCst),
             results,
             dest: dest_path,
         });
@@ -987,62 +987,63 @@ pub fn batch_create_paks(state: PakOpsState) {
     get_shared_progress().reset();
 
     let send = create_result_sender(state.clone());
-    let progress = create_progress_sender(state.clone());
 
     thread::spawn(move || {
-        let mut success_count = 0;
-        let mut fail_count = 0;
-        let mut results = Vec::new();
+        let success_counter = AtomicUsize::new(0);
+        let fail_counter = AtomicUsize::new(0);
+        let processed = AtomicUsize::new(0);
         let source_base = Path::new(&source_path);
+        let shared_progress = get_shared_progress();
 
-        for (i, folder_path) in folders.iter().enumerate() {
-            let folder_name = folder_path
-                .file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_default();
+        // Parallel PAK creation
+        let results: Vec<String> = folders
+            .par_iter()
+            .map(|folder_path| {
+                let folder_name = folder_path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
 
-            // Calculate relative path for display and output structure
-            let relative_path = folder_path
-                .strip_prefix(source_base)
-                .unwrap_or(folder_path.as_path());
-            let display_path = relative_path.to_string_lossy();
+                // Calculate relative path for display and output structure
+                let relative_path = folder_path
+                    .strip_prefix(source_base)
+                    .unwrap_or(folder_path.as_path());
+                let display_path = relative_path.to_string_lossy();
 
-            // Update progress
-            progress(i + 1, folder_count, &display_path);
+                // Update progress (atomic)
+                let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
+                shared_progress.update(current, folder_count, &display_path);
 
-            // Preserve directory structure: create PAK in matching relative path
-            // e.g., source/subdir/folder -> dest/subdir/folder.pak
-            let relative_parent = relative_path.parent().unwrap_or(Path::new(""));
-            let pak_dest_dir = Path::new(&dest_path).join(relative_parent);
+                // Preserve directory structure: create PAK in matching relative path
+                let relative_parent = relative_path.parent().unwrap_or(Path::new(""));
+                let pak_dest_dir = Path::new(&dest_path).join(relative_parent);
 
-            // Create parent directories if needed
-            if !pak_dest_dir.exists() {
+                // Create parent directories if needed (idempotent)
                 if let Err(e) = std::fs::create_dir_all(&pak_dest_dir) {
-                    results.push(format!("Failed to create dir for {}: {}", display_path, e));
-                    fail_count += 1;
-                    continue;
+                    fail_counter.fetch_add(1, Ordering::SeqCst);
+                    return format!("Failed to create dir for {}: {}", display_path, e);
                 }
-            }
 
-            let pak_path = pak_dest_dir.join(format!("{}.pak", folder_name));
-            let folder_str = folder_path.to_string_lossy().to_string();
-            let pak_str = pak_path.to_string_lossy().to_string();
+                let pak_path = pak_dest_dir.join(format!("{}.pak", folder_name));
+                let folder_str = folder_path.to_string_lossy().to_string();
+                let pak_str = pak_path.to_string_lossy().to_string();
 
-            match MacLarian::pak::PakOperations::create(&folder_str, &pak_str) {
-                Ok(_) => {
-                    results.push(format!("Created: {}.pak", display_path));
-                    success_count += 1;
+                match MacLarian::pak::PakOperations::create(&folder_str, &pak_str) {
+                    Ok(()) => {
+                        success_counter.fetch_add(1, Ordering::SeqCst);
+                        format!("Created: {}.pak", display_path)
+                    }
+                    Err(e) => {
+                        fail_counter.fetch_add(1, Ordering::SeqCst);
+                        format!("Failed {}: {}", display_path, e)
+                    }
                 }
-                Err(e) => {
-                    results.push(format!("Failed {}: {}", display_path, e));
-                    fail_count += 1;
-                }
-            }
-        }
+            })
+            .collect();
 
         send(PakResult::BatchCreateDone {
-            success_count,
-            fail_count,
+            success_count: success_counter.load(Ordering::SeqCst),
+            fail_count: fail_counter.load(Ordering::SeqCst),
             results,
             dest: dest_path,
         });

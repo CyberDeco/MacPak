@@ -29,10 +29,10 @@
     - [x] Loads all dialogues from Gustav.pak and Shared.pak - very quickly
     - [x] Can open/expand nodes no problem
     - [ ] BUG: need to fix width for left panel
-    - [ ] BUG: not all 
+    - [ ] BUG: not all (*snaps* yes)
     - [ ] FEATURE: implement per-act subfolders (might be more of a hassle than it's worth)
-    - [ ] FEATURE: play audio
-      - [ ] WORKING: using vgmstream (because damn was reverse-engineering not worth it) - uses brew installed vgmstream as fallback but will probably bundle [vgmstream-cli](https://vgmstream.org) within app when ready for launch
+    - [x] FEATURE: play audio (right-click)
+      - [x] WORKING: using vgmstream (because damn was reverse-engineering not worth it) - uses brew installed vgmstream as fallback but will probably bundle [vgmstream-cli](https://vgmstream.org) within app when ready for launch
 - [x] Working: Piece together x-ref library for GR2 files to their base/normal/physical virtual textures and/or cloth msk
     - [ ] Get tooltip/menu little icons
     - [ ] Option to automatically retrieve companion texture files when working with GR2

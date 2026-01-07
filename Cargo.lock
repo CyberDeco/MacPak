@@ -22,6 +22,7 @@ dependencies = [
  "lz4_flex",
  "pretty_assertions",
  "quick-xml 0.31.0",
+ "rayon",
  "serde",
  "serde_json",
  "tempfile",
