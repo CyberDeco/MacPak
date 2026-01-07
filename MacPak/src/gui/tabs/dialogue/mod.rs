@@ -12,7 +12,7 @@ mod tree_view;
 pub mod operations;
 
 use floem::prelude::*;
-use floem::style::FlexDirection;
+use floem::style::{FlexDirection, Position};
 use floem::text::Weight;
 use crate::gui::state::{AppState, ConfigState, DialogueState};
 
@@ -21,8 +21,10 @@ pub use operations::{open_dialog_folder, load_dialog_from_pak};
 /// Main dialogue tab view
 pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigState) -> impl IntoView {
     let state_for_content = state.clone();
+    let state_for_overlay = state.clone();
 
-    v_stack((
+    // Main content
+    let main_content = v_stack((
         // Toolbar
         toolbar::toolbar(state.clone(), config),
 
@@ -34,7 +36,11 @@ pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigSt
             .height_full()
             .flex_direction(FlexDirection::Column)
             .background(Color::rgb8(250, 250, 250))
-    })
+    });
+
+    // Stack main content with loading overlay
+    (main_content, loading_overlay(state_for_overlay))
+        .style(|s| s.width_full().height_full().position(Position::Relative))
 }
 
 /// Main content area with adjustable split between browser and tree view
@@ -187,5 +193,69 @@ fn empty_state() -> impl IntoView {
             .items_center()
             .justify_center()
             .padding(40.0)
+    })
+}
+
+/// Loading overlay shown during flag index building
+/// Matches the style of Pak Ops, GR2, and Textures tabs
+fn loading_overlay(state: DialogueState) -> impl IntoView {
+    let show = state.is_building_flag_index;
+    let message = state.flag_index_message;
+
+    dyn_container(
+        move || show.get(),
+        move |is_loading| {
+            if is_loading {
+                container(
+                    v_stack((
+                        // Loading message
+                        label(move || message.get())
+                            .style(|s| s.font_size(14.0).margin_bottom(16.0)),
+                        // Indeterminate progress indicator (animated bar)
+                        container(
+                            container(empty())
+                                .style(|s| {
+                                    s.height_full()
+                                        .width_pct(30.0)
+                                        .background(Color::rgb8(76, 175, 80))
+                                        .border_radius(4.0)
+                                })
+                        )
+                        .style(|s| {
+                            s.width_full()
+                                .height(8.0)
+                                .background(Color::rgb8(220, 220, 220))
+                                .border_radius(4.0)
+                        }),
+                    ))
+                    .style(|s| {
+                        s.padding(24.0)
+                            .background(Color::WHITE)
+                            .border(1.0)
+                            .border_color(Color::rgb8(200, 200, 200))
+                            .border_radius(8.0)
+                            .width(400.0)
+                    }),
+                )
+                .into_any()
+            } else {
+                empty().into_any()
+            }
+        },
+    )
+    .style(move |s| {
+        if show.get() {
+            s.position(Position::Absolute)
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .inset_bottom(0.0)
+                .inset_right(0.0)
+                .items_center()
+                .justify_center()
+                .background(Color::rgba8(0, 0, 0, 100))
+                .z_index(100)
+        } else {
+            s.display(floem::style::Display::None)
+        }
     })
 }

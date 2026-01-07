@@ -31,27 +31,47 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
     let loca_cache = state.localization_cache.clone();
     let flag_cache = state.flag_cache.clone();
 
+    // Clone state for the result handler
+    let state_for_result = state.clone();
+
     // Create ext_action to send results back to main thread
     let send = create_ext_action(Scope::new(), move |result: ScanResult| {
         match result {
             ScanResult::Success { entries, count, loca_count } => {
                 if count == 0 {
-                    state.status_message.set(format!("No dialogs found in {}", pak_display));
+                    state_for_result.status_message.set(format!("No dialogs found in {}", pak_display));
                 } else {
-                    state.available_dialogs.set(entries);
+                    state_for_result.available_dialogs.set(entries);
                     if loca_count > 0 {
-                        state.localization_loaded.set(true);
+                        state_for_result.localization_loaded.set(true);
                     }
                     let status = format!("Found {} dialogs, {} loca strings", count, loca_count);
-                    state.status_message.set(status);
+                    state_for_result.status_message.set(status);
                 }
             }
             ScanResult::Error(e) => {
-                state.status_message.set(format!("Error: {}", e));
-                state.error_message.set(Some(e));
+                state_for_result.status_message.set(format!("Error: {}", e));
+                state_for_result.error_message.set(Some(e));
             }
         }
-        state.is_loading.set(false);
+        state_for_result.is_loading.set(false);
+    });
+
+    // Clone state for flag index overlay
+    let state_for_flag_start = state.clone();
+    let state_for_flag_end = state.clone();
+
+    // Create separate ext_actions for flag index overlay (FnOnce can only be called once)
+    let send_flag_started = create_ext_action(Scope::new(), move |msg: String| {
+        state_for_flag_start.flag_index_message.set(msg);
+        state_for_flag_start.is_building_flag_index.set(true);
+    });
+
+    let send_flag_finished = create_ext_action(Scope::new(), move |count: usize| {
+        state_for_flag_end.is_building_flag_index.set(false);
+        if count > 0 {
+            tracing::info!("Flag index ready: {} flags", count);
+        }
     });
 
     // Spawn thread for loading
@@ -59,8 +79,10 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
         // Load localization first (updates Arc<RwLock<>> directly)
         let loca_count = load_localization(&loca_cache, &pak_path);
 
-        // Configure flag cache and build index (one-time cost)
-        configure_flags(&flag_cache, &pak_path);
+        // Configure flag cache and build index (with overlay)
+        send_flag_started("Building flag index...".to_string());
+        let flag_count = configure_flags(&flag_cache, &pak_path);
+        send_flag_finished(flag_count);
 
         // Scan for dialog files
         let mut entries = Vec::new();
@@ -182,36 +204,42 @@ fn load_localization_from_pak(cache: &Arc<std::sync::RwLock<LocalizationCache>>,
 }
 
 /// Configure flag cache and build index from PAK sources
-fn configure_flags(cache: &Arc<std::sync::RwLock<FlagCache>>, pak_path: &Path) {
+/// Returns the number of flags indexed
+fn configure_flags(cache: &Arc<std::sync::RwLock<FlagCache>>, pak_path: &Path) -> usize {
     let Some(data_dir) = pak_path.parent() else {
-        return;
+        return 0;
     };
 
     let Ok(mut cache) = cache.write() else {
-        return;
+        return 0;
     };
 
     // Skip if already indexed
     if cache.is_indexed() {
-        return;
+        return cache.len();
     }
 
     // Configure PAK sources and build the index
     cache.configure_from_game_data(data_dir);
-    if let Err(e) = cache.build_index() {
-        tracing::warn!("Failed to build flag index: {}", e);
+    match cache.build_index() {
+        Ok(count) => count,
+        Err(e) => {
+            tracing::warn!("Failed to build flag index: {}", e);
+            0
+        }
     }
 }
 
 /// Configure flag cache from a folder that may contain PAK files
-fn configure_flags_from_folder(cache: &Arc<std::sync::RwLock<FlagCache>>, folder: &Path) {
+/// Returns the number of flags indexed
+fn configure_flags_from_folder(cache: &Arc<std::sync::RwLock<FlagCache>>, folder: &Path) -> usize {
     let Ok(mut cache) = cache.write() else {
-        return;
+        return 0;
     };
 
     // Skip if already indexed
     if cache.is_indexed() {
-        return;
+        return cache.len();
     }
 
     // Look for PAK files in the folder and add them as sources
@@ -223,8 +251,12 @@ fn configure_flags_from_folder(cache: &Arc<std::sync::RwLock<FlagCache>>, folder
     }
 
     // Build the index after adding all sources
-    if let Err(e) = cache.build_index() {
-        tracing::warn!("Failed to build flag index: {}", e);
+    match cache.build_index() {
+        Ok(count) => count,
+        Err(e) => {
+            tracing::warn!("Failed to build flag index: {}", e);
+            0
+        }
     }
 }
 
@@ -242,27 +274,47 @@ pub fn open_dialog_folder(state: DialogueState) {
         let loca_cache = state.localization_cache.clone();
         let flag_cache = state.flag_cache.clone();
 
+        // Clone state for the result handler
+        let state_for_result = state.clone();
+
         // Create ext_action to send results back to main thread
         let send = create_ext_action(Scope::new(), move |result: ScanResult| {
             match result {
                 ScanResult::Success { entries, count, loca_count } => {
                     if count == 0 {
-                        state.status_message.set(format!("No dialogs found in {}", path_display));
+                        state_for_result.status_message.set(format!("No dialogs found in {}", path_display));
                     } else {
-                        state.available_dialogs.set(entries);
+                        state_for_result.available_dialogs.set(entries);
                         if loca_count > 0 {
-                            state.localization_loaded.set(true);
+                            state_for_result.localization_loaded.set(true);
                         }
                         let status = format!("Found {} dialogs, {} loca strings", count, loca_count);
-                        state.status_message.set(status);
+                        state_for_result.status_message.set(status);
                     }
                 }
                 ScanResult::Error(e) => {
-                    state.status_message.set(format!("Error: {}", e));
-                    state.error_message.set(Some(e));
+                    state_for_result.status_message.set(format!("Error: {}", e));
+                    state_for_result.error_message.set(Some(e));
                 }
             }
-            state.is_loading.set(false);
+            state_for_result.is_loading.set(false);
+        });
+
+        // Clone state for flag index overlay
+        let state_for_flag_start = state.clone();
+        let state_for_flag_end = state.clone();
+
+        // Create separate ext_actions for flag index overlay (FnOnce can only be called once)
+        let send_flag_started = create_ext_action(Scope::new(), move |msg: String| {
+            state_for_flag_start.flag_index_message.set(msg);
+            state_for_flag_start.is_building_flag_index.set(true);
+        });
+
+        let send_flag_finished = create_ext_action(Scope::new(), move |count: usize| {
+            state_for_flag_end.is_building_flag_index.set(false);
+            if count > 0 {
+                tracing::info!("Flag index ready: {} flags", count);
+            }
         });
 
         // Spawn thread for the actual scanning work
@@ -270,8 +322,10 @@ pub fn open_dialog_folder(state: DialogueState) {
             // Try to load localization from PAK files in the folder
             let loca_count = load_localization_from_folder(&loca_cache, &path);
 
-            // Configure flag cache and build index
-            configure_flags_from_folder(&flag_cache, &path);
+            // Configure flag cache and build index (with overlay)
+            send_flag_started("Building flag index...".to_string());
+            let flag_count = configure_flags_from_folder(&flag_cache, &path);
+            send_flag_finished(flag_count);
 
             match scan_dialog_folder(&path) {
                 Ok(entries) => {

@@ -16,10 +16,20 @@
 - [x] Working: local Floem GUI (not yet packaged for production)
   - [x] File tree/preview/browser tab
   - [x] Text editor tab + meta.lsx generator
+    - [ ] BUG: Content doesn't populate after large file warning
+    - [ ] BUG: I think some LSF files from BaldursBasket aren't populating because the conversion is failing?
   - [x] Pak operations tab
+    - [ ] BUG: some files show as failed in the list (should never show as failed if just listing)
+    - [ ] BUG: investigate why some files are failing to unpak
   - [x] Tab for gr2 <> glTF/GLB single/batch conversion
   - [x] Tab for extracting and stitching single/batch virtual textures
     - [ ] Future: work in reverse for custom virtual textures (needs BG3SE for testing)
+  - [x] Tab for creating custom dyes
+  - [x] Tab incorporating [BG3 Dialog Reader](https://github.com/angaityel/bg3-dialog-reader)
+    - [x] Loads all dialogues from Gustav.pak and Shared.pak - very quickly
+    - [x] Can open/expand nodes no problem
+    - [ ] BUG: need to fix width for left panel
+    - [ ] FEATURE: implement per-act subfolders (might be more of a hassle than it's worth)
 - [x] Working: Piece together x-ref library for GR2 files to their base/normal/physical virtual textures and/or cloth msk
     - [ ] Get tooltip/menu little icons
     - [ ] Option to automatically retrieve companion texture files when working with GR2
@@ -33,6 +43,16 @@
     - [x] Mimic Official Toolkit's dye menu... thing... and improve it + use built-in macOS Color Picker
     - [ ] Preview on a GR2 + mesh ?
     - [x] Auto-populate mod structure based on Padme4000's template
+
+### Known Bugs
+
+## GUI
+
+- Color selection in the Dye Lab tab only works for macOS since it relies on the Color Picker app.
+
+### Known Patches
+
+- Uses muda to control the menu bar (in a really hacky way) until Floem fully incorporates it.
      
 ### To Do
 

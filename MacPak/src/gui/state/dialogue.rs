@@ -175,6 +175,10 @@ pub struct DialogueState {
     pub status_message: RwSignal<String>,
     /// Whether a loading operation is in progress
     pub is_loading: RwSignal<bool>,
+    /// Whether flag index is being built (shows overlay)
+    pub is_building_flag_index: RwSignal<bool>,
+    /// Message to display during flag index building
+    pub flag_index_message: RwSignal<String>,
     /// Error message if any
     pub error_message: RwSignal<Option<String>>,
 
@@ -224,6 +228,8 @@ impl DialogueState {
             // Status
             status_message: RwSignal::new("Ready".to_string()),
             is_loading: RwSignal::new(false),
+            is_building_flag_index: RwSignal::new(false),
+            flag_index_message: RwSignal::new(String::new()),
             error_message: RwSignal::new(None),
 
             // Localization

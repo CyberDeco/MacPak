@@ -14,6 +14,7 @@ struct StyledSpan {
     start: usize,
     end: usize,
     italic: bool,
+    bold: bool,
 }
 
 /// Parse HTML-like tags and return plain text with style spans
@@ -21,6 +22,7 @@ fn parse_html_styles(text: &str) -> (String, Vec<StyledSpan>) {
     let mut plain_text = String::new();
     let mut spans = Vec::new();
     let mut italic_stack: Vec<usize> = Vec::new();
+    let mut bold_stack: Vec<usize> = Vec::new();
 
     let mut i = 0;
     let chars: Vec<char> = text.chars().collect();
@@ -40,6 +42,26 @@ fn parse_html_styles(text: &str) -> (String, Vec<StyledSpan>) {
                         start,
                         end: plain_text.len(),
                         italic: true,
+                        bold: false,
+                    });
+                }
+                i += 4;
+                continue;
+            }
+            // Check for <b> tag
+            if i + 2 < chars.len() && chars[i + 1] == 'b' && chars[i + 2] == '>' {
+                bold_stack.push(plain_text.len());
+                i += 3;
+                continue;
+            }
+            // Check for </b> tag
+            if i + 3 < chars.len() && chars[i + 1] == '/' && chars[i + 2] == 'b' && chars[i + 3] == '>' {
+                if let Some(start) = bold_stack.pop() {
+                    spans.push(StyledSpan {
+                        start,
+                        end: plain_text.len(),
+                        italic: false,
+                        bold: true,
                     });
                 }
                 i += 4;
@@ -84,6 +106,15 @@ fn create_styled_text_layout(text: &str, font_size: f32, text_color: floem::peni
                 Attrs::new()
                     .font_size(font_size)
                     .style(FontStyle::Italic)
+                    .color(text_color)
+            );
+        }
+        if span.bold && span.start < span.end {
+            attrs_list.add_span(
+                span.start..span.end,
+                Attrs::new()
+                    .font_size(font_size)
+                    .weight(Weight::BOLD)
                     .color(text_color)
             );
         }
@@ -220,8 +251,6 @@ fn node_tree(state: DialogueState) -> impl IntoView {
                 },
                 // Use only UUID as key - stable across expand/collapse
                 |node| {
-                    // DEBUG: Track key generation (can be noisy, uncomment if needed)
-                    // eprintln!("[DEBUG node_tree] Key function called for node uuid={}", &node.uuid[..8.min(node.uuid.len())]);
                     node.uuid.clone()
                 },
                 move |node| {
@@ -497,7 +526,7 @@ fn node_row(
                                 s.font_size(10.0)
                                     .color(Color::rgb8(100, 100, 100))
                                     .font_style(floem::text::Style::Italic)
-                                    .max_width(400.0)
+                                    .max_width(500.0)
                             })
                             .into_any()
                     } else {
