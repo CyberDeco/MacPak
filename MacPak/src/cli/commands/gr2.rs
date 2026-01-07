@@ -5,7 +5,7 @@
 use std::path::Path;
 use crate::operations::gr2 as gr2_ops;
 use MacLarian::gr2_extraction::{process_extracted_gr2, Gr2ExtractionOptions};
-use MacLarian::converter::gr2_to_gltf::convert_gr2_bytes_to_glb_with_textures;
+use MacLarian::converter::gr2_gltf::convert_gr2_bytes_to_glb_with_textures;
 
 /// Inspect a GR2 file and display its structure.
 pub fn inspect(path: &Path) -> anyhow::Result<()> {

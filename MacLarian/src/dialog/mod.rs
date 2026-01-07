@@ -14,8 +14,8 @@
 //! # Usage
 //!
 //! ```no_run
-//! use maclarian::formats::dialog::{parse_dialog, LocalizationCache};
-//! use maclarian::formats::lsj::read_lsj;
+//! use MacLarian::dialog::{parse_dialog, LocalizationCache};
+//! use MacLarian::formats::lsj::read_lsj;
 //!
 //! // Load and parse a dialog file
 //! let doc = read_lsj("path/to/dialog.lsj").unwrap();
@@ -48,6 +48,7 @@ pub use localization::{
     LocalizedEntry,
     LocalizationError,
     get_available_languages,
+    load_localization_from_pak_parallel,
 };
 pub use embedded::{
     embedded_speakers,
@@ -79,27 +80,35 @@ pub fn parse_dialog_file<P: AsRef<std::path::Path>>(path: P) -> Result<Dialog, D
 
 /// Parse dialog from an LSF file (converts to LSJ internally)
 pub fn parse_dialog_lsf<P: AsRef<std::path::Path>>(path: P) -> Result<Dialog, DialogParseError> {
+    let data = std::fs::read(path.as_ref())
+        .map_err(|e| DialogParseError::IoError(e))?;
+    parse_dialog_lsf_bytes(&data)
+}
+
+/// Parse dialog from LSF bytes (converts through LSF → LSX → LSJ → Dialog pipeline)
+///
+/// This is useful when reading dialog data from PAK files or other sources
+/// where you have the raw bytes rather than a file path.
+pub fn parse_dialog_lsf_bytes(data: &[u8]) -> Result<Dialog, DialogParseError> {
     use crate::converter::{to_lsx, to_lsj};
+    use crate::formats::lsf::parse_lsf_bytes;
     use crate::formats::lsx::parse_lsx;
 
-    // Read LSF
-    let lsf_doc = crate::formats::lsf::read_lsf(path.as_ref())
-        .map_err(|e| DialogParseError::IoError(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e.to_string()
-        )))?;
+    // Parse LSF binary
+    let lsf_doc = parse_lsf_bytes(data)
+        .map_err(|e| DialogParseError::InvalidFormat(format!("LSF parse error: {}", e)))?;
 
     // Convert LSF to LSX XML string
     let lsx_xml = to_lsx(&lsf_doc)
-        .map_err(|e| DialogParseError::InvalidFormat(e.to_string()))?;
+        .map_err(|e| DialogParseError::InvalidFormat(format!("LSF→LSX error: {}", e)))?;
 
     // Parse LSX XML string to document
     let lsx_doc = parse_lsx(&lsx_xml)
-        .map_err(|e| DialogParseError::InvalidFormat(e.to_string()))?;
+        .map_err(|e| DialogParseError::InvalidFormat(format!("LSX parse error: {}", e)))?;
 
     // Convert to LSJ
     let lsj_doc = to_lsj(&lsx_doc)
-        .map_err(|e| DialogParseError::InvalidFormat(e.to_string()))?;
+        .map_err(|e| DialogParseError::InvalidFormat(format!("LSX→LSJ error: {}", e)))?;
 
     parse_dialog(&lsj_doc)
 }

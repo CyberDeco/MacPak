@@ -1,4 +1,7 @@
 //! File format handlers for Larian Studios formats
+//!
+//! Note: `dialog` and `virtual_texture` have been promoted to top-level modules.
+//! They are re-exported here for backwards compatibility.
 
 pub mod common;
 pub mod lsf;
@@ -7,8 +10,6 @@ pub mod lsj;
 pub mod loca;
 pub mod gr2;
 pub mod meta;
-pub mod virtual_texture;
-pub mod dialog;
 pub mod voice_meta;
 #[cfg(feature = "audio")]
 pub mod wem;
@@ -26,11 +27,11 @@ pub use meta::{ModMetadata, parse_meta_lsx};
 // Re-export GR2 decompression utilities
 pub use gr2::decompress_gr2;
 
-// Re-export virtual texture types
-pub use virtual_texture::{VirtualTextureExtractor, GtsFile, GtpFile};
+// Re-export virtual texture types (from top-level module for backwards compatibility)
+pub use crate::virtual_texture::{VirtualTextureExtractor, GtsFile, GtpFile};
 
-// Re-export dialog types
-pub use dialog::{
+// Re-export dialog types (from top-level module for backwards compatibility)
+pub use crate::dialog::{
     Dialog, DialogNode, NodeConstructor, DialogEditorData,
     TaggedText, TagTextEntry, RuleGroup, Rule,
     FlagGroup, FlagType, Flag, SpeakerInfo, GameData,

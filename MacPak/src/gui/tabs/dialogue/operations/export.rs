@@ -19,7 +19,7 @@ pub fn export_html(state: DialogueState) {
             state.status_message.set("Exporting to HTML...".to_string());
 
             // Use MacLarian's HTML export
-            match MacLarian::formats::dialog::export::generate_html(&dialog) {
+            match MacLarian::dialog::export::generate_html(&dialog) {
                 Ok(html) => {
                     match std::fs::write(&path, html) {
                         Ok(_) => {
@@ -59,4 +59,4 @@ pub fn export_de2(state: DialogueState) {
     });
 }
 
-// HTML export logic is now in MacLarian::formats::dialog::export
+// HTML export logic is now in MacLarian::dialog::export

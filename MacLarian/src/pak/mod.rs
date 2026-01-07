@@ -3,6 +3,7 @@
 pub mod pak_tools;
 pub mod creator;
 pub mod lspk;
+pub mod batch;
 mod extractor;
 mod lister;
 
@@ -16,3 +17,8 @@ pub use lister::list_pak_contents;
 
 // Re-export LSPK reader types
 pub use lspk::{LspkReader, PakContents, PakFile, PakPhase, PakProgress};
+
+// Re-export batch operations
+pub use batch::{
+    find_pak_files, find_packable_folders, batch_extract, batch_create, BatchPakResult,
+};

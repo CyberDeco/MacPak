@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 use serde::Deserialize;
 
 /// Embedded speaker database JSON
-const SPEAKERS_DB_JSON: &str = include_str!("../../../data/speakers_db.json");
+const SPEAKERS_DB_JSON: &str = include_str!("../../data/speakers_db.json");
 
 /// Speaker database structure
 #[derive(Debug, Deserialize)]

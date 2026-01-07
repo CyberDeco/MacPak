@@ -8,7 +8,7 @@ use std::path::Path;
 use crate::{Error, Result};
 
 // Re-export types from MacLarian for convenience
-pub use MacLarian::formats::virtual_texture::{
+pub use MacLarian::virtual_texture::{
     GtsFile, GtpFile, GtsHeader, GtsPageFileInfo, GtpHeader,
     VirtualTextureExtractor, DdsWriter,
     // Utility functions and types

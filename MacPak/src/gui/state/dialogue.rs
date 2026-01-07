@@ -5,7 +5,7 @@ use floem::reactive::SignalGet;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use MacLarian::formats::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache};
+use MacLarian::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache};
 pub use MacLarian::formats::voice_meta::{VoiceMetaEntry, VoiceMetaCache};
 use MacLarian::formats::wem::AudioCache;
 use crate::gui::tabs::dialogue::operations::SpeakerNameCache;

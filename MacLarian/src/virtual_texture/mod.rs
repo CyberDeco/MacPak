@@ -7,13 +7,12 @@
 //! # Usage
 //!
 //! ```no_run
-//! use maclarian::formats::virtual_textures::VirtualTextureExtractor;
+//! use MacLarian::virtual_texture::VirtualTextureExtractor;
 //!
 //! // Extract a GTP file to DDS textures
 //! VirtualTextureExtractor::extract(
 //!     "path/to/texture.gtp",
 //!     "output/directory",
-//!     None,
 //! ).unwrap();
 //! ```
 
@@ -22,6 +21,7 @@ pub mod gts;
 pub mod gtp;
 pub mod extractor;
 pub mod utils;
+pub mod batch;
 
 // Re-exports
 pub use types::*;
@@ -31,4 +31,7 @@ pub use extractor::{VirtualTextureExtractor, DdsWriter};
 pub use utils::{
     list_gts, gtp_info, get_subfolder_name, find_base_name, find_gts_path, extract_all,
     GtsInfo, PageFileInfo, GtpInfo, ExtractResult,
+};
+pub use batch::{
+    extract_gts_file, extract_batch, GtsExtractResult, BatchExtractResult,
 };

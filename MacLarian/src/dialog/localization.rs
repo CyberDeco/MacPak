@@ -247,6 +247,86 @@ impl std::fmt::Display for LocalizationError {
 
 impl std::error::Error for LocalizationError {}
 
+/// Load localization entries from a language PAK file with parallel parsing
+///
+/// This is a high-performance alternative to `LocalizationCache::load_language_pak`
+/// that uses rayon for parallel .loca file parsing. Useful when loading large
+/// language PAKs with many localization files.
+///
+/// # Arguments
+/// * `pak_path` - Path to the language PAK file (e.g., `Localization/English.pak`)
+/// * `cache` - Mutable reference to the localization cache to populate
+///
+/// # Returns
+/// The number of localization entries loaded, or an error.
+pub fn load_localization_from_pak_parallel(
+    pak_path: &Path,
+    cache: &mut LocalizationCache,
+) -> Result<usize, LocalizationError> {
+    use rayon::prelude::*;
+
+    // List all .loca files in the PAK
+    let entries = PakOperations::list(pak_path)
+        .map_err(|e| LocalizationError::PakError(format!("Failed to list PAK: {}", e)))?;
+
+    let loca_files: Vec<_> = entries
+        .iter()
+        .filter(|e| e.to_lowercase().ends_with(".loca"))
+        .cloned()
+        .collect();
+
+    if loca_files.is_empty() {
+        return Ok(0);
+    }
+
+    // Batch read all .loca files from PAK
+    let file_data = PakOperations::read_files_bytes(pak_path, &loca_files)
+        .map_err(|e| LocalizationError::PakError(format!("Failed to batch read files: {}", e)))?;
+
+    // Parsed entry for merging into cache
+    struct ParsedEntry {
+        key: String,
+        text: String,
+        version: u16,
+    }
+
+    // Parse .loca files in parallel
+    let parsed_results: Vec<Result<Vec<ParsedEntry>, String>> = file_data
+        .par_iter()
+        .map(|(path, data)| {
+            parse_loca_bytes(data)
+                .map(|resource| {
+                    resource
+                        .entries
+                        .into_iter()
+                        .map(|e| ParsedEntry {
+                            key: e.key,
+                            text: e.text,
+                            version: e.version,
+                        })
+                        .collect()
+                })
+                .map_err(|e| format!("Failed to parse {}: {}", path, e))
+        })
+        .collect();
+
+    // Merge results sequentially into cache
+    let mut total_count = 0;
+    for result in parsed_results {
+        match result {
+            Ok(entries) => {
+                for entry in entries {
+                    cache.insert(entry.key, entry.text, entry.version);
+                    total_count += 1;
+                }
+            }
+            Err(e) => tracing::warn!("{}", e),
+        }
+    }
+
+    Ok(total_count)
+}
+
 /// Get available languages from a BG3 data directory
 pub fn get_available_languages<P: AsRef<Path>>(game_data_path: P) -> Vec<String> {
     let localization_dir = game_data_path.as_ref().join("Localization");

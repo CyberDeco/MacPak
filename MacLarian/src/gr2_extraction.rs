@@ -8,7 +8,7 @@
 
 use crate::converter::convert_gr2_to_glb;
 use crate::error::{Error, Result};
-use crate::formats::virtual_texture::VirtualTextureExtractor;
+use crate::virtual_texture::VirtualTextureExtractor;
 use crate::merged::{bg3_data_path, embedded_database_cached, MergedDatabase, TextureRef, VirtualTextureRef};
 use crate::pak::PakOperations;
 use std::collections::HashSet;

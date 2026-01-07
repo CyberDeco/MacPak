@@ -6,8 +6,8 @@ use std::io::Write;
 use std::path::Path;
 
 use crate::error::{Error, Result};
-use crate::converter::gr2_to_gltf::gr2_reader::{MeshData, Skeleton};
-use crate::converter::gr2_to_gltf::utils::decode_qtangent;
+use crate::converter::gr2_gltf::to_gltf::gr2_reader::{MeshData, Skeleton};
+use crate::converter::gr2_gltf::to_gltf::utils::decode_qtangent;
 
 use super::types::*;
 use super::materials::*;

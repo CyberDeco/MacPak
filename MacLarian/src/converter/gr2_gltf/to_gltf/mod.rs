@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use std::path::Path;
 use crate::error::{Error, Result};
 use crate::converter::dds_png::dds_bytes_to_png_bytes;
-use crate::formats::virtual_texture::VirtualTextureExtractor;
+use crate::virtual_texture::VirtualTextureExtractor;
 use crate::merged::embedded_database_cached;
 use crate::pak::PakOperations;
 

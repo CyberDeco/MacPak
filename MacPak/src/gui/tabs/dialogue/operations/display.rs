@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 use floem::prelude::RwSignal;
-use MacLarian::formats::dialog::{Dialog, NodeConstructor, embedded_speakers};
+use MacLarian::dialog::{Dialog, NodeConstructor, embedded_speakers};
 use crate::gui::state::{DialogueState, DisplayNode, DisplayFlag};
 
 /// Build display nodes from a dialog

@@ -5,7 +5,7 @@
 use std::path::Path;
 use crate::error::Result;
 use super::{Gr2File, Compression, PointerSize};
-use crate::converter::gr2_to_gltf::Gr2Reader;
+use crate::converter::gr2_gltf::to_gltf::Gr2Reader;
 
 /// Information about a GR2 file.
 #[derive(Debug, Clone)]

@@ -5,7 +5,7 @@ use floem::prelude::*;
 use floem::text::{Attrs, AttrsList, Style as FontStyle, TextLayout, Weight, Wrap};
 use floem::views::{clip, rich_text, virtual_list, VirtualDirection, VirtualItemSize};
 use im::Vector as ImVector;
-use MacLarian::formats::dialog::NodeConstructor;
+use MacLarian::dialog::NodeConstructor;
 use crate::gui::state::{DialogueState, DisplayNode};
 use super::context_menu::show_node_context_menu;
 

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use floem::ext_event::create_ext_action;
 use floem::reactive::SignalUpdate;
 use floem_reactive::Scope;
-use MacLarian::formats::dialog::{LocalizationCache, FlagCache};
+use MacLarian::dialog::{LocalizationCache, FlagCache};
 use MacLarian::formats::wem::AudioCache;
 use MacLarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogEntry, DialogSource};

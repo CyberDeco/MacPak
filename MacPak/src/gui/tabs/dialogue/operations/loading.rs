@@ -3,10 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 use floem::reactive::{SignalGet, SignalUpdate};
-use MacLarian::formats::dialog::{parse_dialog_file, parse_dialog_bytes, Dialog};
-use MacLarian::formats::lsf::parse_lsf_bytes;
-use MacLarian::converter::{to_lsx, to_lsj};
-use MacLarian::formats::lsx::parse_lsx;
+use MacLarian::dialog::{parse_dialog_file, parse_dialog_bytes, parse_dialog_lsf_bytes, Dialog};
 use MacLarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogSource, DialogEntry, DisplayNode};
 use super::display::{build_display_nodes, resolve_speaker_names, resolve_localized_text, resolve_flag_names};
@@ -21,8 +18,8 @@ pub fn load_dialog_from_pak(state: DialogueState, pak_path: PathBuf, internal_pa
         Ok(data) => {
             let lower_path = internal_path.to_lowercase();
             let result = if lower_path.ends_with(".lsf") {
-                // Parse LSF (binary) format - convert through LSX to LSJ
-                parse_lsf_dialog(&data)
+                // Parse LSF (binary) format using MacLarian's optimized pipeline
+                parse_dialog_lsf_bytes(&data).map_err(|e| e.to_string())
             } else {
                 // Parse LSJ (JSON) format directly
                 parse_dialog_bytes(&data).map_err(|e| e.to_string())
@@ -46,31 +43,6 @@ pub fn load_dialog_from_pak(state: DialogueState, pak_path: PathBuf, internal_pa
     }
 
     state.is_loading.set(false);
-}
-
-/// Parse an LSF dialog file by converting through LSX → LSJ → Dialog
-fn parse_lsf_dialog(data: &[u8]) -> Result<Dialog, String> {
-    use MacLarian::formats::dialog::parse_dialog;
-
-    // Parse LSF binary
-    let lsf_doc = parse_lsf_bytes(data)
-        .map_err(|e| format!("LSF parse error: {}", e))?;
-
-    // Convert to LSX XML string
-    let lsx_xml = to_lsx(&lsf_doc)
-        .map_err(|e| format!("LSF→LSX error: {}", e))?;
-
-    // Parse LSX XML to document
-    let lsx_doc = parse_lsx(&lsx_xml)
-        .map_err(|e| format!("LSX parse error: {}", e))?;
-
-    // Convert to LSJ
-    let lsj_doc = to_lsj(&lsx_doc)
-        .map_err(|e| format!("LSX→LSJ error: {}", e))?;
-
-    // Parse dialog from LSJ
-    parse_dialog(&lsj_doc)
-        .map_err(|e| format!("Dialog parse error: {}", e))
 }
 
 /// Load a dialog from a path (runs synchronously for UI updates)

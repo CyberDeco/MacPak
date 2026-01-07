@@ -14,7 +14,7 @@
 //! # Usage
 //!
 //! ```no_run
-//! use maclarian::merged::{embedded_database_cached, MergedResolver};
+//! use MacLarian::merged::embedded_database_cached;
 //!
 //! // Use the embedded production database (recommended)
 //! let db = embedded_database_cached();
@@ -22,9 +22,6 @@
 //!     println!("GR2: {}", asset.gr2_path);
 //!     println!("Textures: {:?}", asset.textures);
 //! }
-//!
-//! // Or build from pak files directly
-//! let resolver = MergedResolver::from_pak("/path/to/Shared.pak")?;
 //! ```
 
 mod embedded;
