@@ -6,6 +6,7 @@ use crate::formats::common::{get_type_name, extract_value, extract_translated_st
 
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
+use std::collections::HashMap;
 use std::path::Path;
 
 /// Convert LSF file to LSX format
@@ -22,13 +23,23 @@ pub fn convert_lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
 pub fn to_lsx(doc: &LsfDocument) -> Result<String> {
     let mut output = Vec::new();
     let mut writer = Writer::new_with_indent(&mut output, b'\t', 1);
-    
+
+    // Pre-build children index for O(1) lookup instead of O(n) per node
+    // This changes overall complexity from O(n^2) to O(n)
+    let children_by_parent: HashMap<i32, Vec<usize>> = {
+        let mut map: HashMap<i32, Vec<usize>> = HashMap::with_capacity(doc.nodes.len());
+        for (idx, node) in doc.nodes.iter().enumerate() {
+            map.entry(node.parent_index).or_default().push(idx);
+        }
+        map
+    };
+
     // XML declaration
     writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
-    
+
     // <save>
     writer.write_event(Event::Start(BytesStart::new("save")))?;
-    
+
     // <version>
     write_version(&mut writer, doc)?;
 
@@ -40,7 +51,7 @@ pub fn to_lsx(doc: &LsfDocument) -> Result<String> {
             region.push_attribute(("id", region_id));
             writer.write_event(Event::Start(region.borrow()))?;
 
-            write_node(&mut writer, doc, i)?;
+            write_node(&mut writer, doc, i, &children_by_parent)?;
 
             writer.write_event(Event::End(BytesEnd::new("region")))?;
         }
@@ -93,36 +104,38 @@ fn write_version<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument) -
     Ok(())
 }
 
-fn write_node<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument, node_idx: usize) -> Result<()> {
+fn write_node<W: std::io::Write>(
+    writer: &mut Writer<W>,
+    doc: &LsfDocument,
+    node_idx: usize,
+    children_by_parent: &HashMap<i32, Vec<usize>>,
+) -> Result<()> {
     let node = &doc.nodes[node_idx];
     let node_name = doc.get_name(node.name_index_outer, node.name_index_inner)?;
-    
+
     let has_attributes = node.first_attribute_index >= 0
         && (node.first_attribute_index as usize) < doc.attributes.len();
-    let children: Vec<_> = doc.nodes
-        .iter()
-        .enumerate()
-        .filter(|(_, child)| child.parent_index == node_idx as i32)
-        .collect();
-    let has_children = !children.is_empty();
-    
+    // O(1) lookup instead of O(n) filter
+    let children = children_by_parent.get(&(node_idx as i32));
+    let has_children = children.map_or(false, |c| !c.is_empty());
+
     // Get key attribute from the keys section
     let key_attr = doc.node_keys.get(node_idx).and_then(|k| k.as_deref());
-    
+
     let mut node_start = BytesStart::new("node");
     node_start.push_attribute(("id", node_name));
-    
+
     if let Some(key) = key_attr {
         node_start.push_attribute(("key", key));
     }
-    
+
     if !has_attributes && !has_children {
         writer.write_event(Event::Empty(node_start))?;
         return Ok(());
     }
-    
+
     writer.write_event(Event::Start(node_start.borrow()))?;
-    
+
     if has_attributes {
         let mut attr_idx = node.first_attribute_index as usize;
         loop {
@@ -137,15 +150,15 @@ fn write_node<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument, node
             attr_idx = attr.next_index as usize;
         }
     }
-    
-    if has_children {
+
+    if let Some(child_indices) = children {
         writer.write_event(Event::Start(BytesStart::new("children")))?;
-        for (child_idx, _) in children {
-            write_node(writer, doc, child_idx)?;
+        for &child_idx in child_indices {
+            write_node(writer, doc, child_idx, children_by_parent)?;
         }
         writer.write_event(Event::End(BytesEnd::new("children")))?;
     }
-    
+
     writer.write_event(Event::End(BytesEnd::new("node")))?;
     Ok(())
 }

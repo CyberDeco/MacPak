@@ -2,7 +2,8 @@
 
 /// Pretty-print XML content with proper indentation
 pub fn format_xml(content: &str) -> String {
-    let mut result = String::new();
+    // Pre-allocate with ~10% overhead for indentation to avoid reallocations
+    let mut result = String::with_capacity(content.len() + content.len() / 10);
     let mut indent_level: i32 = 0;
     let indent_str = "    "; // 4 spaces
 

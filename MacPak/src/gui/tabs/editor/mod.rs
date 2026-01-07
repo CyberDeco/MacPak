@@ -11,6 +11,7 @@ mod syntax;
 
 use floem::event::{Event, EventListener};
 use floem::prelude::*;
+use floem::style::Position;
 use std::path::Path;
 
 use crate::gui::state::{AppState, EditorTab, EditorTabsState};
@@ -41,6 +42,7 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
     let tabs_state_status = tabs_state.clone();
     let tabs_state_drop = tabs_state.clone();
     let tabs_state_dialog = tabs_state.clone();
+    let tabs_state_overlay = tabs_state.clone();
     let _tabs_state_keyboard = tabs_state.clone();
     let show_line_numbers = tabs_state.show_line_numbers;
 
@@ -52,8 +54,8 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
         tab.modified.set(true);
     };
 
-    // Use v_stack with position: Relative so absolutely positioned dialogs work correctly
-    v_stack((
+    // Main content
+    let main_content = v_stack((
         file_tab_bar(tabs_state.clone()),
         editor_toolbar(tabs_state_toolbar),
         dyn_container(
@@ -97,14 +99,91 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
     .style(|s| {
         s.width_full()
             .height_full()
-            .position(floem::style::Position::Relative)
-    })
-    .on_event_cont(EventListener::DroppedFile, move |e| {
-        if let Event::DroppedFile(drop_event) = e {
-            let path = &drop_event.path;
-            if path.is_file() && is_editable_file(path) {
-                load_file_in_tab(path, tabs_state_drop.clone());
+    });
+
+    // Stack main content with loading overlay
+    (main_content, loading_overlay(tabs_state_overlay))
+        .style(|s| {
+            s.width_full()
+                .height_full()
+                .position(Position::Relative)
+        })
+        .on_event_cont(EventListener::DroppedFile, move |e| {
+            if let Event::DroppedFile(drop_event) = e {
+                let path = &drop_event.path;
+                if path.is_file() && is_editable_file(path) {
+                    load_file_in_tab(path, tabs_state_drop.clone());
+                }
             }
+        })
+}
+
+/// Loading overlay shown while a file is being loaded/converted
+/// Matches the style of Dialogue, Pak Ops, GR2, and Textures tabs
+fn loading_overlay(tabs_state: EditorTabsState) -> impl IntoView {
+    let tabs_state_for_style = tabs_state.clone();
+
+    dyn_container(
+        move || {
+            tabs_state.active_tab().map(|tab| (tab.is_loading.get(), tab.loading_message.get()))
+        },
+        move |state| {
+            if let Some((true, message)) = state {
+                container(
+                    v_stack((
+                        // Loading message
+                        label(move || message.clone())
+                            .style(|s| s.font_size(14.0).margin_bottom(16.0)),
+                        // Indeterminate progress indicator (animated bar)
+                        container(
+                            container(empty())
+                                .style(|s| {
+                                    s.height_full()
+                                        .width_pct(30.0)
+                                        .background(Color::rgb8(76, 175, 80))
+                                        .border_radius(4.0)
+                                })
+                        )
+                        .style(|s| {
+                            s.width_full()
+                                .height(8.0)
+                                .background(Color::rgb8(220, 220, 220))
+                                .border_radius(4.0)
+                        }),
+                    ))
+                    .style(|s| {
+                        s.padding(24.0)
+                            .background(Color::WHITE)
+                            .border(1.0)
+                            .border_color(Color::rgb8(200, 200, 200))
+                            .border_radius(8.0)
+                            .width(400.0)
+                    }),
+                )
+                .into_any()
+            } else {
+                empty().into_any()
+            }
+        },
+    )
+    .style(move |s| {
+        let is_loading = tabs_state_for_style
+            .active_tab()
+            .map(|tab| tab.is_loading.get())
+            .unwrap_or(false);
+
+        if is_loading {
+            s.position(Position::Absolute)
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .inset_bottom(0.0)
+                .inset_right(0.0)
+                .items_center()
+                .justify_center()
+                .background(Color::rgba8(0, 0, 0, 100))
+                .z_index(100)
+        } else {
+            s.display(floem::style::Display::None)
         }
     })
 }

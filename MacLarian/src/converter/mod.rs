@@ -11,16 +11,26 @@ pub mod loca;
 pub mod gr2_gltf;
 mod dds_png;
 
+/// Progress callback type for conversion operations.
+/// The callback receives a message describing the current step.
+pub type ProgressCallback<'a> = &'a dyn Fn(&str);
+
 // Re-export LSF/LSX/LSJ conversions from subdirectory
 pub use lsf_lsx_lsj::{
     // Primary conversion functions
     convert_lsf_to_lsx, convert_lsx_to_lsf,
     convert_lsx_to_lsj, convert_lsj_to_lsx,
     convert_lsf_to_lsj, convert_lsj_to_lsf,
+    // With-progress variants
+    convert_lsx_to_lsj_with_progress, convert_lsj_to_lsx_with_progress,
+    convert_lsf_to_lsj_with_progress, convert_lsj_to_lsf_with_progress,
     // Helper functions
     to_lsx, from_lsx, to_lsj, lsj_to_lsx_doc,
     // Convenience aliases
     lsf_to_lsx, lsx_to_lsf, lsx_to_lsj, lsj_to_lsx, lsf_to_lsj, lsj_to_lsf,
+    // Convenience aliases with progress
+    lsx_to_lsj_with_progress, lsj_to_lsx_with_progress,
+    lsf_to_lsj_with_progress, lsj_to_lsf_with_progress,
 };
 
 // GR2/glTF conversion exports

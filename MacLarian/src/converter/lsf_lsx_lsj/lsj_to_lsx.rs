@@ -11,14 +11,27 @@ use std::path::Path;
 
 /// Convert LSJ file to LSX format
 pub fn convert_lsj_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
+    convert_lsj_to_lsx_with_progress(source, dest, &|_| {})
+}
+
+/// Convert LSJ file to LSX format with progress callback
+pub fn convert_lsj_to_lsx_with_progress<P: AsRef<Path>>(
+    source: P,
+    dest: P,
+    progress: crate::converter::ProgressCallback,
+) -> Result<()> {
     tracing::info!("Converting LSJ→LSX: {:?} → {:?}", source.as_ref(), dest.as_ref());
-    
+
+    progress("Reading LSJ file...");
     let lsj_doc = crate::formats::lsj::read_lsj(&source)?;
+
+    let region_count = lsj_doc.save.regions.len();
+    progress(&format!("Converting {} regions to XML...", region_count));
     let lsx_doc = to_lsx(&lsj_doc)?;
-    
-    // Use proper LSX writer
+
+    progress("Writing LSX file...");
     lsx::write_lsx(&lsx_doc, dest)?;
-    
+
     tracing::info!("Conversion complete");
     Ok(())
 }

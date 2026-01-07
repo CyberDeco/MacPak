@@ -46,6 +46,9 @@ pub struct BrowserState {
     pub preview_3d_path: RwSignal<Option<String>>,  // Path to .glb file for 3D preview
     // Panel layout
     pub file_list_width: RwSignal<f64>,  // Width of file list panel in pixels
+    // Loading overlay state (for conversions)
+    pub is_loading: RwSignal<bool>,
+    pub loading_message: RwSignal<String>,
 }
 
 impl BrowserState {
@@ -72,6 +75,8 @@ impl BrowserState {
             rename_text: RwSignal::new(String::new()),
             preview_3d_path: RwSignal::new(None),
             file_list_width: RwSignal::new(600.0),  // Default width in pixels
+            is_loading: RwSignal::new(false),
+            loading_message: RwSignal::new(String::new()),
         }
     }
 }

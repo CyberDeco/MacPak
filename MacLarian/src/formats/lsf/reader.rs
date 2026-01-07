@@ -217,11 +217,11 @@ fn read_nodes<R: Read>(
     }
 
     let mut cursor = Cursor::new(&data);
-    let mut nodes = Vec::new();
 
     // Node size: 16 bytes for extended (v3+), 12 bytes for v2
     let node_size = if extended_format { 16 } else { 12 };
     let node_count = data.len() / node_size;
+    let mut nodes = Vec::with_capacity(node_count);
 
     for _ in 0..node_count {
         // NameHashTableIndex is a u32 packed as: upper 16 bits = hash index, lower 16 bits = offset
@@ -272,11 +272,11 @@ fn read_attributes<R: Read>(
     }
 
     let mut cursor = Cursor::new(&data);
-    let mut attributes = Vec::new();
 
     // Attribute size: 16 bytes for extended (v3+), 12 bytes for v2
     let attr_size = if extended_format { 16 } else { 12 };
     let attr_count = data.len() / attr_size;
+    let mut attributes = Vec::with_capacity(attr_count);
 
     // For V2, we need to calculate offsets as we go
     let mut current_data_offset: usize = 0;

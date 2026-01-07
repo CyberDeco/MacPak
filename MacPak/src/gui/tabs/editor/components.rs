@@ -122,8 +122,8 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
         separator(),
         // Format badge
         format_badge(tabs_state.clone()),
-        // Status message
-        status_message(tabs_state.status_message),
+        // Save status indicator (top right corner)
+        save_status_badge(tabs_state.clone()),
     ))
     .style(|s| {
         s.width_full()
@@ -135,25 +135,6 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
             .border_bottom(1.0)
             .border_color(Color::rgb8(220, 220, 220))
     })
-}
-
-fn status_message(status: RwSignal<String>) -> impl IntoView {
-    dyn_container(
-        move || status.get(),
-        move |msg| {
-            if !msg.is_empty() {
-                label(move || msg.clone())
-                    .style(|s| {
-                        s.color(Color::rgb8(76, 175, 80))
-                            .font_size(12.0)
-                            .margin_left(8.0)
-                    })
-                    .into_any()
-            } else {
-                empty().into_any()
-            }
-        },
-    )
 }
 
 /// Convert button for LSF/LSX/LSJ group - disabled for LOCA files
@@ -516,6 +497,30 @@ fn format_badge(tabs_state: EditorTabsState) -> impl IntoView {
     )
 }
 
+/// Save status badge - shown after file conversion/output (Dyes tab style)
+fn save_status_badge(tabs_state: EditorTabsState) -> impl IntoView {
+    dyn_container(
+        move || tabs_state.active_tab().map(|tab| tab.save_status.get()),
+        move |maybe_status| {
+            let status = maybe_status.unwrap_or_default();
+            if status.is_empty() {
+                empty().into_any()
+            } else {
+                label(move || status.clone())
+                    .style(|s| {
+                        s.padding_horiz(12.0)
+                            .padding_vert(6.0)
+                            .border_radius(4.0)
+                            .font_size(12.0)
+                            .background(Color::rgb8(232, 245, 233))  // BG_SUCCESS
+                            .color(Color::rgb8(46, 125, 50))         // TEXT_SUCCESS
+                    })
+                    .into_any()
+            }
+        },
+    )
+}
+
 pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_numbers: RwSignal<bool>) -> impl IntoView {
     let content = tab.content;
     let modified = tab.modified;
@@ -528,6 +533,7 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
 
     // Recreate editor only when format changes (for syntax highlighting)
     // Width/resize and line numbers are handled reactively
+    // Loading state is now handled by the overlay in mod.rs
     dyn_container(
         move || file_format.get(),
         move |format| {
@@ -644,6 +650,7 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
                     });
                 })
                 .style(|s| s.size_full().flex_grow(1.0))
+                .into_any()
         },
     )
     .style(|s| s.size_full().flex_grow(1.0))

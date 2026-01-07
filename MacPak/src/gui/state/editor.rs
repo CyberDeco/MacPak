@@ -12,6 +12,12 @@ pub struct EditorTab {
     pub content: RwSignal<String>,
     pub modified: RwSignal<bool>,
     pub converted_from_lsf: RwSignal<bool>,
+    /// Whether the tab is currently loading a file
+    pub is_loading: RwSignal<bool>,
+    /// Loading progress message (shown in overlay)
+    pub loading_message: RwSignal<String>,
+    /// Save/convert status message (shown as badge, auto-clears)
+    pub save_status: RwSignal<String>,
 
     // Search state (per-tab)
     pub search_visible: RwSignal<bool>,
@@ -42,6 +48,9 @@ impl EditorTab {
             content: RwSignal::new(String::new()),
             modified: RwSignal::new(false),
             converted_from_lsf: RwSignal::new(false),
+            is_loading: RwSignal::new(false),
+            loading_message: RwSignal::new(String::new()),
+            save_status: RwSignal::new(String::new()),
 
             search_visible: RwSignal::new(false),
             search_text: RwSignal::new(String::new()),
@@ -163,6 +172,9 @@ impl EditorTabsState {
                 tab.content.set(String::new());
                 tab.modified.set(false);
                 tab.converted_from_lsf.set(false);
+                tab.is_loading.set(false);
+                tab.loading_message.set(String::new());
+                tab.save_status.set(String::new());
             }
             return;
         }

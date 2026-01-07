@@ -16,11 +16,11 @@
 - [x] Working: local Floem GUI (not yet packaged for production)
   - [x] File tree/preview/browser tab
   - [x] Text editor tab + meta.lsx generator
-    - [ ] BUG: Content doesn't populate after large file warning
+    - [x] BUG: Content doesn't populate after large file warning
     - [ ] BUG: I think some LSF files from BaldursBasket aren't populating because the conversion is failing?
   - [x] Pak operations tab
-    - [ ] BUG: some files show as failed in the list (should never show as failed if just listing)
-    - [ ] BUG: investigate why some files are failing to unpak
+    - [x] BUG: some files show as failed in the list (should never show as failed if just listing)
+    - [x] BUG: investigate why some files are failing to unpak
   - [x] Tab for gr2 <> glTF/GLB single/batch conversion
   - [x] Tab for extracting and stitching single/batch virtual textures
     - [ ] Future: work in reverse for custom virtual textures (needs BG3SE for testing)
@@ -47,7 +47,7 @@
     - [ ] Preview on a GR2 + mesh ?
     - [x] Auto-populate mod structure based on Padme4000's template
      
-- [ ] GENERAL: Parallelization with Rayon
+- [x] GENERAL: Parallelization with Rayon
     - [x] Dialogue backend (Voice Meta, Flag Cache, Localization, 
 
  New Module
