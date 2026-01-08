@@ -47,7 +47,9 @@ pub fn show_node_context_menu(
     state: DialogueState,
 ) {
     let node_uuid = node.uuid.clone();
-    let text_handle = node.text_handle.clone();
+    // Use text_handle if available, otherwise fall back to jump_target_handle for Jump/Alias nodes
+    let text_handle = node.text_handle.clone()
+        .or_else(|| node.jump_target_handle.clone());
     let has_audio = text_handle.as_ref().is_some_and(|h| state.has_audio(h));
 
     let mut menu = Menu::new("");

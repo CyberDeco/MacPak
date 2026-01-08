@@ -543,6 +543,9 @@ fn node_row(
             )
         },
     ))
+    // Stop PointerDown propagation to prevent scroll container from
+    // resetting scroll position when clicking on rows
+    .on_event_stop(floem::event::EventListener::PointerDown, |_| {})
     .on_click_stop(move |_| {
         // All rendered rows are visible (filtered at data source level)
         selected_uuid.set(Some(node_uuid_for_select.clone()));

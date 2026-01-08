@@ -126,4 +126,7 @@ fn process_loaded_dialog(state: DialogueState, dialog: Dialog) {
     state.current_dialog.set(Some(Arc::new(dialog)));
     state.selected_node_index.set(None);
     state.selected_node_uuid.set(None);
+    // Increment tree_version to force cache invalidation in node_tree
+    // This ensures the tree re-renders even if node count is the same
+    state.tree_version.update(|v| *v += 1);
 }

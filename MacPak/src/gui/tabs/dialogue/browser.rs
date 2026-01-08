@@ -157,37 +157,43 @@ fn dialog_row(
         .map(|i| entry.path[..i].to_string())
         .unwrap_or_default();
 
-    // Capture panel width once - don't create reactive subscriptions in each row
-    // Using get_untracked to avoid subscriptions that could cause scroll resets
-    let initial_width = panel_width.get_untracked();
-
     h_stack((
-        // Name and path - use fixed width to avoid reactive updates
+        // Name and path - truncation is reactive to panel width
         v_stack((
             {
                 let name_for_label = name.clone();
-                let available = initial_width - ROW_PADDING - 8.0;
-                let max_chars = (available / CHAR_WIDTH).max(10.0) as usize;
-                let truncated = truncate_middle(&name_for_label, max_chars);
-                label(move || truncated.clone())
-                    .style(move |s| {
-                        s.font_size(13.0)
-                            .font_weight(Weight::MEDIUM)
-                            .color(Color::rgb8(40, 40, 40))
-                            .width(available as f32)
-                    })
+                label(move || {
+                    // Compute truncation reactively based on current panel width
+                    let width = panel_width.get();
+                    let available = width - ROW_PADDING - 8.0;
+                    let max_chars = (available / CHAR_WIDTH).max(10.0) as usize;
+                    truncate_middle(&name_for_label, max_chars)
+                })
+                .style(move |s| {
+                    let width = panel_width.get();
+                    let available = width - ROW_PADDING - 8.0;
+                    s.font_size(13.0)
+                        .font_weight(Weight::MEDIUM)
+                        .color(Color::rgb8(40, 40, 40))
+                        .width(available as f32)
+                })
             },
             {
                 let path_for_label = display_path.clone();
-                let available = initial_width - ROW_PADDING - 8.0;
-                let max_chars = (available / 6.0).max(10.0) as usize;
-                let truncated = truncate_middle(&path_for_label, max_chars);
-                label(move || truncated.clone())
-                    .style(move |s| {
-                        s.font_size(11.0)
-                            .color(Color::rgb8(120, 120, 120))
-                            .width(available as f32)
-                    })
+                label(move || {
+                    // Compute truncation reactively based on current panel width
+                    let width = panel_width.get();
+                    let available = width - ROW_PADDING - 8.0;
+                    let max_chars = (available / 6.0).max(10.0) as usize;
+                    truncate_middle(&path_for_label, max_chars)
+                })
+                .style(move |s| {
+                    let width = panel_width.get();
+                    let available = width - ROW_PADDING - 8.0;
+                    s.font_size(11.0)
+                        .color(Color::rgb8(120, 120, 120))
+                        .width(available as f32)
+                })
             },
         ))
         .style(|s| s.flex_grow(1.0).min_width(0.0)),
