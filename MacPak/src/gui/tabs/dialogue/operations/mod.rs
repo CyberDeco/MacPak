@@ -5,7 +5,6 @@ mod loading;
 mod display;
 mod export;
 mod localization;
-mod speakers;
 mod voice;
 mod audio;
 
@@ -13,6 +12,5 @@ mod audio;
 pub use file_ops::{load_pak_directly, open_dialog_folder};
 pub use loading::{load_dialog, load_dialog_entry, load_dialog_from_pak};
 pub use export::{export_html, export_de2};
-pub use speakers::SpeakerNameCache;
 pub use voice::{load_voice_meta, find_voice_files_path};
 pub use audio::{AudioPlayer, AudioError, play_node_audio};

@@ -343,13 +343,28 @@ fn node_row(
     let node_uuid_for_style = node.uuid.clone();
     let node_for_ctx = node.clone();
     let roll_success = node.roll_success;
+    let roll_info = node.roll_info.clone();
+    let has_roll_info = roll_info.is_some();
     let constructor_for_roll = node.constructor.clone();
+    let constructor_for_roll_info = node.constructor.clone();
     // Get NodeContext (the primary dev note field) if available
     let node_context = node.editor_data.get("NodeContext")
         .filter(|s| !s.is_empty())
         .cloned()
         .unwrap_or_default();
-    let has_dev_notes = !node_context.is_empty();
+    // Get stateContext for VisualState nodes
+    let state_context = node.editor_data.get("stateContext")
+        .filter(|s| !s.is_empty())
+        .cloned()
+        .unwrap_or_default();
+    // Combine dev notes - show both if present
+    let combined_notes = match (node_context.is_empty(), state_context.is_empty()) {
+        (false, false) => format!("{} | {}", node_context, state_context),
+        (false, true) => node_context,
+        (true, false) => state_context,
+        (true, true) => String::new(),
+    };
+    let has_dev_notes = !combined_notes.is_empty();
 
     // Format check flags for display
     let check_flags_str = if node.check_flags.is_empty() {
@@ -358,7 +373,7 @@ fn node_row(
         node.check_flags.iter()
             .map(|f| {
                 if f.value {
-                    f.name.clone()
+                    format!("{} = True", f.name)
                 } else {
                     format!("{} = False", f.name)
                 }
@@ -367,6 +382,23 @@ fn node_row(
             .join(", ")
     };
     let has_check_flags = !check_flags_str.is_empty();
+
+    // Format set flags for display (flags that get set when this node is reached)
+    let set_flags_str = if node.set_flags.is_empty() {
+        String::new()
+    } else {
+        node.set_flags.iter()
+            .map(|f| {
+                if f.value {
+                    format!("{} = True", f.name)
+                } else {
+                    format!("{} = False", f.name)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let has_set_flags = !set_flags_str.is_empty();
 
     h_stack((
         // Indentation
@@ -399,77 +431,116 @@ fn node_row(
         // Node type badge
         node_type_badge(constructor),
 
-        // Speaker (if present)
-        {
-            let speaker_check = speaker.clone();
-            let speaker_display = speaker.clone();
-            dyn_container(
-                move || !speaker_check.is_empty(),
-                move |has_speaker| {
-                    let speaker_inner = speaker_display.clone();
-                    if has_speaker {
-                        label(move || format!("[{}]", speaker_inner.clone()))
-                            .style(|s| {
-                                s.font_size(12.0)
-                                    .color(Color::rgb8(79, 70, 229))
-                                    .font_weight(Weight::MEDIUM)
-                                    .margin_right(4.0)
-                            })
+        // Content area with flags above text
+        v_stack((
+            // Flags row (check flags and set flags on same line above text)
+            {
+                let check_flags_display = check_flags_str.clone();
+                let set_flags_display = set_flags_str.clone();
+                let show_flags_row = has_check_flags || has_set_flags;
+                dyn_container(
+                    move || show_flags_row,
+                    move |show| {
+                        let check_inner = check_flags_display.clone();
+                        let set_inner = set_flags_display.clone();
+                        if show {
+                            // Clone for the condition closures
+                            let check_for_cond = check_inner.clone();
+                            let set_for_cond = set_inner.clone();
+                            h_stack((
+                                // Check flags (conditions)
+                                dyn_container(
+                                    move || !check_for_cond.is_empty(),
+                                    move |show_check| {
+                                        let flags = check_inner.clone();
+                                        if show_check {
+                                            label(move || format!("IF [{}]", flags.clone()))
+                                                .style(|s| {
+                                                    s.font_size(10.0)
+                                                        .color(Color::rgb8(180, 100, 60))
+                                                        .margin_right(8.0)
+                                                })
+                                                .into_any()
+                                        } else {
+                                            empty().into_any()
+                                        }
+                                    },
+                                ),
+                                // Set flags
+                                dyn_container(
+                                    move || !set_for_cond.is_empty(),
+                                    move |show_set| {
+                                        let flags = set_inner.clone();
+                                        if show_set {
+                                            label(move || format!("SET [{}]", flags.clone()))
+                                                .style(|s| {
+                                                    s.font_size(10.0)
+                                                        .color(Color::rgb8(60, 140, 60))
+                                                })
+                                                .into_any()
+                                        } else {
+                                            empty().into_any()
+                                        }
+                                    },
+                                ),
+                            ))
+                            .style(|s| s.margin_bottom(2.0))
                             .into_any()
-                    } else {
-                        empty().into_any()
-                    }
-                },
-            )
-        },
+                        } else {
+                            empty().into_any()
+                        }
+                    },
+                )
+            },
 
-        // Check flags (conditions) - show inline before the text
-        {
-            let flags_display = check_flags_str.clone();
-            dyn_container(
-                move || has_check_flags,
-                move |show_flags| {
-                    let flags_inner = flags_display.clone();
-                    if show_flags {
-                        label(move || format!("[{}]", flags_inner.clone()))
-                            .style(|s| {
-                                s.font_size(11.0)
-                                    .color(Color::rgb8(180, 100, 60)) // Orange-brown for conditions
-                                    .font_style(floem::text::Style::Italic)
-                                    .margin_right(4.0)
-                            })
-                            .into_any()
-                    } else {
-                        empty().into_any()
-                    }
-                },
-            )
-        },
-
-        // Node text with HTML styling support (no truncation - use horizontal scroll)
-        {
-            let text_for_display = text.clone();
-            let text_is_empty = text.is_empty();
-            let text_len = text.len();
-            rich_text(move || {
-                let display_text = if text_for_display.is_empty() {
-                    "(no text)".to_string()
-                } else {
-                    text_for_display.clone()
-                };
-
-                let text_color = if text_is_empty {
-                    floem::peniko::Color::rgba8(180, 180, 180, 255)
-                } else {
-                    floem::peniko::Color::rgba8(40, 40, 40, 255)
-                };
-
-                create_styled_text_layout(&display_text, 13.0, text_color)
-            })
-            // Set minimum width based on text length (~7px per char at 13pt font)
-            // This communicates the content width to the layout system
-            .style(move |s| s.min_width((text_len as f32 * 7.0).max(50.0)).flex_shrink(0.0))
-        },
+            // Main content row: Speaker + Text (only show if there's text)
+            {
+                let text_for_display = text.clone();
+                let text_is_empty = text.is_empty();
+                let speaker_display = speaker.clone();
+                dyn_container(
+                    move || !text_is_empty,
+                    move |has_text| {
+                        let display_text = text_for_display.clone();
+                        let speaker_inner = speaker_display.clone();
+                        if has_text {
+                            h_stack((
+                                // Speaker (if present and text exists)
+                                {
+                                    let speaker_check = speaker_inner.clone();
+                                    dyn_container(
+                                        move || !speaker_check.is_empty(),
+                                        move |has_speaker| {
+                                            let spk = speaker_inner.clone();
+                                            if has_speaker {
+                                                label(move || format!("[{}]", spk.clone()))
+                                                    .style(|s| {
+                                                        s.font_size(12.0)
+                                                            .color(Color::rgb8(79, 70, 229))
+                                                            .font_weight(Weight::MEDIUM)
+                                                            .margin_right(4.0)
+                                                    })
+                                                    .into_any()
+                                            } else {
+                                                empty().into_any()
+                                            }
+                                        },
+                                    )
+                                },
+                                // Node text
+                                rich_text(move || {
+                                    let text_color = floem::peniko::Color::rgba8(40, 40, 40, 255);
+                                    create_styled_text_layout(&display_text, 13.0, text_color)
+                                })
+                                .style(|s| s.flex_shrink(0.0)),
+                            )).into_any()
+                        } else {
+                            empty().into_any()
+                        }
+                    },
+                )
+            },
+        )),
 
         // End node indicator
         dyn_container(
@@ -520,9 +591,32 @@ fn node_row(
             },
         ),
 
-        // Dev notes indicator - shows NodeContext when available
+        // Roll info (skill/ability/DC) for RollResult nodes
         {
-            let notes = node_context.clone();
+            let info = roll_info.clone().unwrap_or_default();
+            dyn_container(
+                move || constructor_for_roll_info == NodeConstructor::RollResult && has_roll_info,
+                move |show_info| {
+                    let info_text = info.clone();
+                    if show_info && !info_text.is_empty() {
+                        label(move || info_text.clone())
+                            .style(|s| {
+                                s.font_size(10.0)
+                                    .color(Color::rgb8(100, 149, 237))  // Cornflower blue
+                                    .font_weight(Weight::MEDIUM)
+                                    .margin_left(4.0)
+                            })
+                            .into_any()
+                    } else {
+                        empty().into_any()
+                    }
+                },
+            )
+        },
+
+        // Dev notes indicator - shows NodeContext and/or stateContext when available
+        {
+            let notes = combined_notes.clone();
             dyn_container(
                 move || has_dev_notes,
                 move |show_notes| {

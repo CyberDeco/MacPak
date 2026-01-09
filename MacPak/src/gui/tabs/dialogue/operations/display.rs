@@ -2,8 +2,106 @@
 
 use std::collections::HashSet;
 use floem::prelude::RwSignal;
-use MacLarian::dialog::{Dialog, NodeConstructor, embedded_speakers};
+use MacLarian::dialog::{Dialog, DialogNode, NodeConstructor};
 use crate::gui::state::{DialogueState, DisplayNode, DisplayFlag};
+
+/// Result of following a node chain to find text
+struct ChainResult {
+    /// The text handle if found
+    handle: Option<String>,
+    /// Inline text value if available
+    value: Option<String>,
+    /// Fallback display (node ID or type) if no text found
+    fallback: String,
+    /// Whether we hit a VisualState node
+    is_visual: bool,
+}
+
+/// Follow a chain of nodes (through Jump, Alias, or single children) to find text
+/// Returns the first text found, or a fallback description
+fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth: usize) -> ChainResult {
+    let mut current = start_node;
+    let mut depth = 0;
+
+    loop {
+        if depth >= max_depth {
+            break;
+        }
+        depth += 1;
+
+        // Check if current node has text
+        if let Some(text_entry) = dialog.get_node_text(current) {
+            return ChainResult {
+                handle: Some(text_entry.handle.clone()),
+                value: text_entry.value.clone(),
+                fallback: String::new(),
+                is_visual: false,
+            };
+        }
+
+        // Check for VisualState
+        if current.constructor == NodeConstructor::VisualState {
+            return ChainResult {
+                handle: None,
+                value: None,
+                fallback: "[Visual]".to_string(),
+                is_visual: true,
+            };
+        }
+
+        // Try to follow through Jump
+        if current.constructor == NodeConstructor::Jump {
+            if let Some(ref target_uuid) = current.jump_target {
+                if let Some(target) = dialog.get_node(target_uuid) {
+                    current = target;
+                    continue;
+                }
+            }
+            // Can't follow jump
+            break;
+        }
+
+        // Try to follow through Alias
+        if current.constructor == NodeConstructor::Alias {
+            if let Some(ref source_uuid) = current.source_node {
+                if let Some(source) = dialog.get_node(source_uuid) {
+                    current = source;
+                    continue;
+                }
+            }
+            // Can't follow alias
+            break;
+        }
+
+        // Try to follow through single child
+        if current.children.len() == 1 {
+            if let Some(child) = dialog.get_node(&current.children[0]) {
+                current = child;
+                continue;
+            }
+        }
+
+        // Multiple children - stop here, don't trace (children shown as separate rows)
+        if current.children.len() > 1 {
+            break;
+        }
+
+        // No children and no text - stop here
+        break;
+    }
+
+    // No text found - return fallback based on where we ended up
+    let fallback = current.editor_data.get("ID")
+        .cloned()
+        .unwrap_or_else(|| current.constructor.display_name().to_string());
+
+    ChainResult {
+        handle: None,
+        value: None,
+        fallback,
+        is_visual: current.constructor == NodeConstructor::VisualState,
+    }
+}
 
 /// Build display nodes from a dialog
 pub fn build_display_nodes(dialog: &Dialog) -> Vec<DisplayNode> {
@@ -44,13 +142,18 @@ fn build_node_tree(
         return;
     };
 
+    // Use original children - no flattening
+    let effective_children = node.children.clone();
+    let inherited_state_contexts: Vec<String> = Vec::new();
+
     let index = nodes.len();
     let mut display = DisplayNode::new(index, uuid.to_string(), node.constructor.clone());
 
     display.parent_uuid = parent_uuid.map(|s| s.to_string());
-    display.children = node.children.clone();
+    display.children = effective_children.clone();
     display.depth = depth;
-    display.child_count = node.children.len();
+    display.child_count = effective_children.len();
+
     display.is_end_node = node.end_node;
     display.has_flags = !node.check_flags.is_empty() || !node.set_flags.is_empty();
 
@@ -137,8 +240,64 @@ fn build_node_tree(
             display.text = format!("Handle: {}", text_entry.handle);
         }
     } else {
-        // No text - show node type info instead
-        display.text = format!("[{} node]", node.constructor.display_name());
+        // No text - check if this is a single Jump/Alias child container
+        // (those should show the target text since they're effectively links)
+        let mut resolved = false;
+
+        if node.children.len() == 1 {
+            if let Some(child_node) = dialog.get_node(&node.children[0]) {
+                if child_node.constructor == NodeConstructor::Jump {
+                    if let Some(ref target_uuid) = child_node.jump_target {
+                        if let Some(target_node) = dialog.get_node(target_uuid) {
+                            let result = follow_chain_for_text(dialog, target_node, 10);
+                            if let Some(ref handle) = result.handle {
+                                display.jump_target_handle = Some(handle.clone());
+                                if let Some(ref value) = result.value {
+                                    if !value.is_empty() {
+                                        display.text = format!("↳ {}", value);
+                                        resolved = true;
+                                    }
+                                }
+                                if !resolved {
+                                    display.text = format!("↳ Handle: {}", handle);
+                                    resolved = true;
+                                }
+                            } else if result.is_visual {
+                                display.text = "↳ [Visual]".to_string();
+                                resolved = true;
+                            }
+                        }
+                    }
+                } else if child_node.constructor == NodeConstructor::Alias {
+                    if let Some(ref source_uuid) = child_node.source_node {
+                        if let Some(source_node) = dialog.get_node(source_uuid) {
+                            let result = follow_chain_for_text(dialog, source_node, 10);
+                            if let Some(ref handle) = result.handle {
+                                display.jump_target_handle = Some(handle.clone());
+                                if let Some(ref value) = result.value {
+                                    if !value.is_empty() {
+                                        display.text = format!("↳ {}", value);
+                                        resolved = true;
+                                    }
+                                }
+                                if !resolved {
+                                    display.text = format!("↳ Handle: {}", handle);
+                                    resolved = true;
+                                }
+                            } else if result.is_visual {
+                                display.text = "↳ [Visual]".to_string();
+                                resolved = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if !resolved {
+            // Multi-child containers or unresolved - children shown as separate rows
+            display.text = String::new();
+        }
     }
 
     // Build roll info if applicable
@@ -161,9 +320,40 @@ fn build_node_tree(
     // Copy editor data (dev notes) from the dialog node
     display.editor_data = node.editor_data.clone();
 
-    // For RollResult nodes, capture the success/failure flag
+    // Add inherited stateContext from flattened VisualState children
+    if !inherited_state_contexts.is_empty() {
+        display.editor_data.insert(
+            "stateContext".to_string(),
+            inherited_state_contexts.join(" | ")
+        );
+    }
+
+    // For RollResult nodes, capture the success/failure flag and copy roll info from parent
     if node.constructor == NodeConstructor::RollResult {
         display.roll_success = node.success;
+
+        // Look up parent node to get roll details
+        if let Some(parent_id) = parent_uuid {
+            if let Some(parent_node) = dialog.get_node(parent_id) {
+                // Copy roll info from parent if it's a roll node
+                if parent_node.is_roll() {
+                    let mut parts = Vec::new();
+                    if let Some(ref skill) = parent_node.skill {
+                        parts.push(skill.clone());
+                    }
+                    if let Some(ref ability) = parent_node.ability {
+                        parts.push(format!("({})", ability));
+                    }
+                    if let Some(ref dc_id) = parent_node.difficulty_class_id {
+                        // Store DC UUID for later resolution
+                        parts.push(format!("DC:__UUID__:{}", dc_id));
+                    }
+                    if !parts.is_empty() {
+                        display.roll_info = Some(parts.join(" "));
+                    }
+                }
+            }
+        }
     }
 
     // Handle Jump nodes - store target info for resolution
@@ -195,19 +385,28 @@ fn build_node_tree(
                         }
                     }
                 }
-                // Copy text from target
-                if let Some(text_entry) = dialog.get_node_text(target_node) {
-                    display.jump_target_handle = Some(text_entry.handle.clone());
-                    // If we have inline text, use it directly
-                    if let Some(ref value) = text_entry.value {
+                // Follow chain from target to find text
+                let result = follow_chain_for_text(dialog, target_node, 10);
+
+                if let Some(ref handle) = result.handle {
+                    display.jump_target_handle = Some(handle.clone());
+                    if let Some(ref value) = result.value {
                         if !value.is_empty() {
                             display.text = format!("→ {}", value);
+                        } else {
+                            display.text = format!("→ Handle: {}", handle);
                         }
+                    } else {
+                        display.text = format!("→ Handle: {}", handle);
                     }
+                } else if result.is_visual {
+                    display.text = "→ [Visual]".to_string();
+                } else if !result.fallback.is_empty() {
+                    display.text = format!("→ {}", result.fallback);
                 }
             }
-            // If no text resolved, show target UUID
-            if display.text.is_empty() || display.text == "[Jump node]" {
+            // If target not found or had no text, show shortened UUID as fallback
+            if !display.text.starts_with("→") {
                 let short_uuid = &target_uuid[..8.min(target_uuid.len())];
                 display.text = format!("→ ({}...)", short_uuid);
             }
@@ -243,19 +442,28 @@ fn build_node_tree(
                         }
                     }
                 }
-                // Copy text from source
-                if let Some(text_entry) = dialog.get_node_text(source_node) {
-                    display.jump_target_handle = Some(text_entry.handle.clone());
-                    // If we have inline text, use it directly
-                    if let Some(ref value) = text_entry.value {
+                // Follow chain from source to find text
+                let result = follow_chain_for_text(dialog, source_node, 10);
+
+                if let Some(ref handle) = result.handle {
+                    display.jump_target_handle = Some(handle.clone());
+                    if let Some(ref value) = result.value {
                         if !value.is_empty() {
                             display.text = format!("= {}", value);
+                        } else {
+                            display.text = format!("= Handle: {}", handle);
                         }
+                    } else {
+                        display.text = format!("= Handle: {}", handle);
                     }
+                } else if result.is_visual {
+                    display.text = "= [Visual]".to_string();
+                } else if !result.fallback.is_empty() {
+                    display.text = format!("= {}", result.fallback);
                 }
             }
-            // If no text resolved, show source UUID
-            if display.text.is_empty() || display.text == "[Alias node]" {
+            // If source not found or had no text, show shortened UUID as fallback
+            if !display.text.starts_with("=") {
                 let short_uuid = &source_uuid[..8.min(source_uuid.len())];
                 display.text = format!("= ({}...)", short_uuid);
             }
@@ -265,18 +473,24 @@ fn build_node_tree(
     nodes.push(display);
 
     // Process children - they're visible only if this node is expanded AND visible
+    // Use effective_children which has VisualState nodes flattened out
     let children_visible = this_expanded && (depth == 0 || parent_expanded);
-    for child_uuid in &node.children {
+    for child_uuid in &effective_children {
         build_node_tree(dialog, child_uuid, Some(uuid), depth + 1, children_visible, nodes, visited);
     }
 }
 
-/// Resolve speaker names using embedded speaker database + runtime localization
+/// Resolve speaker names using dynamic speaker cache + runtime localization
 pub fn resolve_speaker_names(state: &DialogueState, nodes: &mut [DisplayNode]) {
-    let speakers = embedded_speakers();
     let loca_cache = state.localization_cache.clone();
+    let speaker_cache = state.speaker_cache.clone();
 
     let loca_cache = match loca_cache.read() {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    let speaker_cache = match speaker_cache.read() {
         Ok(c) => c,
         Err(_) => return,
     };
@@ -291,14 +505,16 @@ pub fn resolve_speaker_names(state: &DialogueState, nodes: &mut [DisplayNode]) {
             let mut resolved_names: Vec<String> = Vec::new();
 
             for uuid in &uuids {
-                // First check embedded companion names
-                if let Some(name) = speakers.get_companion_name(uuid) {
-                    resolved_names.push(name.to_string());
-                }
-                // Then try embedded handle + runtime localization
-                else if let Some(handle) = speakers.get_display_handle(uuid) {
-                    if let Some(localized) = loca_cache.get_text_opt(handle) {
-                        resolved_names.push(localized);
+                // Look up in dynamic speaker cache (loaded from PAK files)
+                if let Some(handle) = speaker_cache.get_handle(uuid) {
+                    // Check for hardcoded direct names (prefixed with __DIRECT__:)
+                    if let Some(direct_name) = handle.strip_prefix("__DIRECT__:") {
+                        resolved_names.push(direct_name.to_string());
+                    } else {
+                        // Resolve the handle to localized text
+                        if let Some(localized) = loca_cache.get_text_opt(handle) {
+                            resolved_names.push(localized);
+                        }
                     }
                 }
             }
@@ -351,6 +567,16 @@ pub fn resolve_localized_text(state: &DialogueState, nodes: &mut [DisplayNode]) 
                 if needs_resolution {
                     if let Some(text) = loca_cache.get_text_opt(handle) {
                         node.text = format!("{} {}", prefix, text);
+                    }
+                }
+            } else {
+                // Container node (TagAnswer, etc.) that links through a Jump/Alias child
+                let needs_resolution = node.text.starts_with("↳ Handle:")
+                    || node.text.starts_with("↳ (");
+
+                if needs_resolution {
+                    if let Some(text) = loca_cache.get_text_opt(handle) {
+                        node.text = format!("↳ {}", text);
                     }
                 }
             }
@@ -409,6 +635,43 @@ pub fn resolve_flag_names(state: &DialogueState, nodes: &mut [DisplayNode]) {
                     // Fallback to shortened UUID
                     let short_id = &uuid[..8.min(uuid.len())];
                     flag.name = format!("({}...)", short_id);
+                }
+            }
+        }
+    }
+}
+
+/// Resolve difficulty class UUIDs in roll_info to numeric DC values
+/// Uses pre-indexed lookups (O(1) per DC)
+pub fn resolve_difficulty_classes(state: &DialogueState, nodes: &mut [DisplayNode]) {
+    let dc_cache = state.difficulty_class_cache.clone();
+
+    let dc_cache = match dc_cache.read() {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    for node in nodes.iter_mut() {
+        // Resolve DC UUIDs in roll_info
+        if let Some(ref mut roll_info) = node.roll_info {
+            // Check for DC:__UUID__: pattern
+            if roll_info.contains("DC:__UUID__:") {
+                // Find and replace the UUID with resolved DC value
+                if let Some(start) = roll_info.find("DC:__UUID__:") {
+                    let uuid_start = start + "DC:__UUID__:".len();
+                    // UUID is 36 chars (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+                    if uuid_start + 36 <= roll_info.len() {
+                        let uuid = &roll_info[uuid_start..uuid_start + 36];
+                        if let Some(formatted) = dc_cache.get_formatted(uuid) {
+                            // Replace "DC:__UUID__:uuid" with resolved DC
+                            let old_pattern = format!("DC:__UUID__:{}", uuid);
+                            *roll_info = roll_info.replace(&old_pattern, &formatted);
+                        } else {
+                            // Fallback: just show "DC ?"
+                            let old_pattern = format!("DC:__UUID__:{}", uuid);
+                            *roll_info = roll_info.replace(&old_pattern, "DC ?");
+                        }
+                    }
                 }
             }
         }

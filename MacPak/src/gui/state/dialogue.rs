@@ -5,10 +5,9 @@ use floem::reactive::SignalGet;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use MacLarian::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache};
+use MacLarian::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
 pub use MacLarian::formats::voice_meta::{VoiceMetaEntry, VoiceMetaCache};
 use MacLarian::formats::wem::AudioCache;
-use crate::gui::tabs::dialogue::operations::SpeakerNameCache;
 
 /// Source of a dialog file
 #[derive(Clone, Debug, PartialEq)]
@@ -188,10 +187,12 @@ pub struct DialogueState {
     pub localization_loaded: RwSignal<bool>,
     /// Localization cache for text lookup
     pub localization_cache: Arc<RwLock<LocalizationCache>>,
-    /// Speaker name cache for resolving UUIDs to names
-    pub speaker_cache: Arc<RwLock<SpeakerNameCache>>,
+    /// Speaker name cache for resolving UUIDs to DisplayName handles
+    pub speaker_cache: Arc<RwLock<SpeakerCache>>,
     /// Flag cache for resolving flag UUIDs to names
     pub flag_cache: Arc<RwLock<FlagCache>>,
+    /// Difficulty class cache for resolving DC UUIDs to numeric values
+    pub difficulty_class_cache: Arc<RwLock<DifficultyClassCache>>,
 
     // Voice/Audio
     /// Voice metadata cache mapping text handles to .wem file info
@@ -249,8 +250,9 @@ impl DialogueState {
             // Localization
             localization_loaded: RwSignal::new(false),
             localization_cache: Arc::new(RwLock::new(LocalizationCache::new())),
-            speaker_cache: Arc::new(RwLock::new(SpeakerNameCache::new())),
+            speaker_cache: Arc::new(RwLock::new(SpeakerCache::new())),
             flag_cache: Arc::new(RwLock::new(FlagCache::new())),
+            difficulty_class_cache: Arc::new(RwLock::new(DifficultyClassCache::new())),
 
             // Voice/Audio
             voice_meta_cache: Arc::new(RwLock::new(HashMap::new())),

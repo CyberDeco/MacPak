@@ -6,7 +6,7 @@ use floem::reactive::{SignalGet, SignalUpdate};
 use MacLarian::dialog::{parse_dialog_file, parse_dialog_bytes, parse_dialog_lsf_bytes, Dialog};
 use MacLarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogSource, DialogEntry, DisplayNode};
-use super::display::{build_display_nodes, resolve_speaker_names, resolve_localized_text, resolve_flag_names};
+use super::display::{build_display_nodes, resolve_speaker_names, resolve_localized_text, resolve_flag_names, resolve_difficulty_classes};
 
 /// Load a dialog from a PAK file (runs synchronously for UI updates)
 /// Handles both .lsf (binary) and .lsj (JSON) formats
@@ -114,6 +114,9 @@ fn process_loaded_dialog(state: DialogueState, dialog: Dialog) {
 
     // Resolve flag UUIDs to names (flag cache)
     resolve_flag_names(&state, &mut display_nodes);
+
+    // Resolve difficulty class UUIDs to DC values (DC cache)
+    resolve_difficulty_classes(&state, &mut display_nodes);
 
     // Calculate max content width for horizontal scroll
     let max_width = display_nodes.iter()

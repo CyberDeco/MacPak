@@ -4,6 +4,7 @@
 //! configured, then lookups are O(1) HashMap access.
 
 use crate::formats::lsf::parse_lsf_bytes;
+use crate::formats::lsx::parse_lsx;
 use crate::formats::common::extract_value;
 use crate::pak::PakOperations;
 use rayon::prelude::*;
@@ -95,12 +96,17 @@ impl FlagCache {
             let all_files = PakOperations::list(&pak_path)
                 .map_err(|e| FlagCacheError::PakError(e.to_string()))?;
 
-            // Filter for flag files: */Flags/*.lsf
+            // Filter for flag, tag, and script flag files
             let flag_files: Vec<String> = all_files
                 .into_iter()
                 .filter(|path| {
                     let lower = path.to_lowercase();
-                    lower.contains("/flags/") && lower.ends_with(".lsf")
+                    // Individual flag/tag definition files (.lsf)
+                    ((lower.contains("/flags/") || lower.contains("/tags/")) && lower.ends_with(".lsf"))
+                        // ScriptFlags.lsx contains script-based flags
+                        || (lower.contains("/scriptflags/") && lower.ends_with(".lsx"))
+                        // Quest prototypes contain DialogFlagGUID → ID mappings
+                        || (lower.contains("/journal/") && lower.contains("quest") && lower.ends_with(".lsx"))
                 })
                 .collect();
 
@@ -115,15 +121,28 @@ impl FlagCache {
                 .map_err(|e| FlagCacheError::PakError(e.to_string()))?;
 
             // Parse flag files in parallel and collect results
-            let parsed_flags: Vec<Option<(String, String)>> = file_data
+            // Handle both LSF (individual flags/tags) and LSX (ScriptFlags) formats
+            let parsed_flags: Vec<Vec<(String, String)>> = file_data
                 .par_iter()
-                .map(|(_path, data)| Self::extract_flag_name_from_lsf_static(data))
+                .map(|(path, data)| {
+                    let lower_path = path.to_lowercase();
+                    if lower_path.ends_with(".lsx") {
+                        Self::extract_flags_from_lsx(data)
+                    } else {
+                        // LSF returns single flag, wrap in Vec
+                        Self::extract_flag_name_from_lsf_static(data)
+                            .into_iter()
+                            .collect()
+                    }
+                })
                 .collect();
 
             // Merge results sequentially
-            for flag in parsed_flags.into_iter().flatten() {
-                self.names.insert(flag.0, flag.1);
-                total_count += 1;
+            for flags in parsed_flags {
+                for (uuid, name) in flags {
+                    self.names.insert(uuid, name);
+                    total_count += 1;
+                }
             }
         }
 
@@ -141,7 +160,8 @@ impl FlagCache {
                 .get_name(node.name_index_outer, node.name_index_inner)
                 .unwrap_or("");
 
-            if node_name != "Flags" {
+            // Handle both Flags and Tags nodes
+            if node_name != "Flags" && node_name != "Tags" {
                 continue;
             }
 
@@ -197,6 +217,90 @@ impl FlagCache {
         }
 
         None
+    }
+
+    /// Extract UUID and name pairs from ScriptFlags LSX (XML) bytes
+    fn extract_flags_from_lsx(data: &[u8]) -> Vec<(String, String)> {
+        let mut results = Vec::new();
+
+        // Parse as UTF-8 string first
+        let Ok(xml_str) = std::str::from_utf8(data) else {
+            return results;
+        };
+
+        let Ok(doc) = parse_lsx(xml_str) else {
+            return results;
+        };
+
+        // Recursively process all nodes in all regions
+        fn process_node(node: &crate::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
+            // ScriptFlags.lsx uses "ScriptFlag" nodes with "name" and "UUID" attributes
+            if node.id == "ScriptFlag" {
+                let mut flag_name: Option<String> = None;
+                let mut flag_uuid: Option<String> = None;
+
+                for attr in &node.attributes {
+                    match attr.id.as_str() {
+                        "name" => {
+                            if !attr.value.is_empty() {
+                                flag_name = Some(attr.value.clone());
+                            }
+                        }
+                        "UUID" => {
+                            if !attr.value.is_empty() {
+                                flag_uuid = Some(attr.value.clone());
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                if let (Some(name), Some(uuid)) = (flag_name, flag_uuid) {
+                    results.push((uuid, name));
+                }
+            }
+
+            // Quest prototypes use "QuestStep" nodes with "DialogFlagGUID" and "ID" attributes
+            if node.id == "QuestStep" {
+                let mut flag_name: Option<String> = None;
+                let mut flag_uuid: Option<String> = None;
+
+                for attr in &node.attributes {
+                    match attr.id.as_str() {
+                        "ID" => {
+                            if !attr.value.is_empty() {
+                                flag_name = Some(attr.value.clone());
+                            }
+                        }
+                        "DialogFlagGUID" => {
+                            // Skip empty/null GUIDs
+                            if !attr.value.is_empty() && attr.value != "00000000-0000-0000-0000-000000000000" {
+                                flag_uuid = Some(attr.value.clone());
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                if let (Some(name), Some(uuid)) = (flag_name, flag_uuid) {
+                    results.push((uuid, name));
+                }
+            }
+
+            // Recursively process children
+            for child in &node.children {
+                process_node(child, results);
+            }
+        }
+
+        // Process all regions and their nodes
+        for region in &doc.regions {
+            for node in &region.nodes {
+                process_node(node, &mut results);
+            }
+        }
+
+        results
     }
 
     /// Configure PAK sources from a game data directory

@@ -37,8 +37,9 @@
 mod types;
 mod parser;
 mod localization;
-mod embedded;
 mod flags;
+mod speakers;
+mod difficulty;
 pub mod export;
 
 pub use types::*;
@@ -50,13 +51,18 @@ pub use localization::{
     get_available_languages,
     load_localization_from_pak_parallel,
 };
-pub use embedded::{
-    embedded_speakers,
-    EmbeddedSpeakers,
-};
 pub use flags::{
     FlagCache,
     FlagCacheError,
+};
+pub use speakers::{
+    SpeakerCache,
+    SpeakerCacheError,
+};
+pub use difficulty::{
+    DifficultyClassCache,
+    DifficultyClassInfo,
+    DifficultyClassError,
 };
 
 /// Parse dialog from LSJ bytes
