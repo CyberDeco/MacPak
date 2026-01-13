@@ -677,7 +677,7 @@ fn node_row(
 
 /// Badge showing node type with appropriate color
 fn node_type_badge(constructor: NodeConstructor) -> impl IntoView {
-    let (text, bg_color) = match constructor {
+    let (text, bg_color) = match &constructor {
         NodeConstructor::TagQuestion => ("Q", Color::rgb8(59, 130, 246)),
         NodeConstructor::TagAnswer => ("A", Color::rgb8(34, 197, 94)),
         NodeConstructor::ActiveRoll => ("R", Color::rgb8(249, 115, 22)),
@@ -690,6 +690,7 @@ fn node_type_badge(constructor: NodeConstructor) -> impl IntoView {
         NodeConstructor::Trade => ("T", Color::rgb8(245, 158, 11)),
         NodeConstructor::NestedDialog => ("N", Color::rgb8(139, 92, 246)),
         NodeConstructor::TagGreeting => ("G", Color::rgb8(16, 185, 129)),
+        NodeConstructor::Other(s) if s == "Link" => ("L", Color::rgb8(99, 102, 241)), // Indigo for links
         _ => ("?", Color::rgb8(156, 163, 175)),
     };
 
