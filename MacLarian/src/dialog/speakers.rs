@@ -89,15 +89,10 @@ impl SpeakerCache {
             return Ok(self.handles.len());
         }
 
-        // Add hardcoded speaker mappings for special cases not in template files
-        // Player character uses a special UUID that's not defined in RootTemplates/Origins
-        // Using __DIRECT__: prefix to signal that this is a direct name, not a loca handle
-        self.handles.insert(
-            "e0d1ff71-04a8-4340-ae64-9684d846eb83".to_string(),
-            "__DIRECT__:Player".to_string(),
-        );
+        // NOTE: Hardcoded speaker mappings removed - now loaded dynamically from SpeakerGroups.lsf
+        // which provides UUID → Name mappings for speaker groups like GROUP_Players, GROUP_ORI_DU, etc.
 
-        let mut total_count = 1; // Count the hardcoded entry
+        let mut total_count = 0;
 
         for pak_path in self.pak_paths.clone() {
             // List all files in the PAK
@@ -105,7 +100,7 @@ impl SpeakerCache {
                 .map_err(|e| SpeakerCacheError::PakError(e.to_string()))?;
 
             // Filter for character/template files
-            // Look for: RootTemplates, Characters folders, and Origins
+            // Look for: RootTemplates, Characters folders, Origins, and SpeakerGroups
             let template_files: Vec<String> = all_files
                 .into_iter()
                 .filter(|path| {
@@ -116,6 +111,8 @@ impl SpeakerCache {
                         || (lower.contains("/characters/") && lower.contains("_merged.lsf"))
                         // Origins contain companion/origin character definitions (.lsx XML)
                         || (lower.contains("/origins/") && (lower.ends_with(".lsf") || lower.ends_with(".lsx")))
+                        // SpeakerGroups.lsf contains speaker group UUID → Name mappings
+                        || (lower.contains("speakergroups") && lower.ends_with(".lsf"))
                 })
                 .collect();
 
@@ -130,12 +127,15 @@ impl SpeakerCache {
                 .map_err(|e| SpeakerCacheError::PakError(e.to_string()))?;
 
             // Parse template files in parallel and collect results
-            // Handle both LSF (binary) and LSX (XML) formats
+            // Handle LSF (binary), LSX (XML), and SpeakerGroups formats
             let parsed_speakers: Vec<Vec<(String, String)>> = file_data
                 .par_iter()
                 .map(|(path, data)| {
                     let lower_path = path.to_lowercase();
-                    if lower_path.ends_with(".lsx") {
+                    if lower_path.contains("speakergroups") {
+                        // SpeakerGroups.lsf has UUID → Name mappings (not DisplayName handles)
+                        Self::extract_speaker_groups_from_lsf(data)
+                    } else if lower_path.ends_with(".lsx") {
                         Self::extract_speakers_from_lsx(data)
                     } else {
                         Self::extract_speakers_from_lsf(data)
@@ -238,6 +238,104 @@ impl SpeakerCache {
         }
 
         results
+    }
+
+    /// Extract speaker group UUID → Name mappings from SpeakerGroups.lsf
+    /// Returns UUID → formatted display name pairs (e.g., "GROUP_ORI_DU" → "Dark Urge")
+    fn extract_speaker_groups_from_lsf(data: &[u8]) -> Vec<(String, String)> {
+        let mut results = Vec::new();
+
+        let Ok(doc) = parse_lsf_bytes(data) else {
+            return results;
+        };
+
+        // Scan all nodes for SpeakerGroup entries (UUID + Name attributes)
+        for node in doc.nodes.iter() {
+            let mut uuid: Option<String> = None;
+            let mut name: Option<String> = None;
+
+            if node.first_attribute_index >= 0 {
+                let mut attr_idx = node.first_attribute_index as usize;
+                loop {
+                    if attr_idx >= doc.attributes.len() {
+                        break;
+                    }
+
+                    let attr = &doc.attributes[attr_idx];
+                    let attr_name = doc
+                        .get_name(attr.name_index_outer, attr.name_index_inner)
+                        .unwrap_or("");
+                    let type_id = attr.type_info & 0x3F;
+                    let value_length = (attr.type_info >> 6) as usize;
+
+                    match attr_name {
+                        "UUID" => {
+                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id) {
+                                if !val.is_empty() && val.contains('-') {
+                                    uuid = Some(val);
+                                }
+                            }
+                        }
+                        "Name" => {
+                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id) {
+                                if !val.is_empty() {
+                                    name = Some(val);
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    if attr.next_index < 0 {
+                        break;
+                    }
+                    attr_idx = attr.next_index as usize;
+                }
+            }
+
+            // Convert Name to a friendly display name
+            if let (Some(uuid), Some(name)) = (uuid, name) {
+                let display_name = Self::format_speaker_group_name(&name);
+                // Use __DIRECT__: prefix to signal this is a direct name, not a loca handle
+                results.push((uuid, format!("__DIRECT__:{}", display_name)));
+            }
+        }
+
+        results
+    }
+
+    /// Format a speaker group name to a friendly display name
+    /// e.g., "GROUP_ORI_DU" → "Dark Urge", "GROUP_Players" → "Player"
+    fn format_speaker_group_name(name: &str) -> String {
+        // Handle specific known groups
+        match name {
+            "GROUP_Players" => return "Player".to_string(),
+            "GROUP_ORI_DU" => return "Dark Urge".to_string(),
+            "GROUP_Origins" => return "Origin".to_string(),
+            "GROUP_PartyMembers" => return "Party Member".to_string(),
+            _ => {}
+        }
+
+        // Generic formatting: strip "GROUP_" prefix and add spaces before capitals
+        let stripped = name.strip_prefix("GROUP_").unwrap_or(name);
+
+        // Convert underscores to spaces and capitalize properly
+        let mut result = String::new();
+        let mut prev_was_underscore = true; // Start capitalized
+
+        for ch in stripped.chars() {
+            if ch == '_' {
+                result.push(' ');
+                prev_was_underscore = true;
+            } else if prev_was_underscore {
+                result.push(ch.to_ascii_uppercase());
+                prev_was_underscore = false;
+            } else {
+                result.push(ch.to_ascii_lowercase());
+            }
+        }
+
+        result
     }
 
     /// Extract UUID and DisplayName (handle) pairs from LSX (XML) bytes
