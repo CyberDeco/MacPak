@@ -508,6 +508,91 @@ struct CompressedFile {
     compressed_data: Vec<u8>,
 }
 
+/// Cache for PAK file tables to avoid re-decompressing the file table
+/// for every file access during batch operations like deep search.
+///
+/// The file table decompression is the critical bottleneck: if a PAK has
+/// 50,000 files and we search 1,000 of them, without caching we'd decompress
+/// the file table 1,000 times. With caching, we decompress it once.
+pub struct PakReaderCache {
+    /// Cached file tables keyed by PAK path
+    tables: std::collections::HashMap<PathBuf, Vec<FileTableEntry>>,
+    /// Maximum number of PAK tables to cache
+    max_paks: usize,
+    /// Access order for LRU eviction (most recent at end)
+    access_order: Vec<PathBuf>,
+}
+
+impl PakReaderCache {
+    /// Create a new cache with a maximum number of PAK tables to hold
+    pub fn new(max_paks: usize) -> Self {
+        Self {
+            tables: std::collections::HashMap::new(),
+            max_paks: max_paks.max(1),
+            access_order: Vec::new(),
+        }
+    }
+
+    /// Ensure the file table is loaded for this PAK
+    fn ensure_loaded(&mut self, pak_path: &Path) -> Result<()> {
+        if self.tables.contains_key(pak_path) {
+            self.update_access_order(pak_path);
+            return Ok(());
+        }
+
+        // Load the file table
+        let file = File::open(pak_path)?;
+        let mut reader = LspkReader::with_path(file, pak_path);
+        let entries = reader.list_files()?;
+
+        // Evict oldest entry if at capacity
+        while self.tables.len() >= self.max_paks && !self.access_order.is_empty() {
+            let to_evict = self.access_order.remove(0);
+            self.tables.remove(&to_evict);
+        }
+
+        // Insert new entry
+        self.tables.insert(pak_path.to_path_buf(), entries);
+        self.access_order.push(pak_path.to_path_buf());
+
+        Ok(())
+    }
+
+    /// Update access order for LRU (move to end)
+    fn update_access_order(&mut self, pak_path: &Path) {
+        if let Some(pos) = self.access_order.iter().position(|p| p == pak_path) {
+            self.access_order.remove(pos);
+        }
+        self.access_order.push(pak_path.to_path_buf());
+    }
+
+    /// Read a file's bytes using the cached file table
+    ///
+    /// This is much faster than `PakOperations::read_file_bytes` when reading
+    /// multiple files from the same PAK, as it reuses the decompressed file table.
+    pub fn read_file_bytes(&mut self, pak_path: &Path, file_path: &str) -> Result<Vec<u8>> {
+        self.ensure_loaded(pak_path)?;
+
+        // Find the entry in the cached table
+        let entry = self
+            .tables
+            .get(pak_path)
+            .and_then(|t| t.iter().find(|e| e.path.to_string_lossy() == file_path))
+            .ok_or_else(|| Error::FileNotFoundInPak(file_path.to_string()))?
+            .clone();
+
+        // Read compressed data from the PAK file
+        let mut file = File::open(pak_path)?;
+        file.seek(SeekFrom::Start(entry.offset))?;
+
+        let mut compressed_data = vec![0u8; entry.size_compressed as usize];
+        file.read_exact(&mut compressed_data)?;
+
+        // Decompress and return
+        decompress_data(&compressed_data, entry.compression, entry.size_decompressed)
+    }
+}
+
 
 /// Standalone LZ4 decompression (for parallel use)
 fn decompress_lz4_standalone(compressed: &[u8], expected_size: usize) -> Result<Vec<u8>> {

@@ -1,0 +1,355 @@
+//! Search index for PAK file contents
+//!
+//! Provides fast filename/path searching across PAK archives without extraction.
+//! Uses a two-phase approach:
+//! - Phase 1: Build file metadata index from PAK listings (fast, no extraction)
+//! - Phase 2: On-demand content loading with LRU caching (for deep search)
+//!
+//! ## Usage
+//!
+//! ```ignore
+//! let mut index = SearchIndex::new();
+//! index.build_index(&[pak_path1, pak_path2])?;
+//!
+//! // Fast filename search
+//! let results = index.search_filename("Barbarian", None);
+//!
+//! // Search with filter
+//! let lsx_only = index.search_filename("Barbarian", Some(FileType::Lsx));
+//! ```
+
+pub mod content_cache;
+
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
+use rayon::prelude::*;
+
+use crate::error::Result;
+use crate::pak::lspk::LspkReader;
+
+pub use content_cache::{ContentCache, CachedContent, ContentCacheStats, ContentMatch};
+
+/// File type classification for filtering
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FileType {
+    Lsx,
+    Lsf,
+    Lsj,
+    Lsbc,
+    Xml,
+    Json,
+    Dds,
+    Png,
+    Gr2,
+    Wem,
+    Gts,
+    Gtp,
+    Other,
+}
+
+impl FileType {
+    /// Determine file type from extension
+    pub fn from_extension(ext: &str) -> Self {
+        match ext.to_lowercase().as_str() {
+            "lsx" => FileType::Lsx,
+            "lsf" => FileType::Lsf,
+            "lsj" => FileType::Lsj,
+            "lsbc" | "lsbs" | "lsbx" => FileType::Lsbc,
+            "xml" => FileType::Xml,
+            "json" => FileType::Json,
+            "dds" => FileType::Dds,
+            "png" | "jpg" | "jpeg" | "tga" | "bmp" => FileType::Png,
+            "gr2" => FileType::Gr2,
+            "wem" | "ogg" | "wav" => FileType::Wem,
+            "gts" => FileType::Gts,
+            "gtp" => FileType::Gtp,
+            _ => FileType::Other,
+        }
+    }
+
+    /// Check if this is a text-based format that can be content-searched
+    pub fn is_searchable_text(&self) -> bool {
+        matches!(self, FileType::Lsx | FileType::Lsf | FileType::Lsj | FileType::Xml | FileType::Json)
+    }
+
+    /// Get display name for UI
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            FileType::Lsx => "LSX",
+            FileType::Lsf => "LSF",
+            FileType::Lsj => "LSJ",
+            FileType::Lsbc => "LSBC",
+            FileType::Xml => "XML",
+            FileType::Json => "JSON",
+            FileType::Dds => "DDS",
+            FileType::Png => "Image",
+            FileType::Gr2 => "GR2",
+            FileType::Wem => "Audio",
+            FileType::Gts => "GTS",
+            FileType::Gtp => "GTP",
+            FileType::Other => "Other",
+        }
+    }
+}
+
+/// Metadata for an indexed file
+#[derive(Debug, Clone)]
+pub struct IndexedFile {
+    /// Filename only (without path)
+    pub name: String,
+    /// Full internal path within PAK
+    pub path: String,
+    /// Source PAK file
+    pub pak_file: PathBuf,
+    /// Detected file type
+    pub file_type: FileType,
+    /// Decompressed file size in bytes
+    pub size: u64,
+}
+
+/// Search index for PAK file contents
+///
+/// Builds an in-memory index of file metadata from PAK archives.
+/// Supports fast O(1) filename lookups and filtered searches.
+#[derive(Debug, Default)]
+pub struct SearchIndex {
+    /// All file entries, keyed by full internal path
+    entries: HashMap<String, IndexedFile>,
+    /// Reverse index: lowercase filename -> list of full paths
+    filename_index: HashMap<String, Vec<String>>,
+    /// Source PAK files that have been indexed
+    indexed_paks: Vec<PathBuf>,
+    /// Whether the index has been built
+    indexed: bool,
+    /// Total file count
+    file_count: usize,
+}
+
+impl SearchIndex {
+    /// Create a new empty search index
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check if the index has been built
+    pub fn is_indexed(&self) -> bool {
+        self.indexed
+    }
+
+    /// Get the number of indexed files
+    pub fn file_count(&self) -> usize {
+        self.file_count
+    }
+
+    /// Get the number of indexed PAK files
+    pub fn pak_count(&self) -> usize {
+        self.indexed_paks.len()
+    }
+
+    /// Get list of indexed PAK files
+    pub fn indexed_paks(&self) -> &[PathBuf] {
+        &self.indexed_paks
+    }
+
+    /// Clear the index
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        self.filename_index.clear();
+        self.indexed_paks.clear();
+        self.indexed = false;
+        self.file_count = 0;
+    }
+
+    /// Build index from multiple PAK files
+    ///
+    /// Scans each PAK file in parallel to extract file metadata.
+    /// Returns the total number of files indexed.
+    pub fn build_index(&mut self, pak_paths: &[PathBuf]) -> Result<usize> {
+        self.clear();
+
+        let start = std::time::Instant::now();
+
+        // Process each PAK file in parallel
+        let pak_entries: Vec<Result<Vec<IndexedFile>>> = pak_paths
+            .par_iter()
+            .map(|pak_path| Self::index_single_pak(pak_path))
+            .collect();
+
+        // Merge results sequentially (to avoid lock contention)
+        for (pak_path, result) in pak_paths.iter().zip(pak_entries) {
+            match result {
+                Ok(entries) => {
+                    for entry in entries {
+                        let path_key = entry.path.clone();
+                        let filename_key = entry.name.to_lowercase();
+
+                        // Add to filename index
+                        self.filename_index
+                            .entry(filename_key)
+                            .or_default()
+                            .push(path_key.clone());
+
+                        // Add to main entries
+                        self.entries.insert(path_key, entry);
+                    }
+                    self.indexed_paks.push(pak_path.clone());
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to index {}: {}", pak_path.display(), e);
+                }
+            }
+        }
+
+        self.file_count = self.entries.len();
+        self.indexed = true;
+
+        let elapsed = start.elapsed();
+        tracing::info!(
+            "Indexed {} files from {} PAKs in {:.2}s",
+            self.file_count,
+            self.indexed_paks.len(),
+            elapsed.as_secs_f64()
+        );
+
+        Ok(self.file_count)
+    }
+
+    /// Index a single PAK file
+    fn index_single_pak(pak_path: &Path) -> Result<Vec<IndexedFile>> {
+        let file = std::fs::File::open(pak_path)?;
+        let mut reader = LspkReader::with_path(file, pak_path);
+
+        let entries = reader.list_files()?;
+
+        let file_entries: Vec<IndexedFile> = entries
+            .into_iter()
+            .filter(|e| {
+                // Skip .DS_Store and other junk
+                e.path.file_name() != Some(std::ffi::OsStr::new(".DS_Store"))
+            })
+            .map(|e| {
+                let path_str = e.path.to_string_lossy().to_string();
+                let name = e.path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| path_str.clone());
+
+                let ext = e.path
+                    .extension()
+                    .map(|e| e.to_string_lossy().to_string())
+                    .unwrap_or_default();
+
+                IndexedFile {
+                    name,
+                    path: path_str,
+                    pak_file: pak_path.to_path_buf(),
+                    file_type: FileType::from_extension(&ext),
+                    size: e.size_decompressed as u64,
+                }
+            })
+            .collect();
+
+        Ok(file_entries)
+    }
+
+    /// Search for files by filename (case-insensitive)
+    ///
+    /// Returns entries where the filename contains the query string.
+    /// Optionally filter by file type.
+    pub fn search_filename(&self, query: &str, filter: Option<FileType>) -> Vec<&IndexedFile> {
+        let query_lower = query.to_lowercase();
+
+        self.filename_index
+            .iter()
+            .filter(|(filename, _)| filename.contains(&query_lower))
+            .flat_map(|(_, paths)| paths.iter())
+            .filter_map(|path| self.entries.get(path))
+            .filter(|entry| {
+                filter.map_or(true, |f| entry.file_type == f)
+            })
+            .collect()
+    }
+
+    /// Search for files by path (case-insensitive substring match)
+    ///
+    /// Returns entries where the full path contains the query string.
+    pub fn search_path(&self, query: &str, filter: Option<FileType>) -> Vec<&IndexedFile> {
+        let query_lower = query.to_lowercase();
+
+        self.entries
+            .values()
+            .filter(|entry| entry.path.to_lowercase().contains(&query_lower))
+            .filter(|entry| filter.map_or(true, |f| entry.file_type == f))
+            .collect()
+    }
+
+    /// Search for UUIDs in filenames/paths
+    ///
+    /// Handles various UUID formats (with/without hyphens, with h/g prefix).
+    pub fn search_uuid(&self, uuid: &str) -> Vec<&IndexedFile> {
+        // Normalize UUID: remove hyphens, convert to lowercase
+        let normalized: String = uuid
+            .chars()
+            .filter(|c| c.is_ascii_hexdigit())
+            .collect::<String>()
+            .to_lowercase();
+
+        if normalized.len() < 8 {
+            return Vec::new(); // Too short to be meaningful
+        }
+
+        self.entries
+            .values()
+            .filter(|entry| {
+                let path_normalized: String = entry.path
+                    .chars()
+                    .filter(|c| c.is_ascii_hexdigit())
+                    .collect::<String>()
+                    .to_lowercase();
+                path_normalized.contains(&normalized)
+            })
+            .collect()
+    }
+
+    /// Get a file entry by its full path
+    pub fn get_by_path(&self, path: &str) -> Option<&IndexedFile> {
+        self.entries.get(path)
+    }
+
+    /// Get all entries (for iteration)
+    pub fn all_entries(&self) -> impl Iterator<Item = &IndexedFile> {
+        self.entries.values()
+    }
+
+    /// Get entries filtered by file type
+    pub fn entries_by_type(&self, file_type: FileType) -> Vec<&IndexedFile> {
+        self.entries
+            .values()
+            .filter(|e| e.file_type == file_type)
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_file_type_from_extension() {
+        assert_eq!(FileType::from_extension("lsx"), FileType::Lsx);
+        assert_eq!(FileType::from_extension("LSX"), FileType::Lsx);
+        assert_eq!(FileType::from_extension("lsf"), FileType::Lsf);
+        assert_eq!(FileType::from_extension("dds"), FileType::Dds);
+        assert_eq!(FileType::from_extension("gr2"), FileType::Gr2);
+        assert_eq!(FileType::from_extension("unknown"), FileType::Other);
+    }
+
+    #[test]
+    fn test_file_type_is_searchable() {
+        assert!(FileType::Lsx.is_searchable_text());
+        assert!(FileType::Lsf.is_searchable_text());
+        assert!(!FileType::Dds.is_searchable_text());
+        assert!(!FileType::Gr2.is_searchable_text());
+    }
+}

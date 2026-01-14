@@ -7,7 +7,7 @@ pub mod batch;
 mod extractor;
 mod lister;
 
-pub use pak_tools::{PakOperations, ProgressCallback};
+pub use pak_tools::{PakOperations, PakReaderCache, ProgressCallback};
 pub use lspk::CompressionMethod;
 pub use creator::create_pak;
 

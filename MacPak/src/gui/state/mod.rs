@@ -20,5 +20,5 @@ pub use dyes::{DyeColorEntry, DyesState, GeneratedDyeEntry, ImportedDyeEntry, Ve
 pub use editor::{EditorState, EditorTab, EditorTabsState};
 pub use gr2::Gr2State;
 pub use pak_ops::{PakCompression, PakOpsState};
-pub use search::{SearchResult, SearchState};
+pub use search::{IndexStatus, SearchResult, SearchState};
 pub use virtual_textures::VirtualTexturesState;

@@ -21,6 +21,7 @@ pub mod merged;
 pub mod gr2_extraction;
 pub mod dyes;
 pub mod mods;
+pub mod search;
 
 // Top-level domain modules (promoted from formats/)
 pub mod dialog;
@@ -84,6 +85,12 @@ pub mod prelude {
     pub use crate::mods::{
         generate_info_json, InfoJsonResult,
         validate_mod_structure, ModValidationResult,
+    };
+
+    // Search module exports
+    pub use crate::search::{
+        SearchIndex, IndexedFile, FileType,
+        ContentCache, CachedContent, ContentCacheStats, ContentMatch,
     };
 }
 
