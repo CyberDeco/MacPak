@@ -119,11 +119,21 @@ fn build_node_tree(
                 // Get effective children: follow through VisualState if needed
                 let effective_children = get_jump_effective_children(dialog, target_node, node.jump_target_point);
 
-                for child_uuid in &effective_children {
-                    if visited.contains(child_uuid) {
-                        build_link_node(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes);
-                    } else {
-                        build_node_tree(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes, visited, alias_logicalnames, sibling_map, ancestor_siblings);
+                // If target is already visited AND has children, link to target directly
+                // This prevents cascading into children's children which creates too many links
+                // If target has no children, do nothing (matches old behavior)
+                if visited.contains(target_uuid) {
+                    if !effective_children.is_empty() {
+                        build_link_node(dialog, target_uuid, parent_uuid, depth, parent_expanded, nodes);
+                    }
+                    // else: target has no children, nothing to show
+                } else {
+                    for child_uuid in &effective_children {
+                        if visited.contains(child_uuid) {
+                            build_link_node(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes);
+                        } else {
+                            build_node_tree(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes, visited, alias_logicalnames, sibling_map, ancestor_siblings);
+                        }
                     }
                 }
             }
@@ -670,18 +680,28 @@ fn build_node_tree(
 /// Get the actual content nodes to link to, following through pass-through chains
 /// Pass-through nodes include: VisualState, flagless Jumps, and nodes with no text + single VisualState child
 fn get_content_nodes_for_link(dialog: &Dialog, uuid: &str) -> Vec<String> {
+    get_content_nodes_for_link_depth(dialog, uuid, 0)
+}
+
+/// Internal helper with depth tracking to prevent deep recursion
+fn get_content_nodes_for_link_depth(dialog: &Dialog, uuid: &str, depth: usize) -> Vec<String> {
+    // Limit expansion depth to prevent cascading through many levels
+    const MAX_DEPTH: usize = 2;
+
     let Some(node) = dialog.get_node(uuid) else {
         return vec![uuid.to_string()];
     };
 
     let has_text = dialog.get_node_text(node).is_some();
 
-    // VisualState is always pass-through
+    // VisualState is always pass-through (but respect depth limit)
     if node.constructor == NodeConstructor::VisualState {
-        // Recursively get content nodes from children
+        if depth >= MAX_DEPTH {
+            return node.children.clone();
+        }
         let mut result = Vec::new();
         for child_uuid in &node.children {
-            result.extend(get_content_nodes_for_link(dialog, child_uuid));
+            result.extend(get_content_nodes_for_link_depth(dialog, child_uuid, depth + 1));
         }
         return if result.is_empty() { vec![uuid.to_string()] } else { result };
     }
@@ -693,12 +713,15 @@ fn get_content_nodes_for_link(dialog: &Dialog, uuid: &str) -> Vec<String> {
         && !has_actual_flags
         && node.children.is_empty()
     {
+        if depth >= MAX_DEPTH {
+            return vec![uuid.to_string()];
+        }
         if let Some(ref target_uuid) = node.jump_target {
             if let Some(target_node) = dialog.get_node(target_uuid) {
                 let effective = get_jump_effective_children(dialog, target_node, node.jump_target_point);
                 let mut result = Vec::new();
                 for child_uuid in &effective {
-                    result.extend(get_content_nodes_for_link(dialog, child_uuid));
+                    result.extend(get_content_nodes_for_link_depth(dialog, child_uuid, depth + 1));
                 }
                 return if result.is_empty() { vec![uuid.to_string()] } else { result };
             }
@@ -708,10 +731,13 @@ fn get_content_nodes_for_link(dialog: &Dialog, uuid: &str) -> Vec<String> {
 
     // Node with no text and single child - follow through if child is pass-through
     if !has_text && node.children.len() == 1 {
+        if depth >= MAX_DEPTH {
+            return vec![uuid.to_string()];
+        }
         if let Some(child) = dialog.get_node(&node.children[0]) {
             // Check if child is VisualState
             if child.constructor == NodeConstructor::VisualState {
-                return get_content_nodes_for_link(dialog, &node.children[0]);
+                return get_content_nodes_for_link_depth(dialog, &node.children[0], depth + 1);
             }
             // Check if child is a pass-through Jump (flagless, no children of its own)
             let child_has_actual_flags = child.check_flags.iter().any(|fg| !fg.flags.is_empty())
@@ -720,8 +746,8 @@ fn get_content_nodes_for_link(dialog: &Dialog, uuid: &str) -> Vec<String> {
                 && !child_has_actual_flags
                 && child.children.is_empty()
             {
-                // Follow through the Jump - get_content_nodes_for_link will handle it
-                return get_content_nodes_for_link(dialog, &node.children[0]);
+                // Follow through the Jump
+                return get_content_nodes_for_link_depth(dialog, &node.children[0], depth + 1);
             }
             // Don't follow through any single child here - the node should be linked to directly
             // This ensures links show the appropriate level of content, not grandchildren
@@ -730,12 +756,10 @@ fn get_content_nodes_for_link(dialog: &Dialog, uuid: &str) -> Vec<String> {
 
     // Node with no text and multiple children - just show the children (skip the parent)
     // The parent has no content, so linking to it is redundant when we show all children
+    // Only expand one level - don't recurse into children's children
     if !has_text && node.children.len() > 1 {
-        let mut result = Vec::new();
-        for child_uuid in &node.children {
-            result.extend(get_content_nodes_for_link(dialog, child_uuid));
-        }
-        return if result.is_empty() { vec![uuid.to_string()] } else { result };
+        // Return children directly without recursive expansion
+        return node.children.clone();
     }
 
     // Not pass-through, return this node
