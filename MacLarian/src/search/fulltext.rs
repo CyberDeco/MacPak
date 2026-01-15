@@ -8,6 +8,7 @@ use std::sync::Arc;
 use tantivy::collector::TopDocs;
 use tantivy::query::QueryParser;
 use tantivy::schema::{Field, Schema, Value, STORED, STRING, TEXT};
+use tantivy::snippet::SnippetGenerator;
 use tantivy::{doc, Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument};
 
 use crate::error::{Error, Result};
@@ -39,6 +40,8 @@ pub struct FullTextResult {
     pub file_type: String,
     /// Relevance score (higher = more relevant)
     pub score: f32,
+    /// Snippet showing match context (with <b> tags around matched terms)
+    pub snippet: Option<String>,
 }
 
 impl FullTextIndex {
@@ -50,8 +53,8 @@ impl FullTextIndex {
         let path_field = schema_builder.add_text_field("path", STRING | STORED);
         // Name is tokenized for searching and stored
         let name_field = schema_builder.add_text_field("name", TEXT | STORED);
-        // Content is tokenized but not stored (too large)
-        let content_field = schema_builder.add_text_field("content", TEXT);
+        // Content is tokenized and stored (needed for snippet generation)
+        let content_field = schema_builder.add_text_field("content", TEXT | STORED);
         // PAK file path stored for retrieval
         let pak_field = schema_builder.add_text_field("pak", STRING | STORED);
         // File type stored for retrieval
@@ -137,13 +140,17 @@ impl FullTextIndex {
         let query_parser =
             QueryParser::for_index(&self.index, vec![self.name_field, self.content_field]);
 
-        let query = query_parser
+        let parsed_query = query_parser
             .parse_query(query)
             .map_err(|e| Error::SearchError(format!("Invalid query: {e}")))?;
 
         let top_docs = searcher
-            .search(&query, &TopDocs::with_limit(limit))
+            .search(&parsed_query, &TopDocs::with_limit(limit))
             .map_err(|e| Error::SearchError(format!("Search failed: {e}")))?;
+
+        // Create snippet generator for content field
+        let snippet_generator = SnippetGenerator::create(&searcher, &parsed_query, self.content_field)
+            .map_err(|e| Error::SearchError(format!("Failed to create snippet generator: {e}")))?;
 
         let mut results = Vec::with_capacity(top_docs.len());
 
@@ -175,12 +182,22 @@ impl FullTextIndex {
                 .unwrap_or("")
                 .to_string();
 
+            // Generate snippet with match context
+            let snippet = snippet_generator.snippet_from_doc(&doc);
+            let snippet_text = if snippet.is_empty() {
+                None
+            } else {
+                // Convert to HTML with <b> tags around matched terms
+                Some(snippet.to_html())
+            };
+
             results.push(FullTextResult {
                 path,
                 name,
                 pak_file: PathBuf::from(pak),
                 file_type,
                 score,
+                snippet: snippet_text,
             });
         }
 

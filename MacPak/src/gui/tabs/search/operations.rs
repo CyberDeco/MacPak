@@ -233,16 +233,30 @@ pub fn perform_search(state: SearchState) {
                     .filter(|r| active_filter.map_or(true, |ft| {
                         r.file_type.to_lowercase() == ft.display_name().to_lowercase()
                     }))
-                    .map(|r| SearchResult {
-                        name: r.name,
-                        path: r.path,
-                        pak_file: r.pak_file.file_name()
-                            .map(|n| n.to_string_lossy().to_string())
-                            .unwrap_or_default(),
-                        file_type: r.file_type,
-                        pak_path: r.pak_file,
-                        context: Some(format!("Score: {:.2}", r.score)),
-                        line_number: None,
+                    .map(|r| {
+                        // Strip HTML tags and decode entities from snippet for display
+                        let context = r.snippet.map(|s| {
+                            s.replace("<b>", "")
+                             .replace("</b>", "")
+                             .replace("&quot;", "\"")
+                             .replace("&apos;", "'")
+                             .replace("&#x27;", "'")
+                             .replace("&#39;", "'")
+                             .replace("&lt;", "<")
+                             .replace("&gt;", ">")
+                             .replace("&amp;", "&")  // Must be last to avoid double-decoding
+                        });
+                        SearchResult {
+                            name: r.name,
+                            path: r.path,
+                            pak_file: r.pak_file.file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_default(),
+                            file_type: r.file_type,
+                            pak_path: r.pak_file,
+                            context,
+                            line_number: None,
+                        }
                     })
                     .collect();
 
@@ -337,7 +351,7 @@ pub fn progress_overlay(state: SearchState) -> impl IntoView {
                 container(
                     v_stack((
                         // Title
-                        label(|| "Searching...")
+                        label(|| "Indexing...")
                             .style(|s| {
                                 s.font_size(16.0)
                                     .font_weight(Weight::BOLD)

@@ -18,13 +18,13 @@ pub fn search_results(state: SearchState, active_filter: RwSignal<Option<FileTyp
     let is_searching = state.is_searching;
     let index_status = state.index_status;
 
-    // Create a derived signal that filters results based on active_filter
+    // Create a derived signal that filters results for count display
     let filtered_results = move || {
         let all_results = results.get();
         let filter = active_filter.get();
 
         match filter {
-            None => all_results, // "All" - no filtering
+            None => all_results,
             Some(ft) => {
                 let filter_name = ft.display_name().to_lowercase();
                 all_results
@@ -36,9 +36,8 @@ pub fn search_results(state: SearchState, active_filter: RwSignal<Option<FileTyp
     };
 
     v_stack((
-        // Results header
+        // Results count
         h_stack((
-            label(|| "Results").style(|s| s.font_weight(Weight::BOLD)),
             empty().style(|s| s.flex_grow(1.0)),
             label(move || {
                 let filtered = filtered_results();
@@ -108,7 +107,7 @@ pub fn search_results(state: SearchState, active_filter: RwSignal<Option<FileTyp
             },
         ),
 
-        // Results list - stable scroll container, virtual_list handles filtering reactively
+        // Results list
         scroll(
             virtual_list(
                 VirtualDirection::Vertical,
@@ -119,23 +118,11 @@ pub fn search_results(state: SearchState, active_filter: RwSignal<Option<FileTyp
             )
             .style(|s| s.width_full().flex_col()),
         )
-        .scroll_style(|s| s.handle_thickness(8.0))
-        .style(move |s| {
-            // Hide when showing status messages
-            let hide = is_searching.get()
-                || !matches!(index_status.get(), IndexStatus::Ready { .. })
-                || results.get().is_empty();
-
-            let s = s.width_full()
+        .style(|s| {
+            s.width_full()
                 .flex_grow(1.0)
                 .flex_basis(0.0)
-                .min_height(0.0);
-
-            if hide {
-                s.display(floem::style::Display::None)
-            } else {
-                s
-            }
+                .min_height(0.0)
         }),
     ))
     .style(|s| {
@@ -205,7 +192,6 @@ fn search_result_row(result: SearchResult) -> impl IntoView {
                         .flex_shrink(0.0)
                 })
                 .action(move || {
-                    // Copy path to clipboard using pbcopy (macOS)
                     copy_to_clipboard(&path_copy);
                 }),
         ))
@@ -251,8 +237,6 @@ fn search_result_row(result: SearchResult) -> impl IntoView {
             .border_color(Color::rgb8(240, 240, 240))
             .hover(|s| s.background(Color::rgb8(250, 252, 255)))
     })
-    // Stop PointerDown propagation to prevent scroll container from
-    // resetting scroll position when clicking on rows
     .on_event_stop(floem::event::EventListener::PointerDown, |_| {})
 }
 
@@ -308,3 +292,5 @@ fn get_type_icon(file_type: &str) -> &'static str {
         _ => "📄",
     }
 }
+
+

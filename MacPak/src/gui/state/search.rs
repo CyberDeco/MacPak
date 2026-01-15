@@ -24,6 +24,33 @@ impl Default for IndexStatus {
     }
 }
 
+/// Column to sort search results by
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum SearchSortColumn {
+    #[default]
+    Name,
+    Type,
+    Pak,
+    Path,
+}
+
+/// Sort direction
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum SortDirection {
+    #[default]
+    Ascending,
+    Descending,
+}
+
+impl SortDirection {
+    pub fn toggle(&self) -> Self {
+        match self {
+            SortDirection::Ascending => SortDirection::Descending,
+            SortDirection::Descending => SortDirection::Ascending,
+        }
+    }
+}
+
 /// Index Search state
 #[derive(Clone)]
 pub struct SearchState {
@@ -53,6 +80,10 @@ pub struct SearchState {
     pub progress_current: RwSignal<usize>,
     /// Total progress count
     pub progress_total: RwSignal<usize>,
+    /// Current sort column
+    pub sort_column: RwSignal<SearchSortColumn>,
+    /// Current sort direction
+    pub sort_direction: RwSignal<SortDirection>,
 }
 
 impl SearchState {
@@ -71,6 +102,8 @@ impl SearchState {
             progress_percent: RwSignal::new(0),
             progress_current: RwSignal::new(0),
             progress_total: RwSignal::new(0),
+            sort_column: RwSignal::new(SearchSortColumn::default()),
+            sort_direction: RwSignal::new(SortDirection::default()),
         }
     }
 

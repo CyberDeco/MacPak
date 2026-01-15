@@ -399,6 +399,13 @@ impl SearchIndex {
 
         // Process each PAK using bulk reading (sorted by offset, parallel decompress)
         for (pak_path, files) in &by_pak {
+            let pak_name = pak_path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "Unknown".to_string());
+
+            progress(indexed_count, total_files, &pak_name);
+
             // Collect all file paths for bulk reading
             let file_paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
 
@@ -431,7 +438,7 @@ impl SearchIndex {
 
                 indexed_count += 1;
                 if indexed_count % 1000 == 0 {
-                    progress(indexed_count, total_files, &file.name);
+                    progress(indexed_count, total_files, &pak_name);
                 }
 
                 fulltext.add_document(
