@@ -50,7 +50,10 @@ walkdir.workspace = true         # Recursive directory traversal
 tempfile.workspace = true        # Temp directories for LSF→LSX conversion
 
 # Parallelism
-rayon.workspace = true           # Data parallelism for batch operations
+rayon.workspace = true
+
+# Full-text search
+tantivy.workspace = true
 
 # Logging
 tracing.workspace = true         # Structured logging

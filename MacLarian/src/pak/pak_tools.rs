@@ -591,6 +591,84 @@ impl PakReaderCache {
         // Decompress and return
         decompress_data(&compressed_data, entry.compression, entry.size_decompressed)
     }
+
+    /// Read multiple files' bytes in bulk with optimized I/O
+    ///
+    /// This is MUCH faster than calling `read_file_bytes` in a loop because:
+    /// 1. Files are sorted by offset for sequential I/O (no random seeks)
+    /// 2. All compressed data is read in one pass
+    /// 3. Decompression happens in parallel
+    ///
+    /// Returns a HashMap of file_path -> decompressed bytes.
+    /// Files that fail to read/decompress are silently skipped.
+    pub fn read_files_bulk(
+        &mut self,
+        pak_path: &Path,
+        file_paths: &[&str],
+    ) -> Result<std::collections::HashMap<String, Vec<u8>>> {
+        use rayon::prelude::*;
+        use std::collections::{HashMap, HashSet};
+
+        self.ensure_loaded(pak_path)?;
+
+        // Build set of requested paths for O(1) lookup
+        let requested: HashSet<&str> = file_paths.iter().copied().collect();
+
+        // Get matching entries from cached table
+        let table = self.tables.get(pak_path).ok_or_else(|| {
+            Error::FileNotFoundInPak(pak_path.to_string_lossy().to_string())
+        })?;
+
+        let mut entries_to_read: Vec<&FileTableEntry> = table
+            .iter()
+            .filter(|e| requested.contains(e.path.to_string_lossy().as_ref()))
+            .collect();
+
+        if entries_to_read.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        // CRITICAL: Sort by offset for sequential I/O
+        entries_to_read.sort_by_key(|e| e.offset);
+
+        // Open file once for all reads
+        let mut file = File::open(pak_path)?;
+
+        // Phase 1: Read all compressed data sequentially
+        let compressed_files: Vec<(String, Vec<u8>, CompressionMethod, u32)> = entries_to_read
+            .iter()
+            .filter_map(|entry| {
+                // Seek and read
+                if file.seek(SeekFrom::Start(entry.offset)).is_err() {
+                    return None;
+                }
+
+                let mut compressed_data = vec![0u8; entry.size_compressed as usize];
+                if file.read_exact(&mut compressed_data).is_err() {
+                    return None;
+                }
+
+                Some((
+                    entry.path.to_string_lossy().to_string(),
+                    compressed_data,
+                    entry.compression,
+                    entry.size_decompressed,
+                ))
+            })
+            .collect();
+
+        // Phase 2: Decompress in parallel
+        let results: Vec<(String, Vec<u8>)> = compressed_files
+            .par_iter()
+            .filter_map(|(path, data, compression, expected_size)| {
+                decompress_data(data, *compression, *expected_size)
+                    .ok()
+                    .map(|bytes| (path.clone(), bytes))
+            })
+            .collect();
+
+        Ok(results.into_iter().collect())
+    }
 }
 
 

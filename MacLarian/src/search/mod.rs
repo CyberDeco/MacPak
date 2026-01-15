@@ -19,6 +19,8 @@
 //! ```
 
 pub mod content_cache;
+pub mod extract;
+pub mod fulltext;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -27,8 +29,10 @@ use rayon::prelude::*;
 
 use crate::error::Result;
 use crate::pak::lspk::LspkReader;
+use crate::pak::PakReaderCache;
 
 pub use content_cache::{ContentCache, CachedContent, ContentCacheStats, ContentMatch};
+pub use fulltext::{FullTextIndex, FullTextResult};
 
 /// File type classification for filtering
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -108,11 +112,15 @@ pub struct IndexedFile {
     pub size: u64,
 }
 
+/// Progress callback for content indexing
+/// Arguments: (current, total, description)
+pub type ProgressCallback<'a> = &'a (dyn Fn(usize, usize, &str) + Sync + Send);
+
 /// Search index for PAK file contents
 ///
 /// Builds an in-memory index of file metadata from PAK archives.
 /// Supports fast O(1) filename lookups and filtered searches.
-#[derive(Debug, Default)]
+/// Optionally includes a full-text index for instant content search.
 pub struct SearchIndex {
     /// All file entries, keyed by full internal path
     entries: HashMap<String, IndexedFile>,
@@ -124,6 +132,21 @@ pub struct SearchIndex {
     indexed: bool,
     /// Total file count
     file_count: usize,
+    /// Full-text search index (built separately via build_fulltext_index)
+    fulltext: Option<FullTextIndex>,
+}
+
+impl Default for SearchIndex {
+    fn default() -> Self {
+        Self {
+            entries: HashMap::new(),
+            filename_index: HashMap::new(),
+            indexed_paks: Vec::new(),
+            indexed: false,
+            file_count: 0,
+            fulltext: None,
+        }
+    }
 }
 
 impl SearchIndex {
@@ -159,6 +182,12 @@ impl SearchIndex {
         self.indexed_paks.clear();
         self.indexed = false;
         self.file_count = 0;
+        self.fulltext = None;
+    }
+
+    /// Check if full-text index is available
+    pub fn has_fulltext(&self) -> bool {
+        self.fulltext.is_some()
     }
 
     /// Build index from multiple PAK files
@@ -328,6 +357,125 @@ impl SearchIndex {
             .values()
             .filter(|e| e.file_type == file_type)
             .collect()
+    }
+
+    /// Build full-text index from file contents
+    ///
+    /// Extracts text from all searchable files and indexes them for instant search.
+    /// This is a potentially long operation - use the progress callback to track progress.
+    ///
+    /// Must be called after `build_index()` has been run.
+    pub fn build_fulltext_index(&mut self, progress: ProgressCallback) -> Result<usize> {
+        if !self.indexed {
+            return Ok(0);
+        }
+
+        // Create new fulltext index
+        let fulltext = FullTextIndex::new()?;
+
+        // Collect searchable files (skip tiny files < 100 bytes)
+        let searchable_files: Vec<&IndexedFile> = self
+            .entries
+            .values()
+            .filter(|f| f.file_type.is_searchable_text())
+            .filter(|f| f.size >= 100) // Skip tiny files
+            .collect();
+
+        let total_files = searchable_files.len();
+        progress(0, total_files, "Starting content indexing...");
+
+        // Group files by PAK for efficient reading
+        let mut by_pak: HashMap<PathBuf, Vec<&IndexedFile>> = HashMap::new();
+        for file in &searchable_files {
+            by_pak
+                .entry(file.pak_file.clone())
+                .or_default()
+                .push(file);
+        }
+
+        // Get a writer with 500MB heap (larger = fewer internal commits)
+        let mut writer = fulltext.writer(500_000_000)?;
+        let mut indexed_count = 0;
+
+        // Process each PAK using bulk reading (sorted by offset, parallel decompress)
+        for (pak_path, files) in &by_pak {
+            // Collect all file paths for bulk reading
+            let file_paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+
+            // Create cache and do bulk read (sorted by offset, parallel decompress)
+            let mut cache = PakReaderCache::new(1);
+            let bulk_bytes = cache.read_files_bulk(pak_path, &file_paths).unwrap_or_default();
+
+            // Build list of (file, bytes) pairs
+            let file_bytes: Vec<(&IndexedFile, &Vec<u8>)> = files
+                .iter()
+                .filter_map(|file| {
+                    bulk_bytes.get(&file.path).map(|bytes| (*file, bytes))
+                })
+                .collect();
+
+            // Extract text in parallel (CPU bound)
+            let extracted: Vec<(&IndexedFile, String)> = file_bytes
+                .par_iter()
+                .map(|(file, bytes)| {
+                    let text = extract::extract_text(bytes, file.file_type);
+                    (*file, text)
+                })
+                .collect();
+
+            // Add to Tantivy (single-threaded writer)
+            for (file, text) in extracted {
+                if text.is_empty() {
+                    continue;
+                }
+
+                indexed_count += 1;
+                if indexed_count % 1000 == 0 {
+                    progress(indexed_count, total_files, &file.name);
+                }
+
+                fulltext.add_document(
+                    &writer,
+                    &file.path,
+                    &file.name,
+                    &text,
+                    &pak_path.to_string_lossy(),
+                    file.file_type.display_name(),
+                )?;
+            }
+        }
+
+        // Commit and reload
+        writer
+            .commit()
+            .map_err(|e| crate::error::Error::SearchError(format!("Commit failed: {e}")))?;
+        fulltext.reload()?;
+
+        tracing::info!(
+            "Built fulltext index for {} files ({} docs)",
+            indexed_count,
+            fulltext.num_docs()
+        );
+
+        progress(total_files, total_files, "Content indexing complete");
+
+        self.fulltext = Some(fulltext);
+        Ok(indexed_count)
+    }
+
+    /// Search using the full-text index
+    ///
+    /// Returns results ranked by relevance (BM25).
+    /// Supports phrase queries, fuzzy matching, and boolean operators.
+    ///
+    /// Returns None if fulltext index hasn't been built.
+    pub fn search_fulltext(&self, query: &str, limit: usize) -> Option<Vec<FullTextResult>> {
+        self.fulltext.as_ref().and_then(|ft| ft.search(query, limit).ok())
+    }
+
+    /// Get number of documents in fulltext index
+    pub fn fulltext_doc_count(&self) -> u64 {
+        self.fulltext.as_ref().map_or(0, |ft| ft.num_docs())
     }
 }
 

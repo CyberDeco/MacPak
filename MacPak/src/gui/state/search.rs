@@ -33,8 +33,6 @@ pub struct SearchState {
     pub results: RwSignal<Vec<SearchResult>>,
     /// Whether a search is in progress
     pub is_searching: RwSignal<bool>,
-    /// Whether to perform deep content search
-    pub deep_search: RwSignal<bool>,
     /// Active file type filter (None = all types)
     pub active_filter: RwSignal<Option<FileType>>,
     /// Index status for display
@@ -63,7 +61,6 @@ impl SearchState {
             query: RwSignal::new(String::new()),
             results: RwSignal::new(Vec::new()),
             is_searching: RwSignal::new(false),
-            deep_search: RwSignal::new(false),
             active_filter: RwSignal::new(None),
             index_status: RwSignal::new(IndexStatus::NotBuilt),
             index: Arc::new(RwLock::new(SearchIndex::new())),

@@ -13,7 +13,6 @@ use super::operations::{build_index, find_pak_files, perform_search};
 
 pub fn search_toolbar(state: SearchState, config_state: ConfigState) -> impl IntoView {
     let query = state.query;
-    let deep_search = state.deep_search;
     let active_filter = state.active_filter;
     let index_status = state.index_status;
 
@@ -38,11 +37,6 @@ pub fn search_toolbar(state: SearchState, config_state: ConfigState) -> impl Int
 
         // Search button
         search_button(state.clone()),
-
-        separator(),
-
-        // Deep search toggle
-        deep_search_toggle(deep_search),
 
         separator(),
 
@@ -109,36 +103,6 @@ fn search_button(state: SearchState) -> impl IntoView {
             }
         },
     )
-}
-
-fn deep_search_toggle(deep_search: RwSignal<bool>) -> impl IntoView {
-    h_stack((
-        label(|| "Deep").style(|s| s.font_size(12.0)),
-        dyn_container(
-            move || deep_search.get(),
-            move |enabled| {
-                let bg = if enabled {
-                    Color::rgb8(33, 150, 243)
-                } else {
-                    Color::rgb8(200, 200, 200)
-                };
-                button(if enabled { "ON" } else { "OFF" })
-                    .style(move |s| {
-                        s.padding_horiz(8.0)
-                            .padding_vert(2.0)
-                            .font_size(10.0)
-                            .background(bg)
-                            .color(Color::WHITE)
-                            .border_radius(4.0)
-                    })
-                    .action(move || {
-                        deep_search.set(!deep_search.get());
-                    })
-                    .into_any()
-            },
-        ),
-    ))
-    .style(|s| s.gap(4.0).items_center())
 }
 
 fn filter_buttons(active_filter: RwSignal<Option<FileType>>) -> impl IntoView {

@@ -75,6 +75,9 @@ pub enum Error {
 
     #[error("DDS error: {0}")]
     DdsError(String),
+
+    #[error("Search error: {0}")]
+    SearchError(String),
 }
 
 // Add conversion from quick_xml::events::attributes::AttrError
