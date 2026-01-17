@@ -14,7 +14,7 @@ use floem::prelude::*;
 
 use crate::gui::state::{AppState, ConfigState, SearchState};
 
-use operations::progress_overlay;
+use operations::{progress_overlay, search_overlay};
 use results::{search_results, search_status_bar};
 use toolbar::search_toolbar;
 
@@ -24,8 +24,10 @@ pub fn search_tab(_app_state: AppState, search_state: SearchState, config_state:
         search_toolbar(search_state.clone(), config_state),
         search_results(search_state.clone(), active_filter),
         search_status_bar(search_state.clone()),
-        // Progress dialog overlay - absolutely positioned so it doesn't affect layout
-        progress_overlay(search_state),
+        // Progress dialog overlay for indexing - absolutely positioned
+        progress_overlay(search_state.clone()),
+        // Search in progress overlay - absolutely positioned
+        search_overlay(search_state),
     ))
     .style(|s| {
         s.width_full()

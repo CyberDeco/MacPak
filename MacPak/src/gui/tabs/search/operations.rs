@@ -63,11 +63,8 @@ lazy_static::lazy_static! {
     static ref SEARCH_PROGRESS: Arc<SharedSearchProgress> = Arc::new(SharedSearchProgress::default());
 }
 
-/// Maximum results for quick search (filename matching)
-const MAX_QUICK_RESULTS: usize = 5000;
-
-/// Maximum results for content search
-const MAX_DEEP_RESULTS: usize = 50000;
+/// Maximum results for fulltext search
+const MAX_RESULTS: usize = 50000;
 
 /// Messages from background indexing thread
 enum IndexMessage {
@@ -209,6 +206,10 @@ pub fn perform_search(state: SearchState) {
 
     // Spawn background thread
     std::thread::spawn(move || {
+        use std::time::Instant;
+        let total_start = Instant::now();
+
+        let lock_start = Instant::now();
         let idx = match index.read() {
             Ok(idx) => idx,
             Err(e) => {
@@ -216,57 +217,107 @@ pub fn perform_search(state: SearchState) {
                 return;
             }
         };
+        let lock_time = lock_start.elapsed();
 
-        // Filename search: find files by name
-        let filename_matches = idx.search_filename(&query, active_filter);
-        let mut results: Vec<SearchResult> = filename_matches
-            .iter()
-            .take(MAX_QUICK_RESULTS)
-            .map(|f| SearchResult::from_indexed_file(f))
-            .collect();
+        // Fulltext search using Tantivy index with progress reporting
+        SEARCH_PROGRESS.set_active(true);
+        SEARCH_PROGRESS.set(0, 1, "Searching...".to_string());
 
-        // Content search: use fulltext index for instant deep search
-        if idx.has_fulltext() {
-            if let Some(ft_results) = idx.search_fulltext(&query, MAX_DEEP_RESULTS) {
-                let content_results: Vec<SearchResult> = ft_results
-                    .into_iter()
-                    .filter(|r| active_filter.map_or(true, |ft| {
-                        r.file_type.to_lowercase() == ft.display_name().to_lowercase()
-                    }))
-                    .map(|r| {
-                        // Strip HTML tags and decode entities from snippet for display
-                        let context = r.snippet.map(|s| {
-                            s.replace("<b>", "")
-                             .replace("</b>", "")
-                             .replace("&quot;", "\"")
-                             .replace("&apos;", "'")
-                             .replace("&#x27;", "'")
-                             .replace("&#39;", "'")
-                             .replace("&lt;", "<")
-                             .replace("&gt;", ">")
-                             .replace("&amp;", "&")  // Must be last to avoid double-decoding
-                        });
-                        SearchResult {
-                            name: r.name,
-                            path: r.path,
-                            pak_file: r.pak_file.file_name()
-                                .map(|n| n.to_string_lossy().to_string())
-                                .unwrap_or_default(),
-                            file_type: r.file_type,
-                            pak_path: r.pak_file,
-                            context,
-                            line_number: None,
-                        }
-                    })
-                    .collect();
+        let results: Vec<SearchResult> = if idx.has_fulltext() {
+            let search_start = Instant::now();
+            let progress_callback = |current: usize, total: usize, name: &str| {
+                SEARCH_PROGRESS.set(current, total, name.to_string());
+            };
+            let ft_results = idx.search_fulltext_with_progress(&query, MAX_RESULTS, progress_callback).unwrap_or_default();
+            let search_time = search_start.elapsed();
+            let result_count = ft_results.len();
 
-                let remaining = MAX_DEEP_RESULTS.saturating_sub(results.len());
-                results.extend(content_results.into_iter().take(remaining));
-            }
-        }
+            let transform_start = Instant::now();
+            let results: Vec<SearchResult> = ft_results
+                .into_iter()
+                .filter(|r| active_filter.map_or(true, |ft| {
+                    r.file_type.to_lowercase() == ft.display_name().to_lowercase()
+                }))
+                .map(|r| {
+                    // Strip HTML tags and decode entities from snippet for display
+                    let context = r.snippet.map(|s| decode_html_entities(&s));
+                    SearchResult {
+                        name: r.name,
+                        path: r.path,
+                        pak_file: r.pak_file.file_name()
+                            .map(|n| n.to_string_lossy().to_string())
+                            .unwrap_or_default(),
+                        file_type: r.file_type,
+                        pak_path: r.pak_file,
+                        context,
+                        line_number: None,
+                    }
+                })
+                .collect();
+            let transform_time = transform_start.elapsed();
 
+            eprintln!(
+                "Search timing: lock={:?}, tantivy={:?} ({} results), transform={:?} ({} final)",
+                lock_time, search_time, result_count, transform_time, results.len()
+            );
+
+            results
+        } else {
+            eprintln!("Search: no fulltext index available");
+            Vec::new()
+        };
+
+        SEARCH_PROGRESS.set_active(false);
+        eprintln!("Search total: {:?}", total_start.elapsed());
         send_results(SearchMessage::Results(results));
     });
+}
+
+/// Decode HTML entities in a single pass
+fn decode_html_entities(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '<' {
+            // Skip HTML tags like <b> and </b>
+            while let Some(&next) = chars.peek() {
+                chars.next();
+                if next == '>' {
+                    break;
+                }
+            }
+        } else if c == '&' {
+            // Collect entity
+            let mut entity = String::new();
+            while let Some(&next) = chars.peek() {
+                if next == ';' {
+                    chars.next();
+                    break;
+                }
+                entity.push(chars.next().unwrap());
+            }
+            // Decode entity
+            match entity.as_str() {
+                "quot" => result.push('"'),
+                "apos" => result.push('\''),
+                "lt" => result.push('<'),
+                "gt" => result.push('>'),
+                "amp" => result.push('&'),
+                "#x27" => result.push('\''),
+                "#39" => result.push('\''),
+                _ => {
+                    // Unknown entity, keep as-is
+                    result.push('&');
+                    result.push_str(&entity);
+                    result.push(';');
+                }
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
 }
 
 /// Copy text to system clipboard (macOS)
@@ -418,6 +469,155 @@ pub fn progress_overlay(state: SearchState) -> impl IntoView {
     )
     .style(move |s| {
         if show.get() {
+            s.position(floem::style::Position::Absolute)
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .inset_bottom(0.0)
+                .inset_right(0.0)
+                .items_center()
+                .justify_center()
+                .background(Color::rgba8(0, 0, 0, 100))
+                .z_index(100)
+        } else {
+            s.display(floem::style::Display::None)
+        }
+    })
+}
+
+/// Overlay shown while search is in progress with progress bar
+pub fn search_overlay(state: SearchState) -> impl IntoView {
+    let is_searching = state.is_searching;
+
+    // Local signals for polled values
+    let polled_current = RwSignal::new(0usize);
+    let polled_total = RwSignal::new(0usize);
+    let polled_msg = RwSignal::new(String::new());
+    let polled_pct = RwSignal::new(0u32);
+    let timer_active = RwSignal::new(false);
+
+    // Polling function
+    fn poll_search_progress(
+        polled_current: RwSignal<usize>,
+        polled_total: RwSignal<usize>,
+        polled_msg: RwSignal<String>,
+        polled_pct: RwSignal<u32>,
+        is_searching: RwSignal<bool>,
+        timer_active: RwSignal<bool>,
+    ) {
+        let (current, total, msg) = SEARCH_PROGRESS.get();
+        polled_current.set(current);
+        polled_total.set(total);
+        if !msg.is_empty() {
+            polled_msg.set(msg);
+        }
+        if total > 0 {
+            polled_pct.set(((current as f64 / total as f64) * 100.0) as u32);
+        }
+
+        // Schedule next poll if still active
+        if is_searching.get_untracked() && timer_active.get_untracked() {
+            exec_after(Duration::from_millis(50), move |_| {
+                if is_searching.get_untracked() && timer_active.get_untracked() {
+                    poll_search_progress(polled_current, polled_total, polled_msg, polled_pct, is_searching, timer_active);
+                }
+            });
+        }
+    }
+
+    // Start/stop polling based on search state
+    create_effect(move |_| {
+        let searching = is_searching.get();
+        if searching {
+            polled_current.set(0);
+            polled_total.set(0);
+            polled_msg.set("Searching...".to_string());
+            polled_pct.set(0);
+            timer_active.set(true);
+
+            exec_after(Duration::from_millis(50), move |_| {
+                if is_searching.get_untracked() {
+                    poll_search_progress(polled_current, polled_total, polled_msg, polled_pct, is_searching, timer_active);
+                }
+            });
+        } else {
+            timer_active.set(false);
+        }
+    });
+
+    dyn_container(
+        move || is_searching.get(),
+        move |searching| {
+            if searching {
+                container(
+                    v_stack((
+                        label(|| "Searching...")
+                            .style(|s| {
+                                s.font_size(16.0)
+                                    .font_weight(Weight::BOLD)
+                                    .margin_bottom(12.0)
+                            }),
+                        // Count display
+                        label(move || {
+                            let t = polled_total.get();
+                            let c = polled_current.get();
+                            if t > 1 {
+                                format!("{}/{}", c, t)
+                            } else {
+                                String::new()
+                            }
+                        })
+                        .style(|s| {
+                            s.font_size(13.0)
+                                .color(Color::rgb8(100, 100, 100))
+                                .margin_bottom(4.0)
+                        }),
+                        // Current file
+                        label(move || polled_msg.get())
+                            .style(|s| {
+                                s.font_size(12.0)
+                                    .color(Color::rgb8(120, 120, 120))
+                                    .margin_bottom(12.0)
+                                    .text_ellipsis()
+                                    .max_width(450.0)
+                            }),
+                        // Progress bar
+                        container(
+                            container(empty())
+                                .style(move |s| {
+                                    let pct = polled_pct.get();
+                                    s.height_full()
+                                        .width_pct(pct as f64)
+                                        .background(Color::rgb8(33, 150, 243))
+                                        .border_radius(4.0)
+                                }),
+                        )
+                        .style(|s| {
+                            s.width_full()
+                                .height(8.0)
+                                .background(Color::rgb8(220, 220, 220))
+                                .border_radius(4.0)
+                        }),
+                        label(move || format!("{}%", polled_pct.get()))
+                            .style(|s| s.font_size(12.0).margin_top(8.0).color(Color::rgb8(100, 100, 100))),
+                    ))
+                    .style(|s| {
+                        s.padding(24.0)
+                            .background(Color::WHITE)
+                            .border(1.0)
+                            .border_color(Color::rgb8(200, 200, 200))
+                            .border_radius(8.0)
+                            .width(500.0)
+                            .items_center()
+                    }),
+                )
+                .into_any()
+            } else {
+                empty().into_any()
+            }
+        },
+    )
+    .style(move |s| {
+        if is_searching.get() {
             s.position(floem::style::Position::Absolute)
                 .inset_top(0.0)
                 .inset_left(0.0)

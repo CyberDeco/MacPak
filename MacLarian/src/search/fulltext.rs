@@ -134,27 +134,40 @@ impl FullTextIndex {
     /// - Fuzzy: `barbrian~1`
     /// - Boolean: `class AND barbarian`, `wizard OR sorcerer`
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<FullTextResult>> {
+        self.search_with_progress(query, limit, |_, _, _| {})
+    }
+
+    /// Search with progress callback: (current, total, filename)
+    pub fn search_with_progress<F>(&self, query: &str, limit: usize, progress: F) -> Result<Vec<FullTextResult>>
+    where
+        F: Fn(usize, usize, &str),
+    {
         let searcher = self.reader.searcher();
 
         // Create query parser that searches name and content fields
         let query_parser =
             QueryParser::for_index(&self.index, vec![self.name_field, self.content_field]);
 
+        progress(0, 1, "Parsing query...");
         let parsed_query = query_parser
             .parse_query(query)
             .map_err(|e| Error::SearchError(format!("Invalid query: {e}")))?;
 
+        progress(0, 1, "Searching index...");
         let top_docs = searcher
             .search(&parsed_query, &TopDocs::with_limit(limit))
             .map_err(|e| Error::SearchError(format!("Search failed: {e}")))?;
+
+        let total = top_docs.len();
+        progress(0, total, "Generating snippets...");
 
         // Create snippet generator for content field
         let snippet_generator = SnippetGenerator::create(&searcher, &parsed_query, self.content_field)
             .map_err(|e| Error::SearchError(format!("Failed to create snippet generator: {e}")))?;
 
-        let mut results = Vec::with_capacity(top_docs.len());
+        let mut results = Vec::with_capacity(total);
 
-        for (score, doc_address) in top_docs {
+        for (i, (score, doc_address)) in top_docs.into_iter().enumerate() {
             let doc: TantivyDocument = searcher
                 .doc(doc_address)
                 .map_err(|e| Error::SearchError(format!("Failed to retrieve doc: {e}")))?;
@@ -191,6 +204,11 @@ impl FullTextIndex {
                 Some(snippet.to_html())
             };
 
+            // Report progress every 50 docs
+            if i % 50 == 0 {
+                progress(i, total, &name);
+            }
+
             results.push(FullTextResult {
                 path,
                 name,
@@ -201,6 +219,7 @@ impl FullTextIndex {
             });
         }
 
+        progress(total, total, "Complete");
         Ok(results)
     }
 

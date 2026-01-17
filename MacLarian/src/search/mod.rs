@@ -480,6 +480,14 @@ impl SearchIndex {
         self.fulltext.as_ref().and_then(|ft| ft.search(query, limit).ok())
     }
 
+    /// Search fulltext index with progress callback: (current, total, filename)
+    pub fn search_fulltext_with_progress<F>(&self, query: &str, limit: usize, progress: F) -> Option<Vec<FullTextResult>>
+    where
+        F: Fn(usize, usize, &str),
+    {
+        self.fulltext.as_ref().and_then(|ft| ft.search_with_progress(query, limit, progress).ok())
+    }
+
     /// Get number of documents in fulltext index
     pub fn fulltext_doc_count(&self) -> u64 {
         self.fulltext.as_ref().map_or(0, |ft| ft.num_docs())
