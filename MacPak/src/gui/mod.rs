@@ -20,9 +20,10 @@ use floem::prelude::*;
 use floem::Application;
 use floem::window::WindowConfig;
 
+use shared::{init_theme, theme_signal, ThemeColors};
 use state::*;
 use tabs::*;
-use tabs::editor::{open_file_dialog, save_file};
+use tabs::editor::{init_config_state, open_file_dialog, save_file};
 use tabs::browser::{cleanup_temp_files, open_folder_dialog};
 use tabs::pak_ops::extract_pak_file;
 use tabs::gr2::open_gr2_file;
@@ -48,6 +49,8 @@ fn app_view() -> impl IntoView {
     // Initialize all state
     let app_state = AppState::new();
     let config_state = ConfigState::new();
+    init_config_state(config_state.clone());  // For recent files tracking
+    init_theme(config_state.theme.get());     // Initialize global theme signal
     let editor_tabs_state = EditorTabsState::new();
     let browser_state = BrowserState::new();
     let pak_ops_state = PakOpsState::new();
@@ -200,6 +203,22 @@ fn app_view() -> impl IntoView {
                 return;
             }
 
+            // CMD+W / Ctrl+W - Close tab (Editor tab only)
+            let is_w_key = matches!(
+                &key_event.key.logical_key,
+                Key::Character(c) if c.as_str().eq_ignore_ascii_case("w")
+            );
+            if is_cmd_or_ctrl && is_w_key {
+                if current_tab == 1 {
+                    let tabs = editor_tabs_for_keyboard.tabs.get();
+                    let active_index = editor_tabs_for_keyboard.active_tab_index.get();
+                    if active_index < tabs.len() {
+                        editor_tabs_for_keyboard.try_close_tab(active_index);
+                    }
+                }
+                return;
+            }
+
             // CMD+, / Ctrl+, - Preferences (toggle config dialog)
             let is_comma_key = matches!(
                 &key_event.key.logical_key,
@@ -235,21 +254,32 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
         empty().style(|s| s.flex_grow(1.0)),
         // App info
         label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION")))
-            .style(|s| s.color(Color::rgb8(128, 128, 128)).font_size(12.0)),
+            .style(move |s| {
+                let colors = theme_signal()
+                    .map(|t| ThemeColors::for_theme(t.get().effective()))
+                    .unwrap_or_else(ThemeColors::dark);
+                s.color(colors.text_muted).font_size(12.0)
+            }),
     ))
-    .style(|s| {
+    .style(move |s| {
+        let colors = theme_signal()
+            .map(|t| ThemeColors::for_theme(t.get().effective()))
+            .unwrap_or_else(ThemeColors::dark);
         s.width_full()
             .height(44.0)
             .padding_horiz(8.0)
             .gap(4.0)
             .items_center()
-            .background(Color::rgb8(38, 38, 38))
+            .background(colors.bg_surface)
     })
 }
 
 fn tab_button(label_text: &'static str, index: usize, active_tab: RwSignal<usize>) -> impl IntoView {
     button(label_text)
         .style(move |s| {
+            let colors = theme_signal()
+                .map(|t| ThemeColors::for_theme(t.get().effective()))
+                .unwrap_or_else(ThemeColors::dark);
             let is_active = active_tab.get() == index;
             let s = s
                 .padding_horiz(16.0)
@@ -258,14 +288,14 @@ fn tab_button(label_text: &'static str, index: usize, active_tab: RwSignal<usize
                 .font_size(13.0);
 
             if is_active {
-                s.background(Color::rgb8(60, 60, 60))
-                    .color(Color::WHITE)
+                s.background(colors.bg_elevated)
+                    .color(colors.text_primary)
             } else {
                 s.background(Color::TRANSPARENT)
-                    .color(Color::rgb8(180, 180, 180))
+                    .color(colors.text_secondary)
                     .hover(|s| {
-                        s.background(Color::rgb8(50, 50, 50))
-                            .color(Color::WHITE)
+                        s.background(colors.bg_hover)
+                            .color(colors.text_primary)
                     })
             }
         })

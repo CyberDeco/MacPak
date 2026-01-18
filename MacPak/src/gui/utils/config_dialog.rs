@@ -8,6 +8,7 @@ use floem::prelude::*;
 use floem::text::Weight;
 use floem::views::PlaceholderTextClass;
 
+use crate::gui::shared::Theme;
 use crate::gui::state::ConfigState;
 
 /// Create the configuration dialog UI
@@ -134,6 +135,23 @@ pub fn config_dialog(config_state: ConfigState) -> impl IntoView {
                             .margin_top(4.0)
                     }),
 
+                // Theme selector
+                {
+                    let theme_signal = config_state.theme;
+                    let config_for_theme = config_state.clone();
+                    v_stack((
+                        label(|| "Appearance")
+                            .style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100)).margin_top(16.0)),
+                        h_stack((
+                            theme_button("Light", Theme::Light, theme_signal, config_for_theme.clone()),
+                            theme_button("Dark", Theme::Dark, theme_signal, config_for_theme.clone()),
+                            theme_button("System", Theme::System, theme_signal, config_for_theme),
+                        ))
+                        .style(|s| s.gap(8.0)),
+                    ))
+                    .style(|s| s.width_full().gap(4.0))
+                },
+
                 // Buttons
                 h_stack((
                     {
@@ -219,4 +237,39 @@ pub fn config_dialog(config_state: ConfigState) -> impl IntoView {
         }
     })
     .keyboard_navigable()
+}
+
+/// Theme selection button
+fn theme_button(
+    label_text: &'static str,
+    theme: Theme,
+    current_theme: RwSignal<Theme>,
+    config_state: ConfigState,
+) -> impl IntoView {
+    button(label_text)
+        .style(move |s| {
+            let is_selected = current_theme.get() == theme;
+            let s = s
+                .padding(8.0)
+                .padding_horiz(16.0)
+                .border_radius(4.0)
+                .font_size(13.0);
+
+            if is_selected {
+                s.background(Color::rgb8(59, 130, 246))
+                    .color(Color::WHITE)
+                    .font_weight(Weight::SEMIBOLD)
+            } else {
+                s.background(Color::rgb8(240, 240, 240))
+                    .color(Color::rgb8(60, 60, 60))
+                    .hover(|s| s.background(Color::rgb8(230, 230, 230)))
+            }
+        })
+        .action(move || {
+            config_state.set_theme(theme);
+            // Update the global theme signal
+            if let Some(signal) = crate::gui::shared::theme_signal() {
+                signal.set(theme);
+            }
+        })
 }
