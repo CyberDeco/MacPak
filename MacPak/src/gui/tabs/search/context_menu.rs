@@ -1,10 +1,16 @@
 //! Context menu for search result operations
 
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use floem::action::show_context_menu;
+use floem::ext_event::create_ext_action;
 use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
+use floem_reactive::Scope;
+use MacLarian::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
+use MacLarian::pak::PakOperations;
 
-use crate::gui::state::{EditorTabsState, SearchResult, SearchState};
+use crate::gui::state::{DialogueState, DialogSource, EditorTabsState, SearchResult, SearchState};
 
 use super::operations::copy_to_clipboard;
 
@@ -13,10 +19,12 @@ pub fn show_search_result_context_menu(
     result: &SearchResult,
     state: SearchState,
     editor_tabs_state: EditorTabsState,
+    dialogue_state: DialogueState,
     active_tab: RwSignal<usize>,
 ) {
     let result_clone = result.clone();
     let result_for_open = result.clone();
+    let result_for_dialogue = result.clone();
     let result_for_extract = result.clone();
     let result_for_matches = result.clone();
     let state_for_matches = state.clone();
@@ -31,6 +39,19 @@ pub fn show_search_result_context_menu(
             MenuItem::new("Open in Editor")
                 .action(move || {
                     open_result_in_editor(&result_for_open, editor_tabs.clone(), active_tab);
+                })
+        );
+    }
+
+    // Open in Dialogue (LSJ files only)
+    if file_type == "lsj" {
+        let dialogue = dialogue_state.clone();
+        let pak_path = result_for_dialogue.pak_path.clone();
+        let internal_path = result_for_dialogue.path.clone();
+        menu = menu.entry(
+            MenuItem::new("Open in Dialogue")
+                .action(move || {
+                    open_in_dialogue(dialogue.clone(), pak_path.clone(), internal_path.clone(), active_tab);
                 })
         );
     }
@@ -173,4 +194,119 @@ fn extract_search_result(result: &SearchResult) {
             }
         }
     });
+}
+
+/// Open a dialog file in the Dialogue tab, initializing caches if needed
+fn open_in_dialogue(
+    state: DialogueState,
+    pak_path: PathBuf,
+    internal_path: String,
+    active_tab: RwSignal<usize>,
+) {
+    // Check if caches need initialization
+    let needs_init = {
+        let loca_empty = state.localization_cache.read().map(|c| c.is_empty()).unwrap_or(true);
+        let speaker_empty = state.speaker_cache.read().map(|c| !c.is_indexed()).unwrap_or(true);
+        loca_empty || speaker_empty
+    };
+
+    // Set up pending load - the Dialogue tab will pick this up
+    let source = DialogSource::PakFile {
+        pak_path: pak_path.clone(),
+        internal_path,
+    };
+
+    if needs_init {
+        // Set pending load info
+        state.pending_load.set(Some(source));
+        state.pending_caches_ready.set(false);
+        state.status_message.set("Loading metadata...".to_string());
+
+        // Switch to Dialogue tab to show status
+        active_tab.set(7);
+
+        // Init caches in background
+        let loca_cache = state.localization_cache.clone();
+        let speaker_cache = state.speaker_cache.clone();
+        let flag_cache = state.flag_cache.clone();
+        let dc_cache = state.difficulty_class_cache.clone();
+
+        // When done, just set the ready flag - Dialogue tab will handle loading
+        let state_for_done = state.clone();
+        let send_done = create_ext_action(Scope::new(), move |_: ()| {
+            state_for_done.pending_caches_ready.set(true);
+        });
+
+        std::thread::spawn(move || {
+            if let Some(data_dir) = pak_path.parent() {
+                init_localization_cache(&loca_cache, data_dir);
+                init_speaker_cache(&speaker_cache, data_dir);
+                init_flag_cache(&flag_cache, data_dir);
+                init_dc_cache(&dc_cache, data_dir);
+            }
+            send_done(());
+        });
+    } else {
+        // Caches already initialized - set pending load and ready immediately
+        state.pending_load.set(Some(source));
+        state.pending_caches_ready.set(true);
+        active_tab.set(7);
+    }
+}
+
+/// Initialize localization cache from English.pak
+fn init_localization_cache(cache: &Arc<std::sync::RwLock<LocalizationCache>>, data_dir: &Path) {
+    let localization_dir = data_dir.join("Localization");
+    if !localization_dir.exists() {
+        return;
+    }
+
+    let language_pak = localization_dir.join("English.pak");
+    if !language_pak.exists() {
+        return;
+    }
+
+    let Ok(mut cache) = cache.write() else { return };
+    if !cache.is_empty() {
+        return;
+    }
+
+    let entries = match PakOperations::list(&language_pak) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    for path in entries.iter().filter(|p| p.to_lowercase().ends_with(".loca")) {
+        let _ = cache.load_from_pak(&language_pak, path);
+    }
+}
+
+/// Initialize speaker cache
+fn init_speaker_cache(cache: &Arc<std::sync::RwLock<SpeakerCache>>, data_dir: &Path) {
+    let Ok(mut cache) = cache.write() else { return };
+    if cache.is_indexed() {
+        return;
+    }
+    cache.configure_from_game_data(data_dir);
+    let _ = cache.build_index();
+}
+
+/// Initialize flag cache
+fn init_flag_cache(cache: &Arc<std::sync::RwLock<FlagCache>>, data_dir: &Path) {
+    let Ok(mut cache) = cache.write() else { return };
+    if cache.is_indexed() {
+        return;
+    }
+    cache.configure_from_game_data(data_dir);
+    let _ = cache.build_index();
+}
+
+/// Initialize difficulty class cache
+fn init_dc_cache(cache: &Arc<std::sync::RwLock<DifficultyClassCache>>, data_dir: &Path) {
+    let Ok(mut cache) = cache.write() else { return };
+    if cache.is_indexed() {
+        return;
+    }
+    cache.configure_from_game_data(data_dir);
+    let _ = cache.build_index();
 }

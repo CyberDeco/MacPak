@@ -7,7 +7,7 @@ use floem::views::{VirtualDirection, VirtualItemSize};
 use im::Vector as ImVector;
 use MacLarian::search::FileType;
 
-use crate::gui::state::{EditorTabsState, IndexStatus, SearchResult, SearchState};
+use crate::gui::state::{DialogueState, EditorTabsState, IndexStatus, SearchResult, SearchState};
 
 use super::context_menu::show_search_result_context_menu;
 
@@ -18,12 +18,14 @@ pub fn search_results(
     state: SearchState,
     active_filter: RwSignal<Option<FileType>>,
     editor_tabs_state: EditorTabsState,
+    dialogue_state: DialogueState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
     let results = state.results;
     let is_searching = state.is_searching;
     let index_status = state.index_status;
     let state_for_rows = state.clone();
+    let dialogue_state_for_rows = dialogue_state.clone();
 
     // Create a derived signal that filters results for count display
     let filtered_results = move || {
@@ -124,7 +126,8 @@ pub fn search_results(
                 {
                     let state = state_for_rows.clone();
                     let editor_tabs = editor_tabs_state.clone();
-                    move |result| search_result_row(result, state.clone(), editor_tabs.clone(), active_tab)
+                    let dialogue = dialogue_state_for_rows.clone();
+                    move |result| search_result_row(result, state.clone(), editor_tabs.clone(), dialogue.clone(), active_tab)
                 },
             )
             .style(|s| s.width_full().flex_col()),
@@ -149,6 +152,7 @@ fn search_result_row(
     result: SearchResult,
     state: SearchState,
     editor_tabs_state: EditorTabsState,
+    dialogue_state: DialogueState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
     let icon = get_type_icon(&result.file_type);
@@ -297,6 +301,7 @@ fn search_result_row(
             &result_for_ctx,
             state.clone(),
             editor_tabs_state.clone(),
+            dialogue_state.clone(),
             active_tab,
         );
         EventPropagation::Stop

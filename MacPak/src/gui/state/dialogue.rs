@@ -194,6 +194,16 @@ pub struct DialogueState {
     /// Difficulty class cache for resolving DC UUIDs to numeric values
     pub difficulty_class_cache: Arc<RwLock<DifficultyClassCache>>,
 
+    // Current dialog source (for reloading)
+    /// The source of the currently loaded dialog (for reload functionality)
+    pub current_source: RwSignal<Option<DialogSource>>,
+
+    // Pending load (for loading from Search tab after cache init)
+    /// Pending dialog to load once caches are ready
+    pub pending_load: RwSignal<Option<DialogSource>>,
+    /// Whether caches are ready for the pending load
+    pub pending_caches_ready: RwSignal<bool>,
+
     // Voice/Audio
     /// Voice metadata cache mapping text handles to .wem file info
     pub voice_meta_cache: Arc<RwLock<VoiceMetaCache>>,
@@ -253,6 +263,13 @@ impl DialogueState {
             speaker_cache: Arc::new(RwLock::new(SpeakerCache::new())),
             flag_cache: Arc::new(RwLock::new(FlagCache::new())),
             difficulty_class_cache: Arc::new(RwLock::new(DifficultyClassCache::new())),
+
+            // Current dialog source
+            current_source: RwSignal::new(None),
+
+            // Pending load
+            pending_load: RwSignal::new(None),
+            pending_caches_ready: RwSignal::new(false),
 
             // Voice/Audio
             voice_meta_cache: Arc::new(RwLock::new(HashMap::new())),

@@ -38,6 +38,7 @@ pub fn toolbar(state: DialogueState, config: ConfigState) -> impl IntoView {
     let config_for_shared = config.clone();
     let state_for_expand = state.clone();
     let state_for_collapse = state.clone();
+    let state_for_reload = state.clone();
     let state_for_status = state.clone();
 
     h_stack((
@@ -118,6 +119,35 @@ pub fn toolbar(state: DialogueState, config: ConfigState) -> impl IntoView {
             .action(move || {
                 collapse_all_nodes(&state_for_collapse);
             }),
+
+        // Reload button
+        {
+            let has_dialog = state.current_dialog;
+            button("Reload")
+                .style(move |s| {
+                    let base = s
+                        .padding_horiz(8.0)
+                        .padding_vert(5.0)
+                        .border_radius(4.0)
+                        .font_size(12.0)
+                        .border(1.0)
+                        .border_color(Color::rgb8(200, 200, 200));
+
+                    if has_dialog.get().is_some() {
+                        base.background(Color::WHITE)
+                            .color(Color::rgb8(60, 60, 60))
+                            .hover(|s| s.background(Color::rgb8(245, 245, 245)))
+                    } else {
+                        base.background(Color::rgb8(240, 240, 240))
+                            .color(Color::rgb8(180, 180, 180))
+                    }
+                })
+                .action(move || {
+                    if state_for_reload.current_dialog.get().is_some() {
+                        operations::reload_current_dialog(state_for_reload.clone());
+                    }
+                })
+        },
 
         // Spacer
         empty().style(|s| s.flex_grow(1.0)),

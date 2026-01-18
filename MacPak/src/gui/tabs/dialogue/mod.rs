@@ -13,9 +13,10 @@ mod context_menu;
 pub mod operations;
 
 use floem::prelude::*;
+use floem::reactive::create_effect;
 use floem::style::{FlexDirection, Position};
 use floem::text::Weight;
-use crate::gui::state::{AppState, ConfigState, DialogueState};
+use crate::gui::state::{AppState, ConfigState, DialogSource, DialogueState};
 
 pub use operations::{open_dialog_folder, load_dialog_from_pak};
 
@@ -23,6 +24,36 @@ pub use operations::{open_dialog_folder, load_dialog_from_pak};
 pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigState) -> impl IntoView {
     let state_for_content = state.clone();
     let state_for_overlay = state.clone();
+    let state_for_pending = state.clone();
+
+    // Watch for pending load - when caches are ready, load the dialog
+    create_effect(move |_| {
+        let pending = state_for_pending.pending_load.get();
+        let ready = state_for_pending.pending_caches_ready.get();
+
+        if let Some(source) = pending {
+            if ready {
+                // Clear pending state first
+                state_for_pending.pending_load.set(None);
+                state_for_pending.pending_caches_ready.set(false);
+
+                // Now load the dialog
+                match source {
+                    DialogSource::PakFile { pak_path, internal_path } => {
+                        operations::load_dialog_from_pak(
+                            state_for_pending.clone(),
+                            pak_path,
+                            internal_path,
+                        );
+                    }
+                    DialogSource::LocalFile(_path) => {
+                        // For local files, use the entry-based loading
+                        state_for_pending.status_message.set("Loading not supported for local files from Search".to_string());
+                    }
+                }
+            }
+        }
+    });
 
     // Main content
     let main_content = v_stack((

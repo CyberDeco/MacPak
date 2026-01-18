@@ -14,7 +14,7 @@ mod toolbar;
 
 use floem::prelude::*;
 
-use crate::gui::state::{AppState, ConfigState, EditorTabsState, SearchState};
+use crate::gui::state::{AppState, ConfigState, DialogueState, EditorTabsState, SearchState};
 
 use all_matches_dialog::all_matches_dialog;
 use operations::{progress_overlay, search_overlay};
@@ -26,12 +26,13 @@ pub fn search_tab(
     search_state: SearchState,
     config_state: ConfigState,
     editor_tabs_state: EditorTabsState,
+    dialogue_state: DialogueState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
     let active_filter = search_state.active_filter;
     v_stack((
         search_toolbar(search_state.clone(), config_state),
-        search_results(search_state.clone(), active_filter, editor_tabs_state, active_tab),
+        search_results(search_state.clone(), active_filter, editor_tabs_state, dialogue_state, active_tab),
         search_status_bar(search_state.clone()),
         // Progress dialog overlay for indexing - absolutely positioned
         progress_overlay(search_state.clone()),
