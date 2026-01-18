@@ -116,6 +116,16 @@ impl EditorTabsState {
         }
     }
 
+    /// Apply persisted state (call after new())
+    pub fn apply_persisted(&self, persisted: &super::PersistedEditorState) {
+        // Restore show_line_numbers preference
+        self.show_line_numbers.set(persisted.show_line_numbers);
+
+        // Note: File reopening should happen asynchronously after UI is ready
+        // For now, we just store the preference. A future enhancement could
+        // reopen the files listed in persisted.open_files
+    }
+
     /// Get the currently active tab
     pub fn active_tab(&self) -> Option<EditorTab> {
         let tabs = self.tabs.get();

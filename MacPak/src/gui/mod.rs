@@ -33,32 +33,49 @@ use utils::config_dialog;
 
 /// Run the MacPak GUI application
 pub fn run_app() {
+    // Load persisted config for window size
+    let persisted = state::PersistedConfig::load();
+    let window_width = persisted.window.width;
+    let window_height = persisted.window.height;
+
     Application::new()
         .window(
-            move |_| app_view(),
+            move |_| app_view(persisted),
             Some(
                 WindowConfig::default()
-                    .size((1200.0, 850.0))
+                    .size((window_width, window_height))
                     .title("MacPak"),
             ),
         )
         .run();
 }
 
-fn app_view() -> impl IntoView {
+fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     // Initialize all state
     let app_state = AppState::new();
+    app_state.active_tab.set(persisted.active_tab);
+
     let config_state = ConfigState::new();
     init_config_state(config_state.clone());  // For recent files tracking
     init_theme(config_state.theme.get());     // Initialize global theme signal
+
     let editor_tabs_state = EditorTabsState::new();
+    editor_tabs_state.apply_persisted(&persisted.editor);
+
     let browser_state = BrowserState::new();
+    browser_state.apply_persisted(&persisted.browser);
+
     let pak_ops_state = PakOpsState::new();
+
     let search_state = SearchState::new();
+    search_state.apply_persisted(&persisted.search);
+
     let gr2_state = Gr2State::new();
     let vt_state = VirtualTexturesState::new();
     let dyes_state = DyesState::new();
+
     let dialogue_state = DialogueState::new();
+    dialogue_state.apply_persisted(&persisted.dialogue);
 
     let active_tab = app_state.active_tab;
     let config_state_for_keyboard = config_state.clone();
@@ -74,6 +91,13 @@ fn app_view() -> impl IntoView {
     let vt_state_for_keyboard = vt_state.clone();
     let dyes_state_for_keyboard = dyes_state.clone();
     let config_state_for_dialogue = config_state.clone();
+
+    // Clones for save_session on close
+    let app_state_for_close = app_state.clone();
+    let browser_state_for_close = browser_state.clone();
+    let search_state_for_close = search_state.clone();
+    let dialogue_state_for_close = dialogue_state.clone();
+    let config_state_for_close = config_state.clone();
 
     v_stack((
         // Tab bar
@@ -121,6 +145,15 @@ fn app_view() -> impl IntoView {
         };
 
         if should_quit {
+            // Save session state before exiting
+            config_state_for_close.save_session(
+                &app_state_for_close,
+                &editor_tabs_for_close,
+                &browser_state_for_close,
+                &search_state_for_close,
+                &dialogue_state_for_close,
+            );
+
             // Kill any running preview process before exiting
             kill_preview_process();
             // Clean up temporary files

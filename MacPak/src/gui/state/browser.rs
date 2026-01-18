@@ -79,6 +79,30 @@ impl BrowserState {
             loading_message: RwSignal::new(String::new()),
         }
     }
+
+    /// Apply persisted state (call after new())
+    pub fn apply_persisted(&self, persisted: &super::PersistedBrowserState) {
+        // Restore sort preferences
+        let sort_column = match persisted.sort_column.as_str() {
+            "Type" => SortColumn::Type,
+            "Size" => SortColumn::Size,
+            "Modified" => SortColumn::Modified,
+            _ => SortColumn::Name,
+        };
+        self.sort_column.set(sort_column);
+        self.sort_ascending.set(persisted.sort_ascending);
+
+        // Restore layout
+        self.file_list_width.set(persisted.file_list_width);
+
+        // Restore filter
+        if !persisted.type_filter.is_empty() {
+            self.type_filter.set(persisted.type_filter.clone());
+        }
+
+        // Note: current_path restoration would require loading the directory,
+        // which should happen after the UI is ready
+    }
 }
 
 impl Default for BrowserState {

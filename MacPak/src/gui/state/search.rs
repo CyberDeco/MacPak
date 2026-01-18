@@ -117,6 +117,30 @@ impl SearchState {
         }
     }
 
+    /// Apply persisted state (call after new())
+    pub fn apply_persisted(&self, persisted: &super::PersistedSearchState) {
+        // Restore last query
+        if !persisted.last_query.is_empty() {
+            self.query.set(persisted.last_query.clone());
+        }
+
+        // Restore sort preferences
+        let sort_column = match persisted.sort_column.as_str() {
+            "Type" => SearchSortColumn::Type,
+            "Pak" => SearchSortColumn::Pak,
+            "Path" => SearchSortColumn::Path,
+            _ => SearchSortColumn::Name,
+        };
+        self.sort_column.set(sort_column);
+
+        let sort_direction = if persisted.sort_ascending {
+            SortDirection::Ascending
+        } else {
+            SortDirection::Descending
+        };
+        self.sort_direction.set(sort_direction);
+    }
+
     /// Check if the index has been built
     pub fn is_indexed(&self) -> bool {
         matches!(self.index_status.get(), IndexStatus::Ready { .. })

@@ -280,6 +280,22 @@ impl DialogueState {
         }
     }
 
+    /// Apply persisted state (call after new())
+    pub fn apply_persisted(&self, persisted: &super::PersistedDialogueState) {
+        // Restore language preference
+        if !persisted.language.is_empty() {
+            self.language.set(persisted.language.clone());
+        }
+
+        // Restore UI preferences
+        self.show_flags.set(persisted.show_flags);
+        self.show_tags.set(persisted.show_tags);
+        self.show_editor_data.set(persisted.show_editor_data);
+
+        // Restore layout
+        self.browser_panel_width.set(persisted.browser_panel_width);
+    }
+
     /// Clear the current dialog and display
     pub fn clear_dialog(&self) {
         self.current_dialog.set(None);
