@@ -507,8 +507,10 @@ impl SearchIndex {
     /// Progress callback receives (current, total, message).
     pub fn export_index_with_progress<F>(&self, dir: &Path, progress: F) -> Result<()>
     where
-        F: Fn(usize, usize, &str),
+        F: Fn(usize, usize, &str) + Sync,
     {
+        use tantivy::TantivyDocument;
+
         // Check that we have a fulltext index
         if self.fulltext.is_none() {
             return Err(crate::error::Error::SearchError(
@@ -534,35 +536,45 @@ impl SearchIndex {
             .map_err(|e| crate::error::Error::SearchError(format!("Failed to serialize metadata: {e}")))?;
         std::fs::write(&meta_path, meta_json)?;
 
-        // Create a new index in the directory and copy all documents
+        // Create a new index in the directory with larger heap for faster writes
         let ft = self.fulltext.as_ref().unwrap();
         let dest_index = FullTextIndex::create_in_dir(&dir.join("tantivy"))?;
-        let mut writer = dest_index.writer(100_000_000)?;
+        let mut writer = dest_index.writer(500_000_000)?; // 500MB heap for faster batching
 
         // Count total documents for progress
         let total_docs = ft.num_docs() as usize;
-        progress(0, total_docs, "Exporting documents...");
+        progress(0, total_docs, "Reading documents...");
 
-        // Read all documents from source and write to destination
+        // Read all documents from segments in parallel using rayon
         let searcher = ft.searcher();
-        let mut exported = 0usize;
-        for segment_reader in searcher.segment_readers() {
-            let store_reader = segment_reader
-                .get_store_reader(1)
-                .map_err(|e| crate::error::Error::SearchError(format!("Failed to get store reader: {e}")))?;
-            for doc_id in 0..segment_reader.num_docs() {
-                if let Ok(doc) = store_reader.get(doc_id) {
-                    writer.add_document(doc)
-                        .map_err(|e| crate::error::Error::SearchError(format!("Failed to copy doc: {e}")))?;
-                    exported += 1;
-                    if exported % 1000 == 0 {
-                        progress(exported, total_docs, "Exporting documents...");
-                    }
-                }
+        let segment_readers: Vec<_> = searcher.segment_readers().iter().collect();
+
+        // Parallel read: each segment is processed independently
+        let all_docs: Vec<TantivyDocument> = segment_readers
+            .par_iter()
+            .flat_map(|segment_reader| {
+                let store_reader = match segment_reader.get_store_reader(16) { // Larger cache
+                    Ok(r) => r,
+                    Err(_) => return Vec::new(),
+                };
+                (0..segment_reader.num_docs())
+                    .filter_map(|doc_id| store_reader.get(doc_id).ok())
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        progress(all_docs.len(), total_docs, "Writing documents...");
+
+        // Sequential write (IndexWriter is not thread-safe for concurrent adds)
+        for (i, doc) in all_docs.into_iter().enumerate() {
+            writer.add_document(doc)
+                .map_err(|e| crate::error::Error::SearchError(format!("Failed to copy doc: {e}")))?;
+            if i % 5000 == 0 {
+                progress(i, total_docs, "Writing documents...");
             }
         }
 
-        progress(exported, total_docs, "Committing index...");
+        progress(total_docs, total_docs, "Committing index...");
         writer
             .commit()
             .map_err(|e| crate::error::Error::SearchError(format!("Export commit failed: {e}")))?;

@@ -1,5 +1,6 @@
 //! Search operations and background processing
 
+use std::collections::HashSet;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -219,11 +220,12 @@ pub fn perform_search(state: SearchState) {
         };
         let lock_time = lock_start.elapsed();
 
-        // Fulltext search using Tantivy index with progress reporting
+        // Combined search: fulltext (content matches) + filename/path (all file types)
         SEARCH_PROGRESS.set_active(true);
         SEARCH_PROGRESS.set(0, 1, "Searching...".to_string());
 
-        let results: Vec<SearchResult> = if idx.has_fulltext() {
+        // 1. Get fulltext results (text files with content matches)
+        let fulltext_results: Vec<SearchResult> = if idx.has_fulltext() {
             let search_start = Instant::now();
             let progress_callback = |current: usize, total: usize, name: &str| {
                 SEARCH_PROGRESS.set(current, total, name.to_string());
@@ -232,14 +234,12 @@ pub fn perform_search(state: SearchState) {
             let search_time = search_start.elapsed();
             let result_count = ft_results.len();
 
-            let transform_start = Instant::now();
             let results: Vec<SearchResult> = ft_results
                 .into_iter()
                 .filter(|r| active_filter.map_or(true, |ft| {
                     r.file_type.to_lowercase() == ft.display_name().to_lowercase()
                 }))
                 .map(|r| {
-                    // Snippet is already processed by the fulltext module
                     let match_count = if r.match_count > 0 { Some(r.match_count) } else { None };
                     SearchResult {
                         name: r.name,
@@ -254,22 +254,61 @@ pub fn perform_search(state: SearchState) {
                     }
                 })
                 .collect();
-            let transform_time = transform_start.elapsed();
 
             eprintln!(
-                "Search timing: lock={:?}, tantivy={:?} ({} results), transform={:?} ({} final)",
-                lock_time, search_time, result_count, transform_time, results.len()
+                "Search timing: lock={:?}, fulltext={:?} ({} raw, {} filtered)",
+                lock_time, search_time, result_count, results.len()
             );
 
             results
         } else {
-            eprintln!("Search: no fulltext index available");
             Vec::new()
         };
 
+        // 2. Get filename/path matches (ALL file types including images, audio, models)
+        let filename_start = Instant::now();
+        let filename_results: Vec<SearchResult> = idx
+            .search_path(&query, active_filter)
+            .into_iter()
+            .take(MAX_RESULTS)
+            .map(|f| SearchResult::from_indexed_file(f))
+            .collect();
+        let filename_time = filename_start.elapsed();
+        eprintln!(
+            "Search timing: filename={:?} ({} results)",
+            filename_time, filename_results.len()
+        );
+
+        // 3. Merge results with deduplication (fulltext results take priority - they have snippets)
+        let merge_start = Instant::now();
+        let mut seen_paths: HashSet<String> = HashSet::new();
+        let mut merged: Vec<SearchResult> = Vec::with_capacity(
+            fulltext_results.len() + filename_results.len()
+        );
+
+        // Add fulltext results first (they have context snippets)
+        for result in fulltext_results {
+            if seen_paths.insert(result.path.clone()) {
+                merged.push(result);
+            }
+        }
+
+        // Add filename matches that weren't already found via fulltext
+        for result in filename_results {
+            if seen_paths.insert(result.path.clone()) {
+                merged.push(result);
+            }
+        }
+
+        let merge_time = merge_start.elapsed();
+        eprintln!(
+            "Search timing: merge={:?} ({} total results)",
+            merge_time, merged.len()
+        );
+
         SEARCH_PROGRESS.set_active(false);
         eprintln!("Search total: {:?}", total_start.elapsed());
-        send_results(SearchMessage::Results(results));
+        send_results(SearchMessage::Results(merged));
     });
 }
 
@@ -596,6 +635,29 @@ pub fn export_index(state: SearchState) {
         Some(d) => d,
         None => return,
     };
+
+    // Check if an index already exists at this location
+    let metadata_exists = dest.join("metadata.json").exists();
+    let tantivy_exists = dest.join("tantivy").exists();
+
+    if metadata_exists || tantivy_exists {
+        let confirmed = rfd::MessageDialog::new()
+            .set_title("Overwrite Existing Index?")
+            .set_description(&format!(
+                "An index already exists at:\n{}\n\nDo you want to overwrite it?",
+                dest.display()
+            ))
+            .set_buttons(rfd::MessageButtons::YesNo)
+            .show();
+
+        if !matches!(confirmed, rfd::MessageDialogResult::Yes) {
+            return;
+        }
+
+        // Clean up existing index files before export
+        let _ = std::fs::remove_file(dest.join("metadata.json"));
+        let _ = std::fs::remove_dir_all(dest.join("tantivy"));
+    }
 
     let index = state.index.clone();
     let show_progress = state.show_progress;
