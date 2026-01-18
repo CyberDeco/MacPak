@@ -239,8 +239,8 @@ pub fn perform_search(state: SearchState) {
                     r.file_type.to_lowercase() == ft.display_name().to_lowercase()
                 }))
                 .map(|r| {
-                    // Strip HTML tags and decode entities from snippet for display
-                    let context = r.snippet.map(|s| decode_html_entities(&s));
+                    // Snippet is already processed by the fulltext module
+                    let match_count = if r.match_count > 0 { Some(r.match_count) } else { None };
                     SearchResult {
                         name: r.name,
                         path: r.path,
@@ -249,8 +249,8 @@ pub fn perform_search(state: SearchState) {
                             .unwrap_or_default(),
                         file_type: r.file_type,
                         pak_path: r.pak_file,
-                        context,
-                        line_number: None,
+                        context: r.snippet,
+                        match_count,
                     }
                 })
                 .collect();
@@ -271,53 +271,6 @@ pub fn perform_search(state: SearchState) {
         eprintln!("Search total: {:?}", total_start.elapsed());
         send_results(SearchMessage::Results(results));
     });
-}
-
-/// Decode HTML entities in a single pass
-fn decode_html_entities(s: &str) -> String {
-    let mut result = String::with_capacity(s.len());
-    let mut chars = s.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        if c == '<' {
-            // Skip HTML tags like <b> and </b>
-            while let Some(&next) = chars.peek() {
-                chars.next();
-                if next == '>' {
-                    break;
-                }
-            }
-        } else if c == '&' {
-            // Collect entity
-            let mut entity = String::new();
-            while let Some(&next) = chars.peek() {
-                if next == ';' {
-                    chars.next();
-                    break;
-                }
-                entity.push(chars.next().unwrap());
-            }
-            // Decode entity
-            match entity.as_str() {
-                "quot" => result.push('"'),
-                "apos" => result.push('\''),
-                "lt" => result.push('<'),
-                "gt" => result.push('>'),
-                "amp" => result.push('&'),
-                "#x27" => result.push('\''),
-                "#39" => result.push('\''),
-                _ => {
-                    // Unknown entity, keep as-is
-                    result.push('&');
-                    result.push_str(&entity);
-                    result.push(';');
-                }
-            }
-        } else {
-            result.push(c);
-        }
-    }
-    result
 }
 
 /// Copy text to system clipboard (macOS)

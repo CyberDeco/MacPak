@@ -10,7 +10,6 @@ use MacLarian::search::FileType;
 use crate::gui::state::{EditorTabsState, IndexStatus, SearchResult, SearchState};
 
 use super::context_menu::show_search_result_context_menu;
-use super::operations::copy_to_clipboard;
 
 /// Fixed row height for virtual list (must accommodate context snippets from deep search)
 const RESULT_ROW_HEIGHT: f64 = 72.0;
@@ -130,6 +129,7 @@ pub fn search_results(
             )
             .style(|s| s.width_full().flex_col()),
         )
+        .scroll_style(|s| s.handle_thickness(10.0))
         .style(|s| {
             s.width_full()
                 .flex_grow(1.0)
@@ -154,12 +154,11 @@ fn search_result_row(
     let icon = get_type_icon(&result.file_type);
     let has_context = result.context.is_some();
     let context_text = result.context.clone().unwrap_or_default();
-    let line_num = result.line_number;
+    let match_count = result.match_count;
 
     // Clone values that need to be used in multiple closures
     let name = result.name.clone();
     let path_display = result.path.clone();
-    let path_copy = result.path.clone();
     let path_for_select = result.path.clone();
     let path_for_select_check = result.path.clone();
     let pak_file = result.pak_file.clone();
@@ -215,32 +214,39 @@ fn search_result_row(
                         .border_radius(4.0)
                         .flex_shrink(0.0)
                 }),
-
-            // Actions - fixed width
-            button("Copy")
-                .style(|s| {
-                    s.padding_horiz(8.0)
-                        .font_size(12.0)
-                        .background(Color::rgb8(230, 230, 230))
-                        .border_radius(4.0)
-                        .flex_shrink(0.0)
-                })
-                .action(move || {
-                    copy_to_clipboard(&path_copy);
-                }),
         ))
         .style(|s| s.width_full().gap(8.0).items_center().min_width(0.0)),
 
-        // Context snippet (if present)
+        // Context snippet with match count badge, or filename-only indicator
         dyn_container(
-            move || has_context,
-            move |show| {
-                if show {
-                    let line_label = line_num.map(|n| format!("Line {}: ", n)).unwrap_or_default();
+            move || (has_context, match_count),
+            move |(show_context, count)| {
+                if show_context {
                     let ctx = context_text.clone();
                     h_stack((
-                        label(move || line_label.clone())
-                            .style(|s| s.font_size(11.0).color(Color::rgb8(100, 100, 100)).flex_shrink(0.0)),
+                        // Match count badge (left of snippet)
+                        dyn_container(
+                            move || count,
+                            move |c| {
+                                if let Some(n) = c {
+                                    label(move || format!("{} matches", n))
+                                        .style(|s| {
+                                            s.font_size(10.0)
+                                                .color(Color::rgb8(80, 80, 80))
+                                                .padding_horiz(6.0)
+                                                .padding_vert(2.0)
+                                                .background(Color::rgb8(220, 230, 245))
+                                                .border_radius(8.0)
+                                                .margin_right(8.0)
+                                                .flex_shrink(0.0)
+                                        })
+                                        .into_any()
+                                } else {
+                                    empty().into_any()
+                                }
+                            },
+                        ),
+                        // Snippet text
                         label(move || ctx.clone())
                             .style(|s| {
                                 s.font_size(11.0)
@@ -250,12 +256,26 @@ fn search_result_row(
                                     .border_radius(2.0)
                                     .text_ellipsis()
                                     .min_width(0.0)
+                                    .flex_grow(1.0)
                             }),
                     ))
-                    .style(|s| s.margin_left(30.0).margin_top(4.0).min_width(0.0))
+                    .style(|s| s.margin_left(30.0).margin_top(4.0).min_width(0.0).items_center())
                     .into_any()
                 } else {
-                    empty().into_any()
+                    // Filename-only match indicator (same style as match count badge)
+                    label(|| "filename match")
+                        .style(|s| {
+                            s.font_size(10.0)
+                                .font_style(floem::text::Style::Italic)
+                                .color(Color::rgb8(100, 100, 100))
+                                .padding_horiz(6.0)
+                                .padding_vert(2.0)
+                                .background(Color::rgb8(235, 235, 235))
+                                .border_radius(8.0)
+                                .margin_left(30.0)
+                                .margin_top(4.0)
+                        })
+                        .into_any()
                 }
             },
         ),

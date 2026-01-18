@@ -157,8 +157,8 @@ pub struct SearchResult {
     pub pak_path: std::path::PathBuf,
     /// Match context (for content search)
     pub context: Option<String>,
-    /// Line number (for content search)
-    pub line_number: Option<usize>,
+    /// Number of matches in the file (for content search)
+    pub match_count: Option<usize>,
 }
 
 impl SearchResult {
@@ -174,19 +174,19 @@ impl SearchResult {
             file_type: file.file_type.display_name().to_string(),
             pak_path: file.pak_file.clone(),
             context: None,
-            line_number: None,
+            match_count: None,
         }
     }
 
     /// Create from a content match
     pub fn from_content_match(
         file: &IndexedFile,
-        line_number: usize,
         context: String,
+        match_count: usize,
     ) -> Self {
         let mut result = Self::from_indexed_file(file);
         result.context = Some(context);
-        result.line_number = Some(line_number);
+        result.match_count = Some(match_count);
         result
     }
 }

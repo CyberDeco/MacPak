@@ -58,8 +58,8 @@ fn extract_lsf_text(bytes: &[u8]) -> String {
         }
     }
 
-    // Join with spaces for tokenization
-    text_parts.join(" ")
+    // Join with newlines so each value is a separate "line" for match counting
+    text_parts.join("\n")
 }
 
 /// Extract text content from UTF-8 encoded files.

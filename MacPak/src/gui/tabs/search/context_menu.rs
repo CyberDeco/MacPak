@@ -35,14 +35,17 @@ pub fn show_search_result_context_menu(
         );
     }
 
-    // Show All Matches in File
-    menu = menu.entry(
-        MenuItem::new("Show All Matches")
-            .action(move || {
-                state_for_matches.all_matches_file.set(Some(result_for_matches.clone()));
-                state_for_matches.show_all_matches.set(true);
-            })
-    );
+    // Show All Matches in File (only if there are content matches)
+    let has_content_matches = result.match_count.map_or(false, |n| n > 0);
+    if has_content_matches {
+        menu = menu.entry(
+            MenuItem::new("Show All Matches")
+                .action(move || {
+                    state_for_matches.all_matches_file.set(Some(result_for_matches.clone()));
+                    state_for_matches.show_all_matches.set(true);
+                })
+        );
+    }
 
     menu = menu.separator();
 

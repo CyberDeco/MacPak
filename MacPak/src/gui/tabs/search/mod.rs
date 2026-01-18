@@ -6,6 +6,7 @@
 //! - Quick search: Filename/path matching (instant, no extraction)
 //! - Deep search: Content matching (extracts and searches directly)
 
+mod all_matches_dialog;
 mod context_menu;
 mod operations;
 mod results;
@@ -15,6 +16,7 @@ use floem::prelude::*;
 
 use crate::gui::state::{AppState, ConfigState, EditorTabsState, SearchState};
 
+use all_matches_dialog::all_matches_dialog;
 use operations::{progress_overlay, search_overlay};
 use results::{search_results, search_status_bar};
 use toolbar::search_toolbar;
@@ -34,7 +36,9 @@ pub fn search_tab(
         // Progress dialog overlay for indexing - absolutely positioned
         progress_overlay(search_state.clone()),
         // Search in progress overlay - absolutely positioned
-        search_overlay(search_state),
+        search_overlay(search_state.clone()),
+        // All matches dialog - absolutely positioned
+        all_matches_dialog(search_state),
     ))
     .style(|s| {
         s.width_full()

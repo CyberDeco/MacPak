@@ -8,7 +8,6 @@ use std::sync::Arc;
 use tantivy::collector::TopDocs;
 use tantivy::query::QueryParser;
 use tantivy::schema::{Field, Schema, Value, STORED, STRING, TEXT};
-use tantivy::snippet::SnippetGenerator;
 use tantivy::{doc, Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument};
 
 use crate::error::{Error, Result};
@@ -40,8 +39,10 @@ pub struct FullTextResult {
     pub file_type: String,
     /// Relevance score (higher = more relevant)
     pub score: f32,
-    /// Snippet showing match context (with <b> tags around matched terms)
+    /// Snippet showing match context
     pub snippet: Option<String>,
+    /// Number of matches in the file (capped at 99)
+    pub match_count: usize,
 }
 
 impl FullTextIndex {
@@ -217,11 +218,10 @@ impl FullTextIndex {
             .map_err(|e| Error::SearchError(format!("Search failed: {e}")))?;
 
         let total = top_docs.len();
-        progress(0, total, "Generating snippets...");
+        progress(0, total, "Processing results...");
 
-        // Create snippet generator for content field
-        let snippet_generator = SnippetGenerator::create(&searcher, &parsed_query, self.content_field)
-            .map_err(|e| Error::SearchError(format!("Failed to create snippet generator: {e}")))?;
+        // Extract search terms from the query for custom snippet generation
+        let search_terms = extract_search_terms(query);
 
         let mut results = Vec::with_capacity(total);
 
@@ -253,14 +253,13 @@ impl FullTextIndex {
                 .unwrap_or("")
                 .to_string();
 
-            // Generate snippet with match context
-            let snippet = snippet_generator.snippet_from_doc(&doc);
-            let snippet_text = if snippet.is_empty() {
-                None
-            } else {
-                // Convert to HTML with <b> tags around matched terms
-                Some(snippet.to_html())
-            };
+            // Get content and generate snippet with match count using custom finder
+            let content = doc
+                .get_first(self.content_field)
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+
+            let (snippet_text, match_count) = find_first_match_and_count(content, &search_terms, 150);
 
             // Report progress every 50 docs
             if i % 50 == 0 {
@@ -274,6 +273,7 @@ impl FullTextIndex {
                 file_type,
                 score,
                 snippet: snippet_text,
+                match_count,
             });
         }
 
@@ -300,3 +300,151 @@ impl Default for FullTextIndex {
 
 /// Thread-safe wrapper for FullTextIndex
 pub type SharedFullTextIndex = Arc<FullTextIndex>;
+
+/// Extract search terms from a query string, skipping boolean operators
+fn extract_search_terms(query: &str) -> Vec<String> {
+    query
+        .split_whitespace()
+        .filter(|w| !matches!(w.to_uppercase().as_str(), "AND" | "OR" | "NOT"))
+        .filter(|w| w.len() >= 2)
+        .map(|w| {
+            // Trim non-alphanumeric characters from start/end (quotes, parens, etc.)
+            w.trim_matches(|c: char| !c.is_alphanumeric() && c != '_')
+                .to_lowercase()
+        })
+        .filter(|w| !w.is_empty())
+        .collect()
+}
+
+/// Find the first match and count lines containing matches
+///
+/// Returns (snippet around first match, number of lines with matches capped at 99)
+fn find_first_match_and_count(
+    content: &str,
+    terms: &[String],
+    max_snippet_len: usize,
+) -> (Option<String>, usize) {
+    if terms.is_empty() || content.is_empty() {
+        return (None, 0);
+    }
+
+    let content_lower = content.to_lowercase();
+
+    // Find the first term that matches
+    for term in terms {
+        if let Some(first_pos) = content_lower.find(term) {
+            // Count lines containing the term (matches "Show All Matches" behavior)
+            let count = content_lower
+                .lines()
+                .filter(|line| line.contains(term.as_str()))
+                .count();
+
+            // Extract snippet around first match
+            let snippet = extract_snippet_around(content, first_pos, term.len(), max_snippet_len);
+
+            return (Some(snippet), count);
+        }
+    }
+
+    (None, 0)
+}
+
+/// Extract a snippet centered around a match position
+fn extract_snippet_around(
+    content: &str,
+    match_pos: usize,
+    match_len: usize,
+    max_len: usize,
+) -> String {
+    // Work with bytes for position calculations, but respect char boundaries
+    let bytes = content.as_bytes();
+    let content_len = bytes.len();
+
+    if content_len <= max_len {
+        // Content fits entirely, just collapse whitespace
+        return collapse_to_single_line(content);
+    }
+
+    // Calculate context window around the match
+    let half_context = (max_len.saturating_sub(match_len)) / 2;
+
+    // Determine start position (expand back from match)
+    let mut start = match_pos.saturating_sub(half_context);
+
+    // Determine end position (expand forward from match end)
+    let match_end = match_pos + match_len;
+    let mut end = (match_end + half_context).min(content_len);
+
+    // Adjust to char boundaries
+    while start > 0 && !content.is_char_boundary(start) {
+        start -= 1;
+    }
+    while end < content_len && !content.is_char_boundary(end) {
+        end += 1;
+    }
+
+    // Try to start at a word boundary (look for whitespace)
+    let snippet_start = if start > 0 {
+        // Find nearest whitespace before start
+        let search_range = &content[start.saturating_sub(20)..start];
+        if let Some(ws_pos) = search_range.rfind(|c: char| c.is_whitespace()) {
+            start.saturating_sub(20) + ws_pos + 1
+        } else {
+            start
+        }
+    } else {
+        0
+    };
+
+    // Try to end at a word boundary
+    let snippet_end = if end < content_len {
+        // Find nearest whitespace after end
+        let search_end = (end + 20).min(content_len);
+        while !content.is_char_boundary(search_end.min(content_len)) && search_end > end {
+            // This shouldn't happen often, but be safe
+        }
+        let search_range = &content[end..search_end.min(content_len)];
+        if let Some(ws_pos) = search_range.find(|c: char| c.is_whitespace()) {
+            end + ws_pos
+        } else {
+            end
+        }
+    } else {
+        content_len
+    };
+
+    // Build the snippet
+    let mut snippet = String::with_capacity(max_len + 10);
+
+    if snippet_start > 0 {
+        snippet.push_str("...");
+    }
+
+    snippet.push_str(&collapse_to_single_line(&content[snippet_start..snippet_end]));
+
+    if snippet_end < content_len {
+        snippet.push_str("...");
+    }
+
+    snippet
+}
+
+/// Collapse whitespace and newlines to single spaces
+fn collapse_to_single_line(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut last_was_space = false;
+
+    for c in s.chars() {
+        if c.is_whitespace() {
+            if !last_was_space {
+                result.push(' ');
+                last_was_space = true;
+            }
+        } else {
+            result.push(c);
+            last_was_space = false;
+        }
+    }
+
+    result.trim().to_string()
+}
