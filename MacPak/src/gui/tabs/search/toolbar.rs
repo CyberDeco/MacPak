@@ -9,7 +9,7 @@ use MacLarian::search::FileType;
 
 use crate::gui::state::{ConfigState, IndexStatus, SearchState};
 
-use super::operations::{build_index, find_pak_files, perform_search};
+use super::operations::{build_index, export_index, extract_selected_results, find_pak_files, import_index, perform_search};
 
 pub fn search_toolbar(state: SearchState, config_state: ConfigState) -> impl IntoView {
     let query = state.query;
@@ -43,7 +43,17 @@ pub fn search_toolbar(state: SearchState, config_state: ConfigState) -> impl Int
         // Filter buttons
         filter_buttons(active_filter),
 
+        separator(),
+
+        // Extract selected button
+        extract_selected_button(state.clone()),
+
         empty().style(|s| s.flex_grow(1.0)),
+
+        // Export/Import buttons
+        export_import_buttons(state.clone(), index_status),
+
+        separator(),
 
         // Rebuild index button (uses BG3 path from preferences)
         rebuild_index_button(state.clone(), config_state, index_status),
@@ -161,6 +171,7 @@ fn rebuild_index_button(state: SearchState, config_state: ConfigState, index_sta
         move || (index_status.get(), bg3_path.get()),
         move |(status, path)| {
             let is_building = matches!(status, IndexStatus::Building { .. });
+            let is_ready = matches!(status, IndexStatus::Ready { .. });
             let state_clone = state.clone();
             let path_valid = !path.is_empty() && std::path::Path::new(&path).is_dir();
 
@@ -176,7 +187,10 @@ fn rebuild_index_button(state: SearchState, config_state: ConfigState, index_sta
                     .into_any()
             } else {
                 let path_for_action = path.clone();
-                button("Build Index")
+                // Change label based on whether index already exists
+                let button_label = if is_ready { "Rebuild Index" } else { "Build Index" };
+
+                button(button_label)
                     .disabled(move || !path_valid)
                     .style(move |s| {
                         let bg = if path_valid {
@@ -191,11 +205,27 @@ fn rebuild_index_button(state: SearchState, config_state: ConfigState, index_sta
                             .hover(|s| s.background(Color::rgb8(56, 142, 60)))
                     })
                     .action(move || {
-                        // Find PAK files in the configured BG3 data path
-                        let paks = find_pak_files(&PathBuf::from(&path_for_action));
-                        if !paks.is_empty() {
-                            state_clone.pak_paths.set(paks);
-                            build_index(state_clone.clone());
+                        // Show confirmation dialog if index already exists
+                        let should_build = if is_ready {
+                            rfd::MessageDialog::new()
+                                .set_title("Rebuild Index?")
+                                .set_description(
+                                    "An index already exists. Rebuilding will take some time.\n\n\
+                                    Do you want to rebuild the index?"
+                                )
+                                .set_buttons(rfd::MessageButtons::YesNo)
+                                .show() == rfd::MessageDialogResult::Yes
+                        } else {
+                            true
+                        };
+
+                        if should_build {
+                            // Find PAK files in the configured BG3 data path
+                            let paks = find_pak_files(&PathBuf::from(&path_for_action));
+                            if !paks.is_empty() {
+                                state_clone.pak_paths.set(paks);
+                                build_index(state_clone.clone());
+                            }
                         }
                     })
                     .into_any()
@@ -211,4 +241,106 @@ pub fn separator() -> impl IntoView {
             .background(Color::rgb8(200, 200, 200))
             .margin_horiz(4.0)
     })
+}
+
+fn extract_selected_button(state: SearchState) -> impl IntoView {
+    let selected = state.selected_results;
+    let state_for_action = state;
+
+    dyn_container(
+        move || selected.get().len(),
+        move |count| {
+            let has_selection = count > 0;
+            let state_clone = state_for_action.clone();
+
+            button(format!("Extract Selected ({})", count))
+                .disabled(move || !has_selection)
+                .style(move |s| {
+                    let bg = if has_selection {
+                        Color::rgb8(33, 150, 243)
+                    } else {
+                        Color::rgb8(180, 180, 180)
+                    };
+                    s.padding_horiz(10.0)
+                        .padding_vert(4.0)
+                        .font_size(12.0)
+                        .background(bg)
+                        .color(Color::WHITE)
+                        .border_radius(4.0)
+                        .hover(|s| s.background(Color::rgb8(25, 118, 210)))
+                })
+                .action(move || {
+                    extract_selected_results(state_clone.clone());
+                })
+                .into_any()
+        },
+    )
+}
+
+fn export_import_buttons(state: SearchState, index_status: RwSignal<IndexStatus>) -> impl IntoView {
+    let state_export = state.clone();
+    let state_import = state;
+
+    h_stack((
+        // Export button (only enabled when index is ready)
+        dyn_container(
+            move || index_status.get(),
+            move |status| {
+                let is_ready = matches!(status, IndexStatus::Ready { .. });
+                let state_for_btn = state_export.clone();
+
+                button("Export")
+                    .disabled(move || !is_ready)
+                    .style(move |s| {
+                        let bg = if is_ready {
+                            Color::rgb8(100, 100, 100)
+                        } else {
+                            Color::rgb8(180, 180, 180)
+                        };
+                        s.padding_horiz(10.0)
+                            .padding_vert(4.0)
+                            .font_size(12.0)
+                            .background(bg)
+                            .color(Color::WHITE)
+                            .border_radius(4.0)
+                            .hover(|s| s.background(Color::rgb8(80, 80, 80)))
+                    })
+                    .action(move || {
+                        export_index(state_for_btn.clone());
+                    })
+                    .into_any()
+            },
+        ),
+
+        // Import button (only enabled when no index)
+        dyn_container(
+            move || index_status.get(),
+            move |status| {
+                let is_ready = matches!(status, IndexStatus::Ready { .. });
+                let state_for_btn = state_import.clone();
+
+                button("Import")
+                    .disabled(move || is_ready)
+                    .style(move |s| {
+                        let bg = if !is_ready {
+                            Color::rgb8(100, 100, 100)
+                        } else {
+                            Color::rgb8(180, 180, 180)
+                        };
+                        s.padding_horiz(10.0)
+                            .padding_vert(4.0)
+                            .font_size(12.0)
+                            .background(bg)
+                            .color(Color::WHITE)
+                            .border_radius(4.0)
+                            .hover(|s| s.background(Color::rgb8(80, 80, 80)))
+                    })
+                    .action(move || {
+                        import_index(state_for_btn.clone());
+                    })
+                    .into_any()
+            },
+        ),
+    ))
+    .style(|s| s.gap(4.0))
 }

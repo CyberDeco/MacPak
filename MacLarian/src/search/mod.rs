@@ -26,6 +26,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 use crate::pak::lspk::LspkReader;
@@ -492,6 +493,129 @@ impl SearchIndex {
     pub fn fulltext_doc_count(&self) -> u64 {
         self.fulltext.as_ref().map_or(0, |ft| ft.num_docs())
     }
+
+    /// Export the fulltext index to a directory
+    ///
+    /// Saves the Tantivy index and metadata (file count, pak list) for later import.
+    /// Returns an error if no fulltext index has been built.
+    pub fn export_index(&self, dir: &Path) -> Result<()> {
+        self.export_index_with_progress(dir, |_, _, _| {})
+    }
+
+    /// Export the fulltext index with progress callback
+    ///
+    /// Progress callback receives (current, total, message).
+    pub fn export_index_with_progress<F>(&self, dir: &Path, progress: F) -> Result<()>
+    where
+        F: Fn(usize, usize, &str),
+    {
+        // Check that we have a fulltext index
+        if self.fulltext.is_none() {
+            return Err(crate::error::Error::SearchError(
+                "No fulltext index to export".to_string(),
+            ));
+        }
+
+        progress(0, 1, "Creating export directory...");
+
+        // Create the export directory
+        std::fs::create_dir_all(dir)?;
+
+        // Save metadata
+        progress(0, 1, "Saving metadata...");
+        let metadata = IndexMetadata {
+            file_count: self.file_count,
+            pak_count: self.indexed_paks.len(),
+            indexed_paks: self.indexed_paks.clone(),
+            fulltext_doc_count: self.fulltext_doc_count(),
+        };
+        let meta_path = dir.join("metadata.json");
+        let meta_json = serde_json::to_string_pretty(&metadata)
+            .map_err(|e| crate::error::Error::SearchError(format!("Failed to serialize metadata: {e}")))?;
+        std::fs::write(&meta_path, meta_json)?;
+
+        // Create a new index in the directory and copy all documents
+        let ft = self.fulltext.as_ref().unwrap();
+        let dest_index = FullTextIndex::create_in_dir(&dir.join("tantivy"))?;
+        let mut writer = dest_index.writer(100_000_000)?;
+
+        // Count total documents for progress
+        let total_docs = ft.num_docs() as usize;
+        progress(0, total_docs, "Exporting documents...");
+
+        // Read all documents from source and write to destination
+        let searcher = ft.searcher();
+        let mut exported = 0usize;
+        for segment_reader in searcher.segment_readers() {
+            let store_reader = segment_reader
+                .get_store_reader(1)
+                .map_err(|e| crate::error::Error::SearchError(format!("Failed to get store reader: {e}")))?;
+            for doc_id in 0..segment_reader.num_docs() {
+                if let Ok(doc) = store_reader.get(doc_id) {
+                    writer.add_document(doc)
+                        .map_err(|e| crate::error::Error::SearchError(format!("Failed to copy doc: {e}")))?;
+                    exported += 1;
+                    if exported % 1000 == 0 {
+                        progress(exported, total_docs, "Exporting documents...");
+                    }
+                }
+            }
+        }
+
+        progress(exported, total_docs, "Committing index...");
+        writer
+            .commit()
+            .map_err(|e| crate::error::Error::SearchError(format!("Export commit failed: {e}")))?;
+
+        progress(total_docs, total_docs, "Export complete");
+        tracing::info!("Exported index to {} ({} docs)", dir.display(), metadata.fulltext_doc_count);
+        Ok(())
+    }
+
+    /// Import a fulltext index from a directory
+    ///
+    /// Loads the Tantivy index and metadata previously saved with `export_index`.
+    /// Note: This only imports the fulltext index, not the metadata index.
+    /// You should rebuild the metadata index first if you need filename/path search.
+    pub fn import_index(&mut self, dir: &Path) -> Result<()> {
+        // Load metadata
+        let meta_path = dir.join("metadata.json");
+        let meta_json = std::fs::read_to_string(&meta_path)?;
+        let metadata: IndexMetadata = serde_json::from_str(&meta_json)
+            .map_err(|e| crate::error::Error::SearchError(format!("Failed to parse metadata: {e}")))?;
+
+        // Open the Tantivy index
+        let tantivy_dir = dir.join("tantivy");
+        let fulltext = FullTextIndex::open_from_dir(&tantivy_dir)?;
+
+        // Update state
+        self.fulltext = Some(fulltext);
+        self.file_count = metadata.file_count;
+        self.indexed_paks = metadata.indexed_paks;
+        self.indexed = true;
+
+        tracing::info!(
+            "Imported index from {} ({} docs from {} paks)",
+            dir.display(),
+            metadata.fulltext_doc_count,
+            metadata.pak_count
+        );
+
+        Ok(())
+    }
+}
+
+/// Metadata saved alongside the exported index
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct IndexMetadata {
+    /// Number of files in the metadata index
+    file_count: usize,
+    /// Number of PAK files indexed
+    pak_count: usize,
+    /// List of indexed PAK file paths
+    indexed_paks: Vec<PathBuf>,
+    /// Number of documents in the fulltext index
+    fulltext_doc_count: u64,
 }
 
 #[cfg(test)]

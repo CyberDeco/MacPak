@@ -297,7 +297,7 @@ fn tab_content(
                 3 => gr2_tab(app_state.clone(), gr2_state.clone()).into_any(),
                 4 => virtual_textures_tab(app_state.clone(), vt_state.clone()).into_any(),
                 5 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
-                6 => search_tab(app_state.clone(), search_state.clone(), config_state.clone()).into_any(),
+                6 => search_tab(app_state.clone(), search_state.clone(), config_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
                 7 => dialogue_tab(app_state.clone(), dialogue_state.clone(), config_state.clone()).into_any(),
                 _ => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
             }

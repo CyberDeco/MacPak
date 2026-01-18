@@ -2,7 +2,7 @@
 //!
 //! Provides instant deep search by pre-indexing file content during "Build Index".
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use tantivy::collector::TopDocs;
@@ -47,6 +47,57 @@ pub struct FullTextResult {
 impl FullTextIndex {
     /// Create a new in-memory full-text index
     pub fn new() -> Result<Self> {
+        Self::create_internal(None)
+    }
+
+    /// Create a new full-text index in a directory (for persistence)
+    pub fn create_in_dir(dir: &Path) -> Result<Self> {
+        Self::create_internal(Some(dir))
+    }
+
+    /// Open an existing full-text index from a directory
+    pub fn open_from_dir(dir: &Path) -> Result<Self> {
+        let index = Index::open_in_dir(dir)
+            .map_err(|e| Error::SearchError(format!("Failed to open index: {e}")))?;
+
+        let schema = index.schema();
+
+        // Extract field handles from schema
+        let path_field = schema
+            .get_field("path")
+            .map_err(|_| Error::SearchError("Missing path field in index".to_string()))?;
+        let name_field = schema
+            .get_field("name")
+            .map_err(|_| Error::SearchError("Missing name field in index".to_string()))?;
+        let content_field = schema
+            .get_field("content")
+            .map_err(|_| Error::SearchError("Missing content field in index".to_string()))?;
+        let pak_field = schema
+            .get_field("pak")
+            .map_err(|_| Error::SearchError("Missing pak field in index".to_string()))?;
+        let file_type_field = schema
+            .get_field("file_type")
+            .map_err(|_| Error::SearchError("Missing file_type field in index".to_string()))?;
+
+        let reader = index
+            .reader_builder()
+            .reload_policy(ReloadPolicy::Manual)
+            .try_into()
+            .map_err(|e| Error::SearchError(format!("Failed to create reader: {e}")))?;
+
+        Ok(Self {
+            index,
+            reader,
+            path_field,
+            name_field,
+            content_field,
+            pak_field,
+            file_type_field,
+        })
+    }
+
+    /// Internal helper to create index with optional directory
+    fn create_internal(dir: Option<&Path>) -> Result<Self> {
         let mut schema_builder = Schema::builder();
 
         // Path is stored exactly (for retrieval) but not tokenized
@@ -62,8 +113,15 @@ impl FullTextIndex {
 
         let schema = schema_builder.build();
 
-        // Create in-memory index
-        let index = Index::create_in_ram(schema.clone());
+        // Create index in RAM or on disk
+        let index = match dir {
+            Some(path) => {
+                std::fs::create_dir_all(path)?;
+                Index::create_in_dir(path, schema.clone())
+                    .map_err(|e| Error::SearchError(format!("Failed to create index in dir: {e}")))?
+            }
+            None => Index::create_in_ram(schema.clone()),
+        };
 
         // Create reader with automatic reload
         let reader = index
@@ -226,6 +284,11 @@ impl FullTextIndex {
     /// Get the number of documents in the index
     pub fn num_docs(&self) -> u64 {
         self.reader.searcher().num_docs()
+    }
+
+    /// Get access to the searcher for iteration
+    pub fn searcher(&self) -> tantivy::Searcher {
+        self.reader.searcher()
     }
 }
 

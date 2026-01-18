@@ -1,22 +1,30 @@
 //! Search results display components
 
+use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::text::Weight;
 use floem::views::{VirtualDirection, VirtualItemSize};
 use im::Vector as ImVector;
 use MacLarian::search::FileType;
 
-use crate::gui::state::{IndexStatus, SearchResult, SearchState};
+use crate::gui::state::{EditorTabsState, IndexStatus, SearchResult, SearchState};
 
+use super::context_menu::show_search_result_context_menu;
 use super::operations::copy_to_clipboard;
 
 /// Fixed row height for virtual list (must accommodate context snippets from deep search)
 const RESULT_ROW_HEIGHT: f64 = 72.0;
 
-pub fn search_results(state: SearchState, active_filter: RwSignal<Option<FileType>>) -> impl IntoView {
+pub fn search_results(
+    state: SearchState,
+    active_filter: RwSignal<Option<FileType>>,
+    editor_tabs_state: EditorTabsState,
+    active_tab: RwSignal<usize>,
+) -> impl IntoView {
     let results = state.results;
     let is_searching = state.is_searching;
     let index_status = state.index_status;
+    let state_for_rows = state.clone();
 
     // Create a derived signal that filters results for count display
     let filtered_results = move || {
@@ -114,7 +122,11 @@ pub fn search_results(state: SearchState, active_filter: RwSignal<Option<FileTyp
                 VirtualItemSize::Fixed(Box::new(|| RESULT_ROW_HEIGHT)),
                 move || filtered_results().into_iter().collect::<ImVector<_>>(),
                 |result| result.path.clone(),
-                move |result| search_result_row(result),
+                {
+                    let state = state_for_rows.clone();
+                    let editor_tabs = editor_tabs_state.clone();
+                    move |result| search_result_row(result, state.clone(), editor_tabs.clone(), active_tab)
+                },
             )
             .style(|s| s.width_full().flex_col()),
         )
@@ -133,7 +145,12 @@ pub fn search_results(state: SearchState, active_filter: RwSignal<Option<FileTyp
     })
 }
 
-fn search_result_row(result: SearchResult) -> impl IntoView {
+fn search_result_row(
+    result: SearchResult,
+    state: SearchState,
+    editor_tabs_state: EditorTabsState,
+    active_tab: RwSignal<usize>,
+) -> impl IntoView {
     let icon = get_type_icon(&result.file_type);
     let has_context = result.context.is_some();
     let context_text = result.context.clone().unwrap_or_default();
@@ -143,11 +160,28 @@ fn search_result_row(result: SearchResult) -> impl IntoView {
     let name = result.name.clone();
     let path_display = result.path.clone();
     let path_copy = result.path.clone();
+    let path_for_select = result.path.clone();
+    let path_for_select_check = result.path.clone();
     let pak_file = result.pak_file.clone();
+    let result_for_ctx = result.clone();
+    let selected_results = state.selected_results;
 
     v_stack((
         // Main row
         h_stack((
+            // Selection checkbox
+            checkbox(move || selected_results.get().contains(&path_for_select_check))
+                .on_update(move |checked| {
+                    let fp = path_for_select.clone();
+                    selected_results.update(|set| {
+                        if checked {
+                            set.insert(fp);
+                        } else {
+                            set.remove(&fp);
+                        }
+                    });
+                })
+                .style(|s| s.margin_right(8.0)),
             // Icon - fixed width
             label(move || icon.to_string())
                 .style(|s| s.width(30.0).flex_shrink(0.0)),
@@ -238,6 +272,15 @@ fn search_result_row(result: SearchResult) -> impl IntoView {
             .hover(|s| s.background(Color::rgb8(250, 252, 255)))
     })
     .on_event_stop(floem::event::EventListener::PointerDown, |_| {})
+    .on_secondary_click(move |_| {
+        show_search_result_context_menu(
+            &result_for_ctx,
+            state.clone(),
+            editor_tabs_state.clone(),
+            active_tab,
+        );
+        EventPropagation::Stop
+    })
 }
 
 pub fn search_status_bar(state: SearchState) -> impl IntoView {

@@ -6,23 +6,30 @@
 //! - Quick search: Filename/path matching (instant, no extraction)
 //! - Deep search: Content matching (extracts and searches directly)
 
+mod context_menu;
 mod operations;
 mod results;
 mod toolbar;
 
 use floem::prelude::*;
 
-use crate::gui::state::{AppState, ConfigState, SearchState};
+use crate::gui::state::{AppState, ConfigState, EditorTabsState, SearchState};
 
 use operations::{progress_overlay, search_overlay};
 use results::{search_results, search_status_bar};
 use toolbar::search_toolbar;
 
-pub fn search_tab(_app_state: AppState, search_state: SearchState, config_state: ConfigState) -> impl IntoView {
+pub fn search_tab(
+    _app_state: AppState,
+    search_state: SearchState,
+    config_state: ConfigState,
+    editor_tabs_state: EditorTabsState,
+    active_tab: RwSignal<usize>,
+) -> impl IntoView {
     let active_filter = search_state.active_filter;
     v_stack((
         search_toolbar(search_state.clone(), config_state),
-        search_results(search_state.clone(), active_filter),
+        search_results(search_state.clone(), active_filter, editor_tabs_state, active_tab),
         search_status_bar(search_state.clone()),
         // Progress dialog overlay for indexing - absolutely positioned
         progress_overlay(search_state.clone()),

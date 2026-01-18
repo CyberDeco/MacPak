@@ -1,5 +1,6 @@
 //! Search tab state
 
+use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 
 use floem::prelude::*;
@@ -84,6 +85,12 @@ pub struct SearchState {
     pub sort_column: RwSignal<SearchSortColumn>,
     /// Current sort direction
     pub sort_direction: RwSignal<SortDirection>,
+    /// Selected result paths for multi-select operations
+    pub selected_results: RwSignal<HashSet<String>>,
+    /// Show "All Matches" dialog
+    pub show_all_matches: RwSignal<bool>,
+    /// Current file for "Show All Matches" dialog
+    pub all_matches_file: RwSignal<Option<SearchResult>>,
 }
 
 impl SearchState {
@@ -104,6 +111,9 @@ impl SearchState {
             progress_total: RwSignal::new(0),
             sort_column: RwSignal::new(SearchSortColumn::default()),
             sort_direction: RwSignal::new(SortDirection::default()),
+            selected_results: RwSignal::new(HashSet::new()),
+            show_all_matches: RwSignal::new(false),
+            all_matches_file: RwSignal::new(None),
         }
     }
 

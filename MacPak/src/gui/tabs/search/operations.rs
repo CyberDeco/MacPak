@@ -632,3 +632,186 @@ pub fn search_overlay(state: SearchState) -> impl IntoView {
         }
     })
 }
+
+/// Export the index to a user-selected directory
+pub fn export_index(state: SearchState) {
+    // Get destination folder
+    let dest = match rfd::FileDialog::new()
+        .set_title("Export Index To...")
+        .pick_folder()
+    {
+        Some(d) => d,
+        None => return,
+    };
+
+    let index = state.index.clone();
+    let show_progress = state.show_progress;
+
+    show_progress.set(true);
+    SEARCH_PROGRESS.reset();
+    SEARCH_PROGRESS.set(0, 1, "Exporting index...".to_string());
+
+    let dest_for_msg = dest.clone();
+    let send = create_ext_action(Scope::new(), move |result: Result<(), String>| {
+        show_progress.set(false);
+        match result {
+            Ok(_) => {
+                rfd::MessageDialog::new()
+                    .set_title("Export Complete")
+                    .set_description(&format!("Index exported to:\n{}", dest_for_msg.display()))
+                    .show();
+            }
+            Err(e) => {
+                rfd::MessageDialog::new()
+                    .set_title("Export Failed")
+                    .set_description(&e)
+                    .show();
+            }
+        }
+    });
+
+    std::thread::spawn(move || {
+        let result = index.read()
+            .map_err(|e| e.to_string())
+            .and_then(|idx| {
+                idx.export_index_with_progress(&dest, |current, total, msg| {
+                    SEARCH_PROGRESS.set(current, total, msg.to_string());
+                }).map_err(|e| e.to_string())
+            });
+        send(result);
+    });
+}
+
+/// Extract selected search results to a user-selected directory
+pub fn extract_selected_results(state: SearchState) {
+    use std::collections::HashMap;
+    use MacLarian::pak::PakOperations;
+
+    let selected_paths = state.selected_results.get();
+    if selected_paths.is_empty() {
+        return;
+    }
+
+    let all_results = state.results.get();
+
+    // Filter to selected results
+    let to_extract: Vec<SearchResult> = all_results
+        .into_iter()
+        .filter(|r| selected_paths.contains(&r.path))
+        .collect();
+
+    if to_extract.is_empty() {
+        return;
+    }
+
+    // Get destination folder
+    let dest = match rfd::FileDialog::new()
+        .set_title("Extract Selected Files To...")
+        .pick_folder()
+    {
+        Some(d) => d,
+        None => return,
+    };
+
+    // Group by PAK file for efficient extraction
+    let mut by_pak: HashMap<PathBuf, Vec<String>> = HashMap::new();
+    for result in &to_extract {
+        by_pak
+            .entry(result.pak_path.clone())
+            .or_default()
+            .push(result.path.clone());
+    }
+
+    let total_files = to_extract.len();
+    let show_progress = state.show_progress;
+    let selected_results = state.selected_results;
+
+    show_progress.set(true);
+    SEARCH_PROGRESS.reset();
+    SEARCH_PROGRESS.set(0, total_files, "Extracting files...".to_string());
+
+    let send = create_ext_action(Scope::new(), move |result: Result<usize, String>| {
+        show_progress.set(false);
+        match result {
+            Ok(count) => {
+                selected_results.set(std::collections::HashSet::new()); // Clear selection
+                rfd::MessageDialog::new()
+                    .set_title("Extraction Complete")
+                    .set_description(&format!("Extracted {} files", count))
+                    .show();
+            }
+            Err(e) => {
+                rfd::MessageDialog::new()
+                    .set_title("Extraction Failed")
+                    .set_description(&e)
+                    .show();
+            }
+        }
+    });
+
+    std::thread::spawn(move || {
+        let mut total_extracted = 0;
+        for (pak_path, file_paths) in by_pak {
+            let paths: Vec<&str> = file_paths.iter().map(|s| s.as_str()).collect();
+            match PakOperations::extract_files_with_progress(&pak_path, &dest, &paths, &|current, _total, _| {
+                SEARCH_PROGRESS.set(total_extracted + current, total_files, format!("Extracting from {}", pak_path.file_name().unwrap_or_default().to_string_lossy()));
+            }) {
+                Ok(_) => total_extracted += paths.len(),
+                Err(e) => {
+                    send(Err(e.to_string()));
+                    return;
+                }
+            }
+        }
+        send(Ok(total_extracted));
+    });
+}
+
+/// Import an index from a user-selected directory
+pub fn import_index(state: SearchState) {
+    // Get source folder
+    let source = match rfd::FileDialog::new()
+        .set_title("Import Index From...")
+        .pick_folder()
+    {
+        Some(d) => d,
+        None => return,
+    };
+
+    let index = state.index.clone();
+    let index_status = state.index_status;
+    let show_progress = state.show_progress;
+
+    show_progress.set(true);
+    SEARCH_PROGRESS.reset();
+    SEARCH_PROGRESS.set(0, 1, "Importing index...".to_string());
+
+    let send = create_ext_action(Scope::new(), move |result: Result<(usize, usize), String>| {
+        show_progress.set(false);
+        match result {
+            Ok((file_count, pak_count)) => {
+                index_status.set(IndexStatus::Ready { file_count, pak_count });
+                rfd::MessageDialog::new()
+                    .set_title("Import Complete")
+                    .set_description(&format!("Index loaded: {} files from {} PAKs", file_count, pak_count))
+                    .show();
+            }
+            Err(e) => {
+                rfd::MessageDialog::new()
+                    .set_title("Import Failed")
+                    .set_description(&e)
+                    .show();
+            }
+        }
+    });
+
+    std::thread::spawn(move || {
+        let result = index.write()
+            .map_err(|e| e.to_string())
+            .and_then(|mut idx| {
+                idx.import_index(&source).map_err(|e| e.to_string())?;
+                Ok((idx.file_count(), idx.pak_count()))
+            });
+        send(result);
+    });
+}
