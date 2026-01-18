@@ -16,7 +16,7 @@ use floem::prelude::*;
 use floem::reactive::create_effect;
 use floem::style::{FlexDirection, Position};
 use floem::text::Weight;
-use crate::gui::state::{AppState, ConfigState, DialogSource, DialogueState};
+use crate::gui::state::{AppState, ConfigState, DialogEntry, DialogSource, DialogueState};
 
 pub use operations::{open_dialog_folder, load_dialog_from_pak};
 
@@ -38,8 +38,28 @@ pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigSt
                 state_for_pending.pending_caches_ready.set(false);
 
                 // Now load the dialog
-                match source {
+                match source.clone() {
                     DialogSource::PakFile { pak_path, internal_path } => {
+                        // Add to browser list if not already there
+                        let display_path = format!("[Search] {}", internal_path);
+                        let name = internal_path.split('/').last()
+                            .unwrap_or(&internal_path)
+                            .to_string();
+
+                        let mut dialogs = state_for_pending.available_dialogs.get();
+                        if !dialogs.iter().any(|d| d.path == display_path) {
+                            dialogs.push(DialogEntry {
+                                name,
+                                path: display_path.clone(),
+                                source: source.clone(),
+                            });
+                            state_for_pending.available_dialogs.set(dialogs);
+                        }
+
+                        // Select it in the browser
+                        state_for_pending.selected_dialog_path.set(Some(display_path));
+
+                        // Load the dialog
                         operations::load_dialog_from_pak(
                             state_for_pending.clone(),
                             pak_path,
@@ -47,7 +67,6 @@ pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigSt
                         );
                     }
                     DialogSource::LocalFile(_path) => {
-                        // For local files, use the entry-based loading
                         state_for_pending.status_message.set("Loading not supported for local files from Search".to_string());
                     }
                 }
@@ -228,8 +247,7 @@ fn empty_state() -> impl IntoView {
     })
 }
 
-/// Loading overlay shown during flag index building
-/// Matches the style of Pak Ops, GR2, and Textures tabs
+/// Loading overlay shown during cache initialization
 fn loading_overlay(state: DialogueState) -> impl IntoView {
     let show = state.is_building_flag_index;
     let message = state.flag_index_message;
@@ -239,36 +257,17 @@ fn loading_overlay(state: DialogueState) -> impl IntoView {
         move |is_loading| {
             if is_loading {
                 container(
-                    v_stack((
-                        // Loading message
-                        label(move || message.get())
-                            .style(|s| s.font_size(14.0).margin_bottom(16.0)),
-                        // Indeterminate progress indicator (animated bar)
-                        container(
-                            container(empty())
-                                .style(|s| {
-                                    s.height_full()
-                                        .width_pct(30.0)
-                                        .background(Color::rgb8(76, 175, 80))
-                                        .border_radius(4.0)
-                                })
-                        )
-                        .style(|s| {
-                            s.width_full()
-                                .height(8.0)
-                                .background(Color::rgb8(220, 220, 220))
-                                .border_radius(4.0)
-                        }),
-                    ))
-                    .style(|s| {
-                        s.padding(24.0)
-                            .background(Color::WHITE)
-                            .border(1.0)
-                            .border_color(Color::rgb8(200, 200, 200))
-                            .border_radius(8.0)
-                            .width(400.0)
-                    }),
+                    label(move || message.get())
+                        .style(|s| s.font_size(14.0)),
                 )
+                .style(|s| {
+                    s.padding(24.0)
+                        .background(Color::WHITE)
+                        .border(1.0)
+                        .border_color(Color::rgb8(200, 200, 200))
+                        .border_radius(8.0)
+                        .min_width(300.0)
+                })
                 .into_any()
             } else {
                 empty().into_any()

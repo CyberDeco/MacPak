@@ -8,7 +8,9 @@ use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 use floem_reactive::Scope;
 use MacLarian::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
+use MacLarian::formats::wem::AudioCache;
 use MacLarian::pak::PakOperations;
+use crate::gui::tabs::dialogue::operations::{load_voice_meta, find_voice_files_path};
 
 use crate::gui::state::{DialogueState, DialogSource, EditorTabsState, SearchResult, SearchState};
 
@@ -220,9 +222,12 @@ fn open_in_dialogue(
         // Set pending load info
         state.pending_load.set(Some(source));
         state.pending_caches_ready.set(false);
-        state.status_message.set("Loading metadata...".to_string());
 
-        // Switch to Dialogue tab to show status
+        // Show loading overlay
+        state.flag_index_message.set("Loading metadata from game files...".to_string());
+        state.is_building_flag_index.set(true);
+
+        // Switch to Dialogue tab to show overlay
         active_tab.set(7);
 
         // Init caches in background
@@ -230,10 +235,17 @@ fn open_in_dialogue(
         let speaker_cache = state.speaker_cache.clone();
         let flag_cache = state.flag_cache.clone();
         let dc_cache = state.difficulty_class_cache.clone();
+        let voice_meta_cache = state.voice_meta_cache.clone();
+        let audio_cache = state.audio_cache.clone();
 
-        // When done, just set the ready flag - Dialogue tab will handle loading
+        // When done, hide overlay and set ready flag
         let state_for_done = state.clone();
-        let send_done = create_ext_action(Scope::new(), move |_: ()| {
+        let send_done = create_ext_action(Scope::new(), move |(voice_loaded, voice_path): (bool, Option<std::path::PathBuf>)| {
+            state_for_done.is_building_flag_index.set(false);
+            state_for_done.voice_meta_loaded.set(voice_loaded);
+            if let Some(path) = voice_path {
+                state_for_done.voice_files_path.set(Some(path));
+            }
             state_for_done.pending_caches_ready.set(true);
         });
 
@@ -243,8 +255,18 @@ fn open_in_dialogue(
                 init_speaker_cache(&speaker_cache, data_dir);
                 init_flag_cache(&flag_cache, data_dir);
                 init_dc_cache(&dc_cache, data_dir);
+
+                let voice_count = load_voice_meta(&voice_meta_cache, data_dir);
+                let voice_path = find_voice_files_path(data_dir);
+
+                if let Some(ref path) = voice_path {
+                    init_audio_cache(&audio_cache, path);
+                }
+
+                send_done((voice_count > 0, voice_path));
+            } else {
+                send_done((false, None));
             }
-            send_done(());
         });
     } else {
         // Caches already initialized - set pending load and ready immediately
@@ -309,4 +331,16 @@ fn init_dc_cache(cache: &Arc<std::sync::RwLock<DifficultyClassCache>>, data_dir:
     }
     cache.configure_from_game_data(data_dir);
     let _ = cache.build_index();
+}
+
+/// Initialize audio cache for WEM file lookups
+fn init_audio_cache(cache: &Arc<std::sync::RwLock<AudioCache>>, voice_path: &Path) {
+    let Ok(mut cache) = cache.write() else { return };
+    if cache.is_indexed() {
+        return;
+    }
+    if !cache.is_configured() {
+        cache.configure(voice_path);
+    }
+    cache.build_index();
 }

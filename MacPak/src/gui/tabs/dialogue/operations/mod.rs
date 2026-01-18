@@ -10,7 +10,7 @@ mod audio;
 
 // Re-export public API
 pub use file_ops::{load_pak_directly, open_dialog_folder};
-pub use loading::{load_dialog, load_dialog_entry, load_dialog_from_pak, reload_current_dialog};
+pub use loading::{load_dialog, load_dialog_entry, load_dialog_from_pak};
 pub use display::{
     build_display_nodes,
     resolve_speaker_names,

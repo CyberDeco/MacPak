@@ -95,37 +95,6 @@ pub fn load_dialog_entry(state: DialogueState, entry: DialogEntry) {
     }
 }
 
-/// Reload the currently loaded dialog
-pub fn reload_current_dialog(state: DialogueState) {
-    let Some(source) = state.current_source.get() else {
-        state.status_message.set("No dialog to reload".to_string());
-        return;
-    };
-
-    match source {
-        DialogSource::LocalFile(file_path) => {
-            state.status_message.set("Reloading dialog...".to_string());
-            state.is_loading.set(true);
-
-            match parse_dialog_file(&file_path) {
-                Ok(dialog) => {
-                    process_loaded_dialog(state.clone(), dialog);
-                    state.status_message.set("Dialog reloaded".to_string());
-                }
-                Err(e) => {
-                    state.status_message.set(format!("Error: {}", e));
-                    state.error_message.set(Some(format!("{}", e)));
-                }
-            }
-
-            state.is_loading.set(false);
-        }
-        DialogSource::PakFile { pak_path, internal_path } => {
-            load_dialog_from_pak(state, pak_path, internal_path);
-        }
-    }
-}
-
 /// Calculate the content width for a node (must match tree_view.rs calculation)
 fn calculate_node_content_width(node: &DisplayNode) -> f32 {
     let indent = (node.depth * 20) as f32;
