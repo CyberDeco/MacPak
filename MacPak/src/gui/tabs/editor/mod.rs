@@ -19,7 +19,9 @@ use crate::gui::utils::meta_dialog::meta_dialog;
 use components::{editor_content, editor_status_bar, editor_toolbar, search_panel};
 
 // Re-export for external use
+pub use operations::init_config_state;
 pub use operations::load_file_in_tab;
+pub use operations::open_file_at_path;
 pub use operations::open_file_dialog;
 pub use operations::save_file;
 
@@ -49,7 +51,8 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
     // Callback for meta dialog - creates a new tab with the generated content
     let on_meta_create = move |content: String| {
         let tab = tabs_state_dialog.new_tab();
-        tab.content.set(content);
+        tab.content.set(content.clone());
+        tab.live_content.set(content);
         tab.file_format.set("LSX".to_string());
         tab.modified.set(true);
     };

@@ -523,6 +523,7 @@ fn save_status_badge(tabs_state: EditorTabsState) -> impl IntoView {
 
 pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_numbers: RwSignal<bool>) -> impl IntoView {
     let content = tab.content;
+    let live_content = tab.live_content;
     let modified = tab.modified;
     let file_format = tab.file_format;
     let goto_offset = tab.goto_offset;
@@ -538,7 +539,8 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
         move || file_format.get(),
         move |format| {
             let show_lines = show_line_numbers;
-            let text = content.get();
+            // Use get_untracked to avoid creating a reactive subscription
+            let text = content.get_untracked();
             let state_change = modified;
             // Create syntax highlighting based on file format
             let styling = SyntaxStyling::new(&text, &format);
@@ -548,9 +550,25 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
             let tabs_state_for_keys = tabs_state_for_open.clone();
 
             // Custom key handler that intercepts shortcuts before the default handler
-            let key_handler = move |editor_sig, keypress: &KeyPress, mods: Modifiers| {
+            let key_handler = move |editor_sig: floem::prelude::RwSignal<floem::views::editor::Editor>, keypress: &KeyPress, mods: Modifiers| {
+
                 // Check for CMD/Ctrl modifier
                 let is_cmd_or_ctrl = mods.meta() || mods.control();
+
+                // Determine if this key might modify content
+                let might_edit = if is_cmd_or_ctrl {
+                    // CMD+Z, CMD+X, CMD+V modify content
+                    matches!(&keypress.key, KeyInput::Keyboard(Key::Character(c), _)
+                        if c.as_str().eq_ignore_ascii_case("z")
+                        || c.as_str().eq_ignore_ascii_case("x")
+                        || c.as_str().eq_ignore_ascii_case("v"))
+                } else {
+                    // Non-modifier keys that edit content
+                    matches!(&keypress.key,
+                        KeyInput::Keyboard(Key::Character(_), _) |
+                        KeyInput::Keyboard(Key::Named(NamedKey::Backspace | NamedKey::Delete | NamedKey::Enter | NamedKey::Tab), _)
+                    )
+                };
 
                 if is_cmd_or_ctrl {
                     if let KeyInput::Keyboard(Key::Character(c), _) = &keypress.key {
@@ -559,8 +577,12 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
                             search_visible.set(!search_visible.get());
                             return CommandExecuted::Yes;
                         }
-                        // CMD+S - Save
+                        // CMD+S - Save (sync content from editor first)
                         if c.as_str().eq_ignore_ascii_case("s") {
+                            // Sync editor content to live_content before saving
+                            let new_text = editor_sig.get_untracked().doc().text().to_string();
+                            live_content.set(new_text);
+
                             if modified.get() {
                                 if converted_from_lsf.get() {
                                     let tab_clone = tab_for_keys.clone();
@@ -584,8 +606,18 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
                     }
                 }
 
-                // Fall through to default handler (handles CMD+Z, CMD+Shift+Z, etc.)
-                default_key_handler(editor_sig)(keypress, mods)
+                // Process the key through the default handler
+                let result = default_key_handler(editor_sig)(keypress, mods);
+
+                // If this was an editing key, sync to live_content and mark as modified
+                // live_content is NOT watched by dyn_container, so this won't cause cascades
+                if might_edit {
+                    let new_text = editor_sig.get_untracked().doc().text().to_string();
+                    live_content.set(new_text);
+                    state_change.set(true);
+                }
+
+                result
             };
 
             text_editor_keys(text, key_handler)
@@ -603,51 +635,24 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
                 .with_editor(move |editor| {
                     let cursor = editor.cursor;
 
+                    // NOTE: Effects disabled due to leak in dyn_container
+                    // floem's create_effect doesn't get cleaned up when views are destroyed
+
                     // Workaround for floem text_editor not re-wrapping on width expansion.
-                    // Watch parent_size (which tracks the container) and update viewport
-                    // when it expands. Floem's internal effect will handle the rest.
-                    let parent_size = editor.parent_size;
-                    let viewport = editor.viewport;
-                    floem::reactive::create_effect(move |prev_width: Option<f64>| {
-                        let current_width = parent_size.get().width();
-                        if let Some(prev) = prev_width {
-                            if current_width > prev {
-                                // Container expanded - update viewport to match parent
-                                let mut vp = viewport.get();
-                                vp = vp.with_size((current_width, vp.height()));
-                                viewport.set(vp);
-                            }
-                        }
-                        current_width
-                    });
+                    // DISABLED - causes effect leak
+                    let _ = (editor.parent_size, editor.viewport);
 
-                    // Set up reactive effect to jump to offset when goto_offset changes
-                    let editor_clone = editor.clone();
-                    floem::reactive::create_effect(move |_| {
-                        if let Some(offset) = goto_offset.get() {
-                            // Move cursor to the match offset
-                            cursor.update(|c| c.set_offset(offset, false, false));
-                            // Center the view on the new cursor position
-                            editor_clone.center_window();
-                            // Clear the goto_offset so it doesn't keep triggering
-                            goto_offset.set(None);
-                        }
-                    });
+                    // Jump to offset when goto_offset changes
+                    // DISABLED - causes effect leak
+                    // TODO: Find alternative approach for search navigation
+                    let _ = (cursor, goto_offset);
 
-                    // Sync editor content back to tab.content when document changes
-                    let doc = editor.doc();
-                    let cache_rev = doc.cache_rev();
-                    let editor_for_sync = editor.clone();
-                    floem::reactive::create_effect(move |prev_rev: Option<u64>| {
-                        let current_rev = cache_rev.get();
-                        // Only sync if revision changed (actual edit occurred)
-                        if prev_rev.is_some() && prev_rev != Some(current_rev) {
-                            let new_text = editor_for_sync.doc().text().to_string();
-                            content.set(new_text);
-                            state_change.set(true);
-                        }
-                        current_rev
-                    });
+                    // TODO: Content sync disabled due to effect leak in dyn_container
+                    // The floem create_effect doesn't get cleaned up when the view is destroyed,
+                    // causing multiple effects to accumulate and cascade.
+                    // For now, we skip auto-sync. The editor maintains its own state.
+                    // Content is synced on-demand (e.g., when saving).
+                    let _ = (content, state_change); // Suppress unused warnings
                 })
                 .style(|s| s.size_full().flex_grow(1.0))
                 .into_any()

@@ -6,9 +6,24 @@ use floem_reactive::Scope;
 use std::fs;
 use std::path::Path;
 
-use crate::gui::state::{EditorTab, EditorTabsState};
+use crate::gui::state::{ConfigState, EditorTab, EditorTabsState};
 use crate::gui::utils::show_file_error;
 use super::formatting::{format_json, format_xml};
+
+/// Global config state for recent files tracking
+static CONFIG_STATE: std::sync::OnceLock<ConfigState> = std::sync::OnceLock::new();
+
+/// Initialize the config state for recent files tracking
+pub fn init_config_state(config: ConfigState) {
+    let _ = CONFIG_STATE.set(config);
+}
+
+/// Add a file to recent files (if config state is available)
+fn track_recent_file(path: &str) {
+    if let Some(config) = CONFIG_STATE.get() {
+        config.add_recent_file(path);
+    }
+}
 
 /// Threshold for large file warning (50,000 lines for text, 5,000 nodes for LSF)
 const LARGE_FILE_LINE_THRESHOLD: usize = 50_000;
@@ -450,6 +465,9 @@ pub fn open_file_dialog(tabs_state: EditorTabsState) {
     if let Some(path) = dialog.pick_file() {
         let path_str = path.to_string_lossy().to_string();
 
+        // Track in recent files
+        track_recent_file(&path_str);
+
         // Check if file is already open
         if tabs_state.switch_to_file(&path_str) {
             return;
@@ -468,9 +486,49 @@ pub fn open_file_dialog(tabs_state: EditorTabsState) {
     }
 }
 
+/// Open a file by path string (used by recent files menu)
+pub fn open_file_at_path(tabs_state: EditorTabsState, path: &str) {
+    let path_buf = std::path::PathBuf::from(path);
+
+    // Verify file exists
+    if !path_buf.exists() {
+        rfd::MessageDialog::new()
+            .set_title("File Not Found")
+            .set_description(&format!("The file no longer exists:\n{path}"))
+            .set_buttons(rfd::MessageButtons::Ok)
+            .show();
+        return;
+    }
+
+    // Track in recent files
+    track_recent_file(path);
+
+    // Check if file is already open
+    if tabs_state.switch_to_file(path) {
+        return;
+    }
+
+    // Check if current tab is empty
+    let tab = match tabs_state.active_tab() {
+        Some(active)
+            if active.file_path.get().is_none()
+                && active.content.get().is_empty()
+                && !active.modified.get() =>
+        {
+            active
+        }
+        _ => tabs_state.new_tab(),
+    };
+
+    load_file(&path_buf, tab);
+}
+
 /// Load a file into a specific tab (used by browser and other components)
 pub fn load_file_in_tab(path: &Path, tabs_state: EditorTabsState) {
     let path_str = path.to_string_lossy().to_string();
+
+    // Track in recent files
+    track_recent_file(&path_str);
 
     // Check if file is already open
     if tabs_state.switch_to_file(&path_str) {
@@ -513,7 +571,8 @@ fn finalize_file_load(tab: EditorTab, result: FileLoadResult) {
     // Populate the tab
     tab.file_format.set(result.format);
     tab.file_path.set(Some(result.path_str));
-    tab.content.set(content);
+    tab.content.set(content.clone());
+    tab.live_content.set(content);
     tab.modified.set(false);
     tab.converted_from_lsf.set(result.converted_from_binary);
 }
@@ -655,7 +714,8 @@ pub fn load_file(path: &Path, tab: EditorTab) {
 pub fn save_file(tab: EditorTab) {
     if let Some(path_str) = tab.file_path.get() {
         let path = Path::new(&path_str);
-        let content = tab.content.get();
+        // Use live_content which is synced from the editor
+        let content = tab.live_content.get();
         let format = tab.file_format.get().to_uppercase();
         let converted_from_binary = tab.converted_from_lsf.get();
 

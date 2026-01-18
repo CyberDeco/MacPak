@@ -150,6 +150,7 @@ pub fn replace_current(state: EditorState) {
             new_content.push_str(&content[end..]);
 
             state.content.set(new_content.clone());
+            state.live_content.set(new_content.clone());
             state.modified.set(true);
 
             // Re-run search to update matches
@@ -213,6 +214,7 @@ pub fn replace_all(state: EditorState) {
                 .to_string();
 
             state.content.set(new_content.clone());
+            state.live_content.set(new_content.clone());
             state.modified.set(true);
 
             // Re-run search

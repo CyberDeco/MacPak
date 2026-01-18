@@ -9,7 +9,11 @@ pub struct EditorTab {
     pub id: u64,
     pub file_path: RwSignal<Option<String>>,
     pub file_format: RwSignal<String>,
+    /// Initial content (used to initialize editor, NOT updated during editing)
     pub content: RwSignal<String>,
+    /// Live editor content (synced from editor, used for saving)
+    /// This is separate from `content` to avoid reactive cascades
+    pub live_content: RwSignal<String>,
     pub modified: RwSignal<bool>,
     pub converted_from_lsf: RwSignal<bool>,
     /// Whether the tab is currently loading a file
@@ -46,6 +50,7 @@ impl EditorTab {
             file_path: RwSignal::new(None),
             file_format: RwSignal::new(String::new()),
             content: RwSignal::new(String::new()),
+            live_content: RwSignal::new(String::new()),
             modified: RwSignal::new(false),
             converted_from_lsf: RwSignal::new(false),
             is_loading: RwSignal::new(false),
@@ -170,6 +175,7 @@ impl EditorTabsState {
                 tab.file_path.set(None);
                 tab.file_format.set(String::new());
                 tab.content.set(String::new());
+                tab.live_content.set(String::new());
                 tab.modified.set(false);
                 tab.converted_from_lsf.set(false);
                 tab.is_loading.set(false);
