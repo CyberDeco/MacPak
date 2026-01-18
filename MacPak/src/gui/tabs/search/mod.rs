@@ -17,7 +17,7 @@ use floem::prelude::*;
 use crate::gui::state::{AppState, ConfigState, DialogueState, EditorTabsState, SearchState};
 
 use all_matches_dialog::all_matches_dialog;
-use operations::{progress_overlay, search_overlay};
+use operations::{auto_load_cached_index, progress_overlay, search_overlay};
 use results::{search_results, search_status_bar};
 use toolbar::search_toolbar;
 
@@ -29,6 +29,9 @@ pub fn search_tab(
     dialogue_state: DialogueState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
+    // Attempt to auto-load cached index on first visit
+    auto_load_cached_index(search_state.clone());
+
     let active_filter = search_state.active_filter;
     v_stack((
         search_toolbar(search_state.clone(), config_state),

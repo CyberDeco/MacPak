@@ -36,7 +36,7 @@ pub use content_cache::{ContentCache, CachedContent, ContentCacheStats, ContentM
 pub use fulltext::{FullTextIndex, FullTextResult};
 
 /// File type classification for filtering
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FileType {
     Lsx,
     Lsf,
@@ -99,7 +99,7 @@ impl FileType {
 }
 
 /// Metadata for an indexed file
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexedFile {
     /// Filename only (without path)
     pub name: String,
@@ -523,6 +523,13 @@ impl SearchIndex {
         // Create the export directory
         std::fs::create_dir_all(dir)?;
 
+        // Save file entries (needed for filename/path search)
+        progress(0, 1, "Saving file entries...");
+        let entries_path = dir.join("entries.json");
+        let entries_json = serde_json::to_string(&self.entries)
+            .map_err(|e| crate::error::Error::SearchError(format!("Failed to serialize entries: {e}")))?;
+        std::fs::write(&entries_path, entries_json)?;
+
         // Save metadata
         progress(0, 1, "Saving metadata...");
         let metadata = IndexMetadata {
@@ -586,9 +593,7 @@ impl SearchIndex {
 
     /// Import a fulltext index from a directory
     ///
-    /// Loads the Tantivy index and metadata previously saved with `export_index`.
-    /// Note: This only imports the fulltext index, not the metadata index.
-    /// You should rebuild the metadata index first if you need filename/path search.
+    /// Loads the Tantivy index, file entries, and metadata previously saved with `export_index`.
     pub fn import_index(&mut self, dir: &Path) -> Result<()> {
         // Load metadata
         let meta_path = dir.join("metadata.json");
@@ -596,19 +601,42 @@ impl SearchIndex {
         let metadata: IndexMetadata = serde_json::from_str(&meta_json)
             .map_err(|e| crate::error::Error::SearchError(format!("Failed to parse metadata: {e}")))?;
 
+        // Load file entries (if available - for backward compatibility)
+        let entries_path = dir.join("entries.json");
+        let entries: HashMap<String, IndexedFile> = if entries_path.exists() {
+            let entries_json = std::fs::read_to_string(&entries_path)?;
+            serde_json::from_str(&entries_json)
+                .map_err(|e| crate::error::Error::SearchError(format!("Failed to parse entries: {e}")))?
+        } else {
+            HashMap::new()
+        };
+
+        // Rebuild filename index from entries
+        let mut filename_index: HashMap<String, Vec<String>> = HashMap::new();
+        for (path, file) in &entries {
+            let filename_lower = file.name.to_lowercase();
+            filename_index
+                .entry(filename_lower)
+                .or_default()
+                .push(path.clone());
+        }
+
         // Open the Tantivy index
         let tantivy_dir = dir.join("tantivy");
         let fulltext = FullTextIndex::open_from_dir(&tantivy_dir)?;
 
         // Update state
+        self.entries = entries;
+        self.filename_index = filename_index;
         self.fulltext = Some(fulltext);
         self.file_count = metadata.file_count;
         self.indexed_paks = metadata.indexed_paks;
         self.indexed = true;
 
         tracing::info!(
-            "Imported index from {} ({} docs from {} paks)",
+            "Imported index from {} ({} files, {} docs from {} paks)",
             dir.display(),
+            self.entries.len(),
             metadata.fulltext_doc_count,
             metadata.pak_count
         );

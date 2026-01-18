@@ -5,7 +5,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 use floem::action::exec_after;
@@ -62,10 +62,99 @@ impl SharedSearchProgress {
 
 lazy_static::lazy_static! {
     static ref SEARCH_PROGRESS: Arc<SharedSearchProgress> = Arc::new(SharedSearchProgress::default());
+    /// Track whether we've already attempted to auto-load the cached index
+    static ref INDEX_AUTO_LOADED: AtomicBool = AtomicBool::new(false);
 }
 
 /// Maximum results for fulltext search
 const MAX_RESULTS: usize = 50000;
+
+/// Get the standard cache directory for the search index
+fn get_index_cache_path() -> Option<PathBuf> {
+    dirs::data_dir().map(|p| p.join("MacPak").join("search_index"))
+}
+
+/// Attempt to auto-load a cached index on first visit to Search tab.
+/// This runs silently in the background without showing any dialogs.
+pub fn auto_load_cached_index(state: SearchState) {
+    // Only attempt once per session
+    if INDEX_AUTO_LOADED.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
+    let cache_path = match get_index_cache_path() {
+        Some(p) => p,
+        None => return,
+    };
+
+    // Check if cached index exists
+    if !cache_path.join("metadata.json").exists() {
+        return;
+    }
+
+    let index = state.index.clone();
+    let index_status = state.index_status;
+
+    // Set a loading status
+    index_status.set(IndexStatus::Building {
+        progress: "Loading cached index...".to_string(),
+    });
+
+    // Load in background thread
+    let send = create_ext_action(Scope::new(), move |result: Result<(usize, usize), String>| {
+        match result {
+            Ok((file_count, pak_count)) => {
+                index_status.set(IndexStatus::Ready { file_count, pak_count });
+                tracing::info!("Auto-loaded cached index: {} files from {} PAKs", file_count, pak_count);
+            }
+            Err(e) => {
+                // Silently fail - user can manually rebuild
+                tracing::warn!("Failed to auto-load cached index: {}", e);
+                index_status.set(IndexStatus::NotBuilt);
+            }
+        }
+    });
+
+    std::thread::spawn(move || {
+        let result = index.write()
+            .map_err(|e| e.to_string())
+            .and_then(|mut idx| {
+                idx.import_index(&cache_path).map_err(|e| e.to_string())?;
+                Ok((idx.file_count(), idx.pak_count()))
+            });
+        send(result);
+    });
+}
+
+/// Save the index to the cache directory (called automatically after building)
+fn auto_save_index(index: Arc<RwLock<MacLarian::search::SearchIndex>>) {
+    let cache_path = match get_index_cache_path() {
+        Some(p) => p,
+        None => return,
+    };
+
+    std::thread::spawn(move || {
+        // Ensure cache directory exists
+        if let Err(e) = std::fs::create_dir_all(&cache_path) {
+            tracing::warn!("Failed to create index cache directory: {}", e);
+            return;
+        }
+
+        // Export index silently
+        match index.read() {
+            Ok(idx) => {
+                if let Err(e) = idx.export_index(&cache_path) {
+                    tracing::warn!("Failed to auto-save index: {}", e);
+                } else {
+                    tracing::info!("Auto-saved index to cache");
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to acquire read lock for auto-save: {}", e);
+            }
+        }
+    });
+}
 
 /// Messages from background indexing thread
 enum IndexMessage {
@@ -134,8 +223,12 @@ pub fn build_index(state: SearchState) {
         }
     });
 
+    // Clone index for auto-save after build completes
+    let index_for_save = index.clone();
+
     // Spawn background thread
     std::thread::spawn(move || {
+        let build_succeeded;
         match index.write() {
             Ok(mut idx) => {
                 // Phase 1: Build metadata index (fast)
@@ -162,15 +255,23 @@ pub fn build_index(state: SearchState) {
                         }
 
                         send(IndexMessage::Complete { file_count, pak_count });
+                        build_succeeded = true;
                     }
                     Err(e) => {
                         send(IndexMessage::Error(format!("Index build failed: {}", e)));
+                        build_succeeded = false;
                     }
                 }
             }
             Err(e) => {
                 send(IndexMessage::Error(format!("Failed to acquire lock: {}", e)));
+                build_succeeded = false;
             }
+        }
+
+        // Auto-save index to cache after successful build
+        if build_succeeded {
+            auto_save_index(index_for_save);
         }
     });
 }
@@ -625,78 +726,6 @@ pub fn search_overlay(state: SearchState) -> impl IntoView {
     })
 }
 
-/// Export the index to a user-selected directory
-pub fn export_index(state: SearchState) {
-    // Get destination folder
-    let dest = match rfd::FileDialog::new()
-        .set_title("Export Index To...")
-        .pick_folder()
-    {
-        Some(d) => d,
-        None => return,
-    };
-
-    // Check if an index already exists at this location
-    let metadata_exists = dest.join("metadata.json").exists();
-    let tantivy_exists = dest.join("tantivy").exists();
-
-    if metadata_exists || tantivy_exists {
-        let confirmed = rfd::MessageDialog::new()
-            .set_title("Overwrite Existing Index?")
-            .set_description(&format!(
-                "An index already exists at:\n{}\n\nDo you want to overwrite it?",
-                dest.display()
-            ))
-            .set_buttons(rfd::MessageButtons::YesNo)
-            .show();
-
-        if !matches!(confirmed, rfd::MessageDialogResult::Yes) {
-            return;
-        }
-
-        // Clean up existing index files before export
-        let _ = std::fs::remove_file(dest.join("metadata.json"));
-        let _ = std::fs::remove_dir_all(dest.join("tantivy"));
-    }
-
-    let index = state.index.clone();
-    let show_progress = state.show_progress;
-
-    show_progress.set(true);
-    SEARCH_PROGRESS.reset();
-    SEARCH_PROGRESS.set(0, 1, "Exporting index...".to_string());
-
-    let dest_for_msg = dest.clone();
-    let send = create_ext_action(Scope::new(), move |result: Result<(), String>| {
-        show_progress.set(false);
-        match result {
-            Ok(_) => {
-                rfd::MessageDialog::new()
-                    .set_title("Export Complete")
-                    .set_description(&format!("Index exported to:\n{}", dest_for_msg.display()))
-                    .show();
-            }
-            Err(e) => {
-                rfd::MessageDialog::new()
-                    .set_title("Export Failed")
-                    .set_description(&e)
-                    .show();
-            }
-        }
-    });
-
-    std::thread::spawn(move || {
-        let result = index.read()
-            .map_err(|e| e.to_string())
-            .and_then(|idx| {
-                idx.export_index_with_progress(&dest, |current, total, msg| {
-                    SEARCH_PROGRESS.set(current, total, msg.to_string());
-                }).map_err(|e| e.to_string())
-            });
-        send(result);
-    });
-}
-
 /// Extract selected search results to a user-selected directory
 pub fn extract_selected_results(state: SearchState) {
     use std::collections::HashMap;
@@ -779,54 +808,5 @@ pub fn extract_selected_results(state: SearchState) {
             }
         }
         send(Ok(total_extracted));
-    });
-}
-
-/// Import an index from a user-selected directory
-pub fn import_index(state: SearchState) {
-    // Get source folder
-    let source = match rfd::FileDialog::new()
-        .set_title("Import Index From...")
-        .pick_folder()
-    {
-        Some(d) => d,
-        None => return,
-    };
-
-    let index = state.index.clone();
-    let index_status = state.index_status;
-    let show_progress = state.show_progress;
-
-    show_progress.set(true);
-    SEARCH_PROGRESS.reset();
-    SEARCH_PROGRESS.set(0, 1, "Importing index...".to_string());
-
-    let send = create_ext_action(Scope::new(), move |result: Result<(usize, usize), String>| {
-        show_progress.set(false);
-        match result {
-            Ok((file_count, pak_count)) => {
-                index_status.set(IndexStatus::Ready { file_count, pak_count });
-                rfd::MessageDialog::new()
-                    .set_title("Import Complete")
-                    .set_description(&format!("Index loaded: {} files from {} PAKs", file_count, pak_count))
-                    .show();
-            }
-            Err(e) => {
-                rfd::MessageDialog::new()
-                    .set_title("Import Failed")
-                    .set_description(&e)
-                    .show();
-            }
-        }
-    });
-
-    std::thread::spawn(move || {
-        let result = index.write()
-            .map_err(|e| e.to_string())
-            .and_then(|mut idx| {
-                idx.import_index(&source).map_err(|e| e.to_string())?;
-                Ok((idx.file_count(), idx.pak_count()))
-            });
-        send(result);
     });
 }
