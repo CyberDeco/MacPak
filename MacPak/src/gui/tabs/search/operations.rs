@@ -308,10 +308,6 @@ pub fn perform_search(state: SearchState) {
 
     // Spawn background thread
     std::thread::spawn(move || {
-        use std::time::Instant;
-        let total_start = Instant::now();
-
-        let lock_start = Instant::now();
         let idx = match index.read() {
             Ok(idx) => idx,
             Err(e) => {
@@ -319,7 +315,6 @@ pub fn perform_search(state: SearchState) {
                 return;
             }
         };
-        let lock_time = lock_start.elapsed();
 
         // Combined search: fulltext (content matches) + filename/path (all file types)
         SEARCH_PROGRESS.set_active(true);
@@ -327,15 +322,12 @@ pub fn perform_search(state: SearchState) {
 
         // 1. Get fulltext results (text files with content matches)
         let fulltext_results: Vec<SearchResult> = if idx.has_fulltext() {
-            let search_start = Instant::now();
             let progress_callback = |current: usize, total: usize, name: &str| {
                 SEARCH_PROGRESS.set(current, total, name.to_string());
             };
             let ft_results = idx.search_fulltext_with_progress(&query, MAX_RESULTS, progress_callback).unwrap_or_default();
-            let search_time = search_start.elapsed();
-            let result_count = ft_results.len();
 
-            let results: Vec<SearchResult> = ft_results
+            ft_results
                 .into_iter()
                 .filter(|r| active_filter.map_or(true, |ft| {
                     r.file_type.to_lowercase() == ft.display_name().to_lowercase()
@@ -354,34 +346,20 @@ pub fn perform_search(state: SearchState) {
                         match_count,
                     }
                 })
-                .collect();
-
-            eprintln!(
-                "Search timing: lock={:?}, fulltext={:?} ({} raw, {} filtered)",
-                lock_time, search_time, result_count, results.len()
-            );
-
-            results
+                .collect()
         } else {
             Vec::new()
         };
 
         // 2. Get filename/path matches (ALL file types including images, audio, models)
-        let filename_start = Instant::now();
         let filename_results: Vec<SearchResult> = idx
             .search_path(&query, active_filter)
             .into_iter()
             .take(MAX_RESULTS)
             .map(|f| SearchResult::from_indexed_file(f))
             .collect();
-        let filename_time = filename_start.elapsed();
-        eprintln!(
-            "Search timing: filename={:?} ({} results)",
-            filename_time, filename_results.len()
-        );
 
         // 3. Merge results with deduplication (fulltext results take priority - they have snippets)
-        let merge_start = Instant::now();
         let mut seen_paths: HashSet<String> = HashSet::new();
         let mut merged: Vec<SearchResult> = Vec::with_capacity(
             fulltext_results.len() + filename_results.len()
@@ -401,14 +379,7 @@ pub fn perform_search(state: SearchState) {
             }
         }
 
-        let merge_time = merge_start.elapsed();
-        eprintln!(
-            "Search timing: merge={:?} ({} total results)",
-            merge_time, merged.len()
-        );
-
         SEARCH_PROGRESS.set_active(false);
-        eprintln!("Search total: {:?}", total_start.elapsed());
         send_results(SearchMessage::Results(merged));
     });
 }

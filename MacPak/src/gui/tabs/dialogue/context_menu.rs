@@ -63,23 +63,17 @@ pub fn show_node_context_menu(
         menu = menu.entry(
             MenuItem::new("Play Audio")
                 .action(move || {
-                    eprintln!("[DEBUG] Play Audio clicked, handle={:?}", handle_play);
                     if let Some(ref handle) = handle_play {
                         let result = with_audio_player(|player| {
-                            eprintln!("[DEBUG] Got audio player, calling play_node_audio");
                             play_node_audio(player, &state_play, handle, &uuid_play)
                         });
 
                         match result {
-                            Some(Ok(())) => {
-                                eprintln!("[DEBUG] Audio playback started successfully");
-                            }
+                            Some(Ok(())) => {}
                             Some(Err(e)) => {
-                                eprintln!("[DEBUG] Audio playback error: {}", e);
                                 state_play.error_message.set(Some(format!("Audio playback failed: {}", e)));
                             }
                             None => {
-                                eprintln!("[DEBUG] Audio player not available");
                                 state_play.error_message.set(Some("Audio player not available".to_string()));
                             }
                         }

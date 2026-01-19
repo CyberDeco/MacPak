@@ -36,39 +36,6 @@ pub fn imported_fields_display(
                     .into_any()
             } else {
                 v_stack((
-                    // Dye Name row - editable
-                    // h_stack((
-                    //     label(|| "Dye Name")
-                    //         .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
-                    //     text_input(dye_name)
-                    //         .on_event_stop(floem::event::EventListener::FocusLost, move |_| {
-                    //             // Update the name in imported_lsf_entries when focus is lost
-                    //             let new_name = dye_name.get();
-                    //             if let Some(idx) = selected_lsf.get() {
-                    //                 let mut entries = imported_lsf.get();
-                    //                 if idx < entries.len() && !new_name.is_empty() {
-                    //                     entries[idx].name = new_name.clone();
-                    //                     imported_lsf.set(entries);
-                    //                     status.set(format!("Renamed to '{}'", new_name));
-                    //                 }
-                    //             }
-                    //         })
-                    //         .style(|s| {
-                    //             s.flex_grow(1.0)
-                    //                 .flex_basis(0.0)
-                    //                 .width_full()
-                    //                 .min_width(INPUT_MIN_WIDTH)
-                    //                 .padding(PADDING_BTN_V)
-                    //                 .font_size(FONT_BODY)
-                    //                 .font_family("monospace".to_string())
-                    //                 .background(Color::WHITE)
-                    //                 .border(1.0)
-                    //                 .border_color(BORDER_INPUT)
-                    //                 .border_radius(RADIUS_STD)
-                    //         }),
-                    // ))
-                    // .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
                     // Dye Name row
                     h_stack((
                         label(|| "Dye Name")

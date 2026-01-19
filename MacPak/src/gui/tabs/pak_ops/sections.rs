@@ -3,10 +3,6 @@
 use floem::event::{Event, EventListener};
 use floem::prelude::*;
 use floem::text::Weight;
-use std::sync::atomic::{AtomicU64, Ordering};
-
-// Counter to track drop events for debugging
-static DROP_EVENT_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::operations::{
@@ -159,10 +155,6 @@ fn drop_zone(state: PakOpsState) -> impl IntoView {
         .style(|s| s.items_center()),
     )
     .on_event_stop(EventListener::DroppedFile, move |e| {
-        // Debug: track drop event timing (delay is in Floem's macOS event delivery, not our code)
-        let drop_num = DROP_EVENT_COUNTER.fetch_add(1, Ordering::SeqCst) + 1;
-        eprintln!("[drop #{}] Event received", drop_num);
-
         if let Event::DroppedFile(drop_event) = e {
             let path = drop_event.path.to_string_lossy().to_string();
             let display_name = drop_event
