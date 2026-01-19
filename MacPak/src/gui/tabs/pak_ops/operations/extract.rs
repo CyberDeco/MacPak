@@ -4,7 +4,7 @@ use floem::prelude::*;
 use std::path::Path;
 use std::thread;
 
-use crate::gui::state::PakOpsState;
+use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
 
 /// Extract a PAK file via file dialog
@@ -47,7 +47,7 @@ pub fn extract_pak_file(state: PakOpsState) {
 
     state.add_result(&format!("Extracting {}...", pak_name));
     state.is_extracting.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state
         .progress_message
@@ -124,7 +124,7 @@ pub fn extract_individual_files(state: PakOpsState) {
 
     state.add_result(&format!("Loading contents of {}...", pak_name));
     state.is_listing.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state.progress_message.set(format!("Reading {}...", pak_name));
 
@@ -175,7 +175,7 @@ pub fn execute_individual_extract(state: PakOpsState) {
     }
 
     // Close the dialog
-    state.show_file_select.set(false);
+    state.active_dialog.set(ActiveDialog::None);
 
     // Ask for destination
     let dest_dialog = rfd::FileDialog::new()
@@ -191,7 +191,7 @@ pub fn execute_individual_extract(state: PakOpsState) {
     state.clear_results();
     state.add_result(&format!("Extracting {} files...", selected.len()));
     state.is_extracting.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state.progress_message.set("Extracting...".to_string());
 
@@ -240,7 +240,7 @@ pub fn extract_individual_dropped_file(state: PakOpsState, pak_path: String) {
 
     state.add_result(&format!("Loading contents of {}...", pak_name));
     state.is_listing.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state.progress_message.set(format!("Reading {}...", pak_name));
     state.dropped_file.set(None);
@@ -300,7 +300,7 @@ pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
 
     state.add_result(&format!("Extracting {}...", pak_name));
     state.is_extracting.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state
         .progress_message

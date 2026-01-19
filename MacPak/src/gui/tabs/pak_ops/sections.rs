@@ -4,7 +4,7 @@ use floem::event::{Event, EventListener};
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::gui::state::PakOpsState;
+use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::operations::{
     batch_create_paks, batch_extract_paks, create_pak_file, extract_individual_files,
     extract_pak_file, list_pak_contents, rebuild_pak_file, validate_mod_structure,
@@ -154,7 +154,7 @@ fn drop_zone(state: PakOpsState) -> impl IntoView {
         ))
         .style(|s| s.items_center()),
     )
-    .on_event_stop(EventListener::DroppedFile, move |e| {
+    .on_event_cont(EventListener::DroppedFile, move |e| {
         if let Event::DroppedFile(drop_event) = e {
             let path = drop_event.path.to_string_lossy().to_string();
             let display_name = drop_event
@@ -167,13 +167,13 @@ fn drop_zone(state: PakOpsState) -> impl IntoView {
             if drop_event.path.is_dir() {
                 state_for_drop.dropped_folder.set(Some(path.clone()));
                 state_for_drop.add_result(&format!("Dropped folder: {}", display_name));
-                state_for_drop.show_folder_drop_dialog.set(true);
+                state_for_drop.active_dialog.set(ActiveDialog::FolderDropAction);
             }
             // Check if it's a .pak file (for extract/list)
             else if path.to_lowercase().ends_with(".pak") {
                 state_for_drop.dropped_file.set(Some(path.clone()));
                 state_for_drop.add_result(&format!("Dropped: {}", display_name));
-                state_for_drop.show_drop_dialog.set(true);
+                state_for_drop.active_dialog.set(ActiveDialog::DropAction);
             } else {
                 state_for_drop.add_result("⚠ Only .pak files or folders can be dropped here");
             }

@@ -4,7 +4,7 @@ use floem::prelude::*;
 use std::path::Path;
 use std::thread;
 
-use crate::gui::state::PakOpsState;
+use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
 
 /// List contents of a PAK file via file dialog
@@ -38,7 +38,7 @@ pub fn list_pak_contents(state: PakOpsState) {
 
     state.add_result(&format!("Listing contents of {}...", pak_name));
     state.is_listing.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state
         .progress_message
@@ -91,7 +91,7 @@ pub fn list_dropped_file(state: PakOpsState, pak_path: String) {
 
     state.add_result(&format!("Listing contents of {}...", pak_name));
     state.is_listing.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state
         .progress_message

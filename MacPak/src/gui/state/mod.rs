@@ -22,6 +22,6 @@ pub use dialogue::{DialogueState, DialogEntry, DialogSource, DisplayNode, Displa
 pub use dyes::{DyeColorEntry, DyesState, GeneratedDyeEntry, ImportedDyeEntry, VendorDef, VENDOR_DEFS};
 pub use editor::{EditorState, EditorTab, EditorTabsState};
 pub use gr2::Gr2State;
-pub use pak_ops::{PakCompression, PakOpsState};
+pub use pak_ops::{ActiveDialog, PakCompression, PakOpsState};
 pub use search::{IndexStatus, SearchResult, SearchSortColumn, SearchState, SortDirection};
 pub use virtual_textures::VirtualTexturesState;

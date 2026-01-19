@@ -16,17 +16,11 @@ use floem::prelude::*;
 use floem::style::Position;
 
 use crate::gui::state::{AppState, PakOpsState};
-use dialogs::{create_options_dialog, drop_action_dialog, file_select_dialog, folder_drop_action_dialog, progress_overlay};
+use dialogs::dialog_overlay;
 use results::results_area;
 use sections::{header_section, operations_row};
 
 pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState) -> impl IntoView {
-    let state = pak_state.clone();
-    let state2 = pak_state.clone();
-    let state3 = pak_state.clone();
-    let state4 = pak_state.clone();
-    let state5 = pak_state.clone();
-
     v_stack((
         // Header with title and status message
         header_section(pak_state.clone()),
@@ -46,12 +40,8 @@ pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState) -> impl IntoVie
                 .padding(24.0)
                 .gap(16.0)
         }),
-        // Dialog overlays - absolutely positioned so they don't affect layout
-        progress_overlay(state),
-        create_options_dialog(state2),
-        drop_action_dialog(state3),
-        file_select_dialog(state4),
-        folder_drop_action_dialog(state5),
+        // Single unified dialog overlay - replaces 5 separate overlays
+        dialog_overlay(pak_state),
     ))
     .style(|s| {
         s.width_full()

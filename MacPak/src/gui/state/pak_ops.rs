@@ -4,6 +4,18 @@ use floem::prelude::*;
 use im::Vector as ImVector;
 use std::collections::HashSet;
 
+/// Which dialog is currently active (only one at a time)
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
+pub enum ActiveDialog {
+    #[default]
+    None,
+    Progress,
+    CreateOptions,
+    DropAction,
+    FileSelect,
+    FolderDropAction,
+}
+
 /// Compression options for PAK creation
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PakCompression {
@@ -34,10 +46,12 @@ impl PakCompression {
 /// PAK Operations state
 #[derive(Clone)]
 pub struct PakOpsState {
+    // Active dialog (only one at a time)
+    pub active_dialog: RwSignal<ActiveDialog>,
+
     // Operation progress (shared for all operations)
     pub progress: RwSignal<f32>,
     pub progress_message: RwSignal<String>,
-    pub show_progress: RwSignal<bool>,
 
     // Operation flags
     pub is_extracting: RwSignal<bool>,
@@ -57,7 +71,6 @@ pub struct PakOpsState {
     // PAK creation options
     pub compression: RwSignal<PakCompression>,
     pub priority: RwSignal<i32>,
-    pub show_create_options: RwSignal<bool>,
     pub generate_info_json: RwSignal<bool>,
 
     // Pending create operation (source, dest)
@@ -68,14 +81,11 @@ pub struct PakOpsState {
 
     // Dropped file (for drag-drop dialog)
     pub dropped_file: RwSignal<Option<String>>,
-    pub show_drop_dialog: RwSignal<bool>,
 
     // Dropped folder (for folder drag-drop dialog)
     pub dropped_folder: RwSignal<Option<String>>,
-    pub show_folder_drop_dialog: RwSignal<bool>,
 
     // File selection dialog (for extract individual files)
-    pub show_file_select: RwSignal<bool>,
     pub file_select_pak: RwSignal<Option<String>>,
     pub file_select_list: RwSignal<Vec<String>>,
     pub file_select_selected: RwSignal<HashSet<String>>,
@@ -84,9 +94,10 @@ pub struct PakOpsState {
 impl PakOpsState {
     pub fn new() -> Self {
         Self {
+            active_dialog: RwSignal::new(ActiveDialog::None),
+
             progress: RwSignal::new(0.0),
             progress_message: RwSignal::new(String::new()),
-            show_progress: RwSignal::new(false),
 
             is_extracting: RwSignal::new(false),
             is_creating: RwSignal::new(false),
@@ -99,19 +110,14 @@ impl PakOpsState {
 
             compression: RwSignal::new(PakCompression::Lz4Hc),
             priority: RwSignal::new(0),
-            show_create_options: RwSignal::new(false),
             generate_info_json: RwSignal::new(true), // Default to true for BaldursModManager compatibility
             pending_create: RwSignal::new(None),
 
             working_dir: RwSignal::new(None),
 
             dropped_file: RwSignal::new(None),
-            show_drop_dialog: RwSignal::new(false),
-
             dropped_folder: RwSignal::new(None),
-            show_folder_drop_dialog: RwSignal::new(false),
 
-            show_file_select: RwSignal::new(false),
             file_select_pak: RwSignal::new(None),
             file_select_list: RwSignal::new(Vec::new()),
             file_select_selected: RwSignal::new(HashSet::new()),

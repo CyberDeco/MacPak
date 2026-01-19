@@ -6,7 +6,7 @@ use floem_reactive::Scope;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
-use crate::gui::state::PakOpsState;
+use crate::gui::state::{ActiveDialog, PakOpsState};
 
 /// Result type for background PAK operations
 pub enum PakResult {
@@ -180,7 +180,7 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             }
 
             state.is_listing.set(false);
-            state.show_progress.set(false);
+            state.active_dialog.set(ActiveDialog::None);
         }
 
         PakResult::ExtractDone {
@@ -201,7 +201,7 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             }
 
             state.is_extracting.set(false);
-            state.show_progress.set(false);
+            state.active_dialog.set(ActiveDialog::None);
         }
 
         PakResult::CreateDone {
@@ -222,7 +222,7 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             }
 
             state.is_creating.set(false);
-            state.show_progress.set(false);
+            state.active_dialog.set(ActiveDialog::None);
         }
 
         PakResult::ValidateDone {
@@ -274,7 +274,7 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
 
             state.add_results_batch(all_results);
             state.is_extracting.set(false);
-            state.show_progress.set(false);
+            state.active_dialog.set(ActiveDialog::None);
         }
 
         PakResult::BatchCreateDone {
@@ -295,7 +295,7 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
 
             state.add_results_batch(all_results);
             state.is_creating.set(false);
-            state.show_progress.set(false);
+            state.active_dialog.set(ActiveDialog::None);
         }
 
         PakResult::FileSelectLoaded {
@@ -305,13 +305,13 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             error,
         } => {
             state.is_listing.set(false);
-            state.show_progress.set(false);
+            state.active_dialog.set(ActiveDialog::None);
 
             if success {
                 state.file_select_pak.set(Some(pak_path));
                 state.file_select_list.set(files);
                 state.file_select_selected.set(std::collections::HashSet::new());
-                state.show_file_select.set(true);
+                state.active_dialog.set(ActiveDialog::FileSelect);
             } else {
                 state.status_message.set(format!("Failed to load PAK: {}", error.unwrap_or_default()));
             }
@@ -325,7 +325,7 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
         } => {
             state.progress.set(1.0);
             state.is_extracting.set(false);
-            state.show_progress.set(false);
+            state.active_dialog.set(ActiveDialog::None);
 
             if success {
                 state.clear_results();

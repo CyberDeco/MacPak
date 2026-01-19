@@ -4,7 +4,7 @@ use floem::prelude::*;
 use std::path::Path;
 use std::thread;
 
-use crate::gui::state::PakOpsState;
+use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
 
 /// Create a PAK file from a folder via file dialog
@@ -55,7 +55,7 @@ pub fn create_pak_file(state: PakOpsState) {
         source_dir.to_string_lossy().to_string(),
         pak_file.to_string_lossy().to_string(),
     )));
-    state.show_create_options.set(true);
+    state.active_dialog.set(ActiveDialog::CreateOptions);
 }
 
 /// Create a PAK file from a dropped folder (skips folder picker)
@@ -95,7 +95,7 @@ pub fn create_pak_from_dropped_folder(state: PakOpsState, folder_path: String) {
         folder_path,
         pak_file.to_string_lossy().to_string(),
     )));
-    state.show_create_options.set(true);
+    state.active_dialog.set(ActiveDialog::CreateOptions);
 }
 
 /// Rebuild a PAK file from a dropped folder (skips folder picker)
@@ -135,7 +135,7 @@ pub fn rebuild_pak_from_dropped_folder(state: PakOpsState, folder_path: String) 
         folder_path,
         pak_file.to_string_lossy().to_string(),
     )));
-    state.show_create_options.set(true);
+    state.active_dialog.set(ActiveDialog::CreateOptions);
 }
 
 /// Rebuild a modified PAK file
@@ -186,7 +186,7 @@ pub fn rebuild_pak_file(state: PakOpsState) {
         source_dir.to_string_lossy().to_string(),
         pak_file.to_string_lossy().to_string(),
     )));
-    state.show_create_options.set(true);
+    state.active_dialog.set(ActiveDialog::CreateOptions);
 }
 
 /// Execute the actual PAK creation after options are set
@@ -216,7 +216,7 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
     }
 
     state.is_creating.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state
         .progress_message

@@ -5,7 +5,7 @@ use std::thread;
 use floem::prelude::*;
 use MacLarian::pak::{find_pak_files, find_packable_folders, batch_extract, batch_create};
 
-use crate::gui::state::PakOpsState;
+use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::types::{create_result_sender, get_shared_progress, PakResult};
 
 /// Batch extract multiple PAK files from a folder (recursively)
@@ -51,7 +51,7 @@ pub fn batch_extract_paks(state: PakOpsState) {
     let pak_count = pak_files.len();
 
     state.is_extracting.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state
         .progress_message
@@ -125,7 +125,7 @@ pub fn batch_create_paks(state: PakOpsState) {
     let folder_count = folders.len();
 
     state.is_creating.set(true);
-    state.show_progress.set(true);
+    state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
     state
         .progress_message
