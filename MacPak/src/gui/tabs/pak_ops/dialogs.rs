@@ -14,8 +14,8 @@ use std::time::Duration;
 use crate::gui::state::PakOpsState;
 use super::operations::{
     create_pak_from_dropped_folder, execute_create_pak, execute_individual_extract,
-    extract_dropped_file, list_dropped_file, rebuild_pak_from_dropped_folder,
-    validate_dropped_folder,
+    extract_dropped_file, extract_individual_dropped_file, list_dropped_file,
+    rebuild_pak_from_dropped_folder, validate_dropped_folder,
 };
 use super::types::get_shared_progress;
 use super::widgets::{compression_selector, priority_input};
@@ -310,6 +310,7 @@ pub fn drop_action_dialog(state: PakOpsState) -> impl IntoView {
     let dropped_file = state.dropped_file;
 
     let state_extract = state.clone();
+    let state_individual = state.clone();
     let state_list = state.clone();
     let state_cancel = state.clone();
 
@@ -324,9 +325,11 @@ pub fn drop_action_dialog(state: PakOpsState) -> impl IntoView {
                     .unwrap_or_else(|| "PAK file".to_string());
 
                 let state_extract = state_extract.clone();
+                let state_individual = state_individual.clone();
                 let state_list = state_list.clone();
                 let state_cancel = state_cancel.clone();
                 let file_path_extract = file_path.clone();
+                let file_path_individual = file_path.clone();
                 let file_path_list = file_path.clone();
 
                 v_stack((
@@ -353,6 +356,21 @@ pub fn drop_action_dialog(state: PakOpsState) -> impl IntoView {
                                 .color(Color::WHITE)
                                 .border_radius(4.0)
                                 .hover(|s| s.background(Color::rgb8(25, 118, 210)))
+                        }),
+                    // Extract Individual button
+                    button("📄 Extract Individual Files")
+                        .action(move || {
+                            state_individual.show_drop_dialog.set(false);
+                            extract_individual_dropped_file(state_individual.clone(), file_path_individual.clone());
+                        })
+                        .style(|s| {
+                            s.width_full()
+                                .padding_vert(10.0)
+                                .margin_bottom(8.0)
+                                .background(Color::rgb8(156, 39, 176))
+                                .color(Color::WHITE)
+                                .border_radius(4.0)
+                                .hover(|s| s.background(Color::rgb8(123, 31, 162)))
                         }),
                     // List button
                     button("📋 List Contents")

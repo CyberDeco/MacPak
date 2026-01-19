@@ -229,6 +229,54 @@ pub fn execute_individual_extract(state: PakOpsState) {
     });
 }
 
+/// Extract individual files from a dropped PAK file (shows file selection dialog)
+pub fn extract_individual_dropped_file(state: PakOpsState, pak_path: String) {
+    state.clear_results();
+
+    let pak_name = Path::new(&pak_path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    state.add_result(&format!("Loading contents of {}...", pak_name));
+    state.is_listing.set(true);
+    state.show_progress.set(true);
+    state.progress.set(0.0);
+    state.progress_message.set(format!("Reading {}...", pak_name));
+    state.dropped_file.set(None);
+
+    get_shared_progress().reset();
+
+    let send = create_result_sender(state.clone());
+    let progress_sender = create_progress_sender(state);
+
+    thread::spawn(move || {
+        let result = MacLarian::pak::PakOperations::list_with_progress(
+            &pak_path,
+            &|current, total, description| {
+                progress_sender(current, total, description);
+            },
+        );
+
+        let pak_result = match result {
+            Ok(files) => PakResult::FileSelectLoaded {
+                success: true,
+                files,
+                pak_path,
+                error: None,
+            },
+            Err(e) => PakResult::FileSelectLoaded {
+                success: false,
+                files: Vec::new(),
+                pak_path,
+                error: Some(e.to_string()),
+            },
+        };
+
+        send(pak_result);
+    });
+}
+
 /// Extract a dropped PAK file
 pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
     state.clear_results();

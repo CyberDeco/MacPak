@@ -5,7 +5,7 @@ use std::path::Path;
 use std::thread;
 
 use crate::gui::state::PakOpsState;
-use super::super::types::{create_result_sender, PakResult};
+use super::super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
 
 /// Create a PAK file from a folder via file dialog
 pub fn create_pak_file(state: PakOpsState) {
@@ -220,10 +220,14 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
     state.progress.set(0.0);
     state
         .progress_message
-        .set(format!("Creating {} (this may take a while)...", pak_name));
+        .set(format!("Creating {}...", pak_name));
     state.pending_create.set(None);
 
-    let send = create_result_sender(state);
+    // Reset shared progress state
+    get_shared_progress().reset();
+
+    let send = create_result_sender(state.clone());
+    let progress_sender = create_progress_sender(state);
 
     let pak_name_clone = pak_name.clone();
 
@@ -244,7 +248,14 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
             .filter_map(|e| e.path().strip_prefix(source_path).ok().map(|p| p.to_string_lossy().to_string()))
             .collect();
 
-        let result = MacLarian::pak::PakOperations::create_with_compression(&source, &dest, mac_compression);
+        let result = MacLarian::pak::PakOperations::create_with_compression_and_progress(
+            &source,
+            &dest,
+            mac_compression,
+            &|current, total, description| {
+                progress_sender(current, total, description);
+            },
+        );
 
         let pak_result = match result {
             Ok(_) => {
