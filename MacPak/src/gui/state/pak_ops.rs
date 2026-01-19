@@ -70,6 +70,10 @@ pub struct PakOpsState {
     pub dropped_file: RwSignal<Option<String>>,
     pub show_drop_dialog: RwSignal<bool>,
 
+    // Dropped folder (for folder drag-drop dialog)
+    pub dropped_folder: RwSignal<Option<String>>,
+    pub show_folder_drop_dialog: RwSignal<bool>,
+
     // File selection dialog (for extract individual files)
     pub show_file_select: RwSignal<bool>,
     pub file_select_pak: RwSignal<Option<String>>,
@@ -103,6 +107,9 @@ impl PakOpsState {
 
             dropped_file: RwSignal::new(None),
             show_drop_dialog: RwSignal::new(false),
+
+            dropped_folder: RwSignal::new(None),
+            show_folder_drop_dialog: RwSignal::new(false),
 
             show_file_select: RwSignal::new(false),
             file_select_pak: RwSignal::new(None),

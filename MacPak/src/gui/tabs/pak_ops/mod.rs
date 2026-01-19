@@ -16,7 +16,7 @@ use floem::prelude::*;
 use floem::style::Position;
 
 use crate::gui::state::{AppState, PakOpsState};
-use dialogs::{create_options_dialog, drop_action_dialog, file_select_dialog, progress_overlay};
+use dialogs::{create_options_dialog, drop_action_dialog, file_select_dialog, folder_drop_action_dialog, progress_overlay};
 use results::results_area;
 use sections::{header_section, operations_row};
 
@@ -25,6 +25,7 @@ pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState) -> impl IntoVie
     let state2 = pak_state.clone();
     let state3 = pak_state.clone();
     let state4 = pak_state.clone();
+    let state5 = pak_state.clone();
 
     v_stack((
         // Header with title and status message
@@ -50,6 +51,7 @@ pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState) -> impl IntoVie
         create_options_dialog(state2),
         drop_action_dialog(state3),
         file_select_dialog(state4),
+        folder_drop_action_dialog(state5),
     ))
     .style(|s| {
         s.width_full()

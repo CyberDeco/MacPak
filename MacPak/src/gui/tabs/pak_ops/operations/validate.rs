@@ -47,3 +47,29 @@ pub fn validate_mod_structure(state: PakOpsState) {
         });
     });
 }
+
+/// Validate a dropped folder's mod structure (skips folder picker)
+pub fn validate_dropped_folder(state: PakOpsState, folder_path: String) {
+    state.clear_results();
+
+    let mod_name = Path::new(&folder_path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    state.add_result(&format!("Validating mod structure: {}", mod_name));
+    state.is_validating.set(true);
+
+    let send = create_result_sender(state);
+
+    thread::spawn(move || {
+        // Use MacLarian's validation
+        let result = MacLarian::mods::validate_mod_structure(Path::new(&folder_path));
+
+        send(PakResult::ValidateDone {
+            valid: result.valid,
+            structure: result.structure,
+            warnings: result.warnings,
+        });
+    });
+}

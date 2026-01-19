@@ -12,7 +12,11 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::gui::state::PakOpsState;
-use super::operations::{execute_create_pak, execute_individual_extract, extract_dropped_file, list_dropped_file};
+use super::operations::{
+    create_pak_from_dropped_folder, execute_create_pak, execute_individual_extract,
+    extract_dropped_file, list_dropped_file, rebuild_pak_from_dropped_folder,
+    validate_dropped_folder,
+};
 use super::types::get_shared_progress;
 use super::widgets::{compression_selector, priority_input};
 
@@ -682,6 +686,144 @@ pub fn file_select_dialog(state: PakOpsState) -> impl IntoView {
                 state_escape.file_select_list.set(Vec::new());
                 state_escape.file_select_selected.set(std::collections::HashSet::new());
                 state_escape.clear_results();
+            }
+        }
+    })
+    .keyboard_navigable()
+}
+
+/// Dialog shown when a folder is dropped, asking what action to take
+pub fn folder_drop_action_dialog(state: PakOpsState) -> impl IntoView {
+    let show = state.show_folder_drop_dialog;
+    let dropped_folder = state.dropped_folder;
+
+    let state_create = state.clone();
+    let state_rebuild = state.clone();
+    let state_validate = state.clone();
+    let state_cancel = state.clone();
+
+    dyn_container(
+        move || show.get(),
+        move |visible| {
+            if visible {
+                let folder_path = dropped_folder.get().unwrap_or_default();
+                let folder_name = Path::new(&folder_path)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "folder".to_string());
+
+                let state_create = state_create.clone();
+                let state_rebuild = state_rebuild.clone();
+                let state_validate = state_validate.clone();
+                let state_cancel = state_cancel.clone();
+                let folder_path_create = folder_path.clone();
+                let folder_path_rebuild = folder_path.clone();
+                let folder_path_validate = folder_path.clone();
+
+                v_stack((
+                    // Title
+                    label(move || format!("Dropped: {}", folder_name)).style(|s| {
+                        s.font_size(16.0)
+                            .font_weight(Weight::BOLD)
+                            .margin_bottom(16.0)
+                    }),
+                    // Action buttons
+                    label(|| "What would you like to do?".to_string())
+                        .style(|s| s.margin_bottom(12.0)),
+                    // Create PAK button
+                    button("🔧 Create PAK from Folder")
+                        .action(move || {
+                            state_create.show_folder_drop_dialog.set(false);
+                            create_pak_from_dropped_folder(state_create.clone(), folder_path_create.clone());
+                        })
+                        .style(|s| {
+                            s.width_full()
+                                .padding_vert(10.0)
+                                .margin_bottom(8.0)
+                                .background(Color::rgb8(33, 150, 243))
+                                .color(Color::WHITE)
+                                .border_radius(4.0)
+                                .hover(|s| s.background(Color::rgb8(25, 118, 210)))
+                        }),
+                    // Rebuild PAK button
+                    button("🔧 Rebuild Modified PAK")
+                        .action(move || {
+                            state_rebuild.show_folder_drop_dialog.set(false);
+                            rebuild_pak_from_dropped_folder(state_rebuild.clone(), folder_path_rebuild.clone());
+                        })
+                        .style(|s| {
+                            s.width_full()
+                                .padding_vert(10.0)
+                                .margin_bottom(8.0)
+                                .background(Color::rgb8(76, 175, 80))
+                                .color(Color::WHITE)
+                                .border_radius(4.0)
+                                .hover(|s| s.background(Color::rgb8(56, 142, 60)))
+                        }),
+                    // Validate button
+                    button("✓ Validate Mod Structure")
+                        .action(move || {
+                            state_validate.show_folder_drop_dialog.set(false);
+                            validate_dropped_folder(state_validate.clone(), folder_path_validate.clone());
+                        })
+                        .style(|s| {
+                            s.width_full()
+                                .padding_vert(10.0)
+                                .margin_bottom(8.0)
+                                .background(Color::rgb8(255, 152, 0))
+                                .color(Color::WHITE)
+                                .border_radius(4.0)
+                                .hover(|s| s.background(Color::rgb8(245, 124, 0)))
+                        }),
+                    // Cancel button
+                    button("Cancel")
+                        .action(move || {
+                            state_cancel.show_folder_drop_dialog.set(false);
+                            state_cancel.dropped_folder.set(None);
+                        })
+                        .style(|s| {
+                            s.width_full()
+                                .padding_vert(10.0)
+                                .background(Color::rgb8(240, 240, 240))
+                                .border(1.0)
+                                .border_color(Color::rgb8(200, 200, 200))
+                                .border_radius(4.0)
+                        }),
+                ))
+                .style(|s| {
+                    s.padding(24.0)
+                        .background(Color::WHITE)
+                        .border(1.0)
+                        .border_color(Color::rgb8(200, 200, 200))
+                        .border_radius(8.0)
+                        .width(320.0)
+                })
+                .into_any()
+            } else {
+                empty().into_any()
+            }
+        },
+    )
+    .style(move |s| {
+        if show.get() {
+            s.position(floem::style::Position::Absolute)
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .inset_bottom(0.0)
+                .inset_right(0.0)
+                .items_center()
+                .justify_center()
+                .background(Color::rgba8(0, 0, 0, 100))
+                .z_index(100)
+        } else {
+            s.display(floem::style::Display::None)
+        }
+    })
+    .on_event_stop(EventListener::KeyDown, move |e| {
+        if let Event::KeyDown(key_event) = e {
+            if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
+                state.show_folder_drop_dialog.set(false);
+                state.dropped_folder.set(None);
             }
         }
     })

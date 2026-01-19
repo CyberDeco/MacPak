@@ -58,6 +58,86 @@ pub fn create_pak_file(state: PakOpsState) {
     state.show_create_options.set(true);
 }
 
+/// Create a PAK file from a dropped folder (skips folder picker)
+pub fn create_pak_from_dropped_folder(state: PakOpsState, folder_path: String) {
+    state.clear_results();
+
+    let source_dir = Path::new(&folder_path);
+
+    state.working_dir.set(Some(folder_path.clone()));
+
+    let suggested_name = format!(
+        "{}.pak",
+        source_dir
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "output".to_string())
+    );
+
+    let save_dialog = rfd::FileDialog::new()
+        .set_title("Save PAK File As")
+        .set_file_name(&suggested_name)
+        .add_filter("PAK Files", &["pak"]);
+
+    let save_dialog = if let Some(parent) = source_dir.parent() {
+        save_dialog.set_directory(parent)
+    } else {
+        save_dialog
+    };
+
+    let Some(pak_file) = save_dialog.save_file() else {
+        state.add_result("Cancelled PAK creation");
+        return;
+    };
+
+    // Store pending operation and show options dialog
+    state.pending_create.set(Some((
+        folder_path,
+        pak_file.to_string_lossy().to_string(),
+    )));
+    state.show_create_options.set(true);
+}
+
+/// Rebuild a PAK file from a dropped folder (skips folder picker)
+pub fn rebuild_pak_from_dropped_folder(state: PakOpsState, folder_path: String) {
+    state.clear_results();
+
+    let source_dir = Path::new(&folder_path);
+
+    state.working_dir.set(Some(folder_path.clone()));
+
+    let suggested_name = format!(
+        "{}_rebuilt.pak",
+        source_dir
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "output".to_string())
+    );
+
+    let save_dialog = rfd::FileDialog::new()
+        .set_title("Save Rebuilt PAK As")
+        .set_file_name(&suggested_name)
+        .add_filter("PAK Files", &["pak"]);
+
+    let save_dialog = if let Some(parent) = source_dir.parent() {
+        save_dialog.set_directory(parent)
+    } else {
+        save_dialog
+    };
+
+    let Some(pak_file) = save_dialog.save_file() else {
+        state.add_result("Cancelled PAK rebuild");
+        return;
+    };
+
+    // Store pending operation and show options dialog
+    state.pending_create.set(Some((
+        folder_path,
+        pak_file.to_string_lossy().to_string(),
+    )));
+    state.show_create_options.set(true);
+}
+
 /// Rebuild a modified PAK file
 pub fn rebuild_pak_file(state: PakOpsState) {
     state.clear_results();
