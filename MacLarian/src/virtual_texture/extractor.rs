@@ -301,7 +301,7 @@ impl VirtualTextureExtractor {
         // Extract base name (e.g., "Albedo_Normal_Physical_1" from "Albedo_Normal_Physical_1_xxx.gtp")
         let base_name = if let Some(pos) = gtp_name.rfind('_') {
             let suffix = &gtp_name[pos + 1..];
-            if suffix.ends_with(".gtp") && suffix.len() > 4 {
+            if suffix.to_lowercase().ends_with(".gtp") && suffix.len() > 4 {
                 &gtp_name[..pos]
             } else {
                 gtp_name.trim_end_matches(".gtp")

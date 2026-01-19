@@ -347,7 +347,7 @@ impl MergedResolver {
         let mut matches = Vec::new();
 
         for file_path in &all_files {
-            if !file_path.ends_with(".gtp") {
+            if !file_path.to_lowercase().ends_with(".gtp") {
                 continue;
             }
 

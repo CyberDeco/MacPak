@@ -40,7 +40,7 @@ pub fn load_voice_meta_from_pak(pak_path: &Path) -> Result<VoiceMetaCache, Strin
     // Filter to Soundbanks .lsf files
     let soundbank_files: Vec<_> = entries
         .iter()
-        .filter(|e| e.contains("/Soundbanks/") && e.ends_with(".lsf"))
+        .filter(|e| e.contains("/Soundbanks/") && e.to_lowercase().ends_with(".lsf"))
         .cloned()
         .collect();
 

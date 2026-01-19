@@ -80,6 +80,7 @@ style = "deny"
 suspicious = "deny"
 too-many-arguments = { level = "allow" }
 multiple-crate-versions = { level = "allow" }
+case_sensitive_file_extension_comparisons = { level = "allow" } # paths are lowercased before comparison
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
