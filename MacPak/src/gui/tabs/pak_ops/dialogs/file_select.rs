@@ -13,7 +13,7 @@ pub fn file_select_content(state: PakOpsState) -> impl IntoView {
     let files = state.file_select_list;
     let selected = state.file_select_selected;
     let pak_path = state.file_select_pak;
-    let ext_filter = RwSignal::new(String::new());
+    let ext_filter = state.file_select_filter;
 
     let state_extract = state.clone();
     let state_cancel = state.clone();
@@ -178,6 +178,7 @@ pub fn file_select_content(state: PakOpsState) -> impl IntoView {
                     state_cancel.file_select_pak.set(None);
                     state_cancel.file_select_list.set(Vec::new());
                     state_cancel.file_select_selected.set(std::collections::HashSet::new());
+                    state_cancel.file_select_filter.set(String::new());
                     state_cancel.clear_results();
                     state_cancel.active_dialog.set(ActiveDialog::None);
                 })

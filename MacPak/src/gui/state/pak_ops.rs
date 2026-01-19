@@ -89,6 +89,16 @@ pub struct PakOpsState {
     pub file_select_pak: RwSignal<Option<String>>,
     pub file_select_list: RwSignal<Vec<String>>,
     pub file_select_selected: RwSignal<HashSet<String>>,
+    pub file_select_filter: RwSignal<String>,
+
+    // Progress polling signals (persistent to avoid accumulation on tab switch)
+    pub polled_pct: RwSignal<u32>,
+    pub polled_current: RwSignal<u32>,
+    pub polled_total: RwSignal<u32>,
+    pub polled_msg: RwSignal<String>,
+    pub timer_active: RwSignal<bool>,
+    /// Guards against multiple effect registrations
+    pub polling_effect_registered: RwSignal<bool>,
 }
 
 impl PakOpsState {
@@ -121,6 +131,14 @@ impl PakOpsState {
             file_select_pak: RwSignal::new(None),
             file_select_list: RwSignal::new(Vec::new()),
             file_select_selected: RwSignal::new(HashSet::new()),
+            file_select_filter: RwSignal::new(String::new()),
+
+            polled_pct: RwSignal::new(0),
+            polled_current: RwSignal::new(0),
+            polled_total: RwSignal::new(0),
+            polled_msg: RwSignal::new(String::new()),
+            timer_active: RwSignal::new(false),
+            polling_effect_registered: RwSignal::new(false),
         }
     }
 

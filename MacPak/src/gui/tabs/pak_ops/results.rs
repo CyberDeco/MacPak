@@ -53,10 +53,8 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
         log.into_iter()
             .filter(|msg| {
                 // Apply failure filter
-                if filter_failures {
-                    if !is_error_message(msg) {
-                        return false;
-                    }
+                if filter_failures && !is_error_message(msg) {
+                    return false;
                 }
                 // Apply search filter
                 if !search.is_empty() {

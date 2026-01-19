@@ -31,12 +31,12 @@ use progress::progress_content;
 pub fn dialog_overlay(state: PakOpsState) -> impl IntoView {
     let active = state.active_dialog;
 
-    // Progress polling state - only used when Progress dialog is active
-    let polled_pct = RwSignal::new(0u32);
-    let polled_current = RwSignal::new(0u32);
-    let polled_total = RwSignal::new(0u32);
-    let polled_msg = RwSignal::new(String::new());
-    let timer_active = RwSignal::new(false);
+    // Use persistent state signals to avoid accumulation on tab switch
+    let polled_pct = state.polled_pct;
+    let polled_current = state.polled_current;
+    let polled_total = state.polled_total;
+    let polled_msg = state.polled_msg;
+    let timer_active = state.timer_active;
 
     // Polling function for progress
     fn poll_and_schedule(
@@ -68,26 +68,31 @@ pub fn dialog_overlay(state: PakOpsState) -> impl IntoView {
         }
     }
 
-    // Start/stop progress polling based on active dialog
-    create_effect(move |_| {
-        let dialog = active.get();
-        if matches!(dialog, ActiveDialog::Progress) {
-            get_shared_progress().reset();
-            polled_pct.set(0);
-            polled_current.set(0);
-            polled_total.set(0);
-            polled_msg.set("Starting...".to_string());
-            timer_active.set(true);
+    // Only register the effect ONCE - guard against re-registration on tab switch
+    if !state.polling_effect_registered.get_untracked() {
+        state.polling_effect_registered.set(true);
 
-            exec_after(Duration::from_millis(50), move |_| {
-                if matches!(active.get_untracked(), ActiveDialog::Progress) {
-                    poll_and_schedule(polled_pct, polled_current, polled_total, polled_msg, active, timer_active);
-                }
-            });
-        } else {
-            timer_active.set(false);
-        }
-    });
+        // Start/stop progress polling based on active dialog
+        create_effect(move |_| {
+            let dialog = active.get();
+            if matches!(dialog, ActiveDialog::Progress) {
+                get_shared_progress().reset();
+                polled_pct.set(0);
+                polled_current.set(0);
+                polled_total.set(0);
+                polled_msg.set("Starting...".to_string());
+                timer_active.set(true);
+
+                exec_after(Duration::from_millis(50), move |_| {
+                    if matches!(active.get_untracked(), ActiveDialog::Progress) {
+                        poll_and_schedule(polled_pct, polled_current, polled_total, polled_msg, active, timer_active);
+                    }
+                });
+            } else {
+                timer_active.set(false);
+            }
+        });
+    }
 
     let state_for_content = state.clone();
     let state_for_escape = state.clone();
@@ -96,43 +101,41 @@ pub fn dialog_overlay(state: PakOpsState) -> impl IntoView {
         move || active.get(),
         move |dialog| {
             let state = state_for_content.clone();
-            match dialog {
-                ActiveDialog::None => empty().into_any(),
 
+            // When None, return empty - the dyn_container styling handles visibility
+            if dialog == ActiveDialog::None {
+                return empty().into_any();
+            }
+
+            // For active dialogs, just return the content - backdrop is on dyn_container
+            match dialog {
+                ActiveDialog::None => unreachable!(),
                 ActiveDialog::Progress => {
                     progress_content(polled_pct, polled_current, polled_total, polled_msg).into_any()
                 }
-
-                ActiveDialog::CreateOptions => {
-                    create_options_content(state).into_any()
-                }
-
-                ActiveDialog::DropAction => {
-                    drop_action_content(state).into_any()
-                }
-
-                ActiveDialog::FileSelect => {
-                    file_select_content(state).into_any()
-                }
-
-                ActiveDialog::FolderDropAction => {
-                    folder_drop_action_content(state).into_any()
-                }
+                ActiveDialog::CreateOptions => create_options_content(state).into_any(),
+                ActiveDialog::DropAction => drop_action_content(state).into_any(),
+                ActiveDialog::FileSelect => file_select_content(state).into_any(),
+                ActiveDialog::FolderDropAction => folder_drop_action_content(state).into_any(),
             }
         },
     )
     .style(move |s| {
-        if active.get() != ActiveDialog::None {
-            s.position(floem::style::Position::Absolute)
-                .inset_top(0.0)
-                .inset_left(0.0)
-                .inset_bottom(0.0)
-                .inset_right(0.0)
-                .items_center()
-                .justify_center()
-                .background(Color::rgba8(0, 0, 0, 100))
-                .z_index(100)
+        let is_active = active.get() != ActiveDialog::None;
+        let s = s
+            .position(floem::style::Position::Absolute)
+            .inset_top(0.0)
+            .inset_left(0.0)
+            .inset_bottom(0.0)
+            .inset_right(0.0)
+            .items_center()
+            .justify_center()
+            .z_index(100);
+
+        if is_active {
+            s.background(Color::rgba8(0, 0, 0, 100))
         } else {
+            // When no dialog, make it non-interactive
             s.display(floem::style::Display::None)
         }
     })
@@ -141,8 +144,7 @@ pub fn dialog_overlay(state: PakOpsState) -> impl IntoView {
             if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
                 let state = state_for_escape.clone();
                 match state.active_dialog.get() {
-                    ActiveDialog::None => {}
-                    ActiveDialog::Progress => {} // Can't cancel progress
+                    ActiveDialog::None | ActiveDialog::Progress => {}
                     ActiveDialog::CreateOptions => {
                         state.pending_create.set(None);
                         state.active_dialog.set(ActiveDialog::None);
@@ -155,6 +157,7 @@ pub fn dialog_overlay(state: PakOpsState) -> impl IntoView {
                         state.file_select_pak.set(None);
                         state.file_select_list.set(Vec::new());
                         state.file_select_selected.set(std::collections::HashSet::new());
+                        state.file_select_filter.set(String::new());
                         state.clear_results();
                         state.active_dialog.set(ActiveDialog::None);
                     }

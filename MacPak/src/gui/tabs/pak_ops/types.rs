@@ -143,9 +143,17 @@ pub fn get_shared_progress() -> &'static SharedProgress {
     SHARED_PROGRESS.get_or_init(SharedProgress::new)
 }
 
+/// Global scope for ext_action callbacks - reused to prevent scope accumulation
+static EXT_ACTION_SCOPE: std::sync::OnceLock<Scope> = std::sync::OnceLock::new();
+
+/// Get or create the global scope for ext_action calls
+fn get_ext_action_scope() -> Scope {
+    *EXT_ACTION_SCOPE.get_or_init(Scope::new)
+}
+
 /// Create a sender for background operations that updates UI on the main thread
 pub fn create_result_sender(state: PakOpsState) -> impl FnOnce(PakResult) {
-    create_ext_action(Scope::new(), move |result| {
+    create_ext_action(get_ext_action_scope(), move |result| {
         handle_pak_result(state, result);
     })
 }
@@ -311,6 +319,7 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
                 state.file_select_pak.set(Some(pak_path));
                 state.file_select_list.set(files);
                 state.file_select_selected.set(std::collections::HashSet::new());
+                state.file_select_filter.set(String::new());
                 state.active_dialog.set(ActiveDialog::FileSelect);
             } else {
                 state.status_message.set(format!("Failed to load PAK: {}", error.unwrap_or_default()));
