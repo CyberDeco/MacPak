@@ -284,6 +284,13 @@ pub fn load_localization_from_pak_parallel(
 ) -> Result<usize, LocalizationError> {
     use rayon::prelude::*;
 
+    // Parsed entry for merging into cache
+    struct ParsedEntry {
+        key: String,
+        text: String,
+        version: u16,
+    }
+
     // List all .loca files in the PAK
     let entries = PakOperations::list(pak_path)
         .map_err(|e| LocalizationError::PakError(format!("Failed to list PAK: {e}")))?;
@@ -301,13 +308,6 @@ pub fn load_localization_from_pak_parallel(
     // Batch read all .loca files from PAK
     let file_data = PakOperations::read_files_bytes(pak_path, &loca_files)
         .map_err(|e| LocalizationError::PakError(format!("Failed to batch read files: {e}")))?;
-
-    // Parsed entry for merging into cache
-    struct ParsedEntry {
-        key: String,
-        text: String,
-        version: u16,
-    }
 
     // Parse .loca files in parallel
     let parsed_results: Vec<Result<Vec<ParsedEntry>, String>> = file_data

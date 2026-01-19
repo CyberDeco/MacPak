@@ -167,17 +167,6 @@ impl DifficultyClassCache {
 
     /// Extract (UUID, Name, Difficulty) tuples from DifficultyClasses.lsx bytes
     fn extract_dcs_from_lsx(data: &[u8]) -> Vec<(String, String, i32)> {
-        let mut results = Vec::new();
-
-        // Parse as UTF-8 string first
-        let Ok(xml_str) = std::str::from_utf8(data) else {
-            return results;
-        };
-
-        let Ok(doc) = parse_lsx(xml_str) else {
-            return results;
-        };
-
         // Process all regions and their nodes
         fn process_node(node: &crate::formats::lsx::LsxNode, results: &mut Vec<(String, String, i32)>) {
             // DifficultyClass nodes have UUID, Name, and Difficulties attributes
@@ -218,6 +207,17 @@ impl DifficultyClassCache {
                 process_node(child, results);
             }
         }
+
+        let mut results = Vec::new();
+
+        // Parse as UTF-8 string first
+        let Ok(xml_str) = std::str::from_utf8(data) else {
+            return results;
+        };
+
+        let Ok(doc) = parse_lsx(xml_str) else {
+            return results;
+        };
 
         // Process all regions and their nodes
         for region in &doc.regions {

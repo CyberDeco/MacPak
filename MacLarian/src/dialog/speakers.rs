@@ -345,17 +345,6 @@ impl SpeakerCache {
     /// Extract UUID and `DisplayName` (handle) pairs from LSX (XML) bytes
     /// Used for Origins files which define companion characters
     fn extract_speakers_from_lsx(data: &[u8]) -> Vec<(String, String)> {
-        let mut results = Vec::new();
-
-        // Parse as UTF-8 string first
-        let Ok(xml_str) = std::str::from_utf8(data) else {
-            return results;
-        };
-
-        let Ok(doc) = parse_lsx(xml_str) else {
-            return results;
-        };
-
         // Recursively process all nodes in all regions
         fn process_node(node: &crate::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
             let mut global_template: Option<String> = None;
@@ -390,6 +379,17 @@ impl SpeakerCache {
                 process_node(child, results);
             }
         }
+
+        let mut results = Vec::new();
+
+        // Parse as UTF-8 string first
+        let Ok(xml_str) = std::str::from_utf8(data) else {
+            return results;
+        };
+
+        let Ok(doc) = parse_lsx(xml_str) else {
+            return results;
+        };
 
         // Process all regions and their nodes
         for region in &doc.regions {

@@ -28,9 +28,8 @@ pub fn extract_text(bytes: &[u8], file_type: FileType) -> String {
 /// - All names from the names table (node/attribute names)
 /// - All string-type attribute values (strings, UUIDs, translated strings)
 fn extract_lsf_text(bytes: &[u8]) -> String {
-    let doc = match parse_lsf_bytes(bytes) {
-        Ok(d) => d,
-        Err(_) => return String::new(),
+    let Ok(doc) = parse_lsf_bytes(bytes) else {
+        return String::new();
     };
 
     let mut text_parts = Vec::new();

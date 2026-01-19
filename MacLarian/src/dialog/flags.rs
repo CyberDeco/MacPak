@@ -226,17 +226,6 @@ impl FlagCache {
 
     /// Extract UUID and name pairs from `ScriptFlags` LSX (XML) bytes
     fn extract_flags_from_lsx(data: &[u8]) -> Vec<(String, String)> {
-        let mut results = Vec::new();
-
-        // Parse as UTF-8 string first
-        let Ok(xml_str) = std::str::from_utf8(data) else {
-            return results;
-        };
-
-        let Ok(doc) = parse_lsx(xml_str) else {
-            return results;
-        };
-
         // Recursively process all nodes in all regions
         fn process_node(node: &crate::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
             // ScriptFlags.lsx uses "ScriptFlag" nodes with "name" and "UUID" attributes
@@ -297,6 +286,17 @@ impl FlagCache {
                 process_node(child, results);
             }
         }
+
+        let mut results = Vec::new();
+
+        // Parse as UTF-8 string first
+        let Ok(xml_str) = std::str::from_utf8(data) else {
+            return results;
+        };
+
+        let Ok(doc) = parse_lsx(xml_str) else {
+            return results;
+        };
 
         // Process all regions and their nodes
         for region in &doc.regions {

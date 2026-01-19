@@ -290,7 +290,7 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// Decompress LZ4 data with multiple fallback strategies
-    fn decompress_lz4(&self, compressed: &[u8], expected_size: usize, path: &PathBuf) -> Result<Vec<u8>> {
+    fn decompress_lz4(&self, compressed: &[u8], expected_size: usize, path: &Path) -> Result<Vec<u8>> {
         // Try standard block decompression first
         if let Ok(data) = lz4_flex::block::decompress(compressed, expected_size) {
             return Ok(data);
@@ -323,7 +323,7 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// Decompress Zlib data
-    fn decompress_zlib(&self, compressed: &[u8], expected_size: usize, path: &PathBuf) -> Result<Vec<u8>> {
+    fn decompress_zlib(&self, compressed: &[u8], expected_size: usize, path: &Path) -> Result<Vec<u8>> {
         use flate2::read::ZlibDecoder;
 
         let mut decoder = ZlibDecoder::new(compressed);

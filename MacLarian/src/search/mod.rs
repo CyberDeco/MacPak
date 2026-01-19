@@ -576,9 +576,8 @@ impl SearchIndex {
         let all_docs: Vec<TantivyDocument> = segment_readers
             .par_iter()
             .flat_map(|segment_reader| {
-                let store_reader = match segment_reader.get_store_reader(16) { // Larger cache
-                    Ok(r) => r,
-                    Err(_) => return Vec::new(),
+                let Ok(store_reader) = segment_reader.get_store_reader(16) else {
+                    return Vec::new(); // Larger cache
                 };
                 (0..segment_reader.num_docs())
                     .filter_map(|doc_id| store_reader.get(doc_id).ok())

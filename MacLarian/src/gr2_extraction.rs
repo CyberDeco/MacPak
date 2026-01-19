@@ -367,15 +367,13 @@ fn extract_virtual_textures(
 fn adjust_vt_path_for_extraction(path: &str) -> String {
     // Get the filename
     let path_obj = std::path::Path::new(path);
-    let filename = match path_obj.file_name().and_then(|f| f.to_str()) {
-        Some(f) => f,
-        None => return path.to_string(),
+    let Some(filename) = path_obj.file_name().and_then(|f| f.to_str()) else {
+        return path.to_string();
     };
 
     // Get the parent directory
-    let parent = match path_obj.parent().and_then(|p| p.to_str()) {
-        Some(p) => p,
-        None => return path.to_string(),
+    let Some(parent) = path_obj.parent().and_then(|p| p.to_str()) else {
+        return path.to_string();
     };
 
     // Extract subfolder name from filename
