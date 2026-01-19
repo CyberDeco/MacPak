@@ -16,7 +16,7 @@
 
 ## Install Instructions
 
-It's going to be packaged into a .dmg probably, since I don't want to pay for an Apple dev license and I'm assuming it'll be a large file (~1 GB). Just haven't figured out hosting yet.
+It'll be an app in Releases, bundled with a macOS binary for vgmstream. Size is ~40 MB.
 
 ## Features:
 
