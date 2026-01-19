@@ -3,7 +3,7 @@
 use std::thread;
 
 use floem::prelude::*;
-use MacLarian::pak::{find_pak_files, find_packable_folders, batch_extract, batch_create};
+use maclarian::pak::{find_pak_files, find_packable_folders, batch_extract, batch_create};
 
 use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::types::{create_result_sender, get_shared_progress, PakResult};
@@ -29,7 +29,7 @@ pub fn batch_extract_paks(state: PakOpsState) {
         .working_dir
         .set(Some(source_dir.to_string_lossy().to_string()));
 
-    // Find all .pak files using MacLarian's utility
+    // Find all .pak files using maclarian's utility
     let pak_files = find_pak_files(&source_dir);
 
     if pak_files.is_empty() {
@@ -103,7 +103,7 @@ pub fn batch_create_paks(state: PakOpsState) {
         .working_dir
         .set(Some(source_dir.to_string_lossy().to_string()));
 
-    // Find all packable folders using MacLarian's utility
+    // Find all packable folders using maclarian's utility
     let folders = find_packable_folders(&source_dir);
 
     if folders.is_empty() {

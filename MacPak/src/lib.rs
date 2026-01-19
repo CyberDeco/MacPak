@@ -2,8 +2,8 @@
 //! MacPak - High-level BG3 modding toolkit
 use std::path::Path;
 
-// Re-export MacLarian
-pub use MacLarian;
+// Re-export maclarian
+pub use maclarian;
 
 pub mod error;
 pub mod index;

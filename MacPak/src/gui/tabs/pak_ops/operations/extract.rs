@@ -63,7 +63,7 @@ pub fn extract_pak_file(state: PakOpsState) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = MacLarian::pak::PakOperations::extract_with_progress(
+        let result = maclarian::pak::PakOperations::extract_with_progress(
             &pak_path,
             &dest_path,
             &|current, total, description| {
@@ -71,7 +71,7 @@ pub fn extract_pak_file(state: PakOpsState) {
             },
         );
 
-        let files = MacLarian::pak::PakOperations::list(&pak_path)
+        let files = maclarian::pak::PakOperations::list(&pak_path)
             .unwrap_or_default();
 
         let pak_result = match result {
@@ -136,7 +136,7 @@ pub fn extract_individual_files(state: PakOpsState) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = MacLarian::pak::PakOperations::list_with_progress(
+        let result = maclarian::pak::PakOperations::list_with_progress(
             &pak_path,
             &|current, total, description| {
                 progress_sender(current, total, description);
@@ -201,7 +201,7 @@ pub fn execute_individual_extract(state: PakOpsState) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = MacLarian::pak::PakOperations::extract_files_with_progress(
+        let result = maclarian::pak::PakOperations::extract_files_with_progress(
             &pak_path,
             &dest_path,
             &selected,
@@ -251,7 +251,7 @@ pub fn extract_individual_dropped_file(state: PakOpsState, pak_path: String) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = MacLarian::pak::PakOperations::list_with_progress(
+        let result = maclarian::pak::PakOperations::list_with_progress(
             &pak_path,
             &|current, total, description| {
                 progress_sender(current, total, description);
@@ -314,7 +314,7 @@ pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = MacLarian::pak::PakOperations::extract_with_progress(
+        let result = maclarian::pak::PakOperations::extract_with_progress(
             &pak_path,
             &dest_path,
             &|current, total, description| {
@@ -322,7 +322,7 @@ pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
             },
         );
 
-        let files = MacLarian::pak::PakOperations::list(&pak_path)
+        let files = maclarian::pak::PakOperations::list(&pak_path)
             .unwrap_or_default();
 
         let pak_result = match result {

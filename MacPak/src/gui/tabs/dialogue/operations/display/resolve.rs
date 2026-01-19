@@ -1,6 +1,6 @@
 //! Resolution functions for converting UUIDs to display names
 
-use MacLarian::dialog::NodeConstructor;
+use maclarian::dialog::NodeConstructor;
 use crate::gui::state::{DialogueState, DisplayNode};
 
 /// Resolve speaker names using dynamic speaker cache + runtime localization

@@ -14,8 +14,8 @@
 //! # Usage
 //!
 //! ```no_run
-//! use MacLarian::dialog::{parse_dialog, LocalizationCache};
-//! use MacLarian::formats::lsj::read_lsj;
+//! use maclarian::dialog::{parse_dialog, LocalizationCache};
+//! use maclarian::formats::lsj::read_lsj;
 //!
 //! // Load and parse a dialog file
 //! let doc = read_lsj("path/to/dialog.lsj").unwrap();

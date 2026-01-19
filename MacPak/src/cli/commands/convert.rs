@@ -46,56 +46,56 @@ pub fn execute(
         // LSF conversions
         ("lsf" | "lsbc" | "lsbs" | "lsfx", "lsx") => {
             println!("Converting LSF → LSX");
-            MacLarian::converter::lsf_to_lsx(source, destination)?;
+            maclarian::converter::lsf_to_lsx(source, destination)?;
         }
         ("lsf" | "lsbc" | "lsbs" | "lsfx", "lsj") => {
             println!("Converting LSF → LSJ");
-            MacLarian::converter::lsf_to_lsj(source, destination)?;
+            maclarian::converter::lsf_to_lsj(source, destination)?;
         }
         
         // LSX conversions
         ("lsx", "lsf" | "lsbc" | "lsbs" | "lsfx", ) => {
             println!("Converting LSX → LSF");
-            MacLarian::converter::lsx_to_lsf(source, destination)?;
+            maclarian::converter::lsx_to_lsf(source, destination)?;
         }
         ("lsx", "lsj") => {
             println!("Converting LSX → LSJ");
-            MacLarian::converter::lsx_to_lsj(source, destination)?;
+            maclarian::converter::lsx_to_lsj(source, destination)?;
         }
         
         // LSJ conversions
         ("lsj", "lsx") => {
             println!("Converting LSJ → LSX");
-            MacLarian::converter::lsj_to_lsx(source, destination)?;
+            maclarian::converter::lsj_to_lsx(source, destination)?;
         }
         ("lsj", "lsf" | "lsbc" | "lsbs" | "lsfx") => {
             println!("Converting LSJ → LSF");
-            MacLarian::converter::lsj_to_lsf(source, destination)?;
+            maclarian::converter::lsj_to_lsf(source, destination)?;
         }
         
         // GR2/glTF conversions
         ("gr2", "glb") => {
             println!("Converting GR2 → GLB");
-            MacLarian::converter::convert_gr2_to_glb(source, destination)?;
+            maclarian::converter::convert_gr2_to_glb(source, destination)?;
         }
         ("gr2", "gltf") => {
             println!("Converting GR2 → glTF");
-            MacLarian::converter::convert_gr2_to_gltf(source, destination)?;
+            maclarian::converter::convert_gr2_to_gltf(source, destination)?;
         }
         ("glb" | "gltf", "gr2") => {
             println!("Converting glTF → GR2");
             println!("Note: Output will be uncompressed (compression not yet implemented)");
-            MacLarian::converter::convert_gltf_to_gr2(source, destination)?;
+            maclarian::converter::convert_gltf_to_gr2(source, destination)?;
         }
 
         // LOCA conversions
         ("loca", "xml") => {
             println!("Converting LOCA → XML");
-            MacLarian::converter::convert_loca_to_xml(source, destination)?;
+            maclarian::converter::convert_loca_to_xml(source, destination)?;
         }
         ("xml", "loca") => {
             println!("Converting XML → LOCA");
-            MacLarian::converter::convert_xml_to_loca(source, destination)?;
+            maclarian::converter::convert_xml_to_loca(source, destination)?;
         }
 
         // Same format (copy)

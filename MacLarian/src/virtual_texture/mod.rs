@@ -7,7 +7,7 @@
 //! # Usage
 //!
 //! ```no_run
-//! use MacLarian::virtual_texture::VirtualTextureExtractor;
+//! use maclarian::virtual_texture::VirtualTextureExtractor;
 //!
 //! // Extract a GTP file to DDS textures
 //! VirtualTextureExtractor::extract(

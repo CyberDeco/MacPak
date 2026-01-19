@@ -20,7 +20,7 @@ const EMBEDDED_DB_JSON: &str = include_str!("../../data/models_textures_db.json"
 /// # Example
 ///
 /// ```
-/// use MacLarian::merged::embedded_database;
+/// use maclarian::merged::embedded_database;
 ///
 /// let db = embedded_database();
 /// println!("Database contains {} visuals", db.visuals_by_id.len());

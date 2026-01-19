@@ -37,8 +37,8 @@ pub fn validate_mod_structure(state: PakOpsState) {
     let send = create_result_sender(state);
 
     thread::spawn(move || {
-        // Use MacLarian's validation
-        let result = MacLarian::mods::validate_mod_structure(Path::new(&mod_path));
+        // Use maclarian's validation
+        let result = maclarian::mods::validate_mod_structure(Path::new(&mod_path));
 
         send(PakResult::ValidateDone {
             valid: result.valid,
@@ -63,8 +63,8 @@ pub fn validate_dropped_folder(state: PakOpsState, folder_path: String) {
     let send = create_result_sender(state);
 
     thread::spawn(move || {
-        // Use MacLarian's validation
-        let result = MacLarian::mods::validate_mod_structure(Path::new(&folder_path));
+        // Use maclarian's validation
+        let result = maclarian::mods::validate_mod_structure(Path::new(&folder_path));
 
         send(PakResult::ValidateDone {
             valid: result.valid,

@@ -14,7 +14,7 @@
 //! # Usage
 //!
 //! ```no_run
-//! use MacLarian::merged::embedded_database_cached;
+//! use maclarian::merged::embedded_database_cached;
 //!
 //! // Use the embedded production database (recommended)
 //! let db = embedded_database_cached();

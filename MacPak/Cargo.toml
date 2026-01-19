@@ -1,5 +1,5 @@
 [package]
-name = "MacPak"
+name = "macpak"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -64,7 +64,7 @@ full = ["gui", "cli", "viewer"]
 
 [dependencies]
 # Internal - always needed (with audio feature when gui is enabled)
-MacLarian = { workspace = true, features = ["audio"] }
+maclarian = { workspace = true, features = ["audio"] }
 
 # Core dependencies - always needed
 thiserror.workspace = true

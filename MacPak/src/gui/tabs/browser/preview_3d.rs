@@ -146,7 +146,7 @@ fn convert_gr2_to_temp_glb(gr2_path: &Path) -> Result<Gr2ConversionResult, Strin
     let temp_glb = temp_dir.join(format!("{}_preview.glb", file_stem));
 
     // Use geometry-only conversion (texture matching temporarily disabled)
-    MacLarian::converter::convert_gr2_to_glb(gr2_path, &temp_glb)
+    maclarian::converter::convert_gr2_to_glb(gr2_path, &temp_glb)
         .map_err(|e| e.to_string())?;
 
     Ok(Gr2ConversionResult {

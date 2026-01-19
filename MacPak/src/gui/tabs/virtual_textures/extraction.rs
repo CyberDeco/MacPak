@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use floem_reactive::{SignalGet, SignalUpdate};
 
 use crate::gui::state::VirtualTexturesState;
-use MacLarian::virtual_texture::{extract_gts_file, extract_batch as vt_extract_batch};
+use maclarian::virtual_texture::{extract_gts_file, extract_batch as vt_extract_batch};
 use super::types::{VtResult, create_result_sender, get_shared_progress};
 
 /// Extract textures from a single GTS file
@@ -34,7 +34,7 @@ pub fn extract_single(state: VirtualTexturesState) {
 
         progress.update(0, 1, &gts_name);
 
-        // Use MacLarian's extraction function
+        // Use maclarian's extraction function
         let output_path = output_dir.as_ref().map(|s| Path::new(s.as_str()));
         let result = extract_gts_file(
             &gts_path,
@@ -88,7 +88,7 @@ pub fn extract_batch(state: VirtualTexturesState) {
         let output_path = output_dir.as_ref().map(|s| Path::new(s.as_str()));
         let total = gts_files.len();
 
-        // Use MacLarian's batch extraction function
+        // Use maclarian's batch extraction function
         let result = vt_extract_batch(
             &gts_files,
             output_path,

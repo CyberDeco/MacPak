@@ -1,6 +1,6 @@
 //! Shared utilities for dye import/export functionality
 //!
-//! Core dye types and parsers are now in MacLarian. This module provides
+//! Core dye types and parsers are now in maclarian. This module provides
 //! GUI-specific helpers and re-exports the library types for convenience.
 
 // GUI-specific modules (stay here)
@@ -10,8 +10,8 @@ pub mod helpers;
 pub mod selector;
 pub mod styles;
 
-// Re-export from MacLarian for backwards compatibility
-pub use MacLarian::dyes::{
+// Re-export from maclarian for backwards compatibility
+pub use maclarian::dyes::{
     // Registry
     ColorCategory, ColorDef, COLOR_REGISTRY, DEFAULT_HEX, COLOR_COUNT,
     colors_by_category, required_colors, find_color,
@@ -26,8 +26,8 @@ pub use MacLarian::dyes::{
     hex_to_fvec3, srgb_to_linear,
 };
 
-// Re-export meta parsing from MacLarian formats
-pub use MacLarian::formats::{ModMetadata, parse_meta_lsx};
+// Re-export meta parsing from maclarian formats
+pub use maclarian::formats::{ModMetadata, parse_meta_lsx};
 
 // Local exports
 pub use colors::{collect_all_colors, collect_colors_skip_defaults, reset_colors_to_default, load_colors_from_map};

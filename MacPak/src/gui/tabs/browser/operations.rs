@@ -278,7 +278,7 @@ pub fn select_file(file: &FileEntry, state: BrowserState) {
         "loca" => {
             // Convert to XML for preview
             let temp_path = std::path::Path::new("/tmp/temp_loca.xml");
-            match MacLarian::converter::convert_loca_to_xml(path, temp_path) {
+            match maclarian::converter::convert_loca_to_xml(path, temp_path) {
                 Ok(_) => {
                     match std::fs::read_to_string(temp_path) {
                         Ok(content) => {
@@ -304,7 +304,7 @@ pub fn select_file(file: &FileEntry, state: BrowserState) {
             }
         }
         "pak" => {
-            match MacLarian::pak::PakOperations::list(path) {
+            match maclarian::pak::PakOperations::list(path) {
                 Ok(pak_files) => {
                     let preview = format!(
                         "PAK Archive: {} files\n\n{}",
@@ -615,7 +615,7 @@ fn convert_file_with_progress(
             send_progress(format!("Parsing {} ({:.1} KB)...", filename, data.len() as f64 / 1024.0));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
-            let lsf_doc = match MacLarian::formats::lsf::parse_lsf_bytes(&data) {
+            let lsf_doc = match maclarian::formats::lsf::parse_lsf_bytes(&data) {
                 Ok(doc) => doc,
                 Err(e) => return ConversionResult {
                     success: false,
@@ -628,7 +628,7 @@ fn convert_file_with_progress(
             send_progress(format!("Converting {} nodes to XML...", node_count));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
-            let xml_content = match MacLarian::converter::to_lsx(&lsf_doc) {
+            let xml_content = match maclarian::converter::to_lsx(&lsf_doc) {
                 Ok(xml) => xml,
                 Err(e) => return ConversionResult {
                     success: false,
@@ -657,7 +657,7 @@ fn convert_file_with_progress(
             send_progress(format!("Parsing XML ({:.1} KB)...", content.len() as f64 / 1024.0));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
-            let lsf_doc = match MacLarian::converter::from_lsx(&content) {
+            let lsf_doc = match maclarian::converter::from_lsx(&content) {
                 Ok(doc) => doc,
                 Err(e) => return ConversionResult {
                     success: false,
@@ -670,7 +670,7 @@ fn convert_file_with_progress(
             send_progress(format!("Writing LSF binary ({} nodes)...", node_count));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
-            MacLarian::formats::lsf::write_lsf(&lsf_doc, Path::new(dest_path))
+            maclarian::formats::lsf::write_lsf(&lsf_doc, Path::new(dest_path))
                 .map_err(|e| e.to_string())
         }
         ("loca", "xml") => {
@@ -688,7 +688,7 @@ fn convert_file_with_progress(
             send_progress(format!("Parsing {} ({:.1} KB)...", filename, data.len() as f64 / 1024.0));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
-            let resource = match MacLarian::formats::loca::parse_loca_bytes(&data) {
+            let resource = match maclarian::formats::loca::parse_loca_bytes(&data) {
                 Ok(res) => res,
                 Err(e) => return ConversionResult {
                     success: false,
@@ -701,7 +701,7 @@ fn convert_file_with_progress(
             send_progress(format!("Converting {} entries to XML...", entry_count));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
-            let xml_content = match MacLarian::converter::loca_to_xml_string(&resource) {
+            let xml_content = match maclarian::converter::loca_to_xml_string(&resource) {
                 Ok(xml) => xml,
                 Err(e) => return ConversionResult {
                     success: false,
@@ -730,7 +730,7 @@ fn convert_file_with_progress(
             send_progress(format!("Parsing XML ({:.1} KB)...", content.len() as f64 / 1024.0));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
-            let resource = match MacLarian::converter::loca_from_xml(&content) {
+            let resource = match maclarian::converter::loca_from_xml(&content) {
                 Ok(res) => res,
                 Err(e) => return ConversionResult {
                     success: false,
@@ -743,16 +743,16 @@ fn convert_file_with_progress(
             send_progress(format!("Writing LOCA binary ({} entries)...", entry_count));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
-            MacLarian::formats::loca::write_loca(Path::new(dest_path), &resource)
+            maclarian::formats::loca::write_loca(Path::new(dest_path), &resource)
                 .map_err(|e| e.to_string())
         }
         ("lsx", "lsj") => {
-            // Use MacLarian's progress-aware conversion
+            // Use maclarian's progress-aware conversion
             let progress_cb = |msg: &str| {
                 send_progress(msg.to_string());
                 std::thread::sleep(std::time::Duration::from_millis(50));
             };
-            MacLarian::converter::lsx_to_lsj_with_progress(source_path, dest_path, &progress_cb)
+            maclarian::converter::lsx_to_lsj_with_progress(source_path, dest_path, &progress_cb)
                 .map_err(|e| e.to_string())
         }
         ("lsj", "lsx") => {
@@ -760,7 +760,7 @@ fn convert_file_with_progress(
                 send_progress(msg.to_string());
                 std::thread::sleep(std::time::Duration::from_millis(50));
             };
-            MacLarian::converter::lsj_to_lsx_with_progress(source_path, dest_path, &progress_cb)
+            maclarian::converter::lsj_to_lsx_with_progress(source_path, dest_path, &progress_cb)
                 .map_err(|e| e.to_string())
         }
         ("lsf", "lsj") => {
@@ -768,7 +768,7 @@ fn convert_file_with_progress(
                 send_progress(msg.to_string());
                 std::thread::sleep(std::time::Duration::from_millis(50));
             };
-            MacLarian::converter::lsf_to_lsj_with_progress(source_path, dest_path, &progress_cb)
+            maclarian::converter::lsf_to_lsj_with_progress(source_path, dest_path, &progress_cb)
                 .map_err(|e| e.to_string())
         }
         ("lsj", "lsf") => {
@@ -776,7 +776,7 @@ fn convert_file_with_progress(
                 send_progress(msg.to_string());
                 std::thread::sleep(std::time::Duration::from_millis(50));
             };
-            MacLarian::converter::lsj_to_lsf_with_progress(source_path, dest_path, &progress_cb)
+            maclarian::converter::lsj_to_lsf_with_progress(source_path, dest_path, &progress_cb)
                 .map_err(|e| e.to_string())
         }
         _ => {

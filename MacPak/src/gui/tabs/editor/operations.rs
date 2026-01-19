@@ -122,7 +122,7 @@ fn load_file_phase1(path: &Path) -> FileLoadPhase1 {
             // Read raw bytes and parse LSF to get node count (fast - no XML conversion yet)
             match fs::read(path) {
                 Ok(data) => {
-                    match MacLarian::formats::lsf::parse_lsf_bytes(&data) {
+                    match maclarian::formats::lsf::parse_lsf_bytes(&data) {
                         Ok(lsf_doc) => {
                             let node_count = lsf_doc.nodes.len();
                             // Always return NeedsConversion - progress will be shown for all LSF files
@@ -276,7 +276,7 @@ fn convert_lsf_data_with_progress(
 
     // Stage 2: Parse LSF binary header
     send_progress(format!("Parsing {} header...", filename));
-    let lsf_doc = match MacLarian::formats::lsf::parse_lsf_bytes(data) {
+    let lsf_doc = match maclarian::formats::lsf::parse_lsf_bytes(data) {
         Ok(doc) => doc,
         Err(e) => {
             return FileLoadResult {
@@ -298,7 +298,7 @@ fn convert_lsf_data_with_progress(
 
     // Stage 4: Convert to XML
     send_progress(format!("Converting {} to XML...", filename));
-    let content = match MacLarian::converter::to_lsx(&lsf_doc) {
+    let content = match maclarian::converter::to_lsx(&lsf_doc) {
         Ok(xml) => xml,
         Err(e) => {
             return FileLoadResult {
@@ -354,7 +354,7 @@ fn convert_loca_data_with_progress(
 
     // Stage 2: Parse LOCA binary
     send_progress(format!("Parsing {} localization data...", filename));
-    let resource = match MacLarian::formats::loca::parse_loca_bytes(data) {
+    let resource = match maclarian::formats::loca::parse_loca_bytes(data) {
         Ok(res) => res,
         Err(e) => {
             return FileLoadResult {
@@ -376,7 +376,7 @@ fn convert_loca_data_with_progress(
 
     // Stage 4: Convert to XML
     send_progress(format!("Converting {} to XML...", filename));
-    let content = match MacLarian::converter::loca_to_xml_string(&resource) {
+    let content = match maclarian::converter::loca_to_xml_string(&resource) {
         Ok(xml) => xml,
         Err(e) => {
             return FileLoadResult {
@@ -721,15 +721,15 @@ pub fn save_file(tab: EditorTab) {
 
         let result = if (format == "LSF" || format == "LSFX") && converted_from_binary {
             // Convert XML back to LSF binary
-            match MacLarian::converter::from_lsx(&content) {
-                Ok(lsf_doc) => MacLarian::formats::lsf::write_lsf(&lsf_doc, path)
+            match maclarian::converter::from_lsx(&content) {
+                Ok(lsf_doc) => maclarian::formats::lsf::write_lsf(&lsf_doc, path)
                     .map_err(|e| e.to_string()),
                 Err(e) => Err(format!("Failed to parse LSX: {}", e)),
             }
         } else if format == "LOCA" && converted_from_binary {
             // Convert XML back to LOCA binary
-            match MacLarian::converter::loca_from_xml(&content) {
-                Ok(resource) => MacLarian::formats::loca::write_loca(path, &resource)
+            match maclarian::converter::loca_from_xml(&content) {
+                Ok(resource) => maclarian::formats::loca::write_loca(path, &resource)
                     .map_err(|e| e.to_string()),
                 Err(e) => Err(format!("Failed to parse LOCA XML: {}", e)),
             }
@@ -796,16 +796,16 @@ pub fn save_file_as_dialog(tab: EditorTab) {
         let result: Result<(), String> = match target_ext.as_str() {
             "LSF" => {
                 // Convert XML/LSX to LSF binary
-                match MacLarian::converter::from_lsx(&content) {
-                    Ok(lsf_doc) => MacLarian::formats::lsf::write_lsf(&lsf_doc, &path)
+                match maclarian::converter::from_lsx(&content) {
+                    Ok(lsf_doc) => maclarian::formats::lsf::write_lsf(&lsf_doc, &path)
                         .map_err(|e| e.to_string()),
                     Err(e) => Err(format!("Failed to parse LSX: {}", e)),
                 }
             }
             "LOCA" => {
                 // Convert XML to LOCA binary
-                match MacLarian::converter::loca_from_xml(&content) {
-                    Ok(resource) => MacLarian::formats::loca::write_loca(&path, &resource)
+                match maclarian::converter::loca_from_xml(&content) {
+                    Ok(resource) => maclarian::formats::loca::write_loca(&path, &resource)
                         .map_err(|e| e.to_string()),
                     Err(e) => Err(format!("Failed to parse LOCA XML: {}", e)),
                 }
@@ -884,14 +884,14 @@ pub fn convert_file(tab: EditorTab, target_format: &str) {
 
         // Perform conversion
         let result = match (current_format.as_str(), target.as_str()) {
-            ("lsf", "lsx") => MacLarian::converter::lsf_to_lsx(&source_path, &dest),
-            ("lsx", "lsf") => MacLarian::converter::lsx_to_lsf(&source_path, &dest),
-            ("lsx", "lsj") => MacLarian::converter::lsx_to_lsj(&source_path, &dest),
-            ("lsj", "lsx") => MacLarian::converter::lsj_to_lsx(&source_path, &dest),
-            ("lsf", "lsj") => MacLarian::converter::lsf_to_lsj(&source_path, &dest),
-            ("lsj", "lsf") => MacLarian::converter::lsj_to_lsf(&source_path, &dest),
-            ("loca", "xml") => MacLarian::converter::convert_loca_to_xml(&source_path, &dest),
-            ("xml", "loca") => MacLarian::converter::convert_xml_to_loca(&source_path, &dest),
+            ("lsf", "lsx") => maclarian::converter::lsf_to_lsx(&source_path, &dest),
+            ("lsx", "lsf") => maclarian::converter::lsx_to_lsf(&source_path, &dest),
+            ("lsx", "lsj") => maclarian::converter::lsx_to_lsj(&source_path, &dest),
+            ("lsj", "lsx") => maclarian::converter::lsj_to_lsx(&source_path, &dest),
+            ("lsf", "lsj") => maclarian::converter::lsf_to_lsj(&source_path, &dest),
+            ("lsj", "lsf") => maclarian::converter::lsj_to_lsf(&source_path, &dest),
+            ("loca", "xml") => maclarian::converter::convert_loca_to_xml(&source_path, &dest),
+            ("xml", "loca") => maclarian::converter::convert_xml_to_loca(&source_path, &dest),
             _ => {
                 return;
             }

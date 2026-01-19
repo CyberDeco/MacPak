@@ -2,7 +2,7 @@
 
 use std::path::Path;
 use anyhow::Result;
-use MacLarian::formats::wem::{
+use maclarian::formats::wem::{
     parse_wem_header, parse_wwise_vorbis_header,
     decode_wwise_vorbis_fallback, load_wem_file_vgmstream,
 };
@@ -111,7 +111,7 @@ pub fn decode(path: &Path, output: Option<&Path>, silent_fallback: bool) -> Resu
 }
 
 /// Write decoded audio as WAV file
-fn write_wav(path: &Path, audio: &MacLarian::formats::wem::DecodedAudio) -> Result<()> {
+fn write_wav(path: &Path, audio: &maclarian::formats::wem::DecodedAudio) -> Result<()> {
     use std::io::Write;
 
     let mut file = std::fs::File::create(path)?;

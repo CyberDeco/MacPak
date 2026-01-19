@@ -51,12 +51,12 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool) {
 
         let result = if is_gr2_input {
             if to_glb {
-                MacLarian::converter::convert_gr2_to_glb(Path::new(&input_str), Path::new(&output_str))
+                maclarian::converter::convert_gr2_to_glb(Path::new(&input_str), Path::new(&output_str))
             } else {
-                MacLarian::converter::convert_gr2_to_gltf(Path::new(&input_str), Path::new(&output_str))
+                maclarian::converter::convert_gr2_to_gltf(Path::new(&input_str), Path::new(&output_str))
             }
         } else {
-            MacLarian::converter::convert_gltf_to_gr2(Path::new(&input_str), Path::new(&output_str))
+            maclarian::converter::convert_gltf_to_gr2(Path::new(&input_str), Path::new(&output_str))
         };
 
         shared.update(1, 1, "Complete");
@@ -136,12 +136,12 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool) {
                 // Perform conversion
                 let result = if is_gr2_input {
                     if to_glb {
-                        MacLarian::converter::convert_gr2_to_glb(input, &output_path)
+                        maclarian::converter::convert_gr2_to_glb(input, &output_path)
                     } else {
-                        MacLarian::converter::convert_gr2_to_gltf(input, &output_path)
+                        maclarian::converter::convert_gr2_to_gltf(input, &output_path)
                     }
                 } else {
-                    MacLarian::converter::convert_gltf_to_gr2(input, &output_path)
+                    maclarian::converter::convert_gltf_to_gr2(input, &output_path)
                 };
 
                 // Show relative path in results if we have a base dir

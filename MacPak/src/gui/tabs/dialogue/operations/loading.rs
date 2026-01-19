@@ -3,8 +3,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 use floem::reactive::{SignalGet, SignalUpdate};
-use MacLarian::dialog::{parse_dialog_file, parse_dialog_bytes, parse_dialog_lsf_bytes, Dialog};
-use MacLarian::pak::PakOperations;
+use maclarian::dialog::{parse_dialog_file, parse_dialog_bytes, parse_dialog_lsf_bytes, Dialog};
+use maclarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogSource, DialogEntry, DisplayNode};
 use super::display::{build_display_nodes, resolve_speaker_names, resolve_localized_text, resolve_flag_names, resolve_difficulty_classes};
 
@@ -24,7 +24,7 @@ pub fn load_dialog_from_pak(state: DialogueState, pak_path: PathBuf, internal_pa
         Ok(data) => {
             let lower_path = internal_path.to_lowercase();
             let result = if lower_path.ends_with(".lsf") {
-                // Parse LSF (binary) format using MacLarian's optimized pipeline
+                // Parse LSF (binary) format using maclarian's optimized pipeline
                 parse_dialog_lsf_bytes(&data).map_err(|e| e.to_string())
             } else {
                 // Parse LSJ (JSON) format directly

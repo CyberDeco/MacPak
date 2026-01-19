@@ -3,77 +3,6 @@
 version = 4
 
 [[package]]
-name = "MacLarian"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "bytemuck",
- "byteorder",
- "chrono",
- "crc32fast",
- "ddsfile",
- "fastlz-rs",
- "flate2",
- "glam 0.27.0",
- "gltf",
- "half",
- "image",
- "indexmap",
- "lz4_flex",
- "md5",
- "pretty_assertions",
- "quick-xml 0.31.0",
- "rayon",
- "serde",
- "serde_json",
- "tantivy",
- "tempfile",
- "thiserror 1.0.69",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "walkdir",
-]
-
-[[package]]
-name = "MacPak"
-version = "0.1.0"
-dependencies = [
- "MacLarian",
- "anyhow",
- "bevy",
- "byteorder",
- "chrono",
- "clap",
- "dds",
- "dirs",
- "dispatch",
- "floem",
- "floem_reactive",
- "floem_renderer",
- "im",
- "image",
- "lazy_static",
- "md5",
- "muda",
- "rand 0.8.5",
- "rayon",
- "regex",
- "rfd",
- "rodio",
- "roxmltree",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 1.0.69",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "walkdir",
-]
-
-[[package]]
 name = "ab_glyph"
 version = "0.2.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4578,6 +4507,77 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "maclarian"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "bytemuck",
+ "byteorder",
+ "chrono",
+ "crc32fast",
+ "ddsfile",
+ "fastlz-rs",
+ "flate2",
+ "glam 0.27.0",
+ "gltf",
+ "half",
+ "image",
+ "indexmap",
+ "lz4_flex",
+ "md5",
+ "pretty_assertions",
+ "quick-xml 0.31.0",
+ "rayon",
+ "serde",
+ "serde_json",
+ "tantivy",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
+name = "macpak"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "byteorder",
+ "chrono",
+ "clap",
+ "dds",
+ "dirs",
+ "dispatch",
+ "floem",
+ "floem_reactive",
+ "floem_renderer",
+ "im",
+ "image",
+ "lazy_static",
+ "maclarian",
+ "md5",
+ "muda",
+ "rand 0.8.5",
+ "rayon",
+ "regex",
+ "rfd",
+ "rodio",
+ "roxmltree",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 1.0.69",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "walkdir",
 ]
 
 [[package]]

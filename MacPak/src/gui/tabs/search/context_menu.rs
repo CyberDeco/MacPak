@@ -7,9 +7,9 @@ use floem::ext_event::create_ext_action;
 use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 use floem_reactive::Scope;
-use MacLarian::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
-use MacLarian::formats::wem::AudioCache;
-use MacLarian::pak::PakOperations;
+use maclarian::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
+use maclarian::formats::wem::AudioCache;
+use maclarian::pak::PakOperations;
 use crate::gui::tabs::dialogue::operations::{load_voice_meta, find_voice_files_path};
 
 use crate::gui::state::{DialogueState, DialogSource, EditorTabsState, SearchResult, SearchState};
@@ -103,7 +103,7 @@ fn open_result_in_editor(
     use std::env::temp_dir;
     use floem::ext_event::create_ext_action;
     use floem_reactive::Scope;
-    use MacLarian::pak::PakOperations;
+    use maclarian::pak::PakOperations;
     use crate::gui::tabs::load_file_in_tab;
 
     let result = result.clone();
@@ -160,7 +160,7 @@ fn open_result_in_editor(
 
 /// Extract a search result to a user-selected location
 fn extract_search_result(result: &SearchResult) {
-    use MacLarian::pak::PakOperations;
+    use maclarian::pak::PakOperations;
 
     let pak_path = result.pak_path.clone();
     let file_path = result.path.clone();

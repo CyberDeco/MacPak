@@ -1,14 +1,14 @@
-//! Voice metadata operations - thin wrapper around MacLarian's voice_meta module
+//! Voice metadata operations - thin wrapper around maclarian's voice_meta module
 //!
-//! The heavy lifting (parallel loading, parsing) is done in MacLarian.
+//! The heavy lifting (parallel loading, parsing) is done in maclarian.
 //! This module provides cache management for the GUI.
 
 use std::path::Path;
 use std::sync::{Arc, RwLock};
-use MacLarian::formats::voice_meta::{VoiceMetaCache, find_voice_meta_path};
+use maclarian::formats::voice_meta::{VoiceMetaCache, find_voice_meta_path};
 
 // Re-export for convenience
-pub use MacLarian::formats::voice_meta::find_voice_files_path;
+pub use maclarian::formats::voice_meta::find_voice_files_path;
 
 /// Load voice metadata from VoiceMeta.pak or extracted Soundbanks folder
 /// Populates the cache with text_handle -> VoiceMetaEntry mappings
@@ -33,11 +33,11 @@ pub fn load_voice_meta(
         return 0;
     };
 
-    // Load using MacLarian's parallel loader
+    // Load using maclarian's parallel loader
     let result = if voice_meta_path.is_file() {
-        MacLarian::formats::voice_meta::load_voice_meta_from_pak(&voice_meta_path)
+        maclarian::formats::voice_meta::load_voice_meta_from_pak(&voice_meta_path)
     } else {
-        MacLarian::formats::voice_meta::load_voice_meta_from_folder(&voice_meta_path)
+        maclarian::formats::voice_meta::load_voice_meta_from_folder(&voice_meta_path)
     };
 
     match result {

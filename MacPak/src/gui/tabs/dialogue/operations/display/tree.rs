@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use floem::prelude::RwSignal;
-use MacLarian::dialog::{Dialog, NodeConstructor};
+use maclarian::dialog::{Dialog, NodeConstructor};
 use crate::gui::state::{DisplayNode, DisplayFlag};
 use super::chain::{follow_chain_for_text, get_jump_effective_children, resolve_passthrough_children};
 use super::maps::{build_alias_logicalname_map, build_ancestor_sibling_map};

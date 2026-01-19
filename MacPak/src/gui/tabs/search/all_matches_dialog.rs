@@ -6,9 +6,9 @@ use floem::ext_event::create_ext_action;
 use floem::prelude::*;
 use floem::text::Weight;
 use floem_reactive::{create_effect, Scope};
-use MacLarian::converter::lsf_lsx_lsj::to_lsx;
-use MacLarian::formats::lsf::parse_lsf_bytes;
-use MacLarian::pak::PakOperations;
+use maclarian::converter::lsf_lsx_lsj::to_lsx;
+use maclarian::formats::lsf::parse_lsf_bytes;
+use maclarian::pak::PakOperations;
 
 use crate::gui::state::{SearchResult, SearchState};
 

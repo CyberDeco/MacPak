@@ -5,9 +5,9 @@ use floem::reactive::SignalGet;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use MacLarian::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
-pub use MacLarian::formats::voice_meta::{VoiceMetaEntry, VoiceMetaCache};
-use MacLarian::formats::wem::AudioCache;
+use maclarian::dialog::{Dialog, DialogNode, NodeConstructor, LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
+pub use maclarian::formats::voice_meta::{VoiceMetaEntry, VoiceMetaCache};
+use maclarian::formats::wem::AudioCache;
 
 /// Source of a dialog file
 #[derive(Clone, Debug, PartialEq)]

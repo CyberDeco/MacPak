@@ -12,9 +12,9 @@ use super::super::shared::{
     reset_colors_to_default, load_colors_from_map,
 };
 
-// MacLarian imports for LSF conversion (via MacPak re-export)
-use crate::MacLarian::formats::lsf;
-use crate::MacLarian::converter::to_lsx;
+// maclarian imports for LSF conversion (via MacPak re-export)
+use crate::maclarian::formats::lsf;
+use crate::maclarian::converter::to_lsx;
 
 /// Import from an extracted mod folder
 /// Automatically discovers _merged.lsf/lsx (colors), Object.txt (metadata), and meta.lsx (mod info)

@@ -5,9 +5,9 @@ use std::sync::Arc;
 use floem::ext_event::create_ext_action;
 use floem::reactive::SignalUpdate;
 use floem_reactive::Scope;
-use MacLarian::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
-use MacLarian::formats::wem::AudioCache;
-use MacLarian::pak::PakOperations;
+use maclarian::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
+use maclarian::formats::wem::AudioCache;
+use maclarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogEntry, DialogSource};
 use super::voice::{load_voice_meta, find_voice_files_path};
 

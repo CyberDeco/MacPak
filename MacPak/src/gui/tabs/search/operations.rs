@@ -127,7 +127,7 @@ pub fn auto_load_cached_index(state: SearchState) {
 }
 
 /// Save the index to the cache directory (called automatically after building)
-fn auto_save_index(index: Arc<RwLock<MacLarian::search::SearchIndex>>) {
+fn auto_save_index(index: Arc<RwLock<maclarian::search::SearchIndex>>) {
     let cache_path = match get_index_cache_path() {
         Some(p) => p,
         None => return,
@@ -700,7 +700,7 @@ pub fn search_overlay(state: SearchState) -> impl IntoView {
 /// Extract selected search results to a user-selected directory
 pub fn extract_selected_results(state: SearchState) {
     use std::collections::HashMap;
-    use MacLarian::pak::PakOperations;
+    use maclarian::pak::PakOperations;
 
     let selected_paths = state.selected_results.get();
     if selected_paths.is_empty() {

@@ -13,10 +13,10 @@ use super::super::shared::{generate_color_nodes, parse_hex_color, required_color
 /// This is the "LOOT_Dye_Generic" template from Shared.pak
 const DYE_PARENT_TEMPLATE_ID: &str = "1a750a66-e5c2-40be-9f62-0a4bf3ddb403";
 
-// MacLarian imports for LSF and LOCA conversion
-use crate::MacLarian::converter::{from_lsx, loca_from_xml};
-use crate::MacLarian::formats::lsf::write_lsf;
-use crate::MacLarian::formats::loca::write_loca;
+// maclarian imports for LSF and LOCA conversion
+use crate::maclarian::converter::{from_lsx, loca_from_xml};
+use crate::maclarian::formats::lsf::write_lsf;
+use crate::maclarian::formats::loca::write_loca;
 
 /// Write LSX content as LSF binary file
 fn write_lsx_as_lsf<P: AsRef<Path>>(lsx_content: &str, dest: P) -> std::io::Result<()> {

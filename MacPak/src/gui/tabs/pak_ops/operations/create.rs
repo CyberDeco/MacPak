@@ -231,11 +231,11 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
 
     let pak_name_clone = pak_name.clone();
 
-    // Convert GUI compression enum to MacLarian compression enum
+    // Convert GUI compression enum to maclarian compression enum
     let mac_compression = match compression {
-        crate::gui::state::PakCompression::Lz4Hc => MacLarian::pak::CompressionMethod::Lz4, // LZ4 HC not yet supported, fall back to LZ4
-        crate::gui::state::PakCompression::Lz4 => MacLarian::pak::CompressionMethod::Lz4,
-        crate::gui::state::PakCompression::None => MacLarian::pak::CompressionMethod::None,
+        crate::gui::state::PakCompression::Lz4Hc => maclarian::pak::CompressionMethod::Lz4, // LZ4 HC not yet supported, fall back to LZ4
+        crate::gui::state::PakCompression::Lz4 => maclarian::pak::CompressionMethod::Lz4,
+        crate::gui::state::PakCompression::None => maclarian::pak::CompressionMethod::None,
     };
 
     thread::spawn(move || {
@@ -248,7 +248,7 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
             .filter_map(|e| e.path().strip_prefix(source_path).ok().map(|p| p.to_string_lossy().to_string()))
             .collect();
 
-        let result = MacLarian::pak::PakOperations::create_with_compression_and_progress(
+        let result = maclarian::pak::PakOperations::create_with_compression_and_progress(
             &source,
             &dest,
             mac_compression,
@@ -287,8 +287,8 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
 
 /// Generate info.json file for BaldursModManager compatibility
 fn generate_info_json_file(source_dir: &str, pak_path: &str) -> String {
-    // Use MacLarian's info.json generation
-    let result = MacLarian::mods::generate_info_json(source_dir, pak_path);
+    // Use maclarian's info.json generation
+    let result = maclarian::mods::generate_info_json(source_dir, pak_path);
 
     if !result.success {
         return format!("Warning: {}, skipped info.json generation", result.message);

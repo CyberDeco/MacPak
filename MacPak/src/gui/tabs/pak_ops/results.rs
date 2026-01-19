@@ -11,7 +11,7 @@ use crate::gui::state::PakOpsState;
 const LOG_ITEM_HEIGHT: f64 = 22.0;
 
 /// Check if a message indicates an error/failure (not just containing the word in a filename).
-/// Matches actual error patterns from MacLarian errors and GUI status messages.
+/// Matches actual error patterns from maclarian errors and GUI status messages.
 pub fn is_error_message(msg: &str) -> bool {
     // Check for emoji indicators (most reliable)
     if msg.starts_with('❌') || msg.starts_with('⚠') {
@@ -23,7 +23,7 @@ pub fn is_error_message(msg: &str) -> bool {
         return true;
     }
 
-    // MacLarian error patterns (from error.rs #[error("...")] attributes)
+    // maclarian error patterns (from error.rs #[error("...")] attributes)
     msg.contains(" error: ")         // "IO error: ", "XML parse error: ", "JSON error: ", etc.
         || msg.contains(" failed: ") // "Decompression failed: ", "Compression failed: "
         || msg.starts_with("Invalid ")

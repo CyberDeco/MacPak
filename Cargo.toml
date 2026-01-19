@@ -59,11 +59,11 @@ libloading = "0.8.9"
 # bevy = "0.17.2" # eventual GUI preview
 
 # Internal crates
-[workspace.dependencies.MacPak]
+[workspace.dependencies.macpak]
 version = "0.1.0"
 path = "./MacPak"
 
-[workspace.dependencies.MacLarian]
+[workspace.dependencies.maclarian]
 version = "0.1.0"
 path = "./MacLarian"
 
