@@ -3,8 +3,11 @@ name = "macpak"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
-description = "BG3 modding toolkit for macOS"
+license-file.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords.workspace = true
+description = "BG3 modding toolkit for macOS - GUI, CLI, and 3D viewer for Baldur's Gate 3 mod files"
 
 # Binary definitions
 [[bin]]

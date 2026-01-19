@@ -9,7 +9,10 @@ resolver = "2"
 version = "0.1.0"
 edition = "2024"
 authors = ["CyberDeco"]
-license = "PolyForm Noncommercial License 1.0.0"
+license-file = "LICENSE"
+repository = "https://github.com/CyberDeco/MacPak"
+readme = "README.md"
+keywords = ["bg3", "baldurs-gate-3", "modding", "larian", "pak", "gr2", "granny2"]
 
 # Workspace-wide shared dependencies
 [workspace.dependencies]

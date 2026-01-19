@@ -19,12 +19,12 @@ pub use maclarian::virtual_texture::{
 
 /// List information about a GTS file
 pub fn list_gts<P: AsRef<Path>>(gts_path: P) -> Result<GtsInfo> {
-    maclarian_list_gts(gts_path).map_err(|e| Error::maclarian(e))
+    maclarian_list_gts(gts_path).map_err(|e| Error::MacLarian(e))
 }
 
 /// Get information about a GTP file
 pub fn gtp_info<P1: AsRef<Path>, P2: AsRef<Path>>(gtp_path: P1, gts_path: P2) -> Result<GtpInfo> {
-    maclarian_gtp_info(gtp_path, gts_path).map_err(|e| Error::maclarian(e))
+    maclarian_gtp_info(gtp_path, gts_path).map_err(|e| Error::MacLarian(e))
 }
 
 /// Extract a single GTP file to DDS textures
@@ -34,7 +34,7 @@ pub fn extract_gtp<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
     output_dir: P3,
 ) -> Result<()> {
     VirtualTextureExtractor::extract_with_gts(gtp_path, gts_path, output_dir)
-        .map_err(|e| Error::maclarian(e))
+        .map_err(|e| Error::MacLarian(e))
 }
 
 /// Extract all GTP files referenced by a GTS file
@@ -42,5 +42,5 @@ pub fn extract_all<P1: AsRef<Path>, P2: AsRef<Path>>(
     gts_path: P1,
     output_dir: P2,
 ) -> Result<ExtractResult> {
-    maclarian_extract_all(gts_path, output_dir).map_err(|e| Error::maclarian(e))
+    maclarian_extract_all(gts_path, output_dir).map_err(|e| Error::MacLarian(e))
 }

@@ -1,7 +1,13 @@
 [package]
 name = "maclarian"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license-file.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords.workspace = true
+description = "Larian file format library for Baldur's Gate 3 - PAK, LSF, LSX, GR2, DDS, and more"
 
 [dependencies]
 # Serialization

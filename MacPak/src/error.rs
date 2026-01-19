@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("maclarian error: {0}")]
-    maclarian(#[from] maclarian::Error),
+    #[error("MacLarian error: {0}")]
+    MacLarian(#[from] maclarian::Error),
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
