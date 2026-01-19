@@ -78,9 +78,12 @@ pedantic = "deny"
 perf = "deny"
 style = "deny"
 suspicious = "deny"
-too-many-arguments = { level = "allow" }
-multiple-crate-versions = { level = "allow" }
-case_sensitive_file_extension_comparisons = { level = "allow" } # paths are lowercased before comparison
+too-many-arguments = { level = "allow", priority = 1 }
+multiple-crate-versions = { level = "allow", priority = 1 }
+case-sensitive-file-extension-comparisons = { level = "allow", priority = 1 } # paths are lowercased before comparison
+unreadable-literal = { level = "allow", priority = 1 } # hex magic numbers and bit masks are more readable without separators
+similar-names = { level = "allow", priority = 1 } # lsx_doc/lsj_doc/lsf_doc are intentionally similar
+single-char-binding-names = { level = "allow", priority = 1 } # math variables like x, y, z are clearer short
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

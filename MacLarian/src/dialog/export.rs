@@ -1,6 +1,7 @@
 //! Export functionality for dialogs
 
 use std::collections::HashSet;
+use std::fmt::Write;
 use super::{Dialog, NodeConstructor};
 
 /// Generate HTML export of a dialog
@@ -28,11 +29,11 @@ pub fn generate_html(dialog: &Dialog) -> Result<String, String> {
     html.push_str("</style>\n</head>\n<body>\n");
 
     // Dialog info
-    html.push_str(&format!("<h1>Dialog: {}</h1>\n", dialog.uuid));
+    let _ = writeln!(html, "<h1>Dialog: {}</h1>", dialog.uuid);
     if let Some(ref synopsis) = dialog.editor_data.synopsis {
-        html.push_str(&format!("<p><em>{}</em></p>\n", html_escape(synopsis)));
+        let _ = writeln!(html, "<p><em>{}</em></p>", html_escape(synopsis));
     }
-    html.push_str(&format!("<p>Nodes: {}</p>\n", dialog.node_count()));
+    let _ = writeln!(html, "<p>Nodes: {}</p>", dialog.node_count());
 
     // Build tree from roots
     for root_uuid in &dialog.root_nodes {
@@ -61,26 +62,26 @@ fn render_node_html(dialog: &Dialog, uuid: &str, html: &mut String, visited: &mu
         _ => "node",
     };
 
-    html.push_str(&format!("<div class=\"{class}\">\n"));
+    let _ = writeln!(html, "<div class=\"{class}\">");
 
     // Type badge
-    html.push_str(&format!("<strong>[{}]</strong> ", node.constructor.display_name()));
+    let _ = write!(html, "<strong>[{}]</strong> ", node.constructor.display_name());
 
     // Speaker
     if let Some(speaker_idx) = node.speaker
         && speaker_idx >= 0 {
-            html.push_str(&format!("<span class=\"speaker\">Speaker {speaker_idx}</span>: "));
+            let _ = write!(html, "<span class=\"speaker\">Speaker {speaker_idx}</span>: ");
         }
 
     // Text
     if let Some(text_entry) = dialog.get_node_text(node) {
         let text = text_entry.value.as_ref().map_or_else(|| format!("[{}]", text_entry.handle), |s| html_escape(s));
-        html.push_str(&format!("<span class=\"text\">{text}</span>\n"));
+        let _ = writeln!(html, "<span class=\"text\">{text}</span>");
     }
 
     // Meta info
     html.push_str("<div class=\"meta\">");
-    html.push_str(&format!("UUID: {uuid} "));
+    let _ = write!(html, "UUID: {uuid} ");
     if node.end_node {
         html.push_str("[END] ");
     }

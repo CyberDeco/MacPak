@@ -1,5 +1,6 @@
 //! info.json generation for `BaldursModManager` compatibility
 
+use std::fmt::Write;
 use std::io::Read;
 use std::path::Path;
 use crate::formats::ModMetadata;
@@ -103,8 +104,11 @@ pub fn calculate_file_md5(file_path: &str) -> Option<String> {
     }
 
     let digest = hasher.compute();
-    // Convert digest bytes to hex string
-    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    // Convert digest bytes to hex string (MD5 = 16 bytes = 32 hex chars)
+    let mut hex = String::with_capacity(32);
+    for b in digest.iter() {
+        let _ = write!(hex, "{b:02x}");
+    }
     Some(hex)
 }
 
