@@ -52,9 +52,9 @@ fn parse_visual_resource(node: &LsxNode) -> Option<VisualAsset> {
 
     for attr in &node.attributes {
         match attr.id.as_str() {
-            "ID" => id = attr.value.clone(),
-            "Name" => name = attr.value.clone(),
-            "SourceFile" => gr2_path = attr.value.clone(),
+            "ID" => id.clone_from(&attr.value),
+            "Name" => name.clone_from(&attr.value),
+            "SourceFile" => gr2_path.clone_from(&attr.value),
             _ => {}
         }
     }
@@ -113,9 +113,9 @@ fn parse_material_resource(node: &LsxNode) -> Option<MaterialDef> {
 
     for attr in &node.attributes {
         match attr.id.as_str() {
-            "ID" => id = attr.value.clone(),
-            "Name" => name = attr.value.clone(),
-            "SourceFile" => source_file = attr.value.clone(),
+            "ID" => id.clone_from(&attr.value),
+            "Name" => name.clone_from(&attr.value),
+            "SourceFile" => source_file.clone_from(&attr.value),
             _ => {}
         }
     }
@@ -128,8 +128,8 @@ fn parse_material_resource(node: &LsxNode) -> Option<MaterialDef> {
 
             for attr in &child.attributes {
                 match attr.id.as_str() {
-                    "ParameterName" => param_name = attr.value.clone(),
-                    "ID" => tex_id = attr.value.clone(),
+                    "ParameterName" => param_name.clone_from(&attr.value),
+                    "ID" => tex_id.clone_from(&attr.value),
                     _ => {}
                 }
             }
@@ -192,9 +192,9 @@ fn parse_texture_resource(node: &LsxNode) -> Option<TextureRef> {
 
     for attr in &node.attributes {
         match attr.id.as_str() {
-            "ID" => id = attr.value.clone(),
-            "Name" => name = attr.value.clone(),
-            "SourceFile" => dds_path = attr.value.clone(),
+            "ID" => id.clone_from(&attr.value),
+            "Name" => name.clone_from(&attr.value),
+            "SourceFile" => dds_path.clone_from(&attr.value),
             "Width" => width = attr.value.parse().unwrap_or(0),
             "Height" => height = attr.value.parse().unwrap_or(0),
             _ => {}
@@ -241,9 +241,9 @@ fn parse_virtual_texture_resource(node: &LsxNode) -> Option<VirtualTextureRef> {
 
     for attr in &node.attributes {
         match attr.id.as_str() {
-            "ID" => id = attr.value.clone(),
-            "Name" => name = attr.value.clone(),
-            "GTexFileName" => gtex_hash = attr.value.clone(),
+            "ID" => id.clone_from(&attr.value),
+            "Name" => name.clone_from(&attr.value),
+            "GTexFileName" => gtex_hash.clone_from(&attr.value),
             _ => {}
         }
     }
