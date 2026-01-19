@@ -1,4 +1,4 @@
-//! Error types for MacLarian
+//! Error types for `MacLarian`
 use thiserror::Error;
 use lz4_flex::frame::Error as Lz4FrameError;
 

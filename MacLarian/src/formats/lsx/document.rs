@@ -35,6 +35,7 @@ pub struct LsxAttribute {
 }
 
 impl LsxDocument {
+    #[must_use] 
     pub fn new(major: u32, minor: u32, revision: u32, build: u32) -> Self {
         LsxDocument {
             major,
@@ -46,12 +47,14 @@ impl LsxDocument {
     }
     
     /// Get version as a string (for LSJ conversion)
+    #[must_use] 
     pub fn version_string(&self) -> String {
         format!("{}.{}.{}.{}", self.major, self.minor, self.revision, self.build)
     }
 }
 
 impl LsxNode {
+    #[must_use] 
     pub fn new(id: String) -> Self {
         LsxNode {
             id,
@@ -63,6 +66,7 @@ impl LsxNode {
 }
 
 impl LsxAttribute {
+    #[must_use] 
     pub fn new(id: String, type_name: String, value: String) -> Self {
         LsxAttribute {
             id,

@@ -93,7 +93,7 @@ struct VertexType {
 
 impl VertexType {
     fn stride(&self) -> usize {
-        self.members.iter().map(|m| m.total_size()).sum()
+        self.members.iter().map(MemberDef::total_size).sum()
     }
 }
 
@@ -160,6 +160,13 @@ pub struct Gr2Reader {
 }
 
 impl Gr2Reader {
+    /// Create a new GR2 reader from file data.
+    ///
+    /// # Errors
+    /// Returns an error if the data is too small, has an invalid magic signature, or uses unsupported compression.
+    ///
+    /// # Panics
+    /// This function does not panic under normal conditions.
     pub fn new(file_data: &[u8]) -> Result<Self> {
         if file_data.len() < 16 {
             return Err(Error::Decompression("GR2 file too small".to_string()));
@@ -177,7 +184,7 @@ impl Gr2Reader {
         let mut cursor = std::io::Cursor::new(&file_data[0x20..]);
         let version = cursor.read_u32::<LittleEndian>()?;
         if version != 6 && version != 7 {
-            return Err(Error::Decompression(format!("Unsupported GR2 version: {}", version)));
+            return Err(Error::Decompression(format!("Unsupported GR2 version: {version}")));
         }
 
         cursor.set_position(12);
@@ -229,7 +236,7 @@ impl Gr2Reader {
             let decompressed = match section.compression {
                 0 => compressed.to_vec(),
                 4 => decompress_bitknit(compressed, section.uncompressed_size as usize)?,
-                c => return Err(Error::Decompression(format!("Unsupported compression: {}", c))),
+                c => return Err(Error::Decompression(format!("Unsupported compression: {c}"))),
             };
 
             let dest_end = current_offset + decompressed.len();
@@ -427,6 +434,10 @@ impl Gr2Reader {
         vertex
     }
 
+    /// Parse meshes from the GR2 file.
+    ///
+    /// # Errors
+    /// Returns an error if the mesh data cannot be read.
     pub fn parse_meshes(&self, file_data: &[u8]) -> Result<Vec<MeshData>> {
         let mut cursor = std::io::Cursor::new(&file_data[0x20..]);
         cursor.set_position(28);
@@ -507,7 +518,7 @@ impl Gr2Reader {
                     for j in 0..idx16_count {
                         let idx_offset = idx16_ptr + j * 2;
                         if idx_offset + 2 <= self.data.len() {
-                            inds.push(self.read_u16(idx_offset) as u32);
+                            inds.push(u32::from(self.read_u16(idx_offset)));
                         }
                     }
                     (inds, false)
@@ -546,6 +557,10 @@ impl Gr2Reader {
         transform
     }
 
+    /// Parse skeleton from the GR2 file.
+    ///
+    /// # Errors
+    /// Returns an error if the skeleton data cannot be read.
     pub fn parse_skeleton(&self, file_data: &[u8]) -> Result<Option<Skeleton>> {
         let mut cursor = std::io::Cursor::new(&file_data[0x20..]);
         cursor.set_position(28);
@@ -610,6 +625,9 @@ impl Gr2Reader {
     }
 
     /// Get a description of what data the GR2 file contains
+    ///
+    /// # Errors
+    /// Returns an error if the content info cannot be read.
     pub fn get_content_info(&self, file_data: &[u8]) -> Result<Gr2ContentInfo> {
         let mut cursor = std::io::Cursor::new(&file_data[0x20..]);
         cursor.set_position(28);
@@ -663,6 +681,7 @@ pub struct Gr2ContentInfo {
 
 impl Gr2ContentInfo {
     /// Returns a human-readable description of the file contents
+    #[must_use] 
     pub fn describe(&self) -> String {
         let mut parts = Vec::new();
         if self.skeleton_count > 0 {

@@ -91,7 +91,7 @@ impl Section {
 
     fn align(&mut self, alignment: usize) {
         let padding = (alignment - (self.data.len() % alignment)) % alignment;
-        self.data.extend(std::iter::repeat(0u8).take(padding));
+        self.data.extend(std::iter::repeat_n(0u8, padding));
     }
 
     fn write_u8(&mut self, v: u8) {
@@ -228,6 +228,7 @@ pub struct Gr2Writer {
 }
 
 impl Gr2Writer {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             meshes: Vec::new(),
@@ -248,11 +249,18 @@ impl Gr2Writer {
     }
 
     /// Build the GR2 file and return as bytes.
+    ///
+    /// # Errors
+    /// Returns an error if building the GR2 data fails.
     pub fn build(&self) -> Result<Vec<u8>> {
         let sections = self.build_sections()?;
         self.build_file_bytes(&sections)
     }
 
+    /// Write the GR2 file to disk.
+    ///
+    /// # Errors
+    /// Returns an error if writing fails.
     pub fn write(&self, path: &Path) -> Result<()> {
         let data = self.build()?;
         let mut file = File::create(path)?;
@@ -641,15 +649,15 @@ impl Gr2Writer {
         }
 
         // Write skeleton pointer array to section 0
-        let skeleton_ptr_array_offset = if !skeleton_offsets.is_empty() {
+        let skeleton_ptr_array_offset = if skeleton_offsets.is_empty() {
+            0
+        } else {
             sections[0].align(8);
             let offset = sections[0].pos();
             for &skel_offset in &skeleton_offsets {
                 sections[0].write_ptr(2, skel_offset);
             }
             offset
-        } else {
-            0
         };
 
         // Write vertex data pointer array to section 0
@@ -729,7 +737,7 @@ impl Gr2Writer {
 
         // Calculate relocation table offsets (uncompressed)
         let mut reloc_offsets = Vec::new();
-        for (_i, section) in sections.iter().enumerate() {
+        for section in sections {
             reloc_offsets.push(current_offset);
             if !section.fixups.is_empty() {
                 current_offset += section.fixups.len() * 12;

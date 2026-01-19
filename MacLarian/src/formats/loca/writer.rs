@@ -11,6 +11,9 @@ use std::path::Path;
 const HEADER_SIZE: u32 = 12;
 
 /// Write a .loca file to disk
+///
+/// # Errors
+/// Returns an error if file writing fails.
 pub fn write_loca<P: AsRef<Path>>(path: P, resource: &LocaResource) -> Result<()> {
     let file = File::create(path)?;
     let mut writer = BufWriter::new(file);
@@ -29,7 +32,7 @@ pub fn write_loca<P: AsRef<Path>>(path: P, resource: &LocaResource) -> Result<()
             if e.text.is_empty() {
                 0
             } else {
-                e.text.as_bytes().len() as u32 + 1 // +1 for null terminator
+                e.text.len() as u32 + 1 // +1 for null terminator
             }
         })
         .collect();

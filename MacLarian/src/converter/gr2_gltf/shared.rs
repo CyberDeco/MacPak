@@ -6,22 +6,25 @@ use glam::{Mat3, Quat, Vec3};
 use half::f16;
 
 /// Convert half-float (f16) to f32.
+#[must_use] 
 pub fn half_to_f32(bits: u16) -> f32 {
     f16::from_bits(bits).to_f32()
 }
 
 /// Convert f32 to half-float (f16).
+#[must_use] 
 pub fn f32_to_half(value: f32) -> u16 {
     f16::from_f32(value).to_bits()
 }
 
-/// Decode QTangent quaternion to normal and tangent vectors.
+/// Decode `QTangent` quaternion to normal and tangent vectors.
+#[must_use] 
 pub fn decode_qtangent(qt: &[i16; 4]) -> ([f32; 3], [f32; 4]) {
     let q: [f32; 4] = [
-        qt[0] as f32 / 32767.0,
-        qt[1] as f32 / 32767.0,
-        qt[2] as f32 / 32767.0,
-        qt[3] as f32 / 32767.0,
+        f32::from(qt[0]) / 32767.0,
+        f32::from(qt[1]) / 32767.0,
+        f32::from(qt[2]) / 32767.0,
+        f32::from(qt[3]) / 32767.0,
     ];
 
     let (qx, qy, qz, qw) = (q[0], q[1], q[2], q[3]);
@@ -45,8 +48,9 @@ pub fn decode_qtangent(qt: &[i16; 4]) -> ([f32; 3], [f32; 4]) {
     (normal, tangent)
 }
 
-/// Encode normal and tangent vectors to QTangent quaternion.
-/// This is the inverse of decode_qtangent.
+/// Encode normal and tangent vectors to `QTangent` quaternion.
+/// This is the inverse of `decode_qtangent`.
+#[must_use] 
 pub fn encode_qtangent(normal: &[f32; 3], tangent: &[f32; 4]) -> [i16; 4] {
     // Normalize inputs
     let n = Vec3::from_array(*normal).normalize_or_zero();

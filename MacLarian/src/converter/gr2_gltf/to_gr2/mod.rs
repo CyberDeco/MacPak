@@ -17,6 +17,9 @@ use std::path::Path;
 use crate::error::Result;
 
 /// Convert a glTF/GLB file to GR2 format.
+///
+/// # Errors
+/// Returns an error if conversion fails.
 pub fn convert_gltf_to_gr2(input_path: &Path, output_path: &Path) -> Result<()> {
     // Load glTF file
     let model = GltfModel::load(input_path)?;
@@ -38,6 +41,9 @@ pub fn convert_gltf_to_gr2(input_path: &Path, output_path: &Path) -> Result<()> 
 }
 
 /// Convert glTF data bytes to GR2 data bytes.
+///
+/// # Errors
+/// Returns an error if conversion fails.
 pub fn convert_gltf_bytes_to_gr2(gltf_data: &[u8]) -> Result<Vec<u8>> {
     let model = GltfModel::load_from_bytes(gltf_data)?;
 

@@ -36,6 +36,7 @@ pub struct LocaResource {
 }
 
 impl LocaResource {
+    #[must_use] 
     pub fn new() -> Self {
         Self { entries: Vec::new() }
     }

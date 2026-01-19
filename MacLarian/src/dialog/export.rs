@@ -6,6 +6,9 @@ use super::{Dialog, NodeConstructor};
 /// Generate HTML export of a dialog
 ///
 /// Creates a standalone HTML document with styled dialog tree
+///
+/// # Errors
+/// Returns an error message if generation fails.
 pub fn generate_html(dialog: &Dialog) -> Result<String, String> {
     let mut html = String::new();
 
@@ -58,29 +61,26 @@ fn render_node_html(dialog: &Dialog, uuid: &str, html: &mut String, visited: &mu
         _ => "node",
     };
 
-    html.push_str(&format!("<div class=\"{}\">\n", class));
+    html.push_str(&format!("<div class=\"{class}\">\n"));
 
     // Type badge
     html.push_str(&format!("<strong>[{}]</strong> ", node.constructor.display_name()));
 
     // Speaker
-    if let Some(speaker_idx) = node.speaker {
-        if speaker_idx >= 0 {
-            html.push_str(&format!("<span class=\"speaker\">Speaker {}</span>: ", speaker_idx));
+    if let Some(speaker_idx) = node.speaker
+        && speaker_idx >= 0 {
+            html.push_str(&format!("<span class=\"speaker\">Speaker {speaker_idx}</span>: "));
         }
-    }
 
     // Text
     if let Some(text_entry) = dialog.get_node_text(node) {
-        let text = text_entry.value.as_ref()
-            .map(|s| html_escape(s))
-            .unwrap_or_else(|| format!("[{}]", text_entry.handle));
-        html.push_str(&format!("<span class=\"text\">{}</span>\n", text));
+        let text = text_entry.value.as_ref().map_or_else(|| format!("[{}]", text_entry.handle), |s| html_escape(s));
+        html.push_str(&format!("<span class=\"text\">{text}</span>\n"));
     }
 
     // Meta info
     html.push_str("<div class=\"meta\">");
-    html.push_str(&format!("UUID: {} ", uuid));
+    html.push_str(&format!("UUID: {uuid} "));
     if node.end_node {
         html.push_str("[END] ");
     }

@@ -3,9 +3,12 @@
 //! Extracts dialog data from the generic LSJ format into typed Dialog structures.
 
 use crate::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
-use super::types::*;
+use super::types::{Dialog, SpeakerInfo, DialogNode, NodeConstructor, GameData, FlagGroup, FlagType, Flag, TaggedText, Rule, RuleGroup, TagTextEntry, DialogEditorData};
 
 /// Parse a dialog from an LSJ document
+///
+/// # Errors
+/// Returns an error if the document is missing required regions or has invalid format.
 pub fn parse_dialog(doc: &LsjDocument) -> Result<Dialog, DialogParseError> {
     let mut dialog = Dialog::new();
 
@@ -44,11 +47,9 @@ pub fn parse_dialog(doc: &LsjDocument) -> Result<Dialog, DialogParseError> {
             if let Some(objects) = das_node.children.get("Object") {
                 for obj in objects {
                     let map_key = obj.attributes.get("MapKey")
-                        .map(|a| get_int_value(a))
-                        .unwrap_or(0);
+                        .map_or(0, get_int_value);
                     let map_value = obj.attributes.get("MapValue")
-                        .map(|a| get_int_value(a))
-                        .unwrap_or(0);
+                        .map_or(0, get_int_value);
                     dialog.default_addressed_speakers.insert(map_key, map_value);
                 }
             }
@@ -96,8 +97,7 @@ pub fn parse_dialog(doc: &LsjDocument) -> Result<Dialog, DialogParseError> {
 /// Parse a speaker from LSJ node
 fn parse_speaker(node: &LsjNode) -> Option<SpeakerInfo> {
     let index = node.attributes.get("index")
-        .map(|a| get_string_value(a).parse::<i32>().unwrap_or(0))
-        .unwrap_or(0);
+        .map_or(0, |a| get_string_value(a).parse::<i32>().unwrap_or(0));
 
     let speaker_mapping_id = node.attributes.get("SpeakerMappingId")
         .map(get_string_value)
@@ -108,14 +108,13 @@ fn parse_speaker(node: &LsjNode) -> Option<SpeakerInfo> {
             get_string_value(a)
                 .split(';')
                 .filter(|s| !s.is_empty())
-                .map(|s| s.to_string())
+                .map(std::string::ToString::to_string)
                 .collect()
         })
         .unwrap_or_default();
 
     let is_peanut = node.attributes.get("IsPeanutSpeaker")
-        .map(|a| get_bool_value(a))
-        .unwrap_or(false);
+        .is_some_and(get_bool_value);
 
     Some(SpeakerInfo {
         index,
@@ -359,10 +358,9 @@ fn parse_flag_group(node: &LsjNode) -> Option<FlagGroup> {
                 .map(get_string_value)
                 .unwrap_or_default();
             let value = flag_node.attributes.get("value")
-                .map(|a| get_bool_value(a))
-                .unwrap_or(false);
+                .is_some_and(get_bool_value);
             let param_val = flag_node.attributes.get("paramval")
-                .map(|a| get_int_value(a));
+                .map(get_int_value);
             let name = flag_node.attributes.get("name")
                 .map(get_string_value);
 
@@ -381,8 +379,7 @@ fn parse_flag_group(node: &LsjNode) -> Option<FlagGroup> {
 /// Parse tagged text structure
 fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
     let has_tag_rule = node.attributes.get("HasTagRule")
-        .map(|a| get_bool_value(a))
-        .unwrap_or(false);
+        .is_some_and(get_bool_value);
 
     let mut rule_groups = Vec::new();
     let mut tag_texts = Vec::new();
@@ -391,8 +388,7 @@ fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
     if let Some(rg_list) = node.children.get("RuleGroup") {
         for rg in rg_list {
             let tag_combine_op = rg.attributes.get("TagCombineOp")
-                .map(|a| get_int_value(a))
-                .unwrap_or(0);
+                .map_or(0, get_int_value);
 
             let mut rules = Vec::new();
 
@@ -401,13 +397,11 @@ fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
                     if let Some(rule_nodes) = rules_container.children.get("Rule") {
                         for rule_node in rule_nodes {
                             let has_child_rules = rule_node.attributes.get("HasChildRules")
-                                .map(|a| get_bool_value(a))
-                                .unwrap_or(false);
+                                .is_some_and(get_bool_value);
                             let rule_combine_op = rule_node.attributes.get("TagCombineOp")
-                                .map(|a| get_int_value(a))
-                                .unwrap_or(0);
+                                .map_or(0, get_int_value);
                             let speaker = rule_node.attributes.get("speaker")
-                                .map(|a| get_int_value(a));
+                                .map(get_int_value);
 
                             let mut rule_tags = Vec::new();
                             if let Some(tags_list) = rule_node.children.get("Tags") {
@@ -448,8 +442,7 @@ fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
                     let line_id = text_node.attributes.get("LineId")
                         .map(get_string_value);
                     let stub = text_node.attributes.get("stub")
-                        .map(|a| get_bool_value(a))
-                        .unwrap_or(false);
+                        .is_some_and(get_bool_value);
 
                     // Get the translated string
                     let (handle, value, version) = if let Some(tt_attr) = text_node.attributes.get("TagText") {
@@ -557,7 +550,7 @@ fn parse_editor_data(node: &LsjNode) -> DialogEditorData {
 fn get_string_value(attr: &LsjAttribute) -> String {
     match attr {
         LsjAttribute::Simple { value, .. } => {
-            value.as_str().map(|s| s.to_string()).unwrap_or_default()
+            value.as_str().map(std::string::ToString::to_string).unwrap_or_default()
         }
         LsjAttribute::TranslatedString { value, handle, .. } => {
             value.clone().unwrap_or_else(|| handle.clone())
@@ -612,9 +605,9 @@ pub enum DialogParseError {
 impl std::fmt::Display for DialogParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DialogParseError::MissingRegion(r) => write!(f, "Missing region: {}", r),
-            DialogParseError::InvalidFormat(s) => write!(f, "Invalid format: {}", s),
-            DialogParseError::IoError(e) => write!(f, "IO error: {}", e),
+            DialogParseError::MissingRegion(r) => write!(f, "Missing region: {r}"),
+            DialogParseError::InvalidFormat(s) => write!(f, "Invalid format: {s}"),
+            DialogParseError::IoError(e) => write!(f, "IO error: {e}"),
         }
     }
 }

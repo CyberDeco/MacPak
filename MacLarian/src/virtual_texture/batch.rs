@@ -46,6 +46,9 @@ pub struct BatchExtractResult {
 ///
 /// # Returns
 /// Information about the extraction, or an error.
+///
+/// # Errors
+/// Returns an error if the GTS/GTP file cannot be read or extraction fails.
 pub fn extract_gts_file<P, F>(
     input_path: P,
     output_dir: Option<&Path>,
@@ -72,22 +75,17 @@ where
     let output_path = match output_dir {
         Some(dir) => dir.to_path_buf(),
         None => input_path
-            .parent()
-            .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| PathBuf::from(".")),
+            .parent().map_or_else(|| PathBuf::from("."), std::path::Path::to_path_buf),
     };
 
     // Create subdirectory based on input filename
     let input_stem = input_path
-        .file_stem()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| "textures".to_string());
+        .file_stem().map_or_else(|| "textures".to_string(), |n| n.to_string_lossy().to_string());
     let texture_output_dir = output_path.join(&input_stem);
 
     std::fs::create_dir_all(&texture_output_dir)
-        .map_err(|e| Error::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Failed to create output directory: {}", e)
+        .map_err(|e| Error::Io(std::io::Error::other(
+            format!("Failed to create output directory: {e}")
         )))?;
 
     if is_single_gtp {
@@ -104,7 +102,7 @@ where
 
         // Count output files
         let count = std::fs::read_dir(&texture_output_dir)
-            .map(|entries| entries.filter_map(|e| e.ok()).count())
+            .map(|entries| entries.filter_map(std::result::Result::ok).count())
             .unwrap_or(0);
 
         Ok(GtsExtractResult {
@@ -133,9 +131,7 @@ where
             if gtp_path.exists() {
                 // Create a subdirectory for this GTP's output
                 let gtp_stem = Path::new(&page_file.filename)
-                    .file_stem()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| format!("gtp_{}", i));
+                    .file_stem().map_or_else(|| format!("gtp_{i}"), |n| n.to_string_lossy().to_string());
                 let gtp_output_dir = texture_output_dir.join(&gtp_stem);
 
                 match VirtualTextureExtractor::extract_with_gts(
@@ -157,8 +153,7 @@ where
 
         if extracted_count == 0 && total_page_files > 0 {
             return Err(Error::InvalidFormat(format!(
-                "No GTP files could be extracted (0/{} succeeded, {} failed)",
-                total_page_files, failed_count
+                "No GTP files could be extracted (0/{total_page_files} succeeded, {failed_count} failed)"
             )));
         }
 
@@ -197,9 +192,7 @@ where
         .par_iter()
         .map(|gts_path| {
             let gts_name = gts_path
-                .file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| "unknown".to_string());
+                .file_name().map_or_else(|| "unknown".to_string(), |n| n.to_string_lossy().to_string());
 
             // Update progress (atomic)
             let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
@@ -216,7 +209,7 @@ where
                 }
                 Err(e) => {
                     error_counter.fetch_add(1, Ordering::SeqCst);
-                    format!("Failed {}: {}", gts_name, e)
+                    format!("Failed {gts_name}: {e}")
                 }
             }
         })

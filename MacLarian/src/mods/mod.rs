@@ -1,7 +1,7 @@
 //! Mod utilities - info.json generation and validation for BG3 mods
 //!
 //! This module provides tools for working with BG3 mod packages:
-//! - Generate info.json for BaldursModManager compatibility
+//! - Generate info.json for `BaldursModManager` compatibility
 //! - Validate mod directory structure
 //! - Find and parse mod metadata
 

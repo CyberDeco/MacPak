@@ -8,6 +8,9 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::Path;
 
 /// Read a .loca file from disk
+///
+/// # Errors
+/// Returns an error if the file cannot be read or has an invalid format.
 pub fn read_loca<P: AsRef<Path>>(path: P) -> Result<LocaResource> {
     let mut file = File::open(path)?;
     let mut buffer = Vec::new();
@@ -16,6 +19,9 @@ pub fn read_loca<P: AsRef<Path>>(path: P) -> Result<LocaResource> {
 }
 
 /// Parse .loca data from bytes
+///
+/// # Errors
+/// Returns an error if the data has an invalid .loca format.
 pub fn parse_loca_bytes(data: &[u8]) -> Result<LocaResource> {
     let mut cursor = Cursor::new(data);
 
@@ -29,7 +35,7 @@ pub fn parse_loca_bytes(data: &[u8]) -> Result<LocaResource> {
     }
 
     let num_entries = cursor.read_u32::<LittleEndian>()? as usize;
-    let texts_offset = cursor.read_u32::<LittleEndian>()? as u64;
+    let texts_offset = u64::from(cursor.read_u32::<LittleEndian>()?);
 
     // Read entry metadata
     let mut entries = Vec::with_capacity(num_entries);

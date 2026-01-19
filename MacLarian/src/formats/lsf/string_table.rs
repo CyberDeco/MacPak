@@ -9,6 +9,7 @@ pub struct StringTable {
 }
 
 impl StringTable {
+    #[must_use] 
     pub fn new() -> Self {
         StringTable {
             strings: Vec::new(),
@@ -29,16 +30,19 @@ impl StringTable {
     }
     
     /// Get string by index
+    #[must_use] 
     pub fn get(&self, idx: i32) -> Option<&str> {
-        self.strings.get(idx as usize).map(|s| s.as_str())
+        self.strings.get(idx as usize).map(std::string::String::as_str)
     }
     
     /// Get index of a string
+    #[must_use] 
     pub fn index_of(&self, s: &str) -> Option<i32> {
         self.indices.get(s).copied()
     }
     
     /// Convert to bytes for serialization
+    #[must_use] 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         for s in &self.strings {
@@ -49,10 +53,12 @@ impl StringTable {
     }
     
     /// Number of strings in table
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.strings.len()
     }
     
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.strings.is_empty()
     }

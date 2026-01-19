@@ -29,6 +29,9 @@ pub type VoiceMetaCache = HashMap<String, VoiceMetaEntry>;
 /// Load voice metadata from VoiceMeta.pak (parallel processing)
 ///
 /// Returns a map of text handle -> `VoiceMetaEntry`
+///
+/// # Errors
+/// Returns an error if the PAK file cannot be read or parsed.
 pub fn load_voice_meta_from_pak(pak_path: &Path) -> Result<VoiceMetaCache, String> {
     // List all .lsf files in the PAK
     let entries = PakOperations::list(pak_path)
@@ -87,9 +90,12 @@ pub fn load_voice_meta_from_pak(pak_path: &Path) -> Result<VoiceMetaCache, Strin
     Ok(cache)
 }
 
-/// Load voice metadata from extracted VoiceMeta folder (parallel processing)
+/// Load voice metadata from extracted `VoiceMeta` folder (parallel processing)
 ///
 /// Returns a map of text handle -> `VoiceMetaEntry`
+///
+/// # Errors
+/// Returns an error if the folder cannot be read or files cannot be parsed.
 pub fn load_voice_meta_from_folder(folder: &Path) -> Result<VoiceMetaCache, String> {
     // Find all Soundbanks .lsf files recursively
     let soundbank_files = find_soundbank_files(folder);
@@ -125,13 +131,13 @@ fn find_soundbank_files(folder: &Path) -> Vec<PathBuf> {
 
     WalkDir::new(folder)
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| {
             let path = e.path();
-            path.extension().map(|ext| ext == "lsf").unwrap_or(false)
+            path.extension().is_some_and(|ext| ext == "lsf")
                 && path.to_string_lossy().contains("Soundbanks")
         })
-        .map(|e| e.into_path())
+        .map(walkdir::DirEntry::into_path)
         .collect()
 }
 
@@ -239,7 +245,8 @@ pub fn find_voice_files_path(data_path: &Path) -> Option<PathBuf> {
     None
 }
 
-/// Find the path to VoiceMeta.pak or extracted VoiceMeta folder
+/// Find the path to VoiceMeta.pak or extracted `VoiceMeta` folder
+#[must_use] 
 pub fn find_voice_meta_path(data_path: &Path) -> Option<PathBuf> {
     let localization_dir = data_path.join("Localization");
 

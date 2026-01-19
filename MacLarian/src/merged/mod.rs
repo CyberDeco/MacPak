@@ -6,10 +6,10 @@
 //! # Overview
 //!
 //! BG3 stores asset metadata in `_merged.lsf` files which contain mappings between:
-//! - **VisualBank**: GR2 mesh files with MaterialID references
-//! - **MaterialBank**: Materials with Texture2DParameters referencing textures
-//! - **TextureBank**: DDS texture file paths
-//! - **VirtualTextureBank**: GTex streaming texture references
+//! - **`VisualBank`**: GR2 mesh files with `MaterialID` references
+//! - **`MaterialBank`**: Materials with `Texture2DParameters` referencing textures
+//! - **`TextureBank`**: DDS texture file paths
+//! - **`VirtualTextureBank`**: `GTex` streaming texture references
 //!
 //! # Usage
 //!

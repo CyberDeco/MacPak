@@ -33,6 +33,7 @@ pub struct LocalizationCache {
 
 impl LocalizationCache {
     /// Create a new empty cache
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             strings: HashMap::new(),
@@ -42,6 +43,7 @@ impl LocalizationCache {
     }
 
     /// Create a cache with a specific language
+    #[must_use] 
     pub fn with_language(language: &str) -> Self {
         Self {
             strings: HashMap::new(),
@@ -51,6 +53,7 @@ impl LocalizationCache {
     }
 
     /// Get the current language
+    #[must_use] 
     pub fn language(&self) -> &str {
         &self.language
     }
@@ -64,11 +67,13 @@ impl LocalizationCache {
     }
 
     /// Get the number of cached strings
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.strings.len()
     }
 
     /// Check if cache is empty
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.strings.is_empty()
     }
@@ -80,6 +85,9 @@ impl LocalizationCache {
     }
 
     /// Load localization from a .loca file
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed.
     pub fn load_from_file<P: AsRef<Path>>(&mut self, path: P) -> Result<usize, LocalizationError> {
         let path = path.as_ref();
 
@@ -98,6 +106,9 @@ impl LocalizationCache {
     }
 
     /// Load localization from a .loca file inside a PAK archive
+    ///
+    /// # Errors
+    /// Returns an error if the PAK cannot be read or the .loca file cannot be parsed.
     pub fn load_from_pak<P: AsRef<Path>>(&mut self, pak_path: P, internal_path: &str) -> Result<usize, LocalizationError> {
         let pak_path = pak_path.as_ref();
         let source_key = pak_path.join(internal_path);
@@ -124,6 +135,9 @@ impl LocalizationCache {
     ///
     /// For BG3, the language PAK is typically at:
     /// `<GameData>/Localization/<Language>.pak`
+    ///
+    /// # Errors
+    /// Returns an error if the PAK cannot be found or read.
     pub fn load_language_pak<P: AsRef<Path>>(&mut self, game_data_path: P) -> Result<usize, LocalizationError> {
         let game_data = game_data_path.as_ref();
         let pak_path = game_data
@@ -158,7 +172,7 @@ impl LocalizationCache {
         Ok(total_count)
     }
 
-    /// Add entries from a LocaResource
+    /// Add entries from a `LocaResource`
     fn add_entries(&mut self, resource: &LocaResource) -> usize {
         let mut count = 0;
         for entry in &resource.entries {
@@ -178,7 +192,7 @@ impl LocalizationCache {
                     version: entry.version,
                 });
             } else {
-                self.strings.insert(format!("h{}", key), LocalizedEntry {
+                self.strings.insert(format!("h{key}"), LocalizedEntry {
                     text: entry.text.clone(),
                     version: entry.version,
                 });
@@ -190,6 +204,7 @@ impl LocalizationCache {
     }
 
     /// Look up a localized string by handle
+    #[must_use] 
     pub fn get(&self, handle: &str) -> Option<&LocalizedEntry> {
         self.strings.get(handle)
             .or_else(|| {
@@ -197,24 +212,25 @@ impl LocalizationCache {
                 if handle.starts_with('h') {
                     self.strings.get(&handle[1..])
                 } else {
-                    self.strings.get(&format!("h{}", handle))
+                    self.strings.get(&format!("h{handle}"))
                 }
             })
     }
 
     /// Get text for a handle, returning a placeholder if not found
+    #[must_use] 
     pub fn get_text(&self, handle: &str) -> String {
-        self.get(handle)
-            .map(|e| e.text.clone())
-            .unwrap_or_else(|| format!("[{}]", handle))
+        self.get(handle).map_or_else(|| format!("[{handle}]"), |e| e.text.clone())
     }
 
     /// Get text or None if not found
+    #[must_use] 
     pub fn get_text_opt(&self, handle: &str) -> Option<String> {
         self.get(handle).map(|e| e.text.clone())
     }
 
     /// Check if a handle exists in the cache
+    #[must_use] 
     pub fn contains(&self, handle: &str) -> bool {
         self.get(handle).is_some()
     }
@@ -237,10 +253,10 @@ pub enum LocalizationError {
 impl std::fmt::Display for LocalizationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LocalizationError::IoError(e) => write!(f, "IO error: {}", e),
-            LocalizationError::PakError(e) => write!(f, "PAK error: {}", e),
-            LocalizationError::LanguageNotFound(lang) => write!(f, "Language not found: {}", lang),
-            LocalizationError::ParseError(e) => write!(f, "Parse error: {}", e),
+            LocalizationError::IoError(e) => write!(f, "IO error: {e}"),
+            LocalizationError::PakError(e) => write!(f, "PAK error: {e}"),
+            LocalizationError::LanguageNotFound(lang) => write!(f, "Language not found: {lang}"),
+            LocalizationError::ParseError(e) => write!(f, "Parse error: {e}"),
         }
     }
 }
@@ -259,6 +275,9 @@ impl std::error::Error for LocalizationError {}
 ///
 /// # Returns
 /// The number of localization entries loaded, or an error.
+///
+/// # Errors
+/// Returns an error if the PAK file cannot be read.
 pub fn load_localization_from_pak_parallel(
     pak_path: &Path,
     cache: &mut LocalizationCache,
@@ -267,7 +286,7 @@ pub fn load_localization_from_pak_parallel(
 
     // List all .loca files in the PAK
     let entries = PakOperations::list(pak_path)
-        .map_err(|e| LocalizationError::PakError(format!("Failed to list PAK: {}", e)))?;
+        .map_err(|e| LocalizationError::PakError(format!("Failed to list PAK: {e}")))?;
 
     let loca_files: Vec<_> = entries
         .iter()
@@ -281,7 +300,7 @@ pub fn load_localization_from_pak_parallel(
 
     // Batch read all .loca files from PAK
     let file_data = PakOperations::read_files_bytes(pak_path, &loca_files)
-        .map_err(|e| LocalizationError::PakError(format!("Failed to batch read files: {}", e)))?;
+        .map_err(|e| LocalizationError::PakError(format!("Failed to batch read files: {e}")))?;
 
     // Parsed entry for merging into cache
     struct ParsedEntry {
@@ -306,7 +325,7 @@ pub fn load_localization_from_pak_parallel(
                         })
                         .collect()
                 })
-                .map_err(|e| format!("Failed to parse {}: {}", path, e))
+                .map_err(|e| format!("Failed to parse {path}: {e}"))
         })
         .collect();
 
@@ -336,15 +355,14 @@ pub fn get_available_languages<P: AsRef<Path>>(game_data_path: P) -> Vec<String>
     if let Ok(entries) = std::fs::read_dir(&localization_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().map(|e| e == "pak").unwrap_or(false) {
-                if let Some(stem) = path.file_stem() {
+            if path.extension().is_some_and(|e| e == "pak")
+                && let Some(stem) = path.file_stem() {
                     let name = stem.to_string_lossy().to_string();
                     // Filter out non-language paks (Voice, VoiceMeta)
                     if !name.contains("Voice") && !name.contains("Meta") {
                         languages.push(name);
                     }
                 }
-            }
         }
     }
 

@@ -12,7 +12,7 @@ use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
 use crate::error::{Error, Result};
-use super::types::*;
+use super::types::{GtsHeader, GtsParameterBlock, GtsPageFileInfo, GtsPackedTileId, GtsFlatTileInfo, GtsCodec, GtsBCParameterBlock, GtsUniformParameterBlock, GtsDataType, TileCompression, TileLocation};
 
 /// GTS file reader and parser
 #[derive(Debug)]
@@ -26,6 +26,9 @@ pub struct GtsFile {
 
 impl GtsFile {
     /// Read and parse a GTS file
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or has an invalid format.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path.as_ref())?;
         let mut reader = BufReader::new(file);
@@ -33,6 +36,9 @@ impl GtsFile {
     }
 
     /// Read and parse GTS from a reader
+    ///
+    /// # Errors
+    /// Returns an error if reading fails or the data has an invalid format.
     pub fn read<R: Read + Seek>(reader: &mut R) -> Result<Self> {
         let header = Self::read_header(reader)?;
 
@@ -451,6 +457,7 @@ impl GtsFile {
     }
 
     /// Get compression method for a parameter block
+    #[must_use] 
     pub fn get_compression_method(&self, param_block_id: u32) -> TileCompression {
         match self.parameter_blocks.get(&param_block_id) {
             Some(GtsParameterBlock::BC(bc)) => bc.get_compression_method(),
@@ -459,6 +466,7 @@ impl GtsFile {
     }
 
     /// Find the page file index by filename hash
+    #[must_use] 
     pub fn find_page_file_index(&self, hash: &str) -> Option<u16> {
         for (i, pf) in self.page_files.iter().enumerate() {
             if pf.filename.contains(hash) {
@@ -469,6 +477,7 @@ impl GtsFile {
     }
 
     /// Get tiles for a specific page file, organized by layer
+    #[must_use] 
     pub fn get_tiles_for_page_file(&self, page_file_index: u16) -> [Vec<TileLocation>; 3] {
         let mut tiles_by_layer: [Vec<TileLocation>; 3] = [Vec::new(), Vec::new(), Vec::new()];
 
@@ -506,10 +515,12 @@ impl GtsFile {
     }
 
     /// Get content dimensions (tile size minus border)
+    #[must_use] 
     pub fn content_width(&self) -> i32 {
         self.header.tile_width - self.header.tile_border * 2
     }
 
+    #[must_use] 
     pub fn content_height(&self) -> i32 {
         self.header.tile_height - self.header.tile_border * 2
     }

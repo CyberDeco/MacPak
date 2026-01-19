@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-//! MacLarian - Larian Studios file format library for macOS
+//! `MacLarian` - Larian Studios file format library for macOS
 //!
 //! This library provides tools for working with Baldur's Gate 3 and other
 //! Larian Studios game file formats, including:

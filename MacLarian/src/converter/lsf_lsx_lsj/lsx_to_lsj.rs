@@ -12,11 +12,17 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Convert LSX file to LSJ format
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
 pub fn convert_lsx_to_lsj<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     convert_lsx_to_lsj_with_progress(source, dest, &|_| {})
 }
 
 /// Convert LSX file to LSJ format with progress callback
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
 pub fn convert_lsx_to_lsj_with_progress<P: AsRef<Path>>(
     source: P,
     dest: P,
@@ -28,7 +34,7 @@ pub fn convert_lsx_to_lsj_with_progress<P: AsRef<Path>>(
     let lsx_doc = crate::formats::lsx::read_lsx(&source)?;
 
     let region_count = lsx_doc.regions.len();
-    progress(&format!("Converting {} regions to JSON...", region_count));
+    progress(&format!("Converting {region_count} regions to JSON..."));
     let lsj_doc = to_lsj(&lsx_doc)?;
 
     progress("Writing LSJ file...");
@@ -39,6 +45,9 @@ pub fn convert_lsx_to_lsj_with_progress<P: AsRef<Path>>(
 }
 
 /// Convert LSX document to LSJ document
+///
+/// # Errors
+/// Returns an error if conversion fails.
 pub fn to_lsj(lsx: &LsxDocument) -> Result<LsjDocument> {
     let mut regions = HashMap::new();
     
@@ -99,7 +108,7 @@ fn convert_child_node(parent: &mut LsjNode, child: &LsxNode) -> Result<()> {
     parent
         .children
         .entry(child.id.clone())
-        .or_insert_with(Vec::new)
+        .or_default()
         .push(child_node);
     
     Ok(())
@@ -155,7 +164,7 @@ fn convert_value_to_json(type_id: TypeId, value_str: &str) -> Result<serde_json:
         // Floats
         6 => {
             let f = value_str.parse::<f32>().unwrap_or(0.0);
-            Value::Number(serde_json::Number::from_f64(f as f64).unwrap_or(serde_json::Number::from(0)))
+            Value::Number(serde_json::Number::from_f64(f64::from(f)).unwrap_or(serde_json::Number::from(0)))
         },
         7 => {
             let f = value_str.parse::<f64>().unwrap_or(0.0);
@@ -166,7 +175,7 @@ fn convert_value_to_json(type_id: TypeId, value_str: &str) -> Result<serde_json:
         19 => Value::Bool(value_str == "True" || value_str == "true" || value_str == "1"),
         
         // Vectors and matrices - keep as strings (space-separated)
-        8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 => Value::String(value_str.to_string()),
+        8..=18 => Value::String(value_str.to_string()),
         
         // All other types (strings, UUIDs, paths, etc.)
         _ => Value::String(value_str.to_string()),

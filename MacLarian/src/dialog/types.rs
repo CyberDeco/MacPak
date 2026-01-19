@@ -53,7 +53,7 @@ pub struct DialogEditorData {
 pub struct DialogNode {
     /// Unique identifier
     pub uuid: String,
-    /// Node type (TagAnswer, TagQuestion, ActiveRoll, etc.)
+    /// Node type (`TagAnswer`, `TagQuestion`, `ActiveRoll`, etc.)
     pub constructor: NodeConstructor,
     /// Speaker index (-1 = no speaker, -666 = narrator)
     pub speaker: Option<i32>,
@@ -103,7 +103,7 @@ pub struct DialogNode {
     pub roll_type: Option<String>,
     /// Roll target speaker index
     pub roll_target_speaker: Option<i32>,
-    /// Whether this is a success node (for RollResult)
+    /// Whether this is a success node (for `RollResult`)
     pub success: Option<bool>,
     /// Exclude companion optional bonuses
     pub exclude_companions_optional_bonuses: bool,
@@ -160,6 +160,7 @@ pub enum NodeConstructor {
 }
 
 impl NodeConstructor {
+    #[must_use] 
     pub fn from_str(s: &str) -> Self {
         match s {
             "TagAnswer" => NodeConstructor::TagAnswer,
@@ -180,6 +181,7 @@ impl NodeConstructor {
         }
     }
 
+    #[must_use] 
     pub fn as_str(&self) -> &str {
         match self {
             NodeConstructor::TagAnswer => "TagAnswer",
@@ -201,6 +203,7 @@ impl NodeConstructor {
     }
 
     /// Returns a display-friendly name for UI
+    #[must_use] 
     pub fn display_name(&self) -> &str {
         match self {
             NodeConstructor::TagAnswer => "Answer",
@@ -233,7 +236,7 @@ pub struct TaggedText {
     pub tag_texts: Vec<TagTextEntry>,
 }
 
-/// A single text entry within TaggedText
+/// A single text entry within `TaggedText`
 #[derive(Debug, Clone, Default)]
 pub struct TagTextEntry {
     /// Line ID for this text
@@ -257,7 +260,7 @@ pub struct RuleGroup {
     pub rules: Vec<Rule>,
 }
 
-/// A single rule within a RuleGroup
+/// A single rule within a `RuleGroup`
 #[derive(Debug, Clone, Default)]
 pub struct Rule {
     /// Whether this rule has child rules
@@ -293,6 +296,7 @@ pub enum FlagType {
 }
 
 impl FlagType {
+    #[must_use] 
     pub fn from_str(s: &str) -> Self {
         match s {
             "Local" => FlagType::Local,
@@ -305,6 +309,7 @@ impl FlagType {
         }
     }
 
+    #[must_use] 
     pub fn as_str(&self) -> &str {
         match self {
             FlagType::Local => "Local",
@@ -357,16 +362,19 @@ pub struct GameData {
 
 // Convenience methods for Dialog
 impl Dialog {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Get a node by UUID
+    #[must_use] 
     pub fn get_node(&self, uuid: &str) -> Option<&DialogNode> {
         self.nodes.get(uuid)
     }
 
     /// Get all root nodes
+    #[must_use] 
     pub fn get_root_nodes(&self) -> Vec<&DialogNode> {
         self.root_nodes
             .iter()
@@ -375,6 +383,7 @@ impl Dialog {
     }
 
     /// Get children of a node
+    #[must_use] 
     pub fn get_children(&self, node: &DialogNode) -> Vec<&DialogNode> {
         node.children
             .iter()
@@ -383,23 +392,27 @@ impl Dialog {
     }
 
     /// Get speaker info by index
+    #[must_use] 
     pub fn get_speaker(&self, index: i32) -> Option<&SpeakerInfo> {
         self.speakers.get(&index)
     }
 
     /// Get the primary text for a node (first text entry, first tag text)
+    #[must_use] 
     pub fn get_node_text<'a>(&self, node: &'a DialogNode) -> Option<&'a TagTextEntry> {
         node.tagged_texts.first()
             .and_then(|tt| tt.tag_texts.first())
     }
 
     /// Count total nodes
+    #[must_use] 
     pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
 }
 
 impl DialogNode {
+    #[must_use] 
     pub fn new(uuid: String, constructor: NodeConstructor) -> Self {
         Self {
             uuid,
@@ -409,12 +422,14 @@ impl DialogNode {
     }
 
     /// Check if this node has any text
+    #[must_use] 
     pub fn has_text(&self) -> bool {
         self.tagged_texts.iter()
             .any(|tt| !tt.tag_texts.is_empty())
     }
 
     /// Get all text handles from this node
+    #[must_use] 
     pub fn get_text_handles(&self) -> Vec<&str> {
         self.tagged_texts.iter()
             .flat_map(|tt| tt.tag_texts.iter())
@@ -423,6 +438,7 @@ impl DialogNode {
     }
 
     /// Check if this node is a roll type
+    #[must_use] 
     pub fn is_roll(&self) -> bool {
         matches!(
             self.constructor,
@@ -431,11 +447,13 @@ impl DialogNode {
     }
 
     /// Check if this node is a question type
+    #[must_use] 
     pub fn is_question(&self) -> bool {
         matches!(self.constructor, NodeConstructor::TagQuestion)
     }
 
     /// Check if this node is an answer type
+    #[must_use] 
     pub fn is_answer(&self) -> bool {
         matches!(self.constructor, NodeConstructor::TagAnswer)
     }

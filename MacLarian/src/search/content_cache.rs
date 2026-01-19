@@ -3,7 +3,7 @@
 //! Provides lazy loading of file contents from PAK archives with automatic
 //! LSF→LSX conversion for searchable text content.
 //!
-//! Modeled after the AudioCache pattern.
+//! Modeled after the `AudioCache` pattern.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -60,7 +60,7 @@ pub struct ContentMatch {
 /// automatically. Uses LRU eviction to bound memory usage.
 #[derive(Debug)]
 pub struct ContentCache {
-    /// Cached content, keyed by "pak_path:internal_path"
+    /// Cached content, keyed by "`pak_path:internal_path`"
     entries: HashMap<String, CachedContent>,
     /// Access order for LRU eviction (most recent at end)
     access_order: Vec<String>,
@@ -72,6 +72,7 @@ pub struct ContentCache {
 
 impl ContentCache {
     /// Create a new empty cache with default settings
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             entries: HashMap::new(),
@@ -82,6 +83,7 @@ impl ContentCache {
     }
 
     /// Create a cache with custom max entries
+    #[must_use] 
     pub fn with_max_entries(max_entries: usize) -> Self {
         Self {
             entries: HashMap::new(),
@@ -97,6 +99,7 @@ impl ContentCache {
     }
 
     /// Check if content is cached
+    #[must_use] 
     pub fn contains(&self, pak_path: &Path, internal_path: &str) -> bool {
         let key = Self::cache_key(pak_path, internal_path);
         self.entries.contains_key(&key)
@@ -122,6 +125,12 @@ impl ContentCache {
     ///
     /// If cached, returns the cached version. Otherwise loads from PAK,
     /// converts LSF→LSX if needed, caches, and returns.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK cannot be read or conversion fails.
+    ///
+    /// # Panics
+    /// This function does not panic under normal conditions.
     pub fn get_or_load(
         &mut self,
         pak_path: &Path,
@@ -154,17 +163,17 @@ impl ContentCache {
             FileType::Lsx | FileType::Xml => {
                 // Already text, just decode
                 String::from_utf8(raw_bytes)
-                    .map_err(|e| Error::ConversionError(format!("UTF-8 decode error: {}", e)))?
+                    .map_err(|e| Error::ConversionError(format!("UTF-8 decode error: {e}")))?
             }
             FileType::Lsj | FileType::Json => {
                 // JSON is text
                 String::from_utf8(raw_bytes)
-                    .map_err(|e| Error::ConversionError(format!("UTF-8 decode error: {}", e)))?
+                    .map_err(|e| Error::ConversionError(format!("UTF-8 decode error: {e}")))?
             }
             _ => {
                 // Non-text format, try anyway but may fail
                 String::from_utf8(raw_bytes)
-                    .map_err(|e| Error::ConversionError(format!("Not a text file: {}", e)))?
+                    .map_err(|e| Error::ConversionError(format!("Not a text file: {e}")))?
             }
         };
 
@@ -195,6 +204,9 @@ impl ContentCache {
     ///
     /// Loads content on demand and searches for matches.
     /// Returns matches with line numbers and context snippets.
+    ///
+    /// # Errors
+    /// Returns an error if the content cannot be loaded.
     pub fn search_content(
         &mut self,
         entry: &IndexedFile,
@@ -271,26 +283,31 @@ impl ContentCache {
     }
 
     /// Get the number of cached entries
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Check if the cache is empty
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
     /// Get cache statistics
+    #[must_use] 
     pub fn stats(&self) -> &ContentCacheStats {
         &self.stats
     }
 
     /// Get total cached size in bytes
+    #[must_use] 
     pub fn total_size_bytes(&self) -> usize {
         self.stats.total_bytes_cached
     }
 
     /// Get total cached size in megabytes
+    #[must_use] 
     pub fn total_size_mb(&self) -> f32 {
         self.stats.total_bytes_cached as f32 / (1024.0 * 1024.0)
     }

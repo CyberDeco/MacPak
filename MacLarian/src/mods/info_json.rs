@@ -1,4 +1,4 @@
-//! info.json generation for BaldursModManager compatibility
+//! info.json generation for `BaldursModManager` compatibility
 
 use std::io::Read;
 use std::path::Path;
@@ -21,7 +21,8 @@ pub struct InfoJsonResult {
 /// * `pak_path` - Path to the PAK file (for MD5 calculation)
 ///
 /// # Returns
-/// InfoJsonResult with the generated JSON and status
+/// `InfoJsonResult` with the generated JSON and status
+#[must_use] 
 pub fn generate_info_json(source_dir: &str, pak_path: &str) -> InfoJsonResult {
     // Find meta.lsx in the source directory
     let meta_lsx_content = find_and_read_meta_lsx(source_dir);
@@ -59,36 +60,35 @@ pub fn generate_info_json(source_dir: &str, pak_path: &str) -> InfoJsonResult {
 }
 
 /// Find and read meta.lsx from a mod source directory
+#[must_use] 
 pub fn find_and_read_meta_lsx(source_dir: &str) -> Option<String> {
     let source_path = Path::new(source_dir);
 
     // Look for Mods/*/meta.lsx pattern
     let mods_dir = source_path.join("Mods");
-    if mods_dir.exists() && mods_dir.is_dir() {
-        if let Ok(entries) = std::fs::read_dir(&mods_dir) {
+    if mods_dir.exists() && mods_dir.is_dir()
+        && let Ok(entries) = std::fs::read_dir(&mods_dir) {
             for entry in entries.flatten() {
                 let meta_path = entry.path().join("meta.lsx");
-                if meta_path.exists() {
-                    if let Ok(content) = std::fs::read_to_string(&meta_path) {
+                if meta_path.exists()
+                    && let Ok(content) = std::fs::read_to_string(&meta_path) {
                         return Some(content);
                     }
-                }
             }
         }
-    }
 
     // Also check for meta.lsx directly in source (some mod structures)
     let direct_meta = source_path.join("meta.lsx");
-    if direct_meta.exists() {
-        if let Ok(content) = std::fs::read_to_string(&direct_meta) {
+    if direct_meta.exists()
+        && let Ok(content) = std::fs::read_to_string(&direct_meta) {
             return Some(content);
         }
-    }
 
     None
 }
 
 /// Calculate MD5 hash of a file (streaming for large files)
+#[must_use] 
 pub fn calculate_file_md5(file_path: &str) -> Option<String> {
     let mut file = std::fs::File::open(file_path).ok()?;
     let mut hasher = md5::Context::new();
@@ -104,7 +104,7 @@ pub fn calculate_file_md5(file_path: &str) -> Option<String> {
 
     let digest = hasher.compute();
     // Convert digest bytes to hex string
-    let hex: String = digest.iter().map(|b| format!("{:02x}", b)).collect();
+    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
     Some(hex)
 }
 
@@ -112,7 +112,7 @@ pub fn calculate_file_md5(file_path: &str) -> Option<String> {
 fn generate_info_json_content(metadata: &ModMetadata, pak_md5: &str) -> String {
     // Use raw Version64 integer as string (matches BG3 Modder's Multitool format)
     let version_json = match metadata.version64 {
-        Some(v) => format!("\"{}\"", v),
+        Some(v) => format!("\"{v}\""),
         None => "null".to_string(),
     };
 

@@ -24,6 +24,9 @@ use crate::error::{Error, Result};
 ///
 /// This is a convenience function that parses the GR2 file and decompresses
 /// all sections, returning the concatenated decompressed data.
+///
+/// # Errors
+/// Returns an error if the file cannot be parsed or decompression fails.
 pub fn decompress_gr2(data: &[u8]) -> Result<Vec<u8>> {
     let gr2 = Gr2File::from_bytes(data)?;
 
@@ -37,7 +40,7 @@ pub fn decompress_gr2(data: &[u8]) -> Result<Vec<u8>> {
     for (i, section) in gr2.sections.iter().enumerate() {
         if section.is_empty() {
             // Add zeros for empty sections
-            output.extend(std::iter::repeat(0u8).take(section.uncompressed_size as usize));
+            output.extend(std::iter::repeat_n(0u8, section.uncompressed_size as usize));
             continue;
         }
 

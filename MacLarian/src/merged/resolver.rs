@@ -9,7 +9,7 @@ use super::parser::{
     parse_visual_bank, resolve_references,
 };
 use super::paths::{path_with_tilde, virtual_textures_pak_path};
-use super::types::*;
+use super::types::{MergedDatabase, VisualAsset, DatabaseStats, GtpMatch};
 
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
@@ -21,11 +21,15 @@ pub struct MergedResolver {
 
 impl MergedResolver {
     /// Create a resolver from an already-parsed database
+    #[must_use] 
     pub fn from_database(database: MergedDatabase) -> Self {
         Self { database }
     }
 
     /// Create a resolver from an extracted folder containing _merged.lsf files
+    ///
+    /// # Errors
+    /// Returns an error if no merged files are found or if parsing fails.
     pub fn from_folder<P: AsRef<Path>>(folder: P) -> Result<Self> {
         let folder = folder.as_ref();
         tracing::info!(
@@ -73,6 +77,9 @@ impl MergedResolver {
     }
 
     /// Create a resolver from a specific _merged.lsf file inside a .pak
+    ///
+    /// # Errors
+    /// Returns an error if the file is not found or if parsing fails.
     pub fn from_pak_file<P: AsRef<Path>>(pak_path: P, lsf_path: &str) -> Result<Self> {
         let pak_path = pak_path.as_ref();
         tracing::info!(
@@ -101,6 +108,9 @@ impl MergedResolver {
     }
 
     /// Create a resolver from a .pak file (all _merged.lsf files)
+    ///
+    /// # Errors
+    /// Returns an error if no merged files are found or if parsing fails.
     pub fn from_pak<P: AsRef<Path>>(pak_path: P) -> Result<Self> {
         let pak_path = pak_path.as_ref();
         tracing::info!("Building merged database from pak: {}", pak_path.display());
@@ -153,6 +163,9 @@ impl MergedResolver {
     }
 
     /// Create a resolver from a single _merged.lsx file (already converted)
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed.
     pub fn from_lsx<P: AsRef<Path>>(lsx_path: P) -> Result<Self> {
         let lsx_path = lsx_path.as_ref();
         tracing::info!(
@@ -191,11 +204,13 @@ impl MergedResolver {
     // -------------------------------------------------------------------------
 
     /// Get a visual asset by its exact name
+    #[must_use] 
     pub fn get_by_visual_name(&self, visual_name: &str) -> Option<&VisualAsset> {
         self.database.get_by_visual_name(visual_name)
     }
 
     /// Get all visuals that use a specific GR2 file
+    #[must_use] 
     pub fn get_visuals_for_gr2(&self, gr2_name: &str) -> Vec<&VisualAsset> {
         self.database.get_visuals_for_gr2(gr2_name)
     }
@@ -211,16 +226,19 @@ impl MergedResolver {
     }
 
     /// Get database statistics
+    #[must_use] 
     pub fn stats(&self) -> DatabaseStats {
         self.database.stats()
     }
 
     /// Get a reference to the underlying database
+    #[must_use] 
     pub fn database(&self) -> &MergedDatabase {
         &self.database
     }
 
     /// Consume and return the database
+    #[must_use] 
     pub fn into_database(self) -> MergedDatabase {
         self.database
     }
@@ -230,6 +248,9 @@ impl MergedResolver {
     // -------------------------------------------------------------------------
 
     /// Save the database to a JSON file
+    ///
+    /// # Errors
+    /// Returns an error if serialization or file writing fails.
     pub fn save_to_json<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let json = serde_json::to_string_pretty(&self.database)?;
         std::fs::write(path, json)?;
@@ -237,6 +258,9 @@ impl MergedResolver {
     }
 
     /// Load a database from a JSON file
+    ///
+    /// # Errors
+    /// Returns an error if reading or deserialization fails.
     pub fn load_from_json<P: AsRef<Path>>(path: P) -> Result<Self> {
         let json = std::fs::read_to_string(path)?;
         let database: MergedDatabase = serde_json::from_str(&json)?;
@@ -248,6 +272,9 @@ impl MergedResolver {
     // -------------------------------------------------------------------------
 
     /// Find .gtp files in VirtualTextures.pak for a given visual
+    ///
+    /// # Errors
+    /// Returns an error if the pak path cannot be determined or listing fails.
     pub fn find_virtual_textures_for_visual(&self, visual_name: &str) -> Result<Vec<GtpMatch>> {
         let pak_path = virtual_textures_pak_path().ok_or_else(|| {
             Error::ConversionError("Could not determine VirtualTextures.pak path".to_string())
@@ -256,13 +283,16 @@ impl MergedResolver {
     }
 
     /// Find .gtp files in a specific pak for a given visual
+    ///
+    /// # Errors
+    /// Returns an error if the visual is not found or listing fails.
     pub fn find_virtual_textures_for_visual_in_pak<P: AsRef<Path>>(
         &self,
         visual_name: &str,
         pak_path: P,
     ) -> Result<Vec<GtpMatch>> {
         let asset = self.get_by_visual_name(visual_name).ok_or_else(|| {
-            Error::FileNotFoundInPak(format!("Visual not found: {}", visual_name))
+            Error::FileNotFoundInPak(format!("Visual not found: {visual_name}"))
         })?;
 
         if asset.virtual_textures.is_empty() {
@@ -278,7 +308,10 @@ impl MergedResolver {
         self.find_gtp_by_hashes_in_pak(&hashes, pak_path)
     }
 
-    /// Find .gtp files matching the given GTex hashes
+    /// Find .gtp files matching the given `GTex` hashes
+    ///
+    /// # Errors
+    /// Returns an error if the pak path cannot be determined or listing fails.
     pub fn find_gtp_by_hashes(&self, hashes: &[&str]) -> Result<Vec<GtpMatch>> {
         let pak_path = virtual_textures_pak_path().ok_or_else(|| {
             Error::ConversionError("Could not determine VirtualTextures.pak path".to_string())
@@ -286,7 +319,10 @@ impl MergedResolver {
         self.find_gtp_by_hashes_in_pak(hashes, &pak_path)
     }
 
-    /// Find .gtp files in a specific pak matching the given GTex hashes
+    /// Find .gtp files in a specific pak matching the given `GTex` hashes
+    ///
+    /// # Errors
+    /// Returns an error if the PAK file cannot be read.
     pub fn find_gtp_by_hashes_in_pak<P: AsRef<Path>>(
         &self,
         hashes: &[&str],
@@ -361,11 +397,10 @@ fn find_merged_files_recursive(folder: &Path, results: &mut Vec<PathBuf>) -> Res
 
         if path.is_dir() {
             find_merged_files_recursive(&path, results)?;
-        } else if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-            if name == "_merged.lsf" {
+        } else if let Some(name) = path.file_name().and_then(|n| n.to_str())
+            && name == "_merged.lsf" {
                 results.push(path);
             }
-        }
     }
 
     Ok(())

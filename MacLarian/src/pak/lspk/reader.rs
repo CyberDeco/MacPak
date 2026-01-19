@@ -63,7 +63,7 @@ impl<R: Read + Seek> LspkReader<R> {
         let ext = base_path.extension()?.to_str()?;
         let parent = base_path.parent()?;
 
-        Some(parent.join(format!("{}_{}.{}", stem, part, ext)))
+        Some(parent.join(format!("{stem}_{part}.{ext}")))
     }
 
     /// Get or open a reader for a specific archive part
@@ -76,7 +76,7 @@ impl<R: Read + Seek> LspkReader<R> {
         if !self.part_readers.contains_key(&part) {
             let part_path = self.get_part_path(part)
                 .ok_or_else(|| Error::ConversionError(
-                    format!("Cannot determine path for archive part {}", part)
+                    format!("Cannot determine path for archive part {part}")
                 ))?;
 
             if !part_path.exists() {
@@ -99,6 +99,12 @@ impl<T: Read + Seek> ReadSeek for T {}
 
 impl<R: Read + Seek> LspkReader<R> {
     /// Read and parse the PAK file header
+    ///
+    /// # Errors
+    /// Returns an error if reading fails or the magic number is invalid.
+    ///
+    /// # Panics
+    /// This function does not panic under normal conditions.
     pub fn read_header(&mut self) -> Result<&LspkHeader> {
         self.reader.seek(SeekFrom::Start(0))?;
 
@@ -113,10 +119,9 @@ impl<R: Read + Seek> LspkReader<R> {
         self.reader.read_exact(&mut version_bytes)?;
         let version = u32::from_le_bytes(version_bytes);
 
-        if version < MIN_VERSION || version > MAX_VERSION {
+        if !(MIN_VERSION..=MAX_VERSION).contains(&version) {
             return Err(Error::ConversionError(format!(
-                "Unsupported PAK version: {} (supported: {}-{})",
-                version, MIN_VERSION, MAX_VERSION
+                "Unsupported PAK version: {version} (supported: {MIN_VERSION}-{MAX_VERSION})"
             )));
         }
 
@@ -134,6 +139,12 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// Read and parse the PAK file footer
+    ///
+    /// # Errors
+    /// Returns an error if the header hasn't been read or reading fails.
+    ///
+    /// # Panics
+    /// This function does not panic under normal conditions.
     pub fn read_footer(&mut self) -> Result<&LspkFooter> {
         let header = self.header.as_ref()
             .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?;
@@ -158,6 +169,12 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// Read and decompress the file table
+    ///
+    /// # Errors
+    /// Returns an error if the footer hasn't been read or decompression fails.
+    ///
+    /// # Panics
+    /// This function does not panic under normal conditions.
     pub fn read_file_table(&mut self) -> Result<&[FileTableEntry]> {
         let footer = self.footer.as_ref()
             .ok_or_else(|| Error::ConversionError("Footer not read yet".to_string()))?;
@@ -173,7 +190,7 @@ impl<R: Read + Seek> LspkReader<R> {
 
         // Decompress the table using LZ4
         let decompressed_table = lz4_flex::block::decompress(&compressed_table, table_size_decompressed)
-            .map_err(|e| Error::DecompressionError(format!("Failed to decompress file table: {}", e)))?;
+            .map_err(|e| Error::DecompressionError(format!("Failed to decompress file table: {e}")))?;
 
         // Parse file entries
         self.file_table.clear();
@@ -235,6 +252,9 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// Decompress a single file from the PAK
+    ///
+    /// # Errors
+    /// Returns an error if reading or decompression fails.
     pub fn decompress_file(&mut self, entry: &FileTableEntry) -> Result<Vec<u8>> {
         // Get the appropriate reader for this archive part
         let reader = self.get_part_reader(entry.archive_part)?;
@@ -319,7 +339,7 @@ impl<R: Read + Seek> LspkReader<R> {
         Ok(decompressed)
     }
 
-    /// Decompress Zstd data
+    // Decompress Zstd data
     // fn decompress_zstd(&self, compressed: &[u8], expected_size: usize, path: &PathBuf) -> Result<Vec<u8>> {
     //     zstd::decode_all(compressed)
     //         .map_err(|e| Error::DecompressionError(format!(
@@ -330,6 +350,12 @@ impl<R: Read + Seek> LspkReader<R> {
     // }
 
     /// Read the entire PAK file with progress callbacks and error recovery
+    ///
+    /// # Errors
+    /// Returns an error if reading or decompression fails.
+    ///
+    /// # Panics
+    /// This function does not panic under normal conditions.
     pub fn read_all(&mut self, progress: Option<ProgressCallback>) -> Result<PakContents> {
         let progress = progress.unwrap_or(&|_| {});
 
@@ -359,13 +385,11 @@ impl<R: Read + Seek> LspkReader<R> {
         let total_files = self.file_table.len();
 
         // Clone file table to avoid borrow issues
-        let entries: Vec<_> = self.file_table.iter().cloned().collect();
+        let entries: Vec<_> = self.file_table.clone();
 
         // Decompress each file
         for (i, entry) in entries.iter().enumerate() {
-            let file_name = entry.path.file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| entry.path.to_string_lossy().to_string());
+            let file_name = entry.path.file_name().map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
 
             progress(&PakProgress {
                 phase: PakPhase::DecompressingFiles,
@@ -399,6 +423,9 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// List files in the PAK without decompressing them
+    ///
+    /// # Errors
+    /// Returns an error if reading the file table fails.
     pub fn list_files(&mut self) -> Result<Vec<FileTableEntry>> {
         if self.header.is_none() {
             self.read_header()?;

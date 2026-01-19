@@ -1,6 +1,6 @@
 //! DDS ↔ PNG texture conversion
 //!
-//! Converts between DDS (DirectDraw Surface) texture files and PNG images.
+//! Converts between DDS (`DirectDraw` Surface) texture files and PNG images.
 //! Supports common DDS formats used in BG3: BC1, BC2, BC3, BC4, BC5, BC7, and uncompressed.
 
 mod decode;
@@ -16,6 +16,9 @@ use std::path::Path;
 pub use encode::DdsFormat;
 
 /// Convert a DDS file to PNG
+///
+/// # Errors
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn convert_dds_to_png<P: AsRef<Path>, Q: AsRef<Path>>(
     dds_path: P,
     png_path: Q,
@@ -34,6 +37,9 @@ pub fn convert_dds_to_png<P: AsRef<Path>, Q: AsRef<Path>>(
 }
 
 /// Convert DDS bytes to PNG bytes
+///
+/// # Errors
+/// Returns an error if the DDS data cannot be parsed or decoded.
 pub fn dds_bytes_to_png_bytes(dds_data: &[u8]) -> Result<Vec<u8>> {
     let dds = Dds::read(&mut std::io::Cursor::new(dds_data))
         .map_err(|e| Error::DdsError(format!("Failed to parse DDS: {e}")))?;
@@ -52,6 +58,9 @@ pub fn dds_bytes_to_png_bytes(dds_data: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Convert a PNG file to DDS with default BC3 compression
+///
+/// # Errors
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn convert_png_to_dds<P: AsRef<Path>, Q: AsRef<Path>>(
     png_path: P,
     dds_path: Q,
@@ -60,6 +69,9 @@ pub fn convert_png_to_dds<P: AsRef<Path>, Q: AsRef<Path>>(
 }
 
 /// Convert a PNG file to DDS with specified compression format
+///
+/// # Errors
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn convert_png_to_dds_with_format<P: AsRef<Path>, Q: AsRef<Path>>(
     png_path: P,
     dds_path: Q,
@@ -77,6 +89,9 @@ pub fn convert_png_to_dds_with_format<P: AsRef<Path>, Q: AsRef<Path>>(
 }
 
 /// Convert a PNG image to DDS bytes with specified format
+///
+/// # Errors
+/// Returns an error if encoding fails.
 pub fn png_image_to_dds_bytes(img: &DynamicImage, format: DdsFormat) -> Result<Vec<u8>> {
     let rgba = img.to_rgba8();
     let width = rgba.width();

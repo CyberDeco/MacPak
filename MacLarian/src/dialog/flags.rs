@@ -1,7 +1,7 @@
 //! Flag cache for resolving flag UUIDs to human-readable names
 //!
 //! Uses pre-indexing - all flag names are loaded once when PAK sources are
-//! configured, then lookups are O(1) HashMap access.
+//! configured, then lookups are O(1) `HashMap` access.
 
 use crate::formats::lsf::parse_lsf_bytes;
 use crate::formats::lsx::parse_lsx;
@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 /// Cache for flag UUID → name resolution
 ///
 /// Uses pre-indexing - builds a complete index when `build_index()` is called,
-/// then provides O(1) lookups. Similar to how LocalizationCache works.
+/// then provides O(1) lookups. Similar to how `LocalizationCache` works.
 #[derive(Debug, Clone, Default)]
 pub struct FlagCache {
     /// Flag names indexed by UUID (pre-loaded)
@@ -27,6 +27,7 @@ pub struct FlagCache {
 
 impl FlagCache {
     /// Create a new empty cache
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             names: HashMap::new(),
@@ -36,21 +37,25 @@ impl FlagCache {
     }
 
     /// Get the number of cached flags
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.names.len()
     }
 
     /// Check if cache is empty
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.names.is_empty() && self.pak_paths.is_empty()
     }
 
     /// Check if PAK sources are configured
+    #[must_use] 
     pub fn has_sources(&self) -> bool {
         !self.pak_paths.is_empty()
     }
 
     /// Check if the index has been built
+    #[must_use] 
     pub fn is_indexed(&self) -> bool {
         self.indexed
     }
@@ -71,8 +76,9 @@ impl FlagCache {
     }
 
     /// Look up a flag name by UUID (O(1) after indexing)
+    #[must_use] 
     pub fn get_name(&self, uuid: &str) -> Option<&str> {
-        self.names.get(uuid).map(|s| s.as_str())
+        self.names.get(uuid).map(std::string::String::as_str)
     }
 
     /// Insert a flag name directly (for testing or manual additions)
@@ -84,6 +90,9 @@ impl FlagCache {
     ///
     /// Call this once after `configure_from_game_data()` to pre-load all flag names.
     /// Returns the number of flags indexed.
+    ///
+    /// # Errors
+    /// Returns an error if PAK files cannot be read or parsed.
     pub fn build_index(&mut self) -> Result<usize, FlagCacheError> {
         if self.indexed {
             return Ok(self.names.len());
@@ -155,7 +164,7 @@ impl FlagCache {
     fn extract_flag_name_from_lsf_static(data: &[u8]) -> Option<(String, String)> {
         let doc = parse_lsf_bytes(data).ok()?;
 
-        for node in doc.nodes.iter() {
+        for node in &doc.nodes {
             let node_name = doc
                 .get_name(node.name_index_outer, node.name_index_inner)
                 .unwrap_or("");
@@ -186,20 +195,16 @@ impl FlagCache {
                         "Name" => {
                             if let Ok(val) =
                                 extract_value(&doc.values, attr.offset, value_length, type_id)
-                            {
-                                if !val.is_empty() {
+                                && !val.is_empty() {
                                     flag_name = Some(val);
                                 }
-                            }
                         }
                         "UUID" => {
                             if let Ok(val) =
                                 extract_value(&doc.values, attr.offset, value_length, type_id)
-                            {
-                                if !val.is_empty() {
+                                && !val.is_empty() {
                                     flag_uuid = Some(val);
                                 }
-                            }
                         }
                         _ => {}
                     }
@@ -219,7 +224,7 @@ impl FlagCache {
         None
     }
 
-    /// Extract UUID and name pairs from ScriptFlags LSX (XML) bytes
+    /// Extract UUID and name pairs from `ScriptFlags` LSX (XML) bytes
     fn extract_flags_from_lsx(data: &[u8]) -> Vec<(String, String)> {
         let mut results = Vec::new();
 
@@ -331,9 +336,9 @@ pub enum FlagCacheError {
 impl std::fmt::Display for FlagCacheError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FlagCacheError::IoError(e) => write!(f, "IO error: {}", e),
-            FlagCacheError::PakError(e) => write!(f, "PAK error: {}", e),
-            FlagCacheError::ParseError(e) => write!(f, "Parse error: {}", e),
+            FlagCacheError::IoError(e) => write!(f, "IO error: {e}"),
+            FlagCacheError::PakError(e) => write!(f, "PAK error: {e}"),
+            FlagCacheError::ParseError(e) => write!(f, "Parse error: {e}"),
         }
     }
 }

@@ -9,7 +9,7 @@ use std::path::PathBuf;
 pub struct VisualAsset {
     /// The visual resource ID (GUID)
     pub id: String,
-    /// Human-readable name (e.g., "HUM_M_ARM_Robe_C_Bracers_0")
+    /// Human-readable name (e.g., "`HUM_M_ARM_Robe_C_Bracers_0`")
     pub name: String,
     /// Path to the GR2 source file (e.g., "Generated/Public/Shared/Assets/...")
     pub gr2_path: String,
@@ -18,13 +18,13 @@ pub struct VisualAsset {
     pub source_pak: String,
     /// Material IDs referenced by this visual
     pub material_ids: Vec<String>,
-    /// Resolved DDS texture paths (from TextureBank)
+    /// Resolved DDS texture paths (from `TextureBank`)
     pub textures: Vec<TextureRef>,
-    /// Resolved virtual texture references (from VirtualTextureBank)
+    /// Resolved virtual texture references (from `VirtualTextureBank`)
     pub virtual_textures: Vec<VirtualTextureRef>,
 }
 
-/// Reference to a DDS texture in TextureBank
+/// Reference to a DDS texture in `TextureBank`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextureRef {
     /// Texture resource ID (GUID)
@@ -39,18 +39,18 @@ pub struct TextureRef {
     /// Texture dimensions
     pub width: u32,
     pub height: u32,
-    /// Parameter name in material (e.g., "MSKColor", "NormalMap")
+    /// Parameter name in material (e.g., "`MSKColor`", "`NormalMap`")
     pub parameter_name: Option<String>,
 }
 
-/// Reference to a virtual/streaming texture in VirtualTextureBank
+/// Reference to a virtual/streaming texture in `VirtualTextureBank`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VirtualTextureRef {
     /// Virtual texture resource ID (GUID)
     pub id: String,
     /// Human-readable name
     pub name: String,
-    /// GTex filename hash (32-char hex)
+    /// `GTex` filename hash (32-char hex)
     pub gtex_hash: String,
 }
 
@@ -63,13 +63,14 @@ pub struct PakPaths {
     pub textures: String,
     /// Pak containing GTP virtual texture files (typically "VirtualTextures.pak")
     pub virtual_textures: String,
-    /// Pattern for deriving GTP path from gtex_hash
-    /// e.g., "Generated/Public/VirtualTextures/Albedo_Normal_Physical_{hash[0]}_{hash}.gtp"
+    /// Pattern for deriving GTP path from `gtex_hash`
+    /// e.g., "`Generated/Public/VirtualTextures/Albedo_Normal_Physical`_{hash[0]}_{hash}.gtp"
     pub gtp_path_pattern: String,
 }
 
 impl PakPaths {
     /// Default BG3 pak paths
+    #[must_use] 
     pub fn bg3_default() -> Self {
         Self {
             models: "Models.pak".to_string(),
@@ -80,6 +81,7 @@ impl PakPaths {
     }
 
     /// Derive the GTP path from a gtex hash
+    #[must_use] 
     pub fn gtp_path_from_hash(&self, gtex_hash: &str) -> String {
         if gtex_hash.is_empty() {
             return String::new();
@@ -91,7 +93,7 @@ impl PakPaths {
     }
 }
 
-/// A material definition from MaterialBank
+/// A material definition from `MaterialBank`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MaterialDef {
     /// Material resource ID (GUID)
@@ -103,9 +105,9 @@ pub struct MaterialDef {
     /// Pak file where this material definition was found (e.g., "Shared.pak")
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub source_pak: String,
-    /// Texture parameter IDs (GUID references to TextureBank)
+    /// Texture parameter IDs (GUID references to `TextureBank`)
     pub texture_ids: Vec<TextureParam>,
-    /// Virtual texture parameter IDs (GUID references to VirtualTextureBank)
+    /// Virtual texture parameter IDs (GUID references to `VirtualTextureBank`)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub virtual_texture_ids: Vec<String>,
 }
@@ -113,7 +115,7 @@ pub struct MaterialDef {
 /// A texture parameter within a material
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextureParam {
-    /// Parameter name (e.g., "MSKColor", "NormalMap")
+    /// Parameter name (e.g., "`MSKColor`", "`NormalMap`")
     pub name: String,
     /// Texture resource ID (GUID)
     pub texture_id: String,
@@ -128,7 +130,7 @@ pub struct MergedDatabase {
     pub pak_paths: PakPaths,
     /// Visual assets indexed by their ID (GUID)
     pub visuals_by_id: HashMap<String, VisualAsset>,
-    /// Visual ID indexed by visual name (e.g., "HUM_M_ARM_Robe_C_Bracers_1" -> ID)
+    /// Visual ID indexed by visual name (e.g., "`HUM_M_ARM_Robe_C_Bracers_1`" -> ID)
     pub visuals_by_name: HashMap<String, String>,
     /// Visual IDs indexed by GR2 filename (one GR2 can have multiple visuals)
     pub visuals_by_gr2: HashMap<String, Vec<String>>,
@@ -149,13 +151,15 @@ impl MergedDatabase {
         }
     }
 
-    /// Get a visual asset by its exact name (e.g., "HUM_M_ARM_Robe_C_Bracers_1")
+    /// Get a visual asset by its exact name (e.g., "`HUM_M_ARM_Robe_C_Bracers_1`")
+    #[must_use] 
     pub fn get_by_visual_name(&self, visual_name: &str) -> Option<&VisualAsset> {
         let id = self.visuals_by_name.get(visual_name)?;
         self.visuals_by_id.get(id)
     }
 
     /// Get all visuals that use a specific GR2 file
+    #[must_use] 
     pub fn get_visuals_for_gr2(&self, gr2_name: &str) -> Vec<&VisualAsset> {
         // Extract just the filename
         let filename = std::path::Path::new(gr2_name)
@@ -174,7 +178,7 @@ impl MergedDatabase {
 
             // Try with uppercase extension specifically
             if let Some(stem) = filename.strip_suffix(".gr2") {
-                let with_upper_ext = format!("{}.GR2", stem);
+                let with_upper_ext = format!("{stem}.GR2");
                 return self.visuals_by_gr2.get(&with_upper_ext);
             }
 
@@ -191,15 +195,16 @@ impl MergedDatabase {
 
     /// Get all visual names in the database
     pub fn visual_names(&self) -> impl Iterator<Item = &str> {
-        self.visuals_by_name.keys().map(|s| s.as_str())
+        self.visuals_by_name.keys().map(std::string::String::as_str)
     }
 
     /// Get all GR2 files in the database
     pub fn gr2_files(&self) -> impl Iterator<Item = &str> {
-        self.visuals_by_gr2.keys().map(|s| s.as_str())
+        self.visuals_by_gr2.keys().map(std::string::String::as_str)
     }
 
     /// Get count statistics
+    #[must_use] 
     pub fn stats(&self) -> DatabaseStats {
         DatabaseStats {
             visual_count: self.visuals_by_id.len(),
@@ -212,7 +217,7 @@ impl MergedDatabase {
     /// Import materials and textures from another database
     ///
     /// This is useful when one database (like Loot) references materials
-    /// that are defined in another database (like Humans_Male_Armor).
+    /// that are defined in another database (like `Humans_Male_Armor`).
     /// Only imports materials/textures that don't already exist.
     pub fn import_materials_from(&mut self, other: &MergedDatabase) {
         // Import materials that don't exist locally
@@ -240,7 +245,7 @@ impl MergedDatabase {
     /// Re-resolve texture references for all visuals using current materials/textures
     ///
     /// Call this after importing materials from external databases to populate
-    /// the textures and virtual_textures fields on each visual.
+    /// the textures and `virtual_textures` fields on each visual.
     pub fn resolve_references(&mut self) {
         let materials = self.materials.clone();
         let textures = self.textures.clone();
@@ -269,11 +274,10 @@ impl MergedDatabase {
             for mat_id in &visual.material_ids {
                 if let Some(material) = materials.get(mat_id) {
                     for vt_id in &material.virtual_texture_ids {
-                        if let Some(vt) = virtual_textures.get(vt_id) {
-                            if !resolved_vts.iter().any(|v: &VirtualTextureRef| v.id == vt.id) {
+                        if let Some(vt) = virtual_textures.get(vt_id)
+                            && !resolved_vts.iter().any(|v: &VirtualTextureRef| v.id == vt.id) {
                                 resolved_vts.push(vt.clone());
                             }
-                        }
                     }
                 }
             }
@@ -296,7 +300,7 @@ pub struct DatabaseStats {
 /// A matched .gtp file from VirtualTextures.pak
 #[derive(Debug, Clone)]
 pub struct GtpMatch {
-    /// The GTex hash that was searched for
+    /// The `GTex` hash that was searched for
     pub gtex_hash: String,
     /// Path to the .gtp file inside the pak
     pub gtp_path: String,

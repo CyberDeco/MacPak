@@ -19,6 +19,9 @@ use crate::merged::embedded_database_cached;
 use crate::pak::PakOperations;
 
 /// Convert a GR2 file to glTF format (separate .gltf and .bin files).
+///
+/// # Errors
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn convert_gr2_to_gltf(input_path: &Path, output_path: &Path) -> Result<()> {
     // Load and parse GR2 file
     let file_data = std::fs::read(input_path)?;
@@ -62,6 +65,9 @@ pub fn convert_gr2_to_gltf(input_path: &Path, output_path: &Path) -> Result<()> 
 }
 
 /// Convert a GR2 file to GLB format.
+///
+/// # Errors
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn convert_gr2_to_glb(input_path: &Path, output_path: &Path) -> Result<()> {
     // Load and parse GR2 file
     let file_data = std::fs::read(input_path)?;
@@ -104,6 +110,9 @@ pub fn convert_gr2_to_glb(input_path: &Path, output_path: &Path) -> Result<()> {
 }
 
 /// Convert GR2 data bytes to GLB data bytes.
+///
+/// # Errors
+/// Returns an error if the data cannot be parsed or conversion fails.
 pub fn convert_gr2_bytes_to_glb(gr2_data: &[u8]) -> Result<Vec<u8>> {
     let reader = Gr2Reader::new(gr2_data)?;
     let skeleton = reader.parse_skeleton(gr2_data)?;
@@ -152,11 +161,14 @@ pub struct TexturedGlbResult {
 ///
 /// # Arguments
 /// * `gr2_data` - The raw GR2 file bytes
-/// * `gr2_filename` - The GR2 filename (used for database lookup, e.g., "HUM_M_ARM_Shirt.GR2")
+/// * `gr2_filename` - The GR2 filename (used for database lookup, e.g., "`HUM_M_ARM_Shirt.GR2`")
 /// * `textures_pak_path` - Path to Textures.pak (also looks for sibling VirtualTextures.pak)
 ///
 /// # Returns
 /// A `TexturedGlbResult` with the GLB data and any warnings
+///
+/// # Errors
+/// Returns an error if the GR2 data cannot be parsed or has no meshes.
 pub fn convert_gr2_bytes_to_glb_with_textures(
     gr2_data: &[u8],
     gr2_filename: &str,
@@ -226,7 +238,7 @@ fn load_textures_for_gr2(
     tracing::debug!("Found {} visuals for GR2", visuals.len());
 
     if visuals.is_empty() {
-        warnings.push(format!("No texture info found in database for: {}", gr2_filename));
+        warnings.push(format!("No texture info found in database for: {gr2_filename}"));
         return None;
     }
 
@@ -324,7 +336,7 @@ fn load_regular_textures(
             bytes
         }
         Err(e) => {
-            warnings.push(format!("Failed to read textures from PAK: {}", e));
+            warnings.push(format!("Failed to read textures from PAK: {e}"));
             return None;
         }
     };
@@ -362,7 +374,7 @@ fn load_regular_textures(
         tracing::debug!("  -> Type: {:?}", texture_type);
 
         // Add to builder and track index
-        let texture_idx = builder.add_image_as_texture(&png_data, Some(dds_path.to_string()));
+        let texture_idx = builder.add_image_as_texture(&png_data, Some((*dds_path).to_string()));
 
         match texture_type {
             TextureType::Albedo => albedo_texture_idx = Some(texture_idx),
@@ -417,7 +429,7 @@ fn load_virtual_textures(
     tracing::debug!("Virtual texture paths: GTP={}, GTS={}", gtp_path, gts_path);
 
     // Extract GTP and GTS from PAK to temp directory
-    let temp_dir = std::env::temp_dir().join(format!("macpak_vt_{}", hash));
+    let temp_dir = std::env::temp_dir().join(format!("macpak_vt_{hash}"));
     let _ = std::fs::create_dir_all(&temp_dir);
 
     // Read files from VirtualTextures.pak
@@ -425,7 +437,7 @@ fn load_virtual_textures(
     let file_bytes = match PakOperations::read_files_bytes(vt_pak_path, &files_to_read) {
         Ok(bytes) => bytes,
         Err(e) => {
-            warnings.push(format!("Failed to read virtual textures from PAK: {}", e));
+            warnings.push(format!("Failed to read virtual textures from PAK: {e}"));
             return None;
         }
     };
@@ -437,7 +449,7 @@ fn load_virtual_textures(
 
     // Write to temp files for the extractor
     // VirtualTextureExtractor expects filename format "SomeName_{hash}.gtp" so use full basename
-    let gtp_fallback = format!("{}.gtp", hash);
+    let gtp_fallback = format!("{hash}.gtp");
     let gtp_filename = std::path::Path::new(&gtp_path)
         .file_name()
         .and_then(|s| s.to_str())
@@ -460,7 +472,7 @@ fn load_virtual_textures(
 
     // Extract virtual textures
     if let Err(e) = VirtualTextureExtractor::extract_with_gts(&temp_gtp, &temp_gts, &temp_dir) {
-        warnings.push(format!("Failed to extract virtual textures: {}", e));
+        warnings.push(format!("Failed to extract virtual textures: {e}"));
         let _ = std::fs::remove_dir_all(&temp_dir);
         return None;
     }
@@ -471,22 +483,21 @@ fn load_virtual_textures(
     let mut physical_texture_idx: Option<usize> = None;
 
     for (layer_name, texture_slot) in [("Albedo", &mut albedo_texture_idx), ("Normal", &mut normal_texture_idx), ("Physical", &mut physical_texture_idx)] {
-        let dds_path = temp_dir.join(format!("{}.dds", layer_name));
-        if dds_path.exists() {
-            if let Ok(dds_data) = std::fs::read(&dds_path) {
+        let dds_path = temp_dir.join(format!("{layer_name}.dds"));
+        if dds_path.exists()
+            && let Ok(dds_data) = std::fs::read(&dds_path) {
                 tracing::debug!("Converting virtual texture {}.dds ({} bytes)", layer_name, dds_data.len());
                 match dds_bytes_to_png_bytes(&dds_data) {
                     Ok(png_data) => {
                         tracing::debug!("  -> PNG: {} bytes", png_data.len());
-                        let idx = builder.add_image_as_texture(&png_data, Some(format!("{}.dds", layer_name)));
+                        let idx = builder.add_image_as_texture(&png_data, Some(format!("{layer_name}.dds")));
                         *texture_slot = Some(idx);
                     }
                     Err(e) => {
-                        warnings.push(format!("Failed to convert {}.dds: {}", layer_name, e));
+                        warnings.push(format!("Failed to convert {layer_name}.dds: {e}"));
                     }
                 }
             }
-        }
     }
 
     // Clean up temp directory
@@ -513,7 +524,7 @@ fn derive_gts_path_from_gtp(gtp_path: &str) -> String {
         }
     }
 
-    format!("{}.gts", without_ext)
+    format!("{without_ext}.gts")
 }
 
 /// Texture type for glTF PBR mapping

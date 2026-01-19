@@ -19,6 +19,9 @@ fn escape_text_minimal(s: &str) -> Cow<'_, str> {
 }
 
 /// Convert .loca file to XML format
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
 pub fn convert_loca_to_xml<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     tracing::info!("Converting LOCA→XML: {:?} → {:?}", source.as_ref(), dest.as_ref());
 
@@ -30,7 +33,10 @@ pub fn convert_loca_to_xml<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     Ok(())
 }
 
-/// Convert LocaResource to XML string
+/// Convert `LocaResource` to XML string
+///
+/// # Errors
+/// Returns an error if XML serialization fails.
 pub fn to_xml(resource: &loca::LocaResource) -> Result<String> {
     let mut output = Vec::new();
     let mut writer = Writer::new_with_indent(&mut output, b'\t', 1);

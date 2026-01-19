@@ -10,6 +10,9 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Convert LSF file to LSX format
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
 pub fn convert_lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     tracing::info!("Converting LSF→LSX: {:?} → {:?}", source.as_ref(), dest.as_ref());
     let lsf_doc = lsf::read_lsf(&source)?;
@@ -20,6 +23,9 @@ pub fn convert_lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
 }
 
 /// Convert LSF document to LSX XML string
+///
+/// # Errors
+/// Returns an error if XML serialization fails.
 pub fn to_lsx(doc: &LsfDocument) -> Result<String> {
     let mut output = Vec::new();
     let mut writer = Writer::new_with_indent(&mut output, b'\t', 1);
@@ -117,7 +123,7 @@ fn write_node<W: std::io::Write>(
         && (node.first_attribute_index as usize) < doc.attributes.len();
     // O(1) lookup instead of O(n) filter
     let children = children_by_parent.get(&(node_idx as i32));
-    let has_children = children.map_or(false, |c| !c.is_empty());
+    let has_children = children.is_some_and(|c| !c.is_empty());
 
     // Get key attribute from the keys section
     let key_attr = doc.node_keys.get(node_idx).and_then(|k| k.as_deref());

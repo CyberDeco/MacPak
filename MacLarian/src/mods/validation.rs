@@ -23,7 +23,8 @@ pub struct ModValidationResult {
 /// * `mod_path` - Path to the mod directory to validate
 ///
 /// # Returns
-/// ModValidationResult with validation status and details
+/// `ModValidationResult` with validation status and details
+#[must_use] 
 pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
     let mut valid = true;
     let mut structure = Vec::new();
@@ -34,7 +35,7 @@ pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
     for dir_name in expected_dirs {
         let dir_path = mod_path.join(dir_name);
         if dir_path.exists() {
-            structure.push(format!("+ {}/", dir_name));
+            structure.push(format!("+ {dir_name}/"));
         }
     }
 
@@ -46,8 +47,8 @@ pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
 
     let mut found_meta = false;
     for base in meta_paths {
-        if base.exists() && base.is_dir() {
-            if let Ok(entries) = std::fs::read_dir(&base) {
+        if base.exists() && base.is_dir()
+            && let Ok(entries) = std::fs::read_dir(&base) {
                 for entry in entries.flatten() {
                     let meta_path = entry.path().join("meta.lsx");
                     if meta_path.exists() {
@@ -59,7 +60,6 @@ pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
                     }
                 }
             }
-        }
     }
 
     if !found_meta {

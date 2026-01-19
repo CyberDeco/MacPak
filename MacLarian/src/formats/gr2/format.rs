@@ -54,18 +54,20 @@ pub enum Compression {
     Oodle0 = 1,
     /// Oodle1 compression (legacy)
     Oodle1 = 2,
-    /// BitKnit compression (modern, used in BG3/DOS2)
+    /// `BitKnit` compression (modern, used in BG3/DOS2)
     BitKnit = 4,
 }
 
 impl Compression {
+    /// # Errors
+    /// Returns an error if the compression format is not recognized.
     pub fn from_u32(value: u32) -> Result<Self> {
         match value {
             0 => Ok(Compression::None),
             1 => Ok(Compression::Oodle0),
             2 => Ok(Compression::Oodle1),
             4 => Ok(Compression::BitKnit),
-            _ => Err(Error::Decompression(format!("Unsupported GR2 compression format: {}", value))),
+            _ => Err(Error::Decompression(format!("Unsupported GR2 compression format: {value}"))),
         }
     }
 }
@@ -98,6 +100,8 @@ pub struct Gr2Magic {
 }
 
 impl Gr2Magic {
+    /// # Errors
+    /// Returns an error if reading from the reader fails.
     pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
         let mut signature = [0u8; 16];
         reader.read_exact(&mut signature)?;
@@ -117,6 +121,9 @@ impl Gr2Magic {
     }
 
     /// Get pointer size from signature
+    ///
+    /// # Errors
+    /// Returns an error if the magic signature is invalid.
     pub fn pointer_size(&self) -> Result<PointerSize> {
         if self.signature == magic::LE32 || self.signature == magic::BE32 {
             Ok(PointerSize::Bit32)
@@ -128,6 +135,9 @@ impl Gr2Magic {
     }
 
     /// Get endianness from signature
+    ///
+    /// # Errors
+    /// Returns an error if the magic signature is invalid.
     pub fn endian(&self) -> Result<Endian> {
         if self.signature == magic::LE32 || self.signature == magic::LE64 {
             Ok(Endian::Little)
@@ -139,6 +149,7 @@ impl Gr2Magic {
     }
 
     /// Check if the magic signature is valid
+    #[must_use] 
     pub fn is_valid(&self) -> bool {
         self.signature == magic::LE32
             || self.signature == magic::LE64
@@ -155,6 +166,8 @@ pub struct SectionRef {
 }
 
 impl SectionRef {
+    /// # Errors
+    /// Returns an error if reading from the reader fails.
     pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
         Ok(Self {
             section: reader.read_u32::<LittleEndian>()?,
@@ -189,10 +202,12 @@ pub struct Gr2Header {
 }
 
 impl Gr2Header {
+    /// # Errors
+    /// Returns an error if reading fails or if the version is unsupported.
     pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
         let version = reader.read_u32::<LittleEndian>()?;
         if version != 6 && version != 7 {
-            return Err(Error::Decompression(format!("Unsupported GR2 version: {}", version)));
+            return Err(Error::Decompression(format!("Unsupported GR2 version: {version}")));
         }
 
         let file_size = reader.read_u32::<LittleEndian>()?;
@@ -233,6 +248,7 @@ impl Gr2Header {
     }
 
     /// Get header size based on version
+    #[must_use] 
     pub fn size(&self) -> usize {
         if self.version == 7 { 88 } else { 72 }
     }
@@ -268,6 +284,8 @@ pub struct SectionHeader {
 impl SectionHeader {
     pub const SIZE: usize = 44;
 
+    /// # Errors
+    /// Returns an error if reading fails or if the compression format is unsupported.
     pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
         let compression_raw = reader.read_u32::<LittleEndian>()?;
         let compression = Compression::from_u32(compression_raw)?;
@@ -288,14 +306,16 @@ impl SectionHeader {
     }
 
     /// Check if section has data
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.compressed_size == 0
     }
 
     /// Get compression ratio
+    #[must_use] 
     pub fn compression_ratio(&self) -> Option<f64> {
         if self.compressed_size > 0 {
-            Some(self.uncompressed_size as f64 / self.compressed_size as f64)
+            Some(f64::from(self.uncompressed_size) / f64::from(self.compressed_size))
         } else {
             None
         }
@@ -316,6 +336,8 @@ pub struct Relocation {
 impl Relocation {
     pub const SIZE: usize = 12;
 
+    /// # Errors
+    /// Returns an error if reading from the reader fails.
     pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
         Ok(Self {
             offset_in_section: reader.read_u32::<LittleEndian>()?,
@@ -340,6 +362,9 @@ pub struct Gr2File {
 
 impl Gr2File {
     /// Parse a GR2 file from a reader
+    ///
+    /// # Errors
+    /// Returns an error if reading fails or if the file format is invalid.
     pub fn read<R: Read + Seek>(reader: &mut R) -> Result<Self> {
         // Read entire file into memory
         let mut data = Vec::new();
@@ -350,6 +375,9 @@ impl Gr2File {
     }
 
     /// Parse a GR2 file from bytes
+    ///
+    /// # Errors
+    /// Returns an error if the file format is invalid.
     pub fn from_bytes(data: &[u8]) -> Result<Self> {
         let mut cursor = std::io::Cursor::new(data);
 
@@ -364,7 +392,7 @@ impl Gr2File {
         let header = Gr2Header::read(&mut cursor)?;
 
         // Read section headers
-        let section_header_offset = 0x20 + header.sections_offset as u64;
+        let section_header_offset = 0x20 + u64::from(header.sections_offset);
         cursor.seek(SeekFrom::Start(section_header_offset))?;
 
         let mut sections = Vec::with_capacity(header.num_sections as usize);
@@ -381,9 +409,12 @@ impl Gr2File {
     }
 
     /// Get compressed data for a section
+    ///
+    /// # Errors
+    /// Returns an error if the section index is invalid or data is truncated.
     pub fn section_compressed_data(&self, index: usize) -> Result<&[u8]> {
         let section = self.sections.get(index)
-            .ok_or_else(|| Error::Decompression(format!("Invalid section index: {}", index)))?;
+            .ok_or_else(|| Error::Decompression(format!("Invalid section index: {index}")))?;
 
         if section.is_empty() {
             return Ok(&[]);
@@ -400,16 +431,23 @@ impl Gr2File {
     }
 
     /// Get raw file data
+    #[must_use] 
     pub fn raw_data(&self) -> &[u8] {
         &self.data
     }
 
     /// Get pointer size
+    ///
+    /// # Errors
+    /// Returns an error if the magic signature is invalid.
     pub fn pointer_size(&self) -> Result<PointerSize> {
         self.magic.pointer_size()
     }
 
     /// Get endianness
+    ///
+    /// # Errors
+    /// Returns an error if the magic signature is invalid.
     pub fn endian(&self) -> Result<Endian> {
         self.magic.endian()
     }

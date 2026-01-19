@@ -70,12 +70,14 @@ impl Gr2ExtractionOptions {
     }
 
     /// Disable GLB conversion
+    #[must_use] 
     pub fn no_conversion(mut self) -> Self {
         self.convert_to_glb = false;
         self
     }
 
     /// Disable texture extraction
+    #[must_use] 
     pub fn no_textures(mut self) -> Self {
         self.extract_textures = false;
         self
@@ -90,6 +92,9 @@ impl Gr2ExtractionOptions {
 /// 3. Extract those textures from their source PAKs
 ///
 /// All output files are placed in the same directory as the GR2 file.
+///
+/// # Errors
+/// Returns an error if conversion or texture extraction fails.
 pub fn process_extracted_gr2(
     gr2_path: &Path,
     options: &Gr2ExtractionOptions,
@@ -115,7 +120,7 @@ pub fn process_extracted_gr2(
                 result.glb_path = Some(glb_path);
             }
             Err(e) => {
-                result.warnings.push(format!("Failed to convert to GLB: {}", e));
+                result.warnings.push(format!("Failed to convert to GLB: {e}"));
             }
         }
     }
@@ -336,7 +341,7 @@ fn extract_virtual_textures(
                 // The extractor creates Albedo.dds, Normal.dds, Physical.dds
                 // Rename them to include the visual name
                 for layer in &["Albedo", "Normal", "Physical"] {
-                    let src = output_dir.join(format!("{}.dds", layer));
+                    let src = output_dir.join(format!("{layer}.dds"));
                     if src.exists() {
                         let dest = output_dir.join(format!("{}_{}.dds", vt.name, layer));
                         if std::fs::rename(&src, &dest).is_ok() {
@@ -357,8 +362,8 @@ fn extract_virtual_textures(
 }
 
 /// Adjust a virtual texture path for the extracted folder structure
-/// The pak contains: Generated/Public/VirtualTextures/Albedo_Normal_Physical_5_xxx.gtp
-/// When extracted: Generated/Public/VirtualTextures/Albedo_Normal_Physical_5/Albedo_Normal_Physical_5_xxx.gtp
+/// The pak contains: `Generated/Public/VirtualTextures/Albedo_Normal_Physical_5_xxx.gtp`
+/// When extracted: `Generated/Public/VirtualTextures/Albedo_Normal_Physical_5/Albedo_Normal_Physical_5_xxx.gtp`
 fn adjust_vt_path_for_extraction(path: &str) -> String {
     // Get the filename
     let path_obj = std::path::Path::new(path);
@@ -391,12 +396,12 @@ fn adjust_vt_path_for_extraction(path: &str) -> String {
     };
 
     // Build new path with subfolder
-    format!("{}/{}/{}", parent, subfolder, filename)
+    format!("{parent}/{subfolder}/{filename}")
 }
 
 /// Derive the GTS path from a GTP path
-/// GTP: "Generated/Public/VirtualTextures/Albedo_Normal_Physical_0_abc123...def.gtp"
-/// GTS: "Generated/Public/VirtualTextures/Albedo_Normal_Physical_0.gts"
+/// GTP: "`Generated/Public/VirtualTextures/Albedo_Normal_Physical_0_abc123...def.gtp`"
+/// GTS: "`Generated/Public/VirtualTextures/Albedo_Normal_Physical_0.gts`"
 fn derive_gts_path(gtp_path: &str) -> String {
     // Remove the .gtp extension
     let without_ext = gtp_path.trim_end_matches(".gtp");
@@ -412,7 +417,7 @@ fn derive_gts_path(gtp_path: &str) -> String {
     }
 
     // Fallback: just replace extension
-    format!("{}.gts", without_ext)
+    format!("{without_ext}.gts")
 }
 
 /// Recursively remove empty directories
@@ -435,6 +440,9 @@ fn cleanup_empty_dirs(dir: &Path) {
 /// 1. Extracts the specified GR2 from the source pak
 /// 2. Converts it to GLB
 /// 3. Extracts associated textures
+///
+/// # Errors
+/// Returns an error if extraction or conversion fails.
 pub fn extract_gr2_with_textures(
     source_pak: &Path,
     gr2_path_in_pak: &str,

@@ -4,6 +4,9 @@ use crate::error::{Error, Result};
 use ddsfile::{D3DFormat, Dds, DxgiFormat};
 
 /// Decode DDS texture data to RGBA pixels
+///
+/// # Errors
+/// Returns an error if the format is unsupported or data is invalid.
 pub fn decode_dds_to_rgba(dds: &Dds) -> Result<Vec<u8>> {
     let width = dds.get_width() as usize;
     let height = dds.get_height() as usize;
@@ -84,8 +87,8 @@ fn decode_d3d_format(
 
 fn decode_bc1(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>> {
     let mut rgba = vec![0u8; width * height * 4];
-    let blocks_x = (width + 3) / 4;
-    let blocks_y = (height + 3) / 4;
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
 
     for by in 0..blocks_y {
         for bx in 0..blocks_x {
@@ -154,15 +157,15 @@ pub fn bc1_colors(c0: u16, c1: u16) -> [[u8; 4]; 4] {
             [r0, g0, b0, 255],
             [r1, g1, b1, 255],
             [
-                ((2 * r0 as u16 + r1 as u16) / 3) as u8,
-                ((2 * g0 as u16 + g1 as u16) / 3) as u8,
-                ((2 * b0 as u16 + b1 as u16) / 3) as u8,
+                ((2 * u16::from(r0) + u16::from(r1)) / 3) as u8,
+                ((2 * u16::from(g0) + u16::from(g1)) / 3) as u8,
+                ((2 * u16::from(b0) + u16::from(b1)) / 3) as u8,
                 255,
             ],
             [
-                ((r0 as u16 + 2 * r1 as u16) / 3) as u8,
-                ((g0 as u16 + 2 * g1 as u16) / 3) as u8,
-                ((b0 as u16 + 2 * b1 as u16) / 3) as u8,
+                ((u16::from(r0) + 2 * u16::from(r1)) / 3) as u8,
+                ((u16::from(g0) + 2 * u16::from(g1)) / 3) as u8,
+                ((u16::from(b0) + 2 * u16::from(b1)) / 3) as u8,
                 255,
             ],
         ]
@@ -171,9 +174,9 @@ pub fn bc1_colors(c0: u16, c1: u16) -> [[u8; 4]; 4] {
             [r0, g0, b0, 255],
             [r1, g1, b1, 255],
             [
-                ((r0 as u16 + r1 as u16) / 2) as u8,
-                ((g0 as u16 + g1 as u16) / 2) as u8,
-                ((b0 as u16 + b1 as u16) / 2) as u8,
+                u16::midpoint(u16::from(r0), u16::from(r1)) as u8,
+                u16::midpoint(u16::from(g0), u16::from(g1)) as u8,
+                u16::midpoint(u16::from(b0), u16::from(b1)) as u8,
                 255,
             ],
             [0, 0, 0, 0], // Transparent
@@ -187,8 +190,8 @@ pub fn bc1_colors(c0: u16, c1: u16) -> [[u8; 4]; 4] {
 
 fn decode_bc2(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>> {
     let mut rgba = vec![0u8; width * height * 4];
-    let blocks_x = (width + 3) / 4;
-    let blocks_y = (height + 3) / 4;
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
 
     for by in 0..blocks_y {
         for bx in 0..blocks_x {
@@ -253,8 +256,8 @@ fn decode_bc2_block(
 
 fn decode_bc3(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>> {
     let mut rgba = vec![0u8; width * height * 4];
-    let blocks_x = (width + 3) / 4;
-    let blocks_y = (height + 3) / 4;
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
 
     for by in 0..blocks_y {
         for bx in 0..blocks_x {
@@ -322,21 +325,21 @@ pub fn bc3_alphas(a0: u8, a1: u8) -> [u8; 8] {
         [
             a0,
             a1,
-            ((6 * a0 as u16 + 1 * a1 as u16) / 7) as u8,
-            ((5 * a0 as u16 + 2 * a1 as u16) / 7) as u8,
-            ((4 * a0 as u16 + 3 * a1 as u16) / 7) as u8,
-            ((3 * a0 as u16 + 4 * a1 as u16) / 7) as u8,
-            ((2 * a0 as u16 + 5 * a1 as u16) / 7) as u8,
-            ((1 * a0 as u16 + 6 * a1 as u16) / 7) as u8,
+            ((6 * u16::from(a0) + u16::from(a1)) / 7) as u8,
+            ((5 * u16::from(a0) + 2 * u16::from(a1)) / 7) as u8,
+            ((4 * u16::from(a0) + 3 * u16::from(a1)) / 7) as u8,
+            ((3 * u16::from(a0) + 4 * u16::from(a1)) / 7) as u8,
+            ((2 * u16::from(a0) + 5 * u16::from(a1)) / 7) as u8,
+            ((u16::from(a0) + 6 * u16::from(a1)) / 7) as u8,
         ]
     } else {
         [
             a0,
             a1,
-            ((4 * a0 as u16 + 1 * a1 as u16) / 5) as u8,
-            ((3 * a0 as u16 + 2 * a1 as u16) / 5) as u8,
-            ((2 * a0 as u16 + 3 * a1 as u16) / 5) as u8,
-            ((1 * a0 as u16 + 4 * a1 as u16) / 5) as u8,
+            ((4 * u16::from(a0) + u16::from(a1)) / 5) as u8,
+            ((3 * u16::from(a0) + 2 * u16::from(a1)) / 5) as u8,
+            ((2 * u16::from(a0) + 3 * u16::from(a1)) / 5) as u8,
+            ((u16::from(a0) + 4 * u16::from(a1)) / 5) as u8,
             0,
             255,
         ]
@@ -349,8 +352,8 @@ pub fn bc3_alphas(a0: u8, a1: u8) -> [u8; 8] {
 
 fn decode_bc4(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>> {
     let mut rgba = vec![0u8; width * height * 4];
-    let blocks_x = (width + 3) / 4;
-    let blocks_y = (height + 3) / 4;
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
 
     for by in 0..blocks_y {
         for bx in 0..blocks_x {
@@ -409,8 +412,8 @@ fn decode_bc4_block(
 
 fn decode_bc5(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>> {
     let mut rgba = vec![0u8; width * height * 4];
-    let blocks_x = (width + 3) / 4;
-    let blocks_y = (height + 3) / 4;
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
 
     for by in 0..blocks_y {
         for bx in 0..blocks_x {

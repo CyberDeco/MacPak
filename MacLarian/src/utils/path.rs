@@ -14,7 +14,7 @@ pub fn relative_path<P: AsRef<Path>>(path: P, base: P) -> Option<String> {
     path.as_ref()
         .strip_prefix(base.as_ref())
         .ok()
-        .map(|p| normalize_path(p))
+        .map(normalize_path)
 }
 
 #[cfg(test)]

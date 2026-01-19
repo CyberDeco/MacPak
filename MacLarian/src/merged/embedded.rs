@@ -13,6 +13,10 @@ const EMBEDDED_DB_JSON: &str = include_str!("../../data/models_textures_db.json"
 /// armor, clothing, and creature meshes. The database is embedded at compile
 /// time so no file I/O is required at runtime.
 ///
+/// # Panics
+/// Panics if the embedded JSON database is malformed. This would indicate
+/// a build-time error and should never occur in a properly built binary.
+///
 /// # Example
 ///
 /// ```
@@ -26,6 +30,7 @@ const EMBEDDED_DB_JSON: &str = include_str!("../../data/models_textures_db.json"
 ///     println!("GR2 path: {}", asset.gr2_path);
 /// }
 /// ```
+#[must_use]
 pub fn embedded_database() -> MergedDatabase {
     serde_json::from_str(EMBEDDED_DB_JSON).expect("Embedded database JSON should be valid")
 }

@@ -54,6 +54,9 @@ pub struct LspkWriter {
 
 impl LspkWriter {
     /// Create a new writer for the given directory
+    ///
+    /// # Errors
+    /// Returns an error if the directory cannot be read.
     pub fn new(root_path: impl Into<PathBuf>) -> Result<Self> {
         let root_path = root_path.into();
         let files = Self::collect_files(&root_path)?;
@@ -67,12 +70,14 @@ impl LspkWriter {
     }
 
     /// Set the PAK version to write
+    #[must_use] 
     pub fn with_version(mut self, version: u32) -> Self {
         self.version = version;
         self
     }
 
     /// Set the compression method to use
+    #[must_use] 
     pub fn with_compression(mut self, compression: CompressionMethod) -> Self {
         self.compression = compression;
         self
@@ -123,6 +128,9 @@ impl LspkWriter {
     }
 
     /// Write the PAK file
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be written.
     pub fn write(self, output_path: impl AsRef<Path>) -> Result<()> {
         self.write_with_progress(output_path, &|_, _, _| {})
     }
@@ -132,6 +140,9 @@ impl LspkWriter {
     /// Uses parallel compression for improved performance on multi-core systems.
     /// Files are compressed in parallel, then written sequentially to maintain
     /// correct file offsets in the PAK.
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be written.
     pub fn write_with_progress(
         self,
         output_path: impl AsRef<Path>,
@@ -163,20 +174,18 @@ impl LspkWriter {
             .map(|file| {
                 let file_name = file
                     .relative_path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| file.relative_path.to_string_lossy().to_string());
+                    .file_name().map_or_else(|| file.relative_path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
-                progress(current, total_files, &format!("{} {}", compress_label, file_name));
+                progress(current, total_files, &format!("{compress_label} {file_name}"));
 
                 let size_decompressed = file.data.len();
 
                 // Validate size fits in u32
                 let size_decompressed: u32 = size_decompressed
                     .try_into()
-                    .map_err(|_| format!("File {} is too large: {} bytes", file_name, size_decompressed))?;
+                    .map_err(|_| format!("File {file_name} is too large: {size_decompressed} bytes"))?;
 
                 let compressed_data = match compression {
                     CompressionMethod::None => file.data.clone(),
@@ -187,10 +196,10 @@ impl LspkWriter {
                         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
                         encoder
                             .write_all(&file.data)
-                            .map_err(|e| format!("Failed to compress {}: {}", file_name, e))?;
+                            .map_err(|e| format!("Failed to compress {file_name}: {e}"))?;
                         encoder
                             .finish()
-                            .map_err(|e| format!("Failed to finish compression for {}: {}", file_name, e))?
+                            .map_err(|e| format!("Failed to finish compression for {file_name}: {e}"))?
                     }
                 };
 
@@ -302,11 +311,13 @@ impl LspkWriter {
     }
 
     /// Get the number of files that will be written
+    #[must_use] 
     pub fn file_count(&self) -> usize {
         self.files.len()
     }
 
     /// Get the root path
+    #[must_use] 
     pub fn root_path(&self) -> &Path {
         &self.root_path
     }

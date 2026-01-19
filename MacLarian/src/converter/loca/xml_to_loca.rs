@@ -9,6 +9,9 @@ use std::fs;
 use std::path::Path;
 
 /// Convert XML file to .loca format
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
 pub fn convert_xml_to_loca<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     tracing::info!("Converting XML→LOCA: {:?} → {:?}", source.as_ref(), dest.as_ref());
 
@@ -20,7 +23,10 @@ pub fn convert_xml_to_loca<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     Ok(())
 }
 
-/// Parse XML string to LocaResource
+/// Parse XML string to `LocaResource`
+///
+/// # Errors
+/// Returns an error if XML parsing fails.
 pub fn from_xml(content: &str) -> Result<LocaResource> {
     let mut reader = Reader::from_str(content);
     // Don't trim text - preserve trailing/leading whitespace in localization strings
@@ -57,7 +63,7 @@ pub fn from_xml(content: &str) -> Result<LocaResource> {
             Ok(Event::Text(e)) => {
                 // Text content inside <content> element
                 if let Some(key) = current_key.take() {
-                    let text = e.unescape().map_err(|e| Error::XmlError(e.into()))?;
+                    let text = e.unescape().map_err(Error::XmlError)?;
                     entries.push(LocalizedText {
                         key,
                         version: current_version,
@@ -96,8 +102,8 @@ pub fn from_xml(content: &str) -> Result<LocaResource> {
             }
             Ok(Event::End(e)) => {
                 // Handle </content> with no text content
-                if e.name().as_ref() == b"content" {
-                    if let Some(key) = current_key.take() {
+                if e.name().as_ref() == b"content"
+                    && let Some(key) = current_key.take() {
                         entries.push(LocalizedText {
                             key,
                             version: current_version,
@@ -105,7 +111,6 @@ pub fn from_xml(content: &str) -> Result<LocaResource> {
                         });
                         current_version = 1;
                     }
-                }
             }
             Ok(Event::Eof) => break,
             Err(e) => return Err(Error::XmlError(e)),

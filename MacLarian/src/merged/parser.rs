@@ -1,15 +1,15 @@
 //! LSX parsing for merged databases
 //!
-//! Parses VisualBank, MaterialBank, TextureBank, and VirtualTextureBank regions
+//! Parses `VisualBank`, `MaterialBank`, `TextureBank`, and `VirtualTextureBank` regions
 //! from _merged.lsx files.
 
 use crate::formats::lsx::{LsxNode, LsxRegion};
 
-use super::types::*;
+use super::types::{MergedDatabase, VisualAsset, MaterialDef, TextureParam, TextureRef, VirtualTextureRef};
 
 use std::path::Path;
 
-/// Parse a VisualBank region into the database
+/// Parse a `VisualBank` region into the database
 pub fn parse_visual_bank(region: &LsxRegion, db: &mut MergedDatabase) {
     for node in &region.nodes {
         if node.id != "VisualBank" {
@@ -63,11 +63,10 @@ fn parse_visual_resource(node: &LsxNode) -> Option<VisualAsset> {
     for child in &node.children {
         if child.id == "Objects" {
             for attr in &child.attributes {
-                if attr.id == "MaterialID" && !attr.value.is_empty() {
-                    if !material_ids.contains(&attr.value) {
+                if attr.id == "MaterialID" && !attr.value.is_empty()
+                    && !material_ids.contains(&attr.value) {
                         material_ids.push(attr.value.clone());
                     }
-                }
             }
         }
     }
@@ -87,7 +86,7 @@ fn parse_visual_resource(node: &LsxNode) -> Option<VisualAsset> {
     })
 }
 
-/// Parse a MaterialBank region into the database
+/// Parse a `MaterialBank` region into the database
 pub fn parse_material_bank(region: &LsxRegion, db: &mut MergedDatabase) {
     for node in &region.nodes {
         if node.id != "MaterialBank" {
@@ -144,11 +143,10 @@ fn parse_material_resource(node: &LsxNode) -> Option<MaterialDef> {
         } else if child.id == "VirtualTextureParameters" {
             // Extract virtual texture references
             for attr in &child.attributes {
-                if attr.id == "ID" && !attr.value.is_empty() {
-                    if !virtual_texture_ids.contains(&attr.value) {
+                if attr.id == "ID" && !attr.value.is_empty()
+                    && !virtual_texture_ids.contains(&attr.value) {
                         virtual_texture_ids.push(attr.value.clone());
                     }
-                }
             }
         }
     }
@@ -167,7 +165,7 @@ fn parse_material_resource(node: &LsxNode) -> Option<MaterialDef> {
     })
 }
 
-/// Parse a TextureBank region into the database
+/// Parse a `TextureBank` region into the database
 pub fn parse_texture_bank(region: &LsxRegion, db: &mut MergedDatabase) {
     for node in &region.nodes {
         if node.id != "TextureBank" {
@@ -218,7 +216,7 @@ fn parse_texture_resource(node: &LsxNode) -> Option<TextureRef> {
     })
 }
 
-/// Parse a VirtualTextureBank region into the database
+/// Parse a `VirtualTextureBank` region into the database
 pub fn parse_virtual_texture_bank(region: &LsxRegion, db: &mut MergedDatabase) {
     for node in &region.nodes {
         if node.id != "VirtualTextureBank" {
@@ -304,11 +302,10 @@ pub fn resolve_references(db: &mut MergedDatabase) {
         for mat_id in &visual.material_ids {
             if let Some(material) = materials.get(mat_id) {
                 for vt_id in &material.virtual_texture_ids {
-                    if let Some(vt) = virtual_textures.get(vt_id) {
-                        if !resolved_vts.iter().any(|v: &VirtualTextureRef| v.id == vt.id) {
+                    if let Some(vt) = virtual_textures.get(vt_id)
+                        && !resolved_vts.iter().any(|v: &VirtualTextureRef| v.id == vt.id) {
                             resolved_vts.push(vt.clone());
                         }
-                    }
                 }
             }
         }

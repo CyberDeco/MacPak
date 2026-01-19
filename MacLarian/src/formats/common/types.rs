@@ -44,6 +44,7 @@ pub const TYPE_INT64: TypeId = 32;
 pub const TYPE_TRANSLATEDFSSTRING: TypeId = 33;
 
 /// Get the human-readable name for a type ID
+#[must_use] 
 pub fn get_type_name(type_id: TypeId) -> &'static str {
     match type_id {
         0 => "None",
@@ -85,6 +86,7 @@ pub fn get_type_name(type_id: TypeId) -> &'static str {
 }
 
 /// Convert type name string to type ID
+#[must_use] 
 pub fn type_name_to_id(type_name: &str) -> TypeId {
     match type_name {
         "None" => 0,
@@ -126,11 +128,13 @@ pub fn type_name_to_id(type_name: &str) -> TypeId {
 }
 
 /// Check if a type is numeric
+#[must_use] 
 pub fn is_numeric(type_id: TypeId) -> bool {
     matches!(type_id, 1 | 2 | 3 | 4 | 5 | 6 | 7 | 24 | 26 | 27 | 32)
 }
 
 /// Get column count for vector/matrix types
+#[must_use] 
 pub fn get_columns(type_id: TypeId) -> Option<usize> {
     match type_id {
         8 | 11 | 14 => Some(2),  // ivec2, fvec2, mat2x2
@@ -141,9 +145,10 @@ pub fn get_columns(type_id: TypeId) -> Option<usize> {
 }
 
 /// Get row count for matrix types
+#[must_use] 
 pub fn get_rows(type_id: TypeId) -> Option<usize> {
     match type_id {
-        8 | 9 | 10 | 11 | 12 | 13 => Some(1),  // vectors
+        8..=13 => Some(1),  // vectors
         14 => Some(2),  // mat2x2
         15 | 16 => Some(3),  // mat3x3, mat3x4
         17 | 18 => Some(4),  // mat4x3, mat4x4
@@ -156,6 +161,9 @@ pub fn get_rows(type_id: TypeId) -> Option<usize> {
 // ============================================================================
 
 /// Serialize a value to bytes based on type ID
+///
+/// # Errors
+/// Returns an error if serialization fails for the given type.
 pub fn serialize_value(buffer: &mut Vec<u8>, type_id: TypeId, value_str: &str) -> Result<usize> {
     let start = buffer.len();
     
@@ -193,7 +201,7 @@ pub fn serialize_value(buffer: &mut Vec<u8>, type_id: TypeId, value_str: &str) -
         12 => serialize_fvec(buffer, value_str, 3)?,
         13 => serialize_fvec(buffer, value_str, 4)?,
         // Matrix types
-        14 | 15 | 16 | 17 | 18 => serialize_matrix(buffer, value_str)?,
+        14..=18 => serialize_matrix(buffer, value_str)?,
         // UUID
         31 => serialize_uuid(buffer, value_str)?,
         // Binary types
@@ -285,7 +293,10 @@ fn serialize_uuid(buffer: &mut Vec<u8>, value_str: &str) -> Result<()> {
     Ok(())
 }
 
-/// Serialize TranslatedString
+/// Serialize `TranslatedString`
+///
+/// # Errors
+/// Returns an error if serialization fails.
 pub fn serialize_translated_string(
     buffer: &mut Vec<u8>,
     handle: &str,
@@ -317,6 +328,9 @@ pub fn serialize_translated_string(
 // ============================================================================
 
 /// Extract value from bytes and convert to string representation
+///
+/// # Errors
+/// Returns an error if deserialization fails for the given type.
 pub fn extract_value(values: &[u8], offset: usize, length: usize, type_id: TypeId) -> Result<String> {
     if offset + length > values.len() {
         return Ok(String::new());
@@ -334,7 +348,7 @@ pub fn extract_value(values: &[u8], offset: usize, length: usize, type_id: TypeI
         19 => if bytes.first() == Some(&1) { "True" } else { "False" }.to_string(),
         // Integer types
         0 => String::new(),
-        1 | 27 => bytes.first().map(|v| v.to_string()).unwrap_or_default(),
+        1 | 27 => bytes.first().map(std::string::ToString::to_string).unwrap_or_default(),
         2 => i16::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         3 => u16::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         4 => i32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
@@ -352,20 +366,21 @@ pub fn extract_value(values: &[u8], offset: usize, length: usize, type_id: TypeI
         12 => format_fvec(bytes, 3),
         13 => format_fvec(bytes, 4),
         // Matrix types
-        14 | 15 | 16 | 17 | 18 => format_matrix(bytes),
+        14..=18 => format_matrix(bytes),
         // UUID
         31 => format_uuid(bytes),
         // Binary types
         25 => BASE64.encode(bytes),
         // Unknown
         _ => {
-            let byte_list: Vec<String> = bytes.iter().map(|b| b.to_string()).collect();
+            let byte_list: Vec<String> = bytes.iter().map(std::string::ToString::to_string).collect();
             format!("[{}]", byte_list.join(", "))
         }
     })
 }
 
 /// Format integer vector (space-separated)
+#[must_use] 
 pub fn format_ivec(bytes: &[u8], count: usize) -> String {
     let values: Vec<String> = (0..count)
         .filter_map(|i| {
@@ -381,6 +396,7 @@ pub fn format_ivec(bytes: &[u8], count: usize) -> String {
 }
 
 /// Format float vector (space-separated)
+#[must_use] 
 pub fn format_fvec(bytes: &[u8], count: usize) -> String {
     let values: Vec<String> = (0..count)
         .filter_map(|i| {
@@ -396,6 +412,7 @@ pub fn format_fvec(bytes: &[u8], count: usize) -> String {
 }
 
 /// Format matrix (space-separated floats)
+#[must_use] 
 pub fn format_matrix(bytes: &[u8]) -> String {
     let count = bytes.len() / 4;
     let values: Vec<String> = (0..count)
@@ -412,6 +429,7 @@ pub fn format_matrix(bytes: &[u8]) -> String {
 }
 
 /// Format UUID with byte swapping (Windows GUID format)
+#[must_use] 
 pub fn format_uuid(bytes: &[u8]) -> String {
     if bytes.len() >= 16 {
         format!(
@@ -429,7 +447,10 @@ pub fn format_uuid(bytes: &[u8]) -> String {
     }
 }
 
-/// Extract TranslatedString (handle, version, optional value)
+/// Extract `TranslatedString` (handle, version, optional value)
+///
+/// # Errors
+/// Returns an error if the bytes cannot be read as a translated string.
 pub fn extract_translated_string(values: &[u8], offset: usize, length: usize) -> Result<(String, u16, Option<String>)> {
     if offset + length > values.len() {
         return Ok((String::new(), 0, None));

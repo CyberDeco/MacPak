@@ -7,9 +7,9 @@
 //! - **All other sections** (nodes, attributes, values, keys): LZ4 Frame format
 //!   (with magic bytes 0x04 0x22 0x4D 0x18)
 //!
-//! This matches LSLib's behavior where `allowChunked=false` uses Block format
+//! This matches `LSLib`'s behavior where `allowChunked=false` uses Block format
 //! and `allowChunked=true` uses Frame format. The compression flags in the header
-//! (0x22 = LZ4 + DefaultCompress) indicate the method but not per-section format.
+//! (0x22 = LZ4 + `DefaultCompress`) indicate the method but not per-section format.
 
 use super::document::LsfDocument;
 use crate::error::Result;
@@ -21,11 +21,11 @@ use std::path::Path;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum LsfFormat {
     /// V2 format: 12-byte nodes/attributes (more compact, default)
-    /// Used when MetadataFormat = None (0)
+    /// Used when `MetadataFormat` = None (0)
     #[default]
     V2,
     /// V3 format: 16-byte nodes/attributes (extended with sibling/offset info)
-    /// Used when MetadataFormat = KeysAndAdjacency (1)
+    /// Used when `MetadataFormat` = `KeysAndAdjacency` (1)
     V3,
 }
 
@@ -48,11 +48,17 @@ fn compress_lz4_frame(data: &[u8]) -> std::io::Result<Vec<u8>> {
 }
 
 /// Write an LSF document to disk (LZ4 compressed, V2 format)
+///
+/// # Errors
+/// Returns an error if serialization or file writing fails.
 pub fn write_lsf<P: AsRef<Path>>(doc: &LsfDocument, path: P) -> Result<()> {
     write_lsf_with_format(doc, path, LsfFormat::V2)
 }
 
 /// Write an LSF document to disk with specified format
+///
+/// # Errors
+/// Returns an error if serialization or file writing fails.
 pub fn write_lsf_with_format<P: AsRef<Path>>(
     doc: &LsfDocument,
     path: P,
@@ -64,11 +70,17 @@ pub fn write_lsf_with_format<P: AsRef<Path>>(
 }
 
 /// Serialize LSF document to bytes (LZ4 compressed, V2 format)
+///
+/// # Errors
+/// Returns an error if serialization fails.
 pub fn serialize_lsf(doc: &LsfDocument) -> Result<Vec<u8>> {
     serialize_lsf_with_format(doc, LsfFormat::V2)
 }
 
 /// Serialize LSF document to bytes with specified format
+///
+/// # Errors
+/// Returns an error if serialization fails.
 pub fn serialize_lsf_with_format(doc: &LsfDocument, format: LsfFormat) -> Result<Vec<u8>> {
     let mut output = Vec::new();
 
@@ -167,14 +179,13 @@ fn write_keys(doc: &LsfDocument) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
 
     for (node_idx, key_opt) in doc.node_keys.iter().enumerate() {
-        if let Some(key) = key_opt {
-            if let Some((outer, inner)) = doc.find_name_indices(key) {
+        if let Some(key) = key_opt
+            && let Some((outer, inner)) = doc.find_name_indices(key) {
                 buffer.write_u32::<LittleEndian>(node_idx as u32)?;
                 // Pack as single u32: outer in high 16 bits, inner in low 16 bits
                 let packed_name = ((outer as u32) << 16) | (inner as u32);
                 buffer.write_u32::<LittleEndian>(packed_name)?;
             }
-        }
     }
 
     Ok(buffer)

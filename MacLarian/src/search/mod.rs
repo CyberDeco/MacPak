@@ -55,6 +55,7 @@ pub enum FileType {
 
 impl FileType {
     /// Determine file type from extension
+    #[must_use] 
     pub fn from_extension(ext: &str) -> Self {
         match ext.to_lowercase().as_str() {
             "lsx" => FileType::Lsx,
@@ -74,11 +75,13 @@ impl FileType {
     }
 
     /// Check if this is a text-based format that can be content-searched
+    #[must_use] 
     pub fn is_searchable_text(&self) -> bool {
         matches!(self, FileType::Lsx | FileType::Lsf | FileType::Lsj | FileType::Xml | FileType::Json)
     }
 
     /// Get display name for UI
+    #[must_use] 
     pub fn display_name(&self) -> &'static str {
         match self {
             FileType::Lsx => "LSX",
@@ -122,6 +125,7 @@ pub type ProgressCallback<'a> = &'a (dyn Fn(usize, usize, &str) + Sync + Send);
 /// Builds an in-memory index of file metadata from PAK archives.
 /// Supports fast O(1) filename lookups and filtered searches.
 /// Optionally includes a full-text index for instant content search.
+#[derive(Default)]
 pub struct SearchIndex {
     /// All file entries, keyed by full internal path
     entries: HashMap<String, IndexedFile>,
@@ -133,45 +137,38 @@ pub struct SearchIndex {
     indexed: bool,
     /// Total file count
     file_count: usize,
-    /// Full-text search index (built separately via build_fulltext_index)
+    /// Full-text search index (built separately via `build_fulltext_index`)
     fulltext: Option<FullTextIndex>,
 }
 
-impl Default for SearchIndex {
-    fn default() -> Self {
-        Self {
-            entries: HashMap::new(),
-            filename_index: HashMap::new(),
-            indexed_paks: Vec::new(),
-            indexed: false,
-            file_count: 0,
-            fulltext: None,
-        }
-    }
-}
 
 impl SearchIndex {
     /// Create a new empty search index
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Check if the index has been built
+    #[must_use] 
     pub fn is_indexed(&self) -> bool {
         self.indexed
     }
 
     /// Get the number of indexed files
+    #[must_use] 
     pub fn file_count(&self) -> usize {
         self.file_count
     }
 
     /// Get the number of indexed PAK files
+    #[must_use] 
     pub fn pak_count(&self) -> usize {
         self.indexed_paks.len()
     }
 
     /// Get list of indexed PAK files
+    #[must_use] 
     pub fn indexed_paks(&self) -> &[PathBuf] {
         &self.indexed_paks
     }
@@ -187,6 +184,7 @@ impl SearchIndex {
     }
 
     /// Check if full-text index is available
+    #[must_use] 
     pub fn has_fulltext(&self) -> bool {
         self.fulltext.is_some()
     }
@@ -195,6 +193,9 @@ impl SearchIndex {
     ///
     /// Scans each PAK file in parallel to extract file metadata.
     /// Returns the total number of files indexed.
+    ///
+    /// # Errors
+    /// Returns an error if any PAK file cannot be read.
     pub fn build_index(&mut self, pak_paths: &[PathBuf]) -> Result<usize> {
         self.clear();
 
@@ -261,9 +262,7 @@ impl SearchIndex {
             .map(|e| {
                 let path_str = e.path.to_string_lossy().to_string();
                 let name = e.path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| path_str.clone());
+                    .file_name().map_or_else(|| path_str.clone(), |n| n.to_string_lossy().to_string());
 
                 let ext = e.path
                     .extension()
@@ -275,7 +274,7 @@ impl SearchIndex {
                     path: path_str,
                     pak_file: pak_path.to_path_buf(),
                     file_type: FileType::from_extension(&ext),
-                    size: e.size_decompressed as u64,
+                    size: u64::from(e.size_decompressed),
                 }
             })
             .collect();
@@ -287,6 +286,7 @@ impl SearchIndex {
     ///
     /// Returns entries where the filename contains the query string.
     /// Optionally filter by file type.
+    #[must_use] 
     pub fn search_filename(&self, query: &str, filter: Option<FileType>) -> Vec<&IndexedFile> {
         let query_lower = query.to_lowercase();
 
@@ -296,7 +296,7 @@ impl SearchIndex {
             .flat_map(|(_, paths)| paths.iter())
             .filter_map(|path| self.entries.get(path))
             .filter(|entry| {
-                filter.map_or(true, |f| entry.file_type == f)
+                filter.is_none_or(|f| entry.file_type == f)
             })
             .collect()
     }
@@ -304,24 +304,26 @@ impl SearchIndex {
     /// Search for files by path (case-insensitive substring match)
     ///
     /// Returns entries where the full path contains the query string.
+    #[must_use] 
     pub fn search_path(&self, query: &str, filter: Option<FileType>) -> Vec<&IndexedFile> {
         let query_lower = query.to_lowercase();
 
         self.entries
             .values()
             .filter(|entry| entry.path.to_lowercase().contains(&query_lower))
-            .filter(|entry| filter.map_or(true, |f| entry.file_type == f))
+            .filter(|entry| filter.is_none_or(|f| entry.file_type == f))
             .collect()
     }
 
     /// Search for UUIDs in filenames/paths
     ///
     /// Handles various UUID formats (with/without hyphens, with h/g prefix).
+    #[must_use] 
     pub fn search_uuid(&self, uuid: &str) -> Vec<&IndexedFile> {
         // Normalize UUID: remove hyphens, convert to lowercase
         let normalized: String = uuid
             .chars()
-            .filter(|c| c.is_ascii_hexdigit())
+            .filter(char::is_ascii_hexdigit)
             .collect::<String>()
             .to_lowercase();
 
@@ -334,7 +336,7 @@ impl SearchIndex {
             .filter(|entry| {
                 let path_normalized: String = entry.path
                     .chars()
-                    .filter(|c| c.is_ascii_hexdigit())
+                    .filter(char::is_ascii_hexdigit)
                     .collect::<String>()
                     .to_lowercase();
                 path_normalized.contains(&normalized)
@@ -343,6 +345,7 @@ impl SearchIndex {
     }
 
     /// Get a file entry by its full path
+    #[must_use] 
     pub fn get_by_path(&self, path: &str) -> Option<&IndexedFile> {
         self.entries.get(path)
     }
@@ -353,6 +356,7 @@ impl SearchIndex {
     }
 
     /// Get entries filtered by file type
+    #[must_use] 
     pub fn entries_by_type(&self, file_type: FileType) -> Vec<&IndexedFile> {
         self.entries
             .values()
@@ -366,6 +370,9 @@ impl SearchIndex {
     /// This is a potentially long operation - use the progress callback to track progress.
     ///
     /// Must be called after `build_index()` has been run.
+    ///
+    /// # Errors
+    /// Returns an error if file extraction or indexing fails.
     pub fn build_fulltext_index(&mut self, progress: ProgressCallback) -> Result<usize> {
         if !self.indexed {
             return Ok(0);
@@ -401,9 +408,7 @@ impl SearchIndex {
         // Process each PAK using bulk reading (sorted by offset, parallel decompress)
         for (pak_path, files) in &by_pak {
             let pak_name = pak_path
-                .file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| "Unknown".to_string());
+                .file_name().map_or_else(|| "Unknown".to_string(), |n| n.to_string_lossy().to_string());
 
             progress(indexed_count, total_files, &pak_name);
 
@@ -477,6 +482,7 @@ impl SearchIndex {
     /// Supports phrase queries, fuzzy matching, and boolean operators.
     ///
     /// Returns None if fulltext index hasn't been built.
+    #[must_use] 
     pub fn search_fulltext(&self, query: &str, limit: usize) -> Option<Vec<FullTextResult>> {
         self.fulltext.as_ref().and_then(|ft| ft.search(query, limit).ok())
     }
@@ -490,14 +496,18 @@ impl SearchIndex {
     }
 
     /// Get number of documents in fulltext index
+    #[must_use] 
     pub fn fulltext_doc_count(&self) -> u64 {
-        self.fulltext.as_ref().map_or(0, |ft| ft.num_docs())
+        self.fulltext.as_ref().map_or(0, fulltext::FullTextIndex::num_docs)
     }
 
     /// Export the fulltext index to a directory
     ///
     /// Saves the Tantivy index and metadata (file count, pak list) for later import.
     /// Returns an error if no fulltext index has been built.
+    ///
+    /// # Errors
+    /// Returns an error if writing the index fails.
     pub fn export_index(&self, dir: &Path) -> Result<()> {
         self.export_index_with_progress(dir, |_, _, _| {})
     }
@@ -505,6 +515,12 @@ impl SearchIndex {
     /// Export the fulltext index with progress callback
     ///
     /// Progress callback receives (current, total, message).
+    ///
+    /// # Errors
+    /// Returns an error if no fulltext index exists or writing fails.
+    ///
+    /// # Panics
+    /// This function does not panic under normal conditions.
     pub fn export_index_with_progress<F>(&self, dir: &Path, progress: F) -> Result<()>
     where
         F: Fn(usize, usize, &str) + Sync,
@@ -594,6 +610,9 @@ impl SearchIndex {
     /// Import a fulltext index from a directory
     ///
     /// Loads the Tantivy index, file entries, and metadata previously saved with `export_index`.
+    ///
+    /// # Errors
+    /// Returns an error if reading the index fails.
     pub fn import_index(&mut self, dir: &Path) -> Result<()> {
         // Load metadata
         let meta_path = dir.join("metadata.json");

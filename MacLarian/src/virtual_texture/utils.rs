@@ -45,6 +45,9 @@ pub struct ExtractResult {
 }
 
 /// List information about a GTS file
+///
+/// # Errors
+/// Returns an error if the GTS file cannot be read or parsed.
 pub fn list_gts<P: AsRef<Path>>(gts_path: P) -> Result<GtsInfo> {
     let gts = GtsFile::open(gts_path.as_ref())?;
 
@@ -64,6 +67,9 @@ pub fn list_gts<P: AsRef<Path>>(gts_path: P) -> Result<GtsInfo> {
 }
 
 /// Get information about a GTP file
+///
+/// # Errors
+/// Returns an error if the GTP or GTS file cannot be read.
 pub fn gtp_info<P1: AsRef<Path>, P2: AsRef<Path>>(gtp_path: P1, gts_path: P2) -> Result<GtpInfo> {
     let gts = GtsFile::open(gts_path.as_ref())?;
     let gtp = GtpFile::open(gtp_path.as_ref(), &gts)?;
@@ -81,7 +87,8 @@ pub fn gtp_info<P1: AsRef<Path>, P2: AsRef<Path>>(gtp_path: P1, gts_path: P2) ->
 /// Extract subfolder name from GTP filename
 ///
 /// Strips the hash suffix from GTP filenames:
-/// "Albedo_Normal_Physical_0_abc123...def.gtp" -> "Albedo_Normal_Physical_0"
+/// "`Albedo_Normal_Physical_0_abc123...def.gtp`" -> "`Albedo_Normal_Physical_0`"
+#[must_use] 
 pub fn get_subfolder_name(filename: &str) -> String {
     let stem = filename.strip_suffix(".gtp")
         .or_else(|| filename.strip_suffix(".GTP"))
@@ -100,7 +107,8 @@ pub fn get_subfolder_name(filename: &str) -> String {
 
 /// Extract the base name from a virtual texture filename
 ///
-/// e.g., "Albedo_Normal_Physical_1" -> Some("Albedo_Normal_Physical")
+/// e.g., "`Albedo_Normal_Physical_1`" -> `Some("Albedo_Normal_Physical`")
+#[must_use] 
 pub fn find_base_name(name: &str) -> Option<&str> {
     // Check if name ends with _N where N is a digit
     if let Some(last_underscore) = name.rfind('_') {
@@ -116,6 +124,9 @@ pub fn find_base_name(name: &str) -> Option<&str> {
 ///
 /// This function resolves GTP files to their associated GTS metadata files,
 /// handling various edge cases like NULL-padded GTS files and hash suffixes.
+///
+/// # Errors
+/// Returns an error if the GTS file cannot be found or the input has an unsupported file type.
 pub fn find_gts_path(input_path: &str) -> Result<String> {
     let path = Path::new(input_path);
     let ext = path.extension()
@@ -135,7 +146,7 @@ pub fn find_gts_path(input_path: &str) -> Result<String> {
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default();
             if let Some(base) = find_base_name(&stem) {
-                let gts_0_path = parent.join(format!("{}_0.gts", base));
+                let gts_0_path = parent.join(format!("{base}_0.gts"));
                 if gts_0_path.exists() {
                     return Ok(gts_0_path.to_string_lossy().to_string());
                 }
@@ -166,19 +177,18 @@ pub fn find_gts_path(input_path: &str) -> Result<String> {
         };
 
         // First try the exact matching GTS file
-        let gts_path = parent.join(format!("{}.gts", name_without_hash));
+        let gts_path = parent.join(format!("{name_without_hash}.gts"));
         if gts_path.exists() {
             // Check if it has a valid GRPG header
-            if let Ok(data) = std::fs::read(&gts_path) {
-                if data.len() >= 4 && &data[0..4] == b"GRPG" {
+            if let Ok(data) = std::fs::read(&gts_path)
+                && data.len() >= 4 && &data[0..4] == b"GRPG" {
                     return Ok(gts_path.to_string_lossy().to_string());
                 }
-            }
         }
 
         // Try _0.gts as fallback
         if let Some(base) = find_base_name(name_without_hash) {
-            let gts_0_path = parent.join(format!("{}_0.gts", base));
+            let gts_0_path = parent.join(format!("{base}_0.gts"));
             if gts_0_path.exists() {
                 return Ok(gts_0_path.to_string_lossy().to_string());
             }
@@ -189,35 +199,36 @@ pub fn find_gts_path(input_path: &str) -> Result<String> {
             let gtp_prefix = stem.split('_').take(3).collect::<Vec<_>>().join("_");
             for entry in entries.flatten() {
                 let entry_path = entry.path();
-                if entry_path.extension().map(|e| e.to_string_lossy().to_lowercase()) == Some("gts".to_string()) {
-                    if let Some(gts_stem) = entry_path.file_stem() {
+                if entry_path.extension().map(|e| e.to_string_lossy().to_lowercase()) == Some("gts".to_string())
+                    && let Some(gts_stem) = entry_path.file_stem() {
                         let gts_name = gts_stem.to_string_lossy();
                         if gts_name.starts_with(&gtp_prefix) {
                             // Check for valid GRPG header
-                            if let Ok(data) = std::fs::read(&entry_path) {
-                                if data.len() >= 4 && &data[0..4] == b"GRPG" {
+                            if let Ok(data) = std::fs::read(&entry_path)
+                                && data.len() >= 4 && &data[0..4] == b"GRPG" {
                                     return Ok(entry_path.to_string_lossy().to_string());
                                 }
-                            }
                         }
                     }
-                }
             }
         }
 
         return Err(Error::Io(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            format!("Could not find associated GTS file for {}", input_path)
+            format!("Could not find associated GTS file for {input_path}")
         )));
     }
 
     Err(Error::Io(std::io::Error::new(
         std::io::ErrorKind::InvalidInput,
-        format!("Unsupported file type: {}", ext)
+        format!("Unsupported file type: {ext}")
     )))
 }
 
 /// Extract all GTP files referenced by a GTS file
+///
+/// # Errors
+/// Returns an error if the GTS file cannot be read or the output directory cannot be created.
 pub fn extract_all<P1: AsRef<Path>, P2: AsRef<Path>>(
     gts_path: P1,
     output_dir: P2,

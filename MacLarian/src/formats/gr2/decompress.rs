@@ -1,11 +1,11 @@
-//! BitKnit decompression algorithm for Granny2 files
-//! SPDX-FileCopyrightText: 2025 Cyberdeco (MacPak, PolyForm Noncommercial), 2025 Legiayayana (Knit, EUPL-1.2), 2024 eiz (pybg3, MIT)
+//! `BitKnit` decompression algorithm for Granny2 files
+//! SPDX-FileCopyrightText: 2025 Cyberdeco (`MacPak`, `PolyForm` Noncommercial), 2025 Legiayayana (Knit, EUPL-1.2), 2024 eiz (pybg3, MIT)
 //!
 //! SPDX-License-Identifier: MIT
 //!
-//! BitKnit compression code is adapted from these clean room implementations:
-//!	https://github.com/neptuwunium/Knit/blob/develop/Knit/Compression/GrannyBitKnitCompression.cs
-//!	https://github.com/eiz/pybg3/blob/9ebda24314822bf35580e74bb7917f666ae046c6/src/rans.h
+//! `BitKnit` compression code is adapted from these clean room implementations:
+//!    <https://github.com/neptuwunium/Knit/blob/develop/Knit/Compression/GrannyBitKnitCompression.cs>
+//!    <https://github.com/eiz/pybg3/blob/9ebda24314822bf35580e74bb7917f666ae046c6/src/rans.h>
 
 use crate::error::{Error, Result};
 
@@ -13,7 +13,7 @@ use crate::error::{Error, Result};
 // Constants
 // ============================================================================
 
-/// BitKnit magic number (little-endian)
+/// `BitKnit` magic number (little-endian)
 const BITKNIT_MAGIC: u16 = 0x75b1;
 
 /// rANS normalization threshold
@@ -48,7 +48,7 @@ impl FrequencyTable {
 
     fn find_symbol(&self, code: u32) -> usize {
         let mut sym = self.lookup[(code >> self.lookup_shift) as usize] as usize;
-        while code >= self.sums[sym + 1] as u32 {
+        while code >= u32::from(self.sums[sym + 1]) {
             sym += 1;
         }
         sym
@@ -142,8 +142,8 @@ impl DeferredAdaptiveModel {
             self.frequency_accumulator[symbol] += self.last_frequency_incr;
             let mut sum: u32 = 0;
             for i in 1..=self.cdf.vocab_size {
-                sum += self.frequency_accumulator[i - 1] as u32;
-                let old = self.cdf.sums[i] as u32;
+                sum += u32::from(self.frequency_accumulator[i - 1]);
+                let old = u32::from(self.cdf.sums[i]);
                 // C# uses unchecked arithmetic where overflow wraps
                 self.cdf.sums[i] = (old.wrapping_add(sum.wrapping_sub(old) / 2)) as u16;
                 self.frequency_accumulator[i - 1] = 1;
@@ -180,8 +180,8 @@ impl RANSState {
     fn pop_cdf(&mut self, stream: &mut BitKnitStream, cdf: &FrequencyTable) -> usize {
         let code = self.bits & ((1 << cdf.frequency_bits) - 1);
         let sym = cdf.find_symbol(code);
-        let freq = cdf.frequency(sym) as u32;
-        let cumul = cdf.sum_below(sym) as u32;
+        let freq = u32::from(cdf.frequency(sym));
+        let cumul = u32::from(cdf.sum_below(sym));
         self.bits = (self.bits >> cdf.frequency_bits) * freq + code - cumul;
         self.maybe_refill(stream);
         sym
@@ -189,7 +189,7 @@ impl RANSState {
 
     fn maybe_refill(&mut self, stream: &mut BitKnitStream) {
         if self.bits < RANS_THRESHOLD {
-            self.bits = (self.bits << 16) | stream.pop() as u32;
+            self.bits = (self.bits << 16) | u32::from(stream.pop());
         }
     }
 }
@@ -214,7 +214,7 @@ impl<'a> BitKnitStream<'a> {
             self.pos += 2;
             val
         } else if self.pos < self.data.len() {
-            let val = self.data[self.pos] as u16;
+            let val = u16::from(self.data[self.pos]);
             self.pos += 1;
             val
         } else {
@@ -226,7 +226,7 @@ impl<'a> BitKnitStream<'a> {
         if self.pos + 1 < self.data.len() {
             u16::from_le_bytes([self.data[self.pos], self.data[self.pos + 1]])
         } else if self.pos < self.data.len() {
-            self.data[self.pos] as u16
+            u16::from(self.data[self.pos])
         } else {
             0
         }
@@ -411,7 +411,7 @@ impl Bitknit2State {
                 self.pop_bits(stream, copy_offset_length % 16, state1, state2);
 
             let copy_offset_bits = if copy_offset_length >= 16 {
-                (copy_offset_bits << 16) | stream.pop() as u32
+                (copy_offset_bits << 16) | u32::from(stream.pop())
             } else {
                 copy_offset_bits
             };
@@ -501,18 +501,21 @@ impl Bitknit2State {
     ) {
         let init_0 = stream.pop();
         let init_1 = stream.pop();
-        let mut merged = RANSState::with_bits(((init_0 as u32) << 16) | init_1 as u32);
+        let mut merged = RANSState::with_bits((u32::from(init_0) << 16) | u32::from(init_1));
 
         let split = merged.pop_bits(stream, 4) as usize;
         state1.bits = merged.bits >> split;
         state1.maybe_refill(stream);
-        state2.bits = (merged.bits << 16) | stream.pop() as u32;
+        state2.bits = (merged.bits << 16) | u32::from(stream.pop());
         state2.bits &= (1 << (16 + split)) - 1;
         state2.bits |= 1 << (16 + split);
     }
 }
 
-/// Decompress data using Granny2 BitKnit (format 4)
+/// Decompress data using Granny2 `BitKnit` (format 4)
+///
+/// # Errors
+/// Returns an error if decompression fails.
 pub fn decompress_bitknit(compressed: &[u8], expected_size: usize) -> Result<Vec<u8>> {
     let mut state = Bitknit2State::new(expected_size);
     state.decode(compressed)?;

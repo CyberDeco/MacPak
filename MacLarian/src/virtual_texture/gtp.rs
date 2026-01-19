@@ -10,13 +10,13 @@ use std::path::Path;
 use crate::compression::fastlz;
 use crate::error::{Error, Result};
 use super::gts::GtsFile;
-use super::types::*;
+use super::types::{GtpHeader, GtsCodec, GtpChunkHeader, TileCompression};
 
 /// GTP file reader
 pub struct GtpFile<R: Read + Seek> {
     reader: BufReader<R>,
     pub header: GtpHeader,
-    /// Chunk offsets for each page: chunk_offsets[page_idx][chunk_idx]
+    /// Chunk offsets for each page: `chunk_offsets`[`page_idx`][chunk_idx]
     pub chunk_offsets: Vec<Vec<u32>>,
     page_size: u32,
     tile_width: i32,
@@ -25,6 +25,9 @@ pub struct GtpFile<R: Read + Seek> {
 
 impl GtpFile<File> {
     /// Open a GTP file
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or has an invalid format.
     pub fn open<P: AsRef<Path>>(path: P, gts: &GtsFile) -> Result<Self> {
         let file = File::open(path.as_ref())?;
         Self::new(file, gts)
@@ -33,6 +36,9 @@ impl GtpFile<File> {
 
 impl<R: Read + Seek> GtpFile<R> {
     /// Create a new GTP reader from any Read + Seek source
+    ///
+    /// # Errors
+    /// Returns an error if reading fails or the data has an invalid format.
     pub fn new(reader: R, gts: &GtsFile) -> Result<Self> {
         let mut reader = BufReader::new(reader);
 
@@ -52,7 +58,7 @@ impl<R: Read + Seek> GtpFile<R> {
         }
 
         let page_size = gts.header.page_size;
-        let num_pages = (file_size / page_size as u64) as usize;
+        let num_pages = (file_size / u64::from(page_size)) as usize;
 
         // Read chunk offsets for each page
         let chunk_offsets = Self::read_chunk_offsets(&mut reader, page_size, num_pages)?;
@@ -93,7 +99,7 @@ impl<R: Read + Seek> GtpFile<R> {
         let mut chunk_offsets = Vec::with_capacity(num_pages);
 
         for page in 0..num_pages {
-            let page_start = (page as u64) * (page_size as u64);
+            let page_start = (page as u64) * u64::from(page_size);
 
             // Position at start of page
             if page == 0 {
@@ -120,6 +126,9 @@ impl<R: Read + Seek> GtpFile<R> {
     }
 
     /// Extract and decompress a single chunk
+    ///
+    /// # Errors
+    /// Returns an error if the chunk is out of range or decompression fails.
     pub fn extract_chunk(
         &mut self,
         page_index: usize,
@@ -143,9 +152,9 @@ impl<R: Read + Seek> GtpFile<R> {
             )));
         }
 
-        let page_start = (page_index as u64) * (self.page_size as u64);
+        let page_start = (page_index as u64) * u64::from(self.page_size);
         let chunk_offset = self.chunk_offsets[page_index][chunk_index];
-        let absolute_offset = page_start + chunk_offset as u64;
+        let absolute_offset = page_start + u64::from(chunk_offset);
 
         self.reader.seek(SeekFrom::Start(absolute_offset))?;
 
@@ -163,11 +172,11 @@ impl<R: Read + Seek> GtpFile<R> {
 
                 // Calculate expected output size for BC5/DXT5
                 // BC5: 16 bytes per 4x4 block
-                let main_size = 16 * ((self.tile_width as usize + 3) / 4)
-                                   * ((self.tile_height as usize + 3) / 4);
+                let main_size = 16 * (self.tile_width as usize).div_ceil(4)
+                                   * (self.tile_height as usize).div_ceil(4);
                 // Add embedded mipmap size
-                let mip_size = 16 * ((self.tile_width as usize / 2 + 3) / 4)
-                                  * ((self.tile_height as usize / 2 + 3) / 4);
+                let mip_size = 16 * (self.tile_width as usize / 2).div_ceil(4)
+                                  * (self.tile_height as usize / 2).div_ceil(4);
                 let output_size = main_size + mip_size;
 
                 self.decompress_tile(&compressed, output_size, method)
@@ -213,7 +222,7 @@ impl<R: Read + Seek> GtpFile<R> {
             TileCompression::Raw => Ok(compressed.to_vec()),
             TileCompression::Lz4 => {
                 lz4_flex::decompress(compressed, output_size)
-                    .map_err(|e| Error::DecompressionError(format!("LZ4: {}", e)))
+                    .map_err(|e| Error::DecompressionError(format!("LZ4: {e}")))
             }
             TileCompression::FastLZ => {
                 fastlz::decompress(compressed, output_size)
@@ -228,6 +237,6 @@ impl<R: Read + Seek> GtpFile<R> {
 
     /// Get the number of chunks in a specific page
     pub fn num_chunks(&self, page_index: usize) -> usize {
-        self.chunk_offsets.get(page_index).map(|v| v.len()).unwrap_or(0)
+        self.chunk_offsets.get(page_index).map_or(0, std::vec::Vec::len)
     }
 }

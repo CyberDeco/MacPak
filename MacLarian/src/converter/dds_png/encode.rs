@@ -19,6 +19,9 @@ pub enum DdsFormat {
 }
 
 /// Encode RGBA pixels to DDS with specified format
+///
+/// # Errors
+/// Returns an error if encoding fails.
 pub fn encode_to_dds(pixels: &[u8], width: u32, height: u32, format: DdsFormat) -> Result<Vec<u8>> {
     match format {
         DdsFormat::BC1 => encode_bc1_dds(pixels, width, height),
@@ -109,8 +112,8 @@ fn build_dds_with_d3d_format(
 
 /// Encode RGBA pixels to BC1 (DXT1) format
 fn encode_bc1(pixels: &[u8], width: usize, height: usize) -> Vec<u8> {
-    let blocks_x = (width + 3) / 4;
-    let blocks_y = (height + 3) / 4;
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
     let mut output = vec![0u8; blocks_x * blocks_y * 8];
 
     for by in 0..blocks_y {
@@ -140,7 +143,7 @@ fn encode_bc1_block(block: &[[u8; 4]; 16]) -> [u8; 8] {
     let mut indices: u32 = 0;
     for (i, pixel) in block.iter().enumerate() {
         let best_idx = find_closest_color(pixel, &colors);
-        indices |= (best_idx as u32) << (i * 2);
+        indices |= u32::from(best_idx) << (i * 2);
     }
 
     // Pack output
@@ -158,8 +161,8 @@ fn encode_bc1_block(block: &[[u8; 4]; 16]) -> [u8; 8] {
 
 /// Encode RGBA pixels to BC2 (DXT3) format
 fn encode_bc2(pixels: &[u8], width: usize, height: usize) -> Vec<u8> {
-    let blocks_x = (width + 3) / 4;
-    let blocks_y = (height + 3) / 4;
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
     let mut output = vec![0u8; blocks_x * blocks_y * 16];
 
     for by in 0..blocks_y {
@@ -199,8 +202,8 @@ fn encode_bc2_block(block: &[[u8; 4]; 16]) -> [u8; 16] {
 
 /// Encode RGBA pixels to BC3 (DXT5) format
 fn encode_bc3(pixels: &[u8], width: usize, height: usize) -> Vec<u8> {
-    let blocks_x = (width + 3) / 4;
-    let blocks_y = (height + 3) / 4;
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
     let mut output = vec![0u8; blocks_x * blocks_y * 16];
 
     for by in 0..blocks_y {
@@ -249,21 +252,21 @@ fn encode_bc3_alpha_block(block: &[[u8; 4]; 16]) -> [u8; 8] {
         [
             a0,
             a1,
-            ((6 * a0 as u16 + 1 * a1 as u16) / 7) as u8,
-            ((5 * a0 as u16 + 2 * a1 as u16) / 7) as u8,
-            ((4 * a0 as u16 + 3 * a1 as u16) / 7) as u8,
-            ((3 * a0 as u16 + 4 * a1 as u16) / 7) as u8,
-            ((2 * a0 as u16 + 5 * a1 as u16) / 7) as u8,
-            ((1 * a0 as u16 + 6 * a1 as u16) / 7) as u8,
+            ((6 * u16::from(a0) + u16::from(a1)) / 7) as u8,
+            ((5 * u16::from(a0) + 2 * u16::from(a1)) / 7) as u8,
+            ((4 * u16::from(a0) + 3 * u16::from(a1)) / 7) as u8,
+            ((3 * u16::from(a0) + 4 * u16::from(a1)) / 7) as u8,
+            ((2 * u16::from(a0) + 5 * u16::from(a1)) / 7) as u8,
+            ((u16::from(a0) + 6 * u16::from(a1)) / 7) as u8,
         ]
     } else {
         [
             a0,
             a1,
-            ((4 * a0 as u16 + 1 * a1 as u16) / 5) as u8,
-            ((3 * a0 as u16 + 2 * a1 as u16) / 5) as u8,
-            ((2 * a0 as u16 + 3 * a1 as u16) / 5) as u8,
-            ((1 * a0 as u16 + 4 * a1 as u16) / 5) as u8,
+            ((4 * u16::from(a0) + u16::from(a1)) / 5) as u8,
+            ((3 * u16::from(a0) + 2 * u16::from(a1)) / 5) as u8,
+            ((2 * u16::from(a0) + 3 * u16::from(a1)) / 5) as u8,
+            ((u16::from(a0) + 4 * u16::from(a1)) / 5) as u8,
             0,
             255,
         ]
@@ -276,7 +279,7 @@ fn encode_bc3_alpha_block(block: &[[u8; 4]; 16]) -> [u8; 8] {
         let mut best_idx = 0u64;
         let mut best_dist = 256i32;
         for (j, &palette_alpha) in alphas.iter().enumerate() {
-            let dist = (alpha as i32 - palette_alpha as i32).abs();
+            let dist = (i32::from(alpha) - i32::from(palette_alpha)).abs();
             if dist < best_dist {
                 best_dist = dist;
                 best_idx = j as u64;
@@ -333,7 +336,7 @@ fn find_endpoint_colors(block: &[[u8; 4]; 16]) -> (u16, u16) {
     let mut max_pixel = [0u8; 3];
 
     for pixel in block {
-        let lum = pixel[0] as u32 + pixel[1] as u32 + pixel[2] as u32;
+        let lum = u32::from(pixel[0]) + u32::from(pixel[1]) + u32::from(pixel[2]);
         if lum < min_lum {
             min_lum = lum;
             min_pixel = [pixel[0], pixel[1], pixel[2]];
@@ -353,9 +356,9 @@ fn find_endpoint_colors(block: &[[u8; 4]; 16]) -> (u16, u16) {
 
 /// Convert RGB888 to RGB565
 pub fn rgb_to_565(r: u8, g: u8, b: u8) -> u16 {
-    let r5 = (r >> 3) as u16;
-    let g6 = (g >> 2) as u16;
-    let b5 = (b >> 3) as u16;
+    let r5 = u16::from(r >> 3);
+    let g6 = u16::from(g >> 2);
+    let b5 = u16::from(b >> 3);
     (r5 << 11) | (g6 << 5) | b5
 }
 
@@ -371,9 +374,9 @@ fn find_closest_color(pixel: &[u8; 4], palette: &[[u8; 4]; 4]) -> u8 {
     let mut best_dist = u32::MAX;
 
     for (i, color) in palette.iter().enumerate() {
-        let dr = pixel[0] as i32 - color[0] as i32;
-        let dg = pixel[1] as i32 - color[1] as i32;
-        let db = pixel[2] as i32 - color[2] as i32;
+        let dr = i32::from(pixel[0]) - i32::from(color[0]);
+        let dg = i32::from(pixel[1]) - i32::from(color[1]);
+        let db = i32::from(pixel[2]) - i32::from(color[2]);
         let dist = (dr * dr + dg * dg + db * db) as u32;
 
         if dist < best_dist {

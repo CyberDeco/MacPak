@@ -28,6 +28,9 @@ pub struct SectionInfo {
 }
 
 /// Get information about a GR2 file structure.
+///
+/// # Errors
+/// Returns an error if the file cannot be read or has an invalid format.
 pub fn inspect_gr2<P: AsRef<Path>>(source: P) -> Result<Gr2Info> {
     let data = std::fs::read(source.as_ref())?;
     let file_size = data.len() as u64;
@@ -95,6 +98,9 @@ pub struct Gr2ModelInfo {
 }
 
 /// Extract mesh and skeleton information from a GR2 file.
+///
+/// # Errors
+/// Returns an error if the file cannot be read or parsed.
 pub fn extract_gr2_info<P: AsRef<Path>>(source: P) -> Result<Gr2ModelInfo> {
     let source_path = source.as_ref();
     let data = std::fs::read(source_path)?;

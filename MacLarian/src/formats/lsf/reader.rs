@@ -1,5 +1,5 @@
 //! LSF file reading and parsing
-//! Based on LSLib's LSFReader.cs implementation
+//! Based on `LSLib`'s LSFReader.cs implementation
 
 use super::document::{LsfDocument, LsfNode, LsfAttribute, LsfMetadataFormat};
 use crate::error::{Error, Result};
@@ -19,6 +19,9 @@ const LSF_VER_EXTENDED_NODES: u32 = 3;
 const LSF_VER_BG3_NODE_KEYS: u32 = 6;
 
 /// Read an LSF file from disk
+///
+/// # Errors
+/// Returns an error if the file cannot be read or has an invalid format.
 pub fn read_lsf<P: AsRef<Path>>(path: P) -> Result<LsfDocument> {
     let mut file = File::open(path)?;
     let mut buffer = Vec::new();
@@ -27,6 +30,9 @@ pub fn read_lsf<P: AsRef<Path>>(path: P) -> Result<LsfDocument> {
 }
 
 /// Parse LSF data from bytes
+///
+/// # Errors
+/// Returns an error if the data has an invalid LSF format.
 pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
     let mut cursor = Cursor::new(data);
 
@@ -38,7 +44,7 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
     }
 
     let version = cursor.read_u32::<LittleEndian>()?;
-    if version < LSF_VER_INITIAL || version > 7 {
+    if !(LSF_VER_INITIAL..=7).contains(&version) {
         return Err(Error::UnsupportedLsfVersion(version));
     }
 
@@ -129,9 +135,9 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
 
 /// Detect if extended format (16-byte) or V2 format (12-byte) based on data size
 fn detect_extended_format(data_size: usize, version_hint: bool) -> bool {
-    if data_size % 16 == 0 && data_size % 12 != 0 {
+    if data_size.is_multiple_of(16) && !data_size.is_multiple_of(12) {
         true  // Only divisible by 16
-    } else if data_size % 12 == 0 && data_size % 16 != 0 {
+    } else if data_size.is_multiple_of(12) && !data_size.is_multiple_of(16) {
         false // Only divisible by 12
     } else {
         // Divisible by both (or neither), fall back to hint
@@ -168,7 +174,7 @@ fn read_section<R: Read>(
 
         // Fall back to LZ4 block decompression
         lz4_flex::block::decompress(&buffer, uncompressed_size)
-            .map_err(|e| Error::DecompressionError(format!("LZ4: {}", e)))
+            .map_err(|e| Error::DecompressionError(format!("LZ4: {e}")))
     } else {
         Ok(buffer)
     }
@@ -379,13 +385,11 @@ fn parse_keys(
             continue;
         }
 
-        if let Some(name_list) = names.get(name_index_outer) {
-            if let Some(key_name) = name_list.get(name_index_inner) {
-                if node_index < keys.len() {
+        if let Some(name_list) = names.get(name_index_outer)
+            && let Some(key_name) = name_list.get(name_index_inner)
+                && node_index < keys.len() {
                     keys[node_index] = Some(key_name.clone());
                 }
-            }
-        }
     }
 
     Ok(keys)

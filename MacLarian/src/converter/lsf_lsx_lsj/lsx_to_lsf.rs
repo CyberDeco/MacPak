@@ -12,6 +12,9 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Convert LSX file to LSF format
+///
+/// # Errors
+/// Returns an error if reading, parsing, or writing fails.
 pub fn convert_lsx_to_lsf<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     tracing::info!("Converting LSX→LSF: {:?} → {:?}", source.as_ref(), dest.as_ref());
     
@@ -26,6 +29,9 @@ pub fn convert_lsx_to_lsf<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
 }
 
 /// Parse LSX XML and build LSF document structure
+///
+/// # Errors
+/// Returns an error if XML parsing fails.
 pub fn from_lsx(content: &str) -> Result<LsfDocument> {
     let mut reader = Reader::from_str(content);
     reader.trim_text(true);
@@ -104,11 +110,8 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
                 }
             }
             Ok(Event::End(e)) => {
-                match e.name().as_ref() {
-                    b"node" => {
-                        node_stack.pop();
-                    }
-                    _ => {}
+                if e.name().as_ref() == b"node" {
+                    node_stack.pop();
                 }
             }
             Ok(Event::Eof) => break,
@@ -118,7 +121,7 @@ pub fn from_lsx(content: &str) -> Result<LsfDocument> {
         buf.clear();
     }
 
-    let has_keys_section = !node_keys.iter().all(|k| k.is_none());
+    let has_keys_section = !node_keys.iter().all(std::option::Option::is_none);
 
     Ok(LsfDocument {
         engine_version,
@@ -160,10 +163,10 @@ fn parse_version(e: &quick_xml::events::BytesStart) -> Result<(u64, LsfMetadataF
     }
 
     // Pack version into u64
-    let engine_version = ((major as u64 & 0x7F) << 55)
-        | ((minor as u64 & 0xFF) << 47)
-        | ((revision as u64 & 0xFFFF) << 31)
-        | (build as u64 & 0x7FFFFFFF);
+    let engine_version = ((u64::from(major) & 0x7F) << 55)
+        | ((u64::from(minor) & 0xFF) << 47)
+        | ((u64::from(revision) & 0xFFFF) << 31)
+        | (u64::from(build) & 0x7FFFFFFF);
 
     Ok((engine_version, metadata_format))
 }
@@ -191,7 +194,7 @@ fn parse_and_create_node(
     let (name_outer, name_inner) = string_table.get_or_insert(&node_id);
     
     // Parent is the last node on the stack, or -1 if stack is empty
-    let parent_index = node_stack.last().map(|&idx| idx as i32).unwrap_or(-1);
+    let parent_index = node_stack.last().map_or(-1, |&idx| idx as i32);
     
     let node = LsfNode {
         name_index_outer: name_outer,
@@ -282,7 +285,7 @@ const STRING_HASH_MAP_SIZE: usize = 0x200; // 512 buckets
 
 /// String table for managing name indices
 struct StringTable {
-    /// Maps string -> (outer_index, inner_index)
+    /// Maps string -> (`outer_index`, `inner_index`)
     string_map: HashMap<String, (usize, usize)>,
     /// Lists of strings grouped by hash
     name_lists: Vec<Vec<String>>,

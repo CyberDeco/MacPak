@@ -9,8 +9,8 @@ use crate::error::{Error, Result};
 use crate::converter::gr2_gltf::to_gltf::gr2_reader::{MeshData, Skeleton};
 use crate::converter::gr2_gltf::to_gltf::utils::decode_qtangent;
 
-use super::types::*;
-use super::materials::*;
+use super::types::{GltfBufferView, GltfAccessor, GltfMesh, GltfNode, GltfSkin, GltfPrimitive, GltfDocument, GltfAsset, GltfScene, GltfBuffer};
+use super::materials::{GltfImage, GltfTexture, GltfSampler, GltfMaterial, GltfPbrMetallicRoughness, GltfTextureInfo, GltfNormalTextureInfo, GltfOcclusionTextureInfo};
 
 /// Builder for constructing glTF documents.
 pub struct GltfBuilder {
@@ -28,6 +28,7 @@ pub struct GltfBuilder {
 }
 
 impl GltfBuilder {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             buffer: Vec::new(),
@@ -46,7 +47,7 @@ impl GltfBuilder {
 
     fn align(&mut self, alignment: usize) {
         let padding = (alignment - (self.buffer.len() % alignment)) % alignment;
-        self.buffer.extend(std::iter::repeat(0u8).take(padding));
+        self.buffer.extend(std::iter::repeat_n(0u8, padding));
     }
 
     // ========================================================================
@@ -632,7 +633,9 @@ impl GltfBuilder {
         attributes.insert("WEIGHTS_0".to_string(), weights_idx);
 
         // Add indices - flip winding order to account for X-axis negation
-        let indices_idx = if !mesh_data.indices.is_empty() {
+        let indices_idx = if mesh_data.indices.is_empty() {
+            None
+        } else {
             let flipped_indices: Vec<u32> = mesh_data.indices
                 .chunks(3)
                 .flat_map(|tri| {
@@ -644,8 +647,6 @@ impl GltfBuilder {
                 })
                 .collect();
             Some(self.add_indices(&flipped_indices, mesh_data.is_32bit_indices))
-        } else {
-            None
         };
 
         let mesh_idx = self.meshes.len();
@@ -728,10 +729,13 @@ impl GltfBuilder {
     }
 
     /// Build GLB data and return as bytes.
+    ///
+    /// # Errors
+    /// Returns an error if JSON serialization fails.
     pub fn build_glb(self, root_bone_idx: Option<usize>) -> Result<Vec<u8>> {
         let (doc, buffer) = self.build_document(root_bone_idx, None);
         let json = serde_json::to_string(&doc)
-            .map_err(|e| Error::ConversionError(format!("JSON serialization error: {}", e)))?;
+            .map_err(|e| Error::ConversionError(format!("JSON serialization error: {e}")))?;
         let json_bytes = json.as_bytes();
 
         let json_padding = (4 - (json_bytes.len() % 4)) % 4;
@@ -768,6 +772,10 @@ impl GltfBuilder {
         Ok(output)
     }
 
+    /// Export as a GLB file.
+    ///
+    /// # Errors
+    /// Returns an error if serialization or file writing fails.
     pub fn export_glb(self, path: &Path, root_bone_idx: Option<usize>) -> Result<()> {
         let glb_data = self.build_glb(root_bone_idx)?;
         let mut file = File::create(path)?;
@@ -776,11 +784,14 @@ impl GltfBuilder {
     }
 
     /// Export as separate .gltf (JSON) and .bin (binary buffer) files.
+    ///
+    /// # Errors
+    /// Returns an error if serialization or file writing fails.
     pub fn export_gltf(self, path: &Path, root_bone_idx: Option<usize>) -> Result<()> {
         // Determine the .bin file name (same base name, .bin extension)
         let bin_filename = path.file_stem()
             .and_then(|s| s.to_str())
-            .map(|s| format!("{}.bin", s))
+            .map(|s| format!("{s}.bin"))
             .ok_or_else(|| Error::ConversionError("Invalid output path".to_string()))?;
 
         let bin_path = path.with_file_name(&bin_filename);
@@ -790,7 +801,7 @@ impl GltfBuilder {
 
         // Write JSON to .gltf file
         let json = serde_json::to_string_pretty(&doc)
-            .map_err(|e| Error::ConversionError(format!("JSON serialization error: {}", e)))?;
+            .map_err(|e| Error::ConversionError(format!("JSON serialization error: {e}")))?;
         let mut gltf_file = File::create(path)?;
         gltf_file.write_all(json.as_bytes())?;
 

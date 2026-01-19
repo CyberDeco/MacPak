@@ -1,15 +1,17 @@
 //! Hashing utilities
 
-/// DJB2 hash algorithm (used by LSLib)
+/// DJB2 hash algorithm (used by `LSLib`)
+#[must_use] 
 pub fn hash_string_djb2(s: &str) -> u32 {
     let mut hash: u32 = 5381;
     for byte in s.bytes() {
-        hash = hash.wrapping_mul(33).wrapping_add(byte as u32);
+        hash = hash.wrapping_mul(33).wrapping_add(u32::from(byte));
     }
     hash
 }
 
-/// C# String.GetHashCode() equivalent for LSLib compatibility
+/// C# `String.GetHashCode()` equivalent for `LSLib` compatibility
+#[must_use] 
 pub fn hash_string_lslib(s: &str) -> u32 {
     let mut hash1 = 5381u32;
     let mut hash2 = hash1;
@@ -18,9 +20,9 @@ pub fn hash_string_lslib(s: &str) -> u32 {
     let mut i = 0;
     
     while i < bytes.len() {
-        hash1 = ((hash1 << 5).wrapping_add(hash1)) ^ (bytes[i] as u32);
+        hash1 = ((hash1 << 5).wrapping_add(hash1)) ^ u32::from(bytes[i]);
         if i + 1 < bytes.len() {
-            hash2 = ((hash2 << 5).wrapping_add(hash2)) ^ (bytes[i + 1] as u32);
+            hash2 = ((hash2 << 5).wrapping_add(hash2)) ^ u32::from(bytes[i + 1]);
         }
         i += 2;
     }
@@ -29,6 +31,7 @@ pub fn hash_string_lslib(s: &str) -> u32 {
 }
 
 /// Generic string hash (alias for DJB2)
+#[must_use] 
 pub fn hash_string(s: &str) -> u32 {
     hash_string_djb2(s)
 }

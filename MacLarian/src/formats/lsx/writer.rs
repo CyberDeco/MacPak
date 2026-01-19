@@ -1,5 +1,5 @@
 //! LSX file writing
-//! LSLib's metadata output purposefully maintained as an homage
+//! `LSLib`'s metadata output purposefully maintained as an homage
 
 use super::document::{LsxDocument, LsxNode};
 use crate::error::Result;
@@ -9,6 +9,9 @@ use std::fs;
 use std::path::Path;
 
 /// Write an LSX document to disk
+///
+/// # Errors
+/// Returns an error if serialization or file writing fails.
 pub fn write_lsx<P: AsRef<Path>>(doc: &LsxDocument, path: P) -> Result<()> {
     let xml = serialize_lsx(doc)?;
     fs::write(path, xml)?;
@@ -16,6 +19,9 @@ pub fn write_lsx<P: AsRef<Path>>(doc: &LsxDocument, path: P) -> Result<()> {
 }
 
 /// Serialize LSX document to XML string
+///
+/// # Errors
+/// Returns an error if XML serialization fails.
 pub fn serialize_lsx(doc: &LsxDocument) -> Result<String> {
     let mut output = Vec::new();
     
@@ -65,7 +71,7 @@ pub fn serialize_lsx(doc: &LsxDocument) -> Result<String> {
     
     let xml = String::from_utf8(output)?;
     // Convert to Windows line endings (CRLF) to match LSLib output
-    let xml = xml.replace("\n", "\r\n");
+    let xml = xml.replace('\n', "\r\n");
     // Fix spacing before self-closing tags
     let xml = xml.replace("/>", " />");
     Ok(xml)

@@ -22,6 +22,7 @@ pub enum GtsCodec {
 }
 
 impl GtsCodec {
+    #[must_use] 
     pub fn from_u32(value: u32) -> Option<Self> {
         match value {
             0 => Some(Self::Uniform),
@@ -75,6 +76,7 @@ pub enum GtsDataType {
 }
 
 impl GtsDataType {
+    #[must_use] 
     pub fn from_u32(value: u32) -> Option<Self> {
         match value {
             0 => Some(Self::R8G8B8Srgb),
@@ -194,18 +196,21 @@ pub struct GtsBCParameterBlock {
 
 impl GtsBCParameterBlock {
     /// Get compression name 1 as string
+    #[must_use] 
     pub fn compression_name1(&self) -> String {
         let end = self.compression1.iter().position(|&b| b == 0).unwrap_or(16);
         String::from_utf8_lossy(&self.compression1[..end]).to_string()
     }
 
     /// Get compression name 2 as string
+    #[must_use] 
     pub fn compression_name2(&self) -> String {
         let end = self.compression2.iter().position(|&b| b == 0).unwrap_or(16);
         String::from_utf8_lossy(&self.compression2[..end]).to_string()
     }
 
     /// Determine the tile compression method
+    #[must_use] 
     pub fn get_compression_method(&self) -> TileCompression {
         let name1 = self.compression_name1();
         let name2 = self.compression_name2();
@@ -268,6 +273,7 @@ pub struct GtsPackedTileId {
 }
 
 impl GtsPackedTileId {
+    #[must_use] 
     pub fn from_u32(value: u32) -> Self {
         Self {
             layer: (value & 0xF) as u8,
@@ -316,6 +322,7 @@ pub enum VirtualTextureLayer {
 }
 
 impl VirtualTextureLayer {
+    #[must_use] 
     pub fn from_index(index: u8) -> Option<Self> {
         match index {
             0 => Some(Self::Albedo),
@@ -325,6 +332,7 @@ impl VirtualTextureLayer {
         }
     }
 
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Albedo => "Albedo",

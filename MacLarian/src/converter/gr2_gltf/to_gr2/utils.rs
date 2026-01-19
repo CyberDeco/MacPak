@@ -5,6 +5,7 @@
 pub use crate::converter::gr2_gltf::shared::{f32_to_half, encode_qtangent};
 
 /// Calculate CRC32 checksum (GR2 uses standard CRC-32)
+#[must_use] 
 pub fn crc32(data: &[u8]) -> u32 {
     const TABLE: [u32; 256] = {
         let mut table = [0u32; 256];
@@ -28,7 +29,7 @@ pub fn crc32(data: &[u8]) -> u32 {
 
     let mut crc = 0xFFFFFFFFu32;
     for &byte in data {
-        crc = TABLE[((crc ^ byte as u32) & 0xFF) as usize] ^ (crc >> 8);
+        crc = TABLE[((crc ^ u32::from(byte)) & 0xFF) as usize] ^ (crc >> 8);
     }
     !crc
 }

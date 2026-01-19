@@ -32,13 +32,12 @@ pub fn find_pak_files<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
     let mut pak_files: Vec<_> = WalkDir::new(dir)
         .follow_links(true)
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| {
             e.path().is_file()
                 && e.path()
                     .extension()
-                    .map(|ext| ext.to_ascii_lowercase() == "pak")
-                    .unwrap_or(false)
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("pak"))
         })
         .map(|e| e.path().to_path_buf())
         .collect();
@@ -62,7 +61,7 @@ pub fn find_packable_folders<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
         .follow_links(true)
         .min_depth(1) // Skip the root directory itself
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| {
             let path = e.path();
             if !path.is_dir() {
@@ -71,12 +70,11 @@ pub fn find_packable_folders<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
             // Check if this directory contains any files (not just subdirs)
             std::fs::read_dir(path)
                 .ok()
-                .map(|entries| {
+                .is_some_and(|entries| {
                     entries
-                        .filter_map(|e| e.ok())
+                        .filter_map(std::result::Result::ok)
                         .any(|e| e.path().is_file())
                 })
-                .unwrap_or(false)
         })
         .map(|e| e.path().to_path_buf())
         .collect();
@@ -141,7 +139,7 @@ where
 
             if let Err(e) = std::fs::create_dir_all(&pak_dest) {
                 fail_counter.fetch_add(1, Ordering::SeqCst);
-                return format!("Failed to create folder for {}: {}", display_path, e);
+                return format!("Failed to create folder for {display_path}: {e}");
             }
 
             let pak_str = pak_path.to_string_lossy().to_string();
@@ -150,11 +148,11 @@ where
             match PakOperations::extract(&pak_str, &dest_str) {
                 Ok(()) => {
                     success_counter.fetch_add(1, Ordering::SeqCst);
-                    format!("Extracted: {}", display_path)
+                    format!("Extracted: {display_path}")
                 }
                 Err(e) => {
                     fail_counter.fetch_add(1, Ordering::SeqCst);
-                    format!("Failed {}: {}", display_path, e)
+                    format!("Failed {display_path}: {e}")
                 }
             }
         })
@@ -221,21 +219,21 @@ where
             // Create parent directories if needed (idempotent)
             if let Err(e) = std::fs::create_dir_all(&pak_dest_dir) {
                 fail_counter.fetch_add(1, Ordering::SeqCst);
-                return format!("Failed to create dir for {}: {}", display_path, e);
+                return format!("Failed to create dir for {display_path}: {e}");
             }
 
-            let pak_path = pak_dest_dir.join(format!("{}.pak", folder_name));
+            let pak_path = pak_dest_dir.join(format!("{folder_name}.pak"));
             let folder_str = folder_path.to_string_lossy().to_string();
             let pak_str = pak_path.to_string_lossy().to_string();
 
             match PakOperations::create(&folder_str, &pak_str) {
                 Ok(()) => {
                     success_counter.fetch_add(1, Ordering::SeqCst);
-                    format!("Created: {}.pak", display_path)
+                    format!("Created: {display_path}.pak")
                 }
                 Err(e) => {
                     fail_counter.fetch_add(1, Ordering::SeqCst);
-                    format!("Failed {}: {}", display_path, e)
+                    format!("Failed {display_path}: {e}")
                 }
             }
         })

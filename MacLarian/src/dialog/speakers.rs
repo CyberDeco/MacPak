@@ -1,7 +1,7 @@
-//! Speaker cache for resolving speaker UUIDs to DisplayName handles
+//! Speaker cache for resolving speaker UUIDs to `DisplayName` handles
 //!
 //! Dynamically loads character templates from PAK files to map
-//! speaker UUIDs to their DisplayName localization handles.
+//! speaker UUIDs to their `DisplayName` localization handles.
 
 use crate::formats::lsf::parse_lsf_bytes;
 use crate::formats::lsx::parse_lsx;
@@ -11,13 +11,13 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-/// Cache for speaker UUID → DisplayName handle resolution
+/// Cache for speaker UUID → `DisplayName` handle resolution
 ///
 /// Uses pre-indexing - builds a complete index when `build_index()` is called,
-/// then provides O(1) lookups. Similar to FlagCache.
+/// then provides O(1) lookups. Similar to `FlagCache`.
 #[derive(Debug, Clone, Default)]
 pub struct SpeakerCache {
-    /// Speaker DisplayName handles indexed by UUID (pre-loaded)
+    /// Speaker `DisplayName` handles indexed by UUID (pre-loaded)
     handles: HashMap<String, String>,
     /// Whether the index has been built
     indexed: bool,
@@ -27,6 +27,7 @@ pub struct SpeakerCache {
 
 impl SpeakerCache {
     /// Create a new empty cache
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             handles: HashMap::new(),
@@ -36,21 +37,25 @@ impl SpeakerCache {
     }
 
     /// Get the number of cached speakers
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.handles.len()
     }
 
     /// Check if cache is empty
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.handles.is_empty() && self.pak_paths.is_empty()
     }
 
     /// Check if PAK sources are configured
+    #[must_use] 
     pub fn has_sources(&self) -> bool {
         !self.pak_paths.is_empty()
     }
 
     /// Check if the index has been built
+    #[must_use] 
     pub fn is_indexed(&self) -> bool {
         self.indexed
     }
@@ -70,9 +75,10 @@ impl SpeakerCache {
         }
     }
 
-    /// Look up a DisplayName handle by speaker UUID (O(1) after indexing)
+    /// Look up a `DisplayName` handle by speaker UUID (O(1) after indexing)
+    #[must_use] 
     pub fn get_handle(&self, uuid: &str) -> Option<&str> {
-        self.handles.get(uuid).map(|s| s.as_str())
+        self.handles.get(uuid).map(std::string::String::as_str)
     }
 
     /// Insert a handle directly (for testing or manual additions)
@@ -82,8 +88,11 @@ impl SpeakerCache {
 
     /// Build the speaker handle index from all configured PAK sources.
     ///
-    /// Scans RootTemplates and Level character files for MapKey → DisplayName mappings.
+    /// Scans `RootTemplates` and Level character files for `MapKey` → `DisplayName` mappings.
     /// Returns the number of speakers indexed.
+    ///
+    /// # Errors
+    /// Returns an error if PAK files cannot be read or parsed.
     pub fn build_index(&mut self) -> Result<usize, SpeakerCacheError> {
         if self.indexed {
             return Ok(self.handles.len());
@@ -157,8 +166,8 @@ impl SpeakerCache {
         Ok(total_count)
     }
 
-    /// Extract UUID and DisplayName (handle) pairs from LSF bytes
-    /// Looks for both MapKey (RootTemplates) and GlobalTemplate (Origins) as UUID sources
+    /// Extract UUID and `DisplayName` (handle) pairs from LSF bytes
+    /// Looks for both `MapKey` (`RootTemplates`) and `GlobalTemplate` (Origins) as UUID sources
     fn extract_speakers_from_lsf(data: &[u8]) -> Vec<(String, String)> {
         let mut results = Vec::new();
 
@@ -168,7 +177,7 @@ impl SpeakerCache {
 
         // Scan all nodes for UUID + DisplayName attribute pairs
         // UUID can come from MapKey (RootTemplates) or GlobalTemplate (Origins)
-        for node in doc.nodes.iter() {
+        for node in &doc.nodes {
 
             let mut map_key: Option<String> = None;
             let mut global_template: Option<String> = None;
@@ -190,31 +199,28 @@ impl SpeakerCache {
 
                     match attr_name {
                         "MapKey" => {
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id) {
-                                if !val.is_empty() && val.contains('-') {
+                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id)
+                                && !val.is_empty() && val.contains('-') {
                                     map_key = Some(val);
                                 }
-                            }
                         }
                         "GlobalTemplate" => {
                             // GlobalTemplate in Origins files maps speaker UUIDs to characters
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id) {
-                                if !val.is_empty() && val.contains('-') {
+                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id)
+                                && !val.is_empty() && val.contains('-') {
                                     global_template = Some(val);
                                 }
-                            }
                         }
                         "DisplayName" => {
                             // DisplayName is a TranslatedString (type 28) - use special extraction
-                            if type_id == 28 {
-                                if let Ok((handle, _version, _value)) = extract_translated_string(&doc.values, attr.offset, value_length) {
+                            if type_id == 28
+                                && let Ok((handle, _version, _value)) = extract_translated_string(&doc.values, attr.offset, value_length) {
                                     // Accept any non-empty handle - don't require 'h' prefix
                                     // as handle formats can vary
                                     if !handle.is_empty() {
                                         display_name_handle = Some(handle);
                                     }
                                 }
-                            }
                         }
                         _ => {}
                     }
@@ -241,7 +247,7 @@ impl SpeakerCache {
     }
 
     /// Extract speaker group UUID → Name mappings from SpeakerGroups.lsf
-    /// Returns UUID → formatted display name pairs (e.g., "GROUP_ORI_DU" → "Dark Urge")
+    /// Returns UUID → formatted display name pairs (e.g., "`GROUP_ORI_DU`" → "Dark Urge")
     fn extract_speaker_groups_from_lsf(data: &[u8]) -> Vec<(String, String)> {
         let mut results = Vec::new();
 
@@ -250,7 +256,7 @@ impl SpeakerCache {
         };
 
         // Scan all nodes for SpeakerGroup entries (UUID + Name attributes)
-        for node in doc.nodes.iter() {
+        for node in &doc.nodes {
             let mut uuid: Option<String> = None;
             let mut name: Option<String> = None;
 
@@ -270,18 +276,16 @@ impl SpeakerCache {
 
                     match attr_name {
                         "UUID" => {
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id) {
-                                if !val.is_empty() && val.contains('-') {
+                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id)
+                                && !val.is_empty() && val.contains('-') {
                                     uuid = Some(val);
                                 }
-                            }
                         }
                         "Name" => {
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id) {
-                                if !val.is_empty() {
+                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id)
+                                && !val.is_empty() {
                                     name = Some(val);
                                 }
-                            }
                         }
                         _ => {}
                     }
@@ -297,7 +301,7 @@ impl SpeakerCache {
             if let (Some(uuid), Some(name)) = (uuid, name) {
                 let display_name = Self::format_speaker_group_name(&name);
                 // Use __DIRECT__: prefix to signal this is a direct name, not a loca handle
-                results.push((uuid, format!("__DIRECT__:{}", display_name)));
+                results.push((uuid, format!("__DIRECT__:{display_name}")));
             }
         }
 
@@ -305,7 +309,7 @@ impl SpeakerCache {
     }
 
     /// Format a speaker group name to a friendly display name
-    /// e.g., "GROUP_ORI_DU" → "Dark Urge", "GROUP_Players" → "Player"
+    /// e.g., "`GROUP_ORI_DU`" → "Dark Urge", "`GROUP_Players`" → "Player"
     fn format_speaker_group_name(name: &str) -> String {
         // Handle specific known groups
         match name {
@@ -338,7 +342,7 @@ impl SpeakerCache {
         result
     }
 
-    /// Extract UUID and DisplayName (handle) pairs from LSX (XML) bytes
+    /// Extract UUID and `DisplayName` (handle) pairs from LSX (XML) bytes
     /// Used for Origins files which define companion characters
     fn extract_speakers_from_lsx(data: &[u8]) -> Vec<(String, String)> {
         let mut results = Vec::new();
@@ -367,11 +371,10 @@ impl SpeakerCache {
                     }
                     "DisplayName" => {
                         // For TranslatedString, the handle is in the handle field
-                        if let Some(ref handle) = attr.handle {
-                            if !handle.is_empty() {
+                        if let Some(ref handle) = attr.handle
+                            && !handle.is_empty() {
                                 display_name_handle = Some(handle.clone());
                             }
-                        }
                     }
                     _ => {}
                 }
@@ -424,9 +427,9 @@ pub enum SpeakerCacheError {
 impl std::fmt::Display for SpeakerCacheError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SpeakerCacheError::IoError(e) => write!(f, "IO error: {}", e),
-            SpeakerCacheError::PakError(e) => write!(f, "PAK error: {}", e),
-            SpeakerCacheError::ParseError(e) => write!(f, "Parse error: {}", e),
+            SpeakerCacheError::IoError(e) => write!(f, "IO error: {e}"),
+            SpeakerCacheError::PakError(e) => write!(f, "PAK error: {e}"),
+            SpeakerCacheError::ParseError(e) => write!(f, "Parse error: {e}"),
         }
     }
 }

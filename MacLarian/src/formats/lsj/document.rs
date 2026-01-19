@@ -84,7 +84,7 @@ impl<'de> Deserialize<'de> for LsjNode {
     }
 }
 
-/// LSJ Attribute - can be simple value, TranslatedString, or TranslatedFSString
+/// LSJ Attribute - can be simple value, `TranslatedString`, or `TranslatedFSString`
 #[derive(Debug, Clone)]
 pub enum LsjAttribute {
     Simple {
@@ -131,11 +131,10 @@ impl Serialize for LsjAttribute {
                     map.serialize_entry("value", v)?;
                 }
                 
-                if let Some(ver) = version {
-                    if *ver != 0 {
+                if let Some(ver) = version
+                    && *ver != 0 {
                         map.serialize_entry("version", ver)?;
                     }
-                }
                 
                 map.serialize_entry("handle", handle)?;
                 map.end()
@@ -166,13 +165,13 @@ impl<'de> Deserialize<'de> for LsjAttribute {
         
         // Check if this is a TranslatedString or TranslatedFSString
         if type_name == "TranslatedString" || type_name == "28" {
-            let value = map.get("value").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let value = map.get("value").and_then(|v| v.as_str()).map(std::string::ToString::to_string);
             let handle = map.get("handle")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| serde::de::Error::missing_field("handle"))?
                 .to_string();
             let version = map.get("version")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .map(|v| v as u16);
             
             Ok(LsjAttribute::TranslatedString {
@@ -182,7 +181,7 @@ impl<'de> Deserialize<'de> for LsjAttribute {
                 version,
             })
         } else if type_name == "TranslatedFSString" || type_name == "33" {
-            let value = map.get("value").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let value = map.get("value").and_then(|v| v.as_str()).map(std::string::ToString::to_string);
             let handle = map.get("handle")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| serde::de::Error::missing_field("handle"))?
@@ -226,11 +225,12 @@ pub struct TranslatedFSStringValue {
 }
 
 impl LsjDocument {
+    #[must_use] 
     pub fn new(major: u32, minor: u32, revision: u32, build: u32) -> Self {
         LsjDocument {
             save: LsjSave {
                 header: LsjHeader {
-                    version: format!("{}.{}.{}.{}", major, minor, revision, build),
+                    version: format!("{major}.{minor}.{revision}.{build}"),
                 },
                 regions: HashMap::new(),
             },
@@ -238,10 +238,11 @@ impl LsjDocument {
     }
     
     /// Parse version string to components
+    #[must_use] 
     pub fn parse_version(&self) -> (u32, u32, u32, u32) {
         let parts: Vec<&str> = self.save.header.version.split('.').collect();
         (
-            parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(4),
+            parts.first().and_then(|s| s.parse().ok()).unwrap_or(4),
             parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0),
             parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(0),
             parts.get(3).and_then(|s| s.parse().ok()).unwrap_or(0),
@@ -250,6 +251,7 @@ impl LsjDocument {
 }
 
 impl LsjNode {
+    #[must_use] 
     pub fn new() -> Self {
         LsjNode {
             attributes: IndexMap::new(),

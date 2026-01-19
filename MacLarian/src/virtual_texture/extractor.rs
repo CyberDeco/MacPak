@@ -9,7 +9,7 @@ use std::path::Path;
 use crate::error::{Error, Result};
 use super::gts::GtsFile;
 use super::gtp::GtpFile;
-use super::types::*;
+use super::types::VirtualTextureLayer;
 
 /// DDS file writer for BC/DXT5 compressed textures
 pub struct DdsWriter;
@@ -27,13 +27,16 @@ impl DdsWriter {
     const FOURCC_DXT5: u32 = 0x3554_5844; // 'DXT5'
 
     /// Write BC/DXT5 texture data to a DDS file
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be created or written.
     pub fn write<P: AsRef<Path>>(path: P, data: &[u8], width: u32, height: u32) -> Result<()> {
         let file = File::create(path.as_ref())?;
         let mut writer = BufWriter::new(file);
 
         // Calculate pitch for BC5/DXT5
-        let pitch = ((width + 3) / 4) * 16;
-        let linear_size = pitch * ((height + 3) / 4);
+        let pitch = width.div_ceil(4) * 16;
+        let linear_size = pitch * height.div_ceil(4);
 
         // Write DDS magic
         writer.write_all(&Self::DDS_MAGIC.to_le_bytes())?;
@@ -109,6 +112,9 @@ impl VirtualTextureExtractor {
     ///
     /// The GTS file is automatically found based on the GTP filename.
     /// Progress should be managed by the caller at the per-file level.
+    ///
+    /// # Errors
+    /// Returns an error if the GTS file cannot be found or extraction fails.
     pub fn extract<P: AsRef<Path>>(
         gtp_path: P,
         output_dir: P,
@@ -125,6 +131,12 @@ impl VirtualTextureExtractor {
     /// Extract a GTP file using a specific GTS file
     ///
     /// Progress should be managed by the caller at the per-file level.
+    ///
+    /// # Errors
+    /// Returns an error if the files cannot be read or extraction fails.
+    ///
+    /// # Panics
+    /// This function does not panic under normal conditions.
     pub fn extract_with_gts<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
         gtp_path: P1,
         gts_path: P2,
@@ -148,7 +160,7 @@ impl VirtualTextureExtractor {
 
         let target_hash = Self::extract_hash_from_filename(gtp_name)
             .ok_or_else(|| Error::ConversionError(
-                format!("Cannot parse GTP filename hash: {}", gtp_name)
+                format!("Cannot parse GTP filename hash: {gtp_name}")
             ))?;
 
         let page_file_idx = gts.find_page_file_index(target_hash)
@@ -169,14 +181,14 @@ impl VirtualTextureExtractor {
         let content_width = gts.content_width() as usize;
         let content_height = gts.content_height() as usize;
 
-        let src_block_width = (tile_width + 3) / 4;
-        let src_block_height = (tile_height + 3) / 4;
+        let src_block_width = tile_width.div_ceil(4);
+        let src_block_height = tile_height.div_ceil(4);
         let bytes_per_block = 16;
         let tile_bc_size = src_block_width * src_block_height * bytes_per_block;
 
         let border_blocks = tile_border / 4;
-        let content_block_width = (content_width + 3) / 4;
-        let content_block_height = (content_height + 3) / 4;
+        let content_block_width = content_width.div_ceil(4);
+        let content_block_height = content_height.div_ceil(4);
 
         // Process each layer (Albedo, Normal, Physical)
         for layer_idx in 0..3 {
@@ -217,7 +229,7 @@ impl VirtualTextureExtractor {
                 ) {
                     Ok(data) => data,
                     Err(e) => {
-                        eprintln!("Warning: Failed to extract chunk: {}", e);
+                        eprintln!("Warning: Failed to extract chunk: {e}");
                         continue;
                     }
                 };
@@ -258,7 +270,7 @@ impl VirtualTextureExtractor {
     }
 
     /// Extract the 32-character hash from a GTP filename
-    /// Format: "SomeName_<32hexchars>.gtp"
+    /// Format: "`SomeName`_<32hexchars>.gtp"
     fn extract_hash_from_filename(filename: &str) -> Option<&str> {
         // Must end with .gtp
         let name = filename.strip_suffix(".gtp")?;
@@ -299,7 +311,7 @@ impl VirtualTextureExtractor {
         };
 
         // Try exact match first
-        let exact_gts = gtp_dir.join(format!("{}.gts", base_name));
+        let exact_gts = gtp_dir.join(format!("{base_name}.gts"));
         if exact_gts.exists() {
             return Ok(exact_gts);
         }
@@ -315,8 +327,7 @@ impl VirtualTextureExtractor {
         }
 
         Err(Error::ConversionError(format!(
-            "Could not find GTS file for {}",
-            gtp_name
+            "Could not find GTS file for {gtp_name}"
         )))
     }
 }

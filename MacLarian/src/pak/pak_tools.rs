@@ -17,6 +17,9 @@ pub struct PakOperations;
 
 impl PakOperations {
     /// Extract a PAK file to a directory
+    ///
+    /// # Errors
+    /// Returns an error if the PAK file cannot be read or extraction fails.
     pub fn extract<P: AsRef<Path>>(pak_path: P, output_dir: P) -> Result<()> {
         Self::extract_with_progress(pak_path, output_dir, &|_, _, _| {})
     }
@@ -25,6 +28,9 @@ impl PakOperations {
     ///
     /// The callback receives (current, total, filename) during file extraction.
     /// Uses parallel decompression for improved performance on multi-core systems.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK file cannot be read or extraction fails.
     pub fn extract_with_progress<P: AsRef<Path>>(
         pak_path: P,
         output_dir: P,
@@ -82,9 +88,7 @@ impl PakOperations {
                 let file_name = cf
                     .entry
                     .path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| cf.entry.path.to_string_lossy().to_string());
+                    .file_name().map_or_else(|| cf.entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
@@ -120,12 +124,11 @@ impl PakOperations {
                 };
 
                 // Create parent directories (idempotent)
-                if let Some(parent) = output_path.parent() {
-                    if let Err(e) = std::fs::create_dir_all(parent) {
+                if let Some(parent) = output_path.parent()
+                    && let Err(e) = std::fs::create_dir_all(parent) {
                         error_count.fetch_add(1, Ordering::SeqCst);
                         return Some((cf.entry.path.clone(), format!("Failed to create dir: {e}")));
                     }
-                }
 
                 // Write file
                 if let Err(e) = std::fs::write(&output_path, &data) {
@@ -151,11 +154,17 @@ impl PakOperations {
     }
 
     /// Create a PAK file from a directory
+    ///
+    /// # Errors
+    /// Returns an error if the directory cannot be read or PAK creation fails.
     pub fn create<P: AsRef<Path>>(source_dir: P, output_pak: P) -> Result<()> {
         Self::create_with_progress(source_dir, output_pak, &|_, _, _| {})
     }
 
     /// Create a PAK file from a directory with progress callback
+    ///
+    /// # Errors
+    /// Returns an error if the directory cannot be read or PAK creation fails.
     pub fn create_with_progress<P: AsRef<Path>>(
         source_dir: P,
         output_pak: P,
@@ -167,6 +176,9 @@ impl PakOperations {
     }
 
     /// Create a PAK file from a directory with specified compression
+    ///
+    /// # Errors
+    /// Returns an error if the directory cannot be read or PAK creation fails.
     pub fn create_with_compression<P: AsRef<Path>>(
         source_dir: P,
         output_pak: P,
@@ -176,6 +188,9 @@ impl PakOperations {
     }
 
     /// Create a PAK file from a directory with compression and progress callback
+    ///
+    /// # Errors
+    /// Returns an error if the directory cannot be read or PAK creation fails.
     pub fn create_with_compression_and_progress<P: AsRef<Path>>(
         source_dir: P,
         output_pak: P,
@@ -189,11 +204,17 @@ impl PakOperations {
     }
 
     /// List contents of a PAK file
+    ///
+    /// # Errors
+    /// Returns an error if the PAK file cannot be read.
     pub fn list<P: AsRef<Path>>(pak_path: P) -> Result<Vec<String>> {
         Self::list_with_progress(pak_path, &|_, _, _| {})
     }
 
     /// List contents of a PAK file with progress callback
+    ///
+    /// # Errors
+    /// Returns an error if the PAK file cannot be read.
     pub fn list_with_progress<P: AsRef<Path>>(
         pak_path: P,
         progress: ProgressCallback,
@@ -217,6 +238,9 @@ impl PakOperations {
     ///
     /// Takes a list of file paths (as they appear in the PAK) and extracts only those files.
     /// File paths should match exactly as returned by `list()`.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK file cannot be read or extraction fails.
     pub fn extract_files<P: AsRef<Path>, S: AsRef<str>>(
         pak_path: P,
         output_dir: P,
@@ -230,6 +254,9 @@ impl PakOperations {
     /// Takes a list of file paths (as they appear in the PAK) and extracts only those files.
     /// The callback receives (current, total, filename) during extraction.
     /// Uses parallel decompression for improved performance on multi-core systems.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK file cannot be read or extraction fails.
     pub fn extract_files_with_progress<P: AsRef<Path>, S: AsRef<str>>(
         pak_path: P,
         output_dir: P,
@@ -246,7 +273,7 @@ impl PakOperations {
         // Build a set of requested paths for fast lookup
         let requested: std::collections::HashSet<&str> = file_paths
             .iter()
-            .map(|p| p.as_ref())
+            .map(std::convert::AsRef::as_ref)
             .collect();
 
         // Get file list and filter to only requested files
@@ -306,9 +333,7 @@ impl PakOperations {
                 let file_name = cf
                     .entry
                     .path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| cf.entry.path.to_string_lossy().to_string());
+                    .file_name().map_or_else(|| cf.entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
@@ -343,11 +368,10 @@ impl PakOperations {
                 };
 
                 // Create parent directories (idempotent)
-                if let Some(parent) = output_path.parent() {
-                    if let Err(e) = std::fs::create_dir_all(parent) {
+                if let Some(parent) = output_path.parent()
+                    && let Err(e) = std::fs::create_dir_all(parent) {
                         return Some((cf.entry.path.clone(), format!("Failed to create dir: {e}")));
                     }
-                }
 
                 // Write file
                 if let Err(e) = std::fs::write(&output_path, &data) {
@@ -374,6 +398,9 @@ impl PakOperations {
     /// Read a single file's bytes from a PAK without writing to disk
     ///
     /// Returns the decompressed file contents, or an error if the file is not found.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK cannot be read or the file is not found.
     pub fn read_file_bytes<P: AsRef<Path>>(pak_path: P, file_path: &str) -> Result<Vec<u8>> {
         let file = File::open(pak_path.as_ref())?;
         let mut reader = LspkReader::with_path(file, pak_path.as_ref());
@@ -396,6 +423,9 @@ impl PakOperations {
     /// Returns a map of file paths to their decompressed contents.
     /// Files that fail to decompress are skipped with a warning.
     /// Uses parallel decompression for improved performance on multi-core systems.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK cannot be read.
     pub fn read_files_bytes<P: AsRef<Path>, S: AsRef<str>>(
         pak_path: P,
         file_paths: &[S],
@@ -412,7 +442,7 @@ impl PakOperations {
         // Build a set of requested paths
         let requested: std::collections::HashSet<&str> = file_paths
             .iter()
-            .map(|p| p.as_ref())
+            .map(std::convert::AsRef::as_ref)
             .collect();
 
         // Get file list and filter
@@ -471,6 +501,9 @@ impl PakOperations {
     }
 
     /// Extract meta.lsx from a PAK
+    ///
+    /// # Errors
+    /// Returns an error if the PAK cannot be read or meta.lsx is not found.
     pub fn extract_meta<P: AsRef<Path>>(pak_path: P) -> Result<String> {
         let file = File::open(pak_path.as_ref())?;
 
@@ -484,21 +517,18 @@ impl PakOperations {
                 let mut components = path.components();
 
                 // Look for Mods/*/meta.lsx pattern
-                if let Some(first) = components.next() {
-                    if first.as_os_str() == "Mods" {
-                        if components.next().is_some() {
-                            if let Some(third) = components.next() {
+                if let Some(first) = components.next()
+                    && first.as_os_str() == "Mods"
+                        && components.next().is_some()
+                            && let Some(third) = components.next() {
                                 return third.as_os_str() == "meta.lsx";
                             }
-                        }
-                    }
-                }
                 false
             })
             .ok_or_else(|| Error::FileNotFoundInPak("meta.lsx".to_string()))?;
 
         String::from_utf8(meta_file.data.clone())
-            .map_err(|e| Error::ConversionError(format!("Invalid UTF-8 in meta.lsx: {}", e)))
+            .map_err(|e| Error::ConversionError(format!("Invalid UTF-8 in meta.lsx: {e}")))
     }
 }
 
@@ -525,6 +555,7 @@ pub struct PakReaderCache {
 
 impl PakReaderCache {
     /// Create a new cache with a maximum number of PAK tables to hold
+    #[must_use] 
     pub fn new(max_paks: usize) -> Self {
         Self {
             tables: std::collections::HashMap::new(),
@@ -570,6 +601,9 @@ impl PakReaderCache {
     ///
     /// This is much faster than `PakOperations::read_file_bytes` when reading
     /// multiple files from the same PAK, as it reuses the decompressed file table.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK cannot be read or the file is not found.
     pub fn read_file_bytes(&mut self, pak_path: &Path, file_path: &str) -> Result<Vec<u8>> {
         self.ensure_loaded(pak_path)?;
 
@@ -599,8 +633,11 @@ impl PakReaderCache {
     /// 2. All compressed data is read in one pass
     /// 3. Decompression happens in parallel
     ///
-    /// Returns a HashMap of file_path -> decompressed bytes.
+    /// Returns a `HashMap` of `file_path` -> decompressed bytes.
     /// Files that fail to read/decompress are silently skipped.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK cannot be read or the file table is not loaded.
     pub fn read_files_bulk(
         &mut self,
         pak_path: &Path,
@@ -742,8 +779,8 @@ fn is_virtual_texture_file(filename: &str) -> bool {
 }
 
 /// Extract the subfolder name for a virtual texture file
-/// e.g., "Albedo_Normal_Physical_0.gts" -> "Albedo_Normal_Physical_0"
-/// e.g., "Albedo_Normal_Physical_0_abc123def.gtp" -> "Albedo_Normal_Physical_0"
+/// e.g., "`Albedo_Normal_Physical_0.gts`" -> "`Albedo_Normal_Physical_0`"
+/// e.g., "`Albedo_Normal_Physical_0_abc123def.gtp`" -> "`Albedo_Normal_Physical_0`"
 fn get_virtual_texture_subfolder(filename: &str) -> Option<String> {
     let stem = filename.strip_suffix(".gts")
         .or_else(|| filename.strip_suffix(".gtp"))

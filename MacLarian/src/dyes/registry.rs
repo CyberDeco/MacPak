@@ -11,7 +11,7 @@ pub enum ColorCategory {
 /// Definition of a single color parameter
 #[derive(Debug, Clone, Copy)]
 pub struct ColorDef {
-    /// Parameter name used in LSX files (e.g., "Cloth_Primary")
+    /// Parameter name used in LSX files (e.g., "`Cloth_Primary`")
     pub name: &'static str,
     /// Category for UI grouping
     pub category: ColorCategory,
@@ -74,6 +74,7 @@ pub fn required_colors() -> impl Iterator<Item = &'static ColorDef> {
 }
 
 /// Find a color definition by name
+#[must_use] 
 pub fn find_color(name: &str) -> Option<&'static ColorDef> {
     COLOR_REGISTRY.iter().find(|c| c.name == name)
 }

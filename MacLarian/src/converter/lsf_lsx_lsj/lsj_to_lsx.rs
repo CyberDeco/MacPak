@@ -10,11 +10,17 @@ use crate::formats::lsx::{self, LsxDocument, LsxRegion, LsxNode, LsxAttribute};
 use std::path::Path;
 
 /// Convert LSJ file to LSX format
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
 pub fn convert_lsj_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     convert_lsj_to_lsx_with_progress(source, dest, &|_| {})
 }
 
 /// Convert LSJ file to LSX format with progress callback
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
 pub fn convert_lsj_to_lsx_with_progress<P: AsRef<Path>>(
     source: P,
     dest: P,
@@ -26,7 +32,7 @@ pub fn convert_lsj_to_lsx_with_progress<P: AsRef<Path>>(
     let lsj_doc = crate::formats::lsj::read_lsj(&source)?;
 
     let region_count = lsj_doc.save.regions.len();
-    progress(&format!("Converting {} regions to XML...", region_count));
+    progress(&format!("Converting {region_count} regions to XML..."));
     let lsx_doc = to_lsx(&lsj_doc)?;
 
     progress("Writing LSX file...");
@@ -37,6 +43,9 @@ pub fn convert_lsj_to_lsx_with_progress<P: AsRef<Path>>(
 }
 
 /// Convert LSJ document to LSX document
+///
+/// # Errors
+/// Returns an error if conversion fails.
 pub fn to_lsx(lsj: &LsjDocument) -> Result<LsxDocument> {
     let (major, minor, revision, build) = lsj.parse_version();
     

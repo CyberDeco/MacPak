@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 /// Info about a difficulty class
 #[derive(Debug, Clone)]
 pub struct DifficultyClassInfo {
-    /// Human-readable name (e.g., "Act1_Medium", "Legacy_10")
+    /// Human-readable name (e.g., "`Act1_Medium`", "`Legacy_10`")
     pub name: String,
     /// Difficulty value (the actual DC number)
     pub difficulty: i32,
@@ -34,6 +34,7 @@ pub struct DifficultyClassCache {
 
 impl DifficultyClassCache {
     /// Create a new empty cache
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             entries: HashMap::new(),
@@ -43,21 +44,25 @@ impl DifficultyClassCache {
     }
 
     /// Get the number of cached entries
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Check if cache is empty
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty() && self.pak_paths.is_empty()
     }
 
     /// Check if PAK sources are configured
+    #[must_use] 
     pub fn has_sources(&self) -> bool {
         !self.pak_paths.is_empty()
     }
 
     /// Check if the index has been built
+    #[must_use] 
     pub fn is_indexed(&self) -> bool {
         self.indexed
     }
@@ -78,16 +83,19 @@ impl DifficultyClassCache {
     }
 
     /// Look up DC info by UUID (O(1) after indexing)
+    #[must_use] 
     pub fn get_info(&self, uuid: &str) -> Option<&DifficultyClassInfo> {
         self.entries.get(uuid)
     }
 
     /// Get just the difficulty value for a UUID
+    #[must_use] 
     pub fn get_difficulty(&self, uuid: &str) -> Option<i32> {
         self.entries.get(uuid).map(|info| info.difficulty)
     }
 
-    /// Get a formatted DC string (e.g., "DC 10" or "DC 15 (Act2_Hard)")
+    /// Get a formatted DC string (e.g., "DC 10" or "DC 15 (`Act2_Hard`)")
+    #[must_use] 
     pub fn get_formatted(&self, uuid: &str) -> Option<String> {
         self.entries.get(uuid).map(|info| {
             format!("DC {}", info.difficulty)
@@ -103,6 +111,9 @@ impl DifficultyClassCache {
     ///
     /// Scans DifficultyClasses.lsx files for UUID → difficulty mappings.
     /// Returns the number of DCs indexed.
+    ///
+    /// # Errors
+    /// Returns an error if PAK files cannot be read or parsed.
     pub fn build_index(&mut self) -> Result<usize, DifficultyClassError> {
         if self.indexed {
             return Ok(self.entries.len());
@@ -244,9 +255,9 @@ pub enum DifficultyClassError {
 impl std::fmt::Display for DifficultyClassError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DifficultyClassError::IoError(e) => write!(f, "IO error: {}", e),
-            DifficultyClassError::PakError(e) => write!(f, "PAK error: {}", e),
-            DifficultyClassError::ParseError(e) => write!(f, "Parse error: {}", e),
+            DifficultyClassError::IoError(e) => write!(f, "IO error: {e}"),
+            DifficultyClassError::PakError(e) => write!(f, "PAK error: {e}"),
+            DifficultyClassError::ParseError(e) => write!(f, "Parse error: {e}"),
         }
     }
 }

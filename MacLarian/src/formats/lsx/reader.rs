@@ -8,12 +8,18 @@ use std::fs;
 use std::path::Path;
 
 /// Read an LSX file from disk
+///
+/// # Errors
+/// Returns an error if the file cannot be read or has invalid XML.
 pub fn read_lsx<P: AsRef<Path>>(path: P) -> Result<LsxDocument> {
     let content = fs::read_to_string(path)?;
     parse_lsx(&content)
 }
 
 /// Parse LSX from XML string
+///
+/// # Errors
+/// Returns an error if the XML is malformed or has an invalid structure.
 pub fn parse_lsx(content: &str) -> Result<LsxDocument> {
     let mut reader = Reader::from_str(content);
     reader.trim_text(true);

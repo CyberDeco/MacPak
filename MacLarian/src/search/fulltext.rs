@@ -47,16 +47,25 @@ pub struct FullTextResult {
 
 impl FullTextIndex {
     /// Create a new in-memory full-text index
+    ///
+    /// # Errors
+    /// Returns an error if index creation fails.
     pub fn new() -> Result<Self> {
         Self::create_internal(None)
     }
 
     /// Create a new full-text index in a directory (for persistence)
+    ///
+    /// # Errors
+    /// Returns an error if index creation fails.
     pub fn create_in_dir(dir: &Path) -> Result<Self> {
         Self::create_internal(Some(dir))
     }
 
     /// Open an existing full-text index from a directory
+    ///
+    /// # Errors
+    /// Returns an error if the index cannot be opened.
     pub fn open_from_dir(dir: &Path) -> Result<Self> {
         let index = Index::open_in_dir(dir)
             .map_err(|e| Error::SearchError(format!("Failed to open index: {e}")))?;
@@ -145,6 +154,9 @@ impl FullTextIndex {
     /// Get an index writer for adding documents
     ///
     /// Call `commit()` on the writer when done, then call `reload()` on this index.
+    ///
+    /// # Errors
+    /// Returns an error if the writer cannot be created.
     pub fn writer(&self, heap_size: usize) -> Result<IndexWriter> {
         self.index
             .writer(heap_size)
@@ -154,6 +166,9 @@ impl FullTextIndex {
     /// Add a document to the index
     ///
     /// Must be called with a writer obtained from `writer()`.
+    ///
+    /// # Errors
+    /// Returns an error if adding the document fails.
     pub fn add_document(
         &self,
         writer: &IndexWriter,
@@ -179,6 +194,9 @@ impl FullTextIndex {
     }
 
     /// Reload the reader after committing writes
+    ///
+    /// # Errors
+    /// Returns an error if the reader cannot be reloaded.
     pub fn reload(&self) -> Result<()> {
         self.reader
             .reload()
@@ -192,11 +210,17 @@ impl FullTextIndex {
     /// - Phrases: `"Action_Shove"`
     /// - Fuzzy: `barbrian~1`
     /// - Boolean: `class AND barbarian`, `wizard OR sorcerer`
+    ///
+    /// # Errors
+    /// Returns an error if the search fails.
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<FullTextResult>> {
         self.search_with_progress(query, limit, |_, _, _| {})
     }
 
     /// Search with progress callback: (current, total, filename)
+    ///
+    /// # Errors
+    /// Returns an error if the query is invalid or the search fails.
     pub fn search_with_progress<F>(&self, query: &str, limit: usize, progress: F) -> Result<Vec<FullTextResult>>
     where
         F: Fn(usize, usize, &str),
@@ -282,11 +306,13 @@ impl FullTextIndex {
     }
 
     /// Get the number of documents in the index
+    #[must_use] 
     pub fn num_docs(&self) -> u64 {
         self.reader.searcher().num_docs()
     }
 
     /// Get access to the searcher for iteration
+    #[must_use] 
     pub fn searcher(&self) -> tantivy::Searcher {
         self.reader.searcher()
     }
@@ -298,7 +324,7 @@ impl Default for FullTextIndex {
     }
 }
 
-/// Thread-safe wrapper for FullTextIndex
+/// Thread-safe wrapper for `FullTextIndex`
 pub type SharedFullTextIndex = Arc<FullTextIndex>;
 
 /// Extract search terms from a query string, skipping boolean operators

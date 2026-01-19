@@ -10,7 +10,7 @@ pub struct ParsedDyeEntry {
     pub root_template_uuid: Option<String>,
 }
 
-/// Localization handle info parsed from RootTemplates
+/// Localization handle info parsed from `RootTemplates`
 #[derive(Clone, Debug, Default)]
 pub struct DyeLocalizationInfo {
     pub name: String,
@@ -28,8 +28,8 @@ pub struct ImportedDyeEntry {
     pub description: String,
     /// The Resource ID from the LSF - this is the Preset UUID used in ItemCombos.txt
     pub preset_uuid: Option<String>,
-    /// The RootTemplate UUID from Object.txt (used for the dye item)
+    /// The `RootTemplate` UUID from Object.txt (used for the dye item)
     pub root_template_uuid: Option<String>,
-    /// Color parameters: parameter name -> hex color (e.g., "Cloth_Primary" -> "FF0000")
+    /// Color parameters: parameter name -> hex color (e.g., "`Cloth_Primary`" -> "FF0000")
     pub colors: HashMap<String, String>,
 }

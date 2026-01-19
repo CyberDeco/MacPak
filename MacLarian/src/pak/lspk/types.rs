@@ -13,6 +13,7 @@ pub enum CompressionMethod {
 
 impl CompressionMethod {
     /// Parse compression method from the flags byte
+    #[must_use] 
     pub fn from_flags(flags: u8) -> Self {
         match flags & 0x0F {
             0 => CompressionMethod::None,
@@ -23,6 +24,7 @@ impl CompressionMethod {
         }
     }
 
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             CompressionMethod::None => "none",
@@ -112,6 +114,7 @@ pub struct PakContents {
 }
 
 impl PakContents {
+    #[must_use] 
     pub fn new(version: u32) -> Self {
         Self {
             files: Vec::new(),
@@ -121,11 +124,13 @@ impl PakContents {
     }
 
     /// Returns true if all files were extracted successfully
+    #[must_use] 
     pub fn is_complete(&self) -> bool {
         self.errors.is_empty()
     }
 
     /// Returns the total number of files (successful + failed)
+    #[must_use] 
     pub fn total_files(&self) -> usize {
         self.files.len() + self.errors.len()
     }
@@ -160,6 +165,7 @@ pub enum PakPhase {
 }
 
 impl PakPhase {
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             PakPhase::ReadingHeader => "Reading header",
