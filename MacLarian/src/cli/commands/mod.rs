@@ -33,6 +33,36 @@ pub enum Commands {
         /// Suppress progress bar
         #[arg(short, long)]
         quiet: bool,
+
+        // GR2 processing options
+
+        /// Enable all GR2 processing (convert to GLB, extract textures and virtual textures)
+        #[arg(long)]
+        bundle: bool,
+
+        /// Convert extracted GR2 files to GLB format
+        #[arg(long)]
+        convert_gr2: bool,
+
+        /// Extract DDS textures associated with GR2 files
+        #[arg(long)]
+        extract_textures: bool,
+
+        /// Extract virtual textures associated with GR2 files
+        #[arg(long)]
+        extract_virtual_textures: bool,
+
+        /// Path to BG3 game data folder (for Textures.pak, Shared.pak)
+        #[arg(long)]
+        game_data: Option<PathBuf>,
+
+        /// Path to pre-extracted virtual textures (GTP/GTS files)
+        #[arg(long)]
+        virtual_textures: Option<PathBuf>,
+
+        /// Delete original GR2 files after GLB conversion (keeps by default)
+        #[arg(long)]
+        delete_gr2: bool,
     },
 
     /// Convert file formats
@@ -306,12 +336,28 @@ impl Commands {
                 filter,
                 file,
                 quiet,
+                bundle,
+                convert_gr2,
+                extract_textures,
+                extract_virtual_textures,
+                game_data,
+                virtual_textures,
+                delete_gr2,
             } => extract::execute(
                 source,
                 destination,
                 filter.as_deref(),
                 file.as_deref(),
                 !*quiet,
+                extract::Gr2CliOptions {
+                    bundle: *bundle,
+                    convert_gr2: *convert_gr2,
+                    extract_textures: *extract_textures,
+                    extract_virtual_textures: *extract_virtual_textures,
+                    game_data: game_data.clone(),
+                    virtual_textures: virtual_textures.clone(),
+                    delete_gr2: *delete_gr2,
+                },
             ),
             Commands::Convert {
                 source,

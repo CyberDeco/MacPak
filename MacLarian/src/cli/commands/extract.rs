@@ -1,8 +1,55 @@
 //! CLI command for PAK extraction
 
 use indicatif::{ProgressBar, ProgressStyle};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+/// GR2 processing options from CLI flags
+#[derive(Debug, Clone, Default)]
+pub struct Gr2CliOptions {
+    /// Enable all GR2 processing (--bundle)
+    pub bundle: bool,
+    /// Convert GR2 to GLB (--convert-gr2)
+    pub convert_gr2: bool,
+    /// Extract DDS textures (--extract-textures)
+    pub extract_textures: bool,
+    /// Extract virtual textures (--extract-virtual-textures)
+    pub extract_virtual_textures: bool,
+    /// Path to game data folder (--game-data)
+    pub game_data: Option<PathBuf>,
+    /// Path to virtual textures folder (--virtual-textures)
+    pub virtual_textures: Option<PathBuf>,
+    /// Delete original GR2 after conversion (--delete-gr2)
+    pub delete_gr2: bool,
+}
+
+impl Gr2CliOptions {
+    /// Check if any GR2 processing is enabled
+    fn has_processing(&self) -> bool {
+        self.bundle || self.convert_gr2 || self.extract_textures || self.extract_virtual_textures
+    }
+
+    /// Convert to library extraction options
+    fn to_extraction_options(&self) -> crate::pak::Gr2ExtractionOptions {
+        use crate::pak::Gr2ExtractionOptions;
+
+        if self.bundle {
+            // Bundle mode enables everything
+            Gr2ExtractionOptions::bundle()
+                .with_game_data_path(self.game_data.clone())
+                .with_virtual_textures_path(self.virtual_textures.clone())
+                .with_keep_original(!self.delete_gr2)
+        } else {
+            Gr2ExtractionOptions::new()
+                .with_convert_to_glb(self.convert_gr2)
+                .with_extract_textures(self.extract_textures)
+                .with_extract_virtual_textures(self.extract_virtual_textures)
+                .with_game_data_path(self.game_data.clone())
+                .with_virtual_textures_path(self.virtual_textures.clone())
+                .with_keep_original(!self.delete_gr2)
+        }
+    }
+}
 
 /// Simple glob pattern matching (supports * and ?)
 fn matches_glob(pattern: &str, text: &str) -> bool {
@@ -67,14 +114,31 @@ pub fn execute(
     filter: Option<&str>,
     file: Option<&str>,
     progress: bool,
+    gr2_options: Gr2CliOptions,
 ) -> anyhow::Result<()> {
-    use crate::pak::PakOperations;
+    use crate::pak::{PakOperations, extract_files_smart};
+
+    // Check if we need smart extraction (GR2 processing enabled)
+    let use_smart_extract = gr2_options.has_processing();
 
     // Single file extraction
     if let Some(file_path) = file {
         println!("Extracting single file: {file_path}");
-        PakOperations::extract_files(source, destination, &[file_path])?;
-        println!("Extraction complete");
+
+        if use_smart_extract {
+            let extraction_opts = gr2_options.to_extraction_options();
+            let result = extract_files_smart(
+                source,
+                destination,
+                &[file_path],
+                extraction_opts,
+                &|_, _, _| {},
+            )?;
+            print_smart_extraction_result(&result);
+        } else {
+            PakOperations::extract_files(source, destination, &[file_path])?;
+            println!("Extraction complete");
+        }
         return Ok(());
     }
 
@@ -84,7 +148,7 @@ pub fn execute(
 
         // List all files and filter
         let all_files = PakOperations::list(source)?;
-        let matching: Vec<&str> = all_files
+        let matching: Vec<String> = all_files
             .iter()
             .filter(|f| {
                 // Match against filename or full path
@@ -94,7 +158,7 @@ pub fn execute(
                     .unwrap_or(f);
                 matches_glob(pattern, filename) || matches_glob(pattern, f)
             })
-            .map(String::as_str)
+            .cloned()
             .collect();
 
         if matching.is_empty() {
@@ -104,18 +168,20 @@ pub fn execute(
 
         println!("Found {} matching files", matching.len());
 
-        if progress {
+        if use_smart_extract {
+            execute_smart_extraction(source, destination, &matching, &gr2_options, progress)?;
+        } else if progress {
             let pb = create_progress_bar(matching.len() as u64, "Extracting");
             let count = AtomicUsize::new(0);
 
+            let matching_refs: Vec<&str> = matching.iter().map(String::as_str).collect();
             PakOperations::extract_files_with_progress(
                 source,
                 destination,
-                &matching,
+                &matching_refs,
                 &|_current, _total, name| {
                     let n = count.fetch_add(1, Ordering::SeqCst) + 1;
                     pb.set_position(n as u64);
-                    // Show just the filename, not full path
                     let short_name = Path::new(name)
                         .file_name()
                         .and_then(|n| n.to_str())
@@ -125,17 +191,22 @@ pub fn execute(
             )?;
 
             pb.finish_with_message("done");
+            println!("Extraction complete");
         } else {
-            PakOperations::extract_files(source, destination, &matching)?;
+            let matching_refs: Vec<&str> = matching.iter().map(String::as_str).collect();
+            PakOperations::extract_files(source, destination, &matching_refs)?;
+            println!("Extraction complete");
         }
 
-        println!("Extraction complete");
         return Ok(());
     }
 
     // Full extraction
-    if progress {
-        // First, get the file count for the progress bar
+    if use_smart_extract {
+        // List all files for smart extraction
+        let all_files = PakOperations::list(source)?;
+        execute_smart_extraction(source, destination, &all_files, &gr2_options, progress)?;
+    } else if progress {
         let files = PakOperations::list(source)?;
         let total = files.len() as u64;
 
@@ -155,13 +226,95 @@ pub fn execute(
         })?;
 
         pb.finish_with_message("done");
+        println!("Extraction complete");
     } else {
         println!("Extracting {:?} to {:?}", source, destination);
         PakOperations::extract(source, destination)?;
+        println!("Extraction complete");
     }
 
-    println!("Extraction complete");
     Ok(())
+}
+
+/// Execute smart extraction with GR2 processing
+fn execute_smart_extraction(
+    source: &Path,
+    destination: &Path,
+    files: &[String],
+    gr2_options: &Gr2CliOptions,
+    progress: bool,
+) -> anyhow::Result<()> {
+    use crate::pak::extract_files_smart;
+
+    let extraction_opts = gr2_options.to_extraction_options();
+
+    // Count GR2 files for progress reporting
+    let gr2_count = files.iter().filter(|f| f.to_lowercase().ends_with(".gr2")).count();
+    if gr2_count > 0 {
+        println!("Found {} GR2 files to process", gr2_count);
+    }
+
+    if progress {
+        let total = files.len();
+        let pb = create_progress_bar(total as u64, "Extracting");
+        let count = AtomicUsize::new(0);
+
+        let result = extract_files_smart(
+            source,
+            destination,
+            files,
+            extraction_opts,
+            &|_current, _total, name| {
+                let n = count.fetch_add(1, Ordering::SeqCst) + 1;
+                pb.set_position(n as u64);
+                let short_name = Path::new(name)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or(name);
+                pb.set_message(short_name.to_string());
+            },
+        )?;
+
+        pb.finish_with_message("done");
+        print_smart_extraction_result(&result);
+    } else {
+        let result = extract_files_smart(
+            source,
+            destination,
+            files,
+            extraction_opts,
+            &|_, _, _| {},
+        )?;
+        print_smart_extraction_result(&result);
+    }
+
+    Ok(())
+}
+
+/// Print summary of smart extraction results
+fn print_smart_extraction_result(result: &crate::pak::SmartExtractionResult) {
+    println!("Extraction complete:");
+    println!("  Files extracted: {}", result.files_extracted);
+
+    if result.gr2s_processed > 0 {
+        println!("  GR2 files processed: {}", result.gr2s_processed);
+        println!("  GLB files created: {}", result.glb_files_created);
+        println!("  Textures extracted: {}", result.textures_extracted);
+
+        if !result.gr2_folders.is_empty() {
+            println!("\nGR2 bundles created:");
+            for folder in &result.gr2_folders {
+                println!("  {}", folder.display());
+            }
+        }
+    }
+
+    if !result.warnings.is_empty() {
+        println!("\nWarnings:");
+        for warning in &result.warnings {
+            println!("  {}", warning);
+        }
+    }
 }
 
 #[cfg(test)]
