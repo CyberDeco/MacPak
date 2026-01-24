@@ -1,6 +1,6 @@
 # MacLarian
 
-Larian file format library for Baldur's Gate 3 modding.
+macOS-focused Larian file format library and toolkit for Baldur's Gate 3 modding.
 
 MacLarian provides pure Rust implementations for reading and writing Larian Studios'
 proprietary file formats, with no external binary dependencies (including no reliance
@@ -15,7 +15,7 @@ on granny2.dll for GR2 mesh decompression).
 | **LSX** | Yes | Yes | XML data format |
 | **LSJ** | Yes | Yes | JSON data format |
 | **LOCA** | Yes | Yes | Localization format |
-| **GR2** (Granny2) | Yes | No | 3D model format (decompression only) |
+| **GR2** (Granny2) | Yes | Yes | 3D model format (decompression only) |
 | **glTF/GLB** | Yes | Yes | 3D model import/export |
 | **DDS** | Yes | Yes | Texture format |
 | **GTS/GTP** | Yes | No | Virtual textures |
@@ -57,7 +57,7 @@ let doc = parse_lsf_bytes(&data)?;
 let xml = to_lsx_string(&doc)?;
 ```
 
-### Converting GR2 to glTF
+### Converting GR2 to GLB/glTF
 
 ```rust
 use maclarian::converter::gr2_gltf::convert_gr2_bytes_to_glb;
@@ -67,7 +67,7 @@ let glb_data = convert_gr2_bytes_to_glb(&gr2_data)?;
 std::fs::write("model.glb", glb_data)?;
 ```
 
-### Working with Dialogs
+### Working with Character Dialogs
 
 ```rust
 use maclarian::dialog::parse_dialog_lsf_bytes;
@@ -88,7 +88,8 @@ use maclarian::prelude::*;
 
 ## Features
 
-- `audio` - Enable WEM audio file path detection (requires vgmstream-cli externally for actual decoding)
+- `audio` - Enable WEM audio file path detection
+  - Requires vgmstream-cli for actual decoding, which can be installed via [Homebrew](https://brew.sh) with `brew install vgmstream`
 
 ## License
 
@@ -102,4 +103,3 @@ Derived from:
 - [LSLib](https://github.com/Norbyte/lslib) by Norbyte (MIT)
 - [xiba](https://gitlab.com/saghm/xiba/) by saghm (Apache-2.0)
 - [Knit](https://github.com/Legiayayana/Knit) by Legiayayana (MIT)
-- [pybg3](https://github.com/eiz/pybg3) by eiz (MIT)
