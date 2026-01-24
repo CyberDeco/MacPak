@@ -20,7 +20,7 @@ use super::types::{GtpHeader, GtsCodec, GtpChunkHeader, TileCompression};
 pub struct GtpFile<R: Read + Seek> {
     reader: BufReader<R>,
     pub header: GtpHeader,
-    /// Chunk offsets for each page: `chunk_offsets`[`page_idx`][chunk_idx]
+    /// Chunk offsets for each page, indexed by page then chunk
     pub chunk_offsets: Vec<Vec<u32>>,
     page_size: u32,
     tile_width: i32,

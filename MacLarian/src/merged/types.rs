@@ -64,7 +64,7 @@ pub struct PakPaths {
     /// Pak containing GTP virtual texture files (typically "VirtualTextures.pak")
     pub virtual_textures: String,
     /// Pattern for deriving GTP path from `gtex_hash`
-    /// e.g., "`Generated/Public/VirtualTextures/Albedo_Normal_Physical`_{hash[0]}_{hash}.gtp"
+    /// e.g., "Generated/Public/VirtualTextures/Albedo_Normal_Physical_{first}_{hash}.gtp"
     pub gtp_path_pattern: String,
 }
 

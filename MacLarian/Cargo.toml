@@ -8,6 +8,9 @@ repository.workspace = true
 readme = "README.md"
 keywords.workspace = true
 description = "Larian file format library for Baldur's Gate 3 - PAK, LSF, LSX, GR2, DDS, and more"
+categories = ["parser-implementations", "game-development", "encoding"]
+homepage = "https://github.com/CyberDeco/MacPak"
+exclude = ["data/", ".DS_Store"]
 
 [dependencies]
 # Serialization
