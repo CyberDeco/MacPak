@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! GR2 file inspection utilities
 //!
 //! Provides functions to inspect GR2 file structure and extract metadata.

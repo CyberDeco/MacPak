@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! glTF file loader.
 //!
 //! Loads glTF/GLB files and converts them to intermediate structures

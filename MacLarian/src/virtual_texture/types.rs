@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! Types for GTS/GTP virtual texture files
 //!
 //! GTS (Game Texture Set) files contain metadata about virtual textures.

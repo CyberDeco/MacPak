@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! Utility functions for GR2 → glTF conversion.
 //!
 //! Re-exports shared utilities from the parent module.

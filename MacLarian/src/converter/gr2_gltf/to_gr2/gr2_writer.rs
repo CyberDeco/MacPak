@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! GR2 file writer.
 //!
 //! Writes meshes and skeletons to GR2 format compatible with

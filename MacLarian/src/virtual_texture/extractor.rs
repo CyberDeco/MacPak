@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! Virtual texture extraction and combining
 //!
 //! Extracts GTP tiles and combines them into full Albedo, Normal, and Physical textures.

@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! glTF to GR2 converter
 //!
 //! Converts glTF 2.0 files to Granny2 GR2 format.

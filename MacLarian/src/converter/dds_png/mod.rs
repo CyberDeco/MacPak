@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! DDS ↔ PNG texture conversion
 //!
 //! Converts between DDS (`DirectDraw` Surface) texture files and PNG images.

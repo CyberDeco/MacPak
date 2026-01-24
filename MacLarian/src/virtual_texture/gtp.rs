@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! GTP (Game Texture Page) file reader
 //!
 //! GTP files contain the actual tile data for virtual textures.

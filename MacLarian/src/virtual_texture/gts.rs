@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! GTS (Game Texture Set) file reader
 //!
 //! GTS files contain metadata about virtual textures, including:

@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! GR2 and glTF 3D model format conversions
 //!
 //! Handles conversions between Granny2 (GR2) and glTF formats:

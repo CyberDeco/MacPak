@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! Batch virtual texture extraction operations
 //!
 //! This module provides high-level functions for extracting GTS/GTP virtual textures,

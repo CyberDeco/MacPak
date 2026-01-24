@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT), 2023 saghm (xiba, Apache-2.0)
+//!
+//! SPDX-License-Identifier: MIT AND Apache-2.0
+//!
 //! Types for LSPK PAK file handling
 
 use std::path::PathBuf;

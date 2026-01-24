@@ -1,3 +1,7 @@
+//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+//!
 //! .loca file writing
 
 use super::{LocaResource, LOCA_SIGNATURE, KEY_SIZE, ENTRY_SIZE};
