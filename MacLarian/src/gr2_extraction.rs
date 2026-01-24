@@ -164,6 +164,11 @@ fn extract_textures_for_gr2(
 
     // Look up all visuals that use this GR2
     let visuals = db.get_visuals_for_gr2(gr2_filename);
+    tracing::info!(
+        "Found {} visuals for GR2 '{}' in database",
+        visuals.len(),
+        gr2_filename
+    );
     if visuals.is_empty() {
         return Ok(extracted_paths);
     }
@@ -196,6 +201,12 @@ fn extract_textures_for_gr2(
         }
     }
 
+    tracing::info!(
+        "Textures to extract: {} regular, {} virtual",
+        textures_to_extract.len(),
+        virtual_textures_to_extract.len()
+    );
+
     // Extract regular DDS textures
     extracted_paths.extend(extract_dds_textures(
         &textures_to_extract,
@@ -203,12 +214,13 @@ fn extract_textures_for_gr2(
         output_dir,
     )?);
 
-    // Extract virtual textures (only if path is configured)
-    if let Some(ref vt_path) = options.virtual_textures_path {
+    // Extract virtual textures (from PAK or pre-extracted path)
+    if !virtual_textures_to_extract.is_empty() {
         extracted_paths.extend(extract_virtual_textures(
             &virtual_textures_to_extract,
             db,
-            vt_path,
+            options.virtual_textures_path.as_deref(),
+            &game_data,
             output_dir,
         )?);
     }
@@ -216,7 +228,7 @@ fn extract_textures_for_gr2(
     Ok(extracted_paths)
 }
 
-/// Extract regular DDS textures from Textures.pak
+/// Extract regular DDS textures from Textures.pak (or Textures_*.pak on macOS)
 fn extract_dds_textures(
     textures: &[&TextureRef],
     game_data: &Path,
@@ -224,63 +236,100 @@ fn extract_dds_textures(
 ) -> Result<Vec<PathBuf>> {
     let mut extracted_paths = Vec::new();
 
-    // Group textures by source pak
-    let mut by_pak: std::collections::HashMap<&str, Vec<&TextureRef>> = std::collections::HashMap::new();
-    for texture in textures {
-        let pak = if texture.source_pak.is_empty() {
-            "Textures.pak"
-        } else {
-            &texture.source_pak
-        };
-        by_pak.entry(pak).or_default().push(texture);
+    if textures.is_empty() {
+        return Ok(extracted_paths);
     }
 
-    // Extract textures from each pak
+    // Log the textures we're trying to extract
+    for tex in textures {
+        tracing::info!(
+            "Looking for texture: {} -> {} (source_pak: '{}')",
+            tex.name,
+            tex.dds_path,
+            tex.source_pak
+        );
+    }
+
+    // Find all texture PAK files in game_data folder
+    // On macOS: Textures_1.pak, Textures_2.pak, Textures_3.pak
+    // On other platforms: Textures.pak
+    let texture_paks = find_texture_paks(game_data);
+    tracing::info!("Found {} texture PAK files: {:?}", texture_paks.len(), texture_paks);
+    if texture_paks.is_empty() {
+        tracing::warn!("No texture PAK files found in: {}", game_data.display());
+        return Ok(extracted_paths);
+    }
+
+    // Group textures by source pak (if known)
+    let mut by_pak: std::collections::HashMap<&str, Vec<&TextureRef>> = std::collections::HashMap::new();
+    let mut unknown_pak: Vec<&TextureRef> = Vec::new();
+
+    for texture in textures {
+        if texture.source_pak.is_empty() {
+            unknown_pak.push(texture);
+        } else {
+            by_pak.entry(&texture.source_pak).or_default().push(texture);
+        }
+    }
+
+    // Extract textures with known source PAK
     for (pak_name, textures) in by_pak {
         let pak_path = game_data.join(pak_name);
         if !pak_path.exists() {
             tracing::warn!("Source pak not found: {}", pak_path.display());
             continue;
         }
+        extract_textures_from_pak(&pak_path, &textures, output_dir, &mut extracted_paths);
+    }
 
-        let dds_paths: Vec<&str> = textures.iter().map(|t| t.dds_path.as_str()).collect();
+    // Extract textures with unknown source PAK - search across all texture PAKs
+    if !unknown_pak.is_empty() {
+        tracing::info!("Searching {} texture PAKs for {} textures", texture_paks.len(), unknown_pak.len());
 
-        let output_dir_buf = output_dir.to_path_buf();
-        match PakOperations::extract_files(&pak_path, &output_dir_buf, &dds_paths) {
-            Ok(()) => {
-                for texture in &textures {
-                    // The texture is extracted to output_dir/dds_path
-                    // We want to flatten it to just the filename in output_dir
-                    let full_extracted_path = output_dir.join(&texture.dds_path);
-                    if full_extracted_path.exists() {
-                        // Move/copy to output_dir with just the filename
-                        let dest_path = output_dir.join(
-                            Path::new(&texture.dds_path)
-                                .file_name()
-                                .unwrap_or_default()
-                        );
-                        if let Err(e) = std::fs::rename(&full_extracted_path, &dest_path) {
-                            // If rename fails (cross-device), try copy
-                            if let Err(e2) = std::fs::copy(&full_extracted_path, &dest_path) {
-                                tracing::warn!(
-                                    "Failed to move texture {} to output: {} / {}",
-                                    texture.name,
-                                    e,
-                                    e2
-                                );
-                                continue;
-                            }
-                            let _ = std::fs::remove_file(&full_extracted_path);
-                        }
-                        extracted_paths.push(dest_path);
-                    }
+        // Try each texture PAK until we find the files
+        for pak_path in &texture_paks {
+            // Check which files exist in this PAK
+            let pak_files: HashSet<String> = match PakOperations::list(pak_path) {
+                Ok(files) => {
+                    tracing::debug!("PAK {} has {} files", pak_path.display(), files.len());
+                    files.into_iter().collect()
                 }
+                Err(e) => {
+                    tracing::warn!("Failed to list PAK {}: {}", pak_path.display(), e);
+                    continue;
+                }
+            };
 
-                // Clean up any empty intermediate directories
-                cleanup_empty_dirs(output_dir);
+            // Find textures that exist in this PAK
+            let textures_in_pak: Vec<&TextureRef> = unknown_pak
+                .iter()
+                .filter(|t| {
+                    let found = pak_files.contains(&t.dds_path);
+                    if found {
+                        tracing::info!("Found texture '{}' in {}", t.dds_path, pak_path.display());
+                    }
+                    found
+                })
+                .copied()
+                .collect();
+
+            if !textures_in_pak.is_empty() {
+                tracing::info!("Extracting {} textures from {}", textures_in_pak.len(), pak_path.display());
+                extract_textures_from_pak(pak_path, &textures_in_pak, output_dir, &mut extracted_paths);
             }
-            Err(e) => {
-                tracing::warn!("Failed to extract textures from {}: {}", pak_name, e);
+        }
+
+        // Log if any textures weren't found
+        let found_paths: HashSet<&str> = extracted_paths.iter()
+            .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
+            .collect();
+        for tex in &unknown_pak {
+            let tex_filename = Path::new(&tex.dds_path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(&tex.dds_path);
+            if !found_paths.contains(tex_filename) {
+                tracing::warn!("Texture not found in any PAK: {}", tex.dds_path);
             }
         }
     }
@@ -288,11 +337,92 @@ fn extract_dds_textures(
     Ok(extracted_paths)
 }
 
-/// Extract virtual textures from pre-extracted GTP/GTS files and convert to DDS
+/// Find all texture PAK files in game data folder
+fn find_texture_paks(game_data: &Path) -> Vec<std::path::PathBuf> {
+    let mut paks = Vec::new();
+
+    // Try single Textures.pak first (Windows/Linux)
+    let single_pak = game_data.join("Textures.pak");
+    if single_pak.exists() {
+        paks.push(single_pak);
+        return paks;
+    }
+
+    // Look for split texture PAKs (macOS: Textures_1.pak, Textures_2.pak, etc.)
+    if let Ok(entries) = std::fs::read_dir(game_data) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.starts_with("Textures_") && name.ends_with(".pak") {
+                    paks.push(path);
+                }
+            }
+        }
+    }
+
+    // Sort for consistent ordering
+    paks.sort();
+    paks
+}
+
+/// Extract textures from a single PAK file
+fn extract_textures_from_pak(
+    pak_path: &Path,
+    textures: &[&TextureRef],
+    output_dir: &Path,
+    extracted_paths: &mut Vec<PathBuf>,
+) {
+    let dds_paths: Vec<&str> = textures.iter().map(|t| t.dds_path.as_str()).collect();
+
+    match PakOperations::extract_files(pak_path, output_dir, &dds_paths) {
+        Ok(()) => {
+            for texture in textures {
+                // The texture is extracted to output_dir/dds_path
+                // We want to flatten it to just the filename in output_dir
+                let full_extracted_path = output_dir.join(&texture.dds_path);
+                if full_extracted_path.exists() {
+                    // Move/copy to output_dir with just the filename
+                    let dest_path = output_dir.join(
+                        Path::new(&texture.dds_path)
+                            .file_name()
+                            .unwrap_or_default()
+                    );
+                    if let Err(e) = std::fs::rename(&full_extracted_path, &dest_path) {
+                        // If rename fails (cross-device), try copy
+                        if let Err(e2) = std::fs::copy(&full_extracted_path, &dest_path) {
+                            tracing::warn!(
+                                "Failed to move texture {} to output: {} / {}",
+                                texture.name,
+                                e,
+                                e2
+                            );
+                            continue;
+                        }
+                        let _ = std::fs::remove_file(&full_extracted_path);
+                    }
+                    extracted_paths.push(dest_path);
+                }
+            }
+
+            // Clean up any empty intermediate directories
+            cleanup_empty_dirs(output_dir);
+        }
+        Err(e) => {
+            tracing::warn!("Failed to extract textures from {}: {}", pak_path.display(), e);
+        }
+    }
+}
+
+/// Extract virtual textures and convert to DDS
+///
+/// This function can extract from:
+/// 1. Pre-extracted GTP/GTS files (if vt_source_path points to extracted files)
+/// 2. VirtualTextures.pak directly (if vt_source_path is None, uses game_data path)
 fn extract_virtual_textures(
     virtual_textures: &[&VirtualTextureRef],
     db: &MergedDatabase,
-    vt_source_path: &Path,
+    vt_source_path: Option<&Path>,
+    game_data: &Path,
     output_dir: &Path,
 ) -> Result<Vec<PathBuf>> {
     let mut extracted_paths = Vec::new();
@@ -301,64 +431,223 @@ fn extract_virtual_textures(
         return Ok(extracted_paths);
     }
 
-    if !vt_source_path.exists() {
-        tracing::warn!("Virtual textures path not found: {}", vt_source_path.display());
+    // Determine if we're using pre-extracted files or extracting from PAK
+    let use_pak = vt_source_path.is_none() || !vt_source_path.unwrap().exists();
+
+    let vt_pak_path = game_data.join("VirtualTextures.pak");
+    if use_pak && !vt_pak_path.exists() {
+        tracing::warn!("VirtualTextures.pak not found: {}", vt_pak_path.display());
         return Ok(extracted_paths);
     }
 
-    for vt in virtual_textures {
-        if vt.gtex_hash.is_empty() {
-            continue;
-        }
+    // Collect hashes for batch lookup
+    let hashes: Vec<&str> = virtual_textures
+        .iter()
+        .filter(|vt| !vt.gtex_hash.is_empty())
+        .map(|vt| vt.gtex_hash.as_str())
+        .collect();
 
-        // Get the GTP path from the hash (relative path)
-        let gtp_rel_path = db.pak_paths.gtp_path_from_hash(&vt.gtex_hash);
-        if gtp_rel_path.is_empty() {
-            tracing::warn!("Could not derive GTP path for hash: {}", vt.gtex_hash);
-            continue;
-        }
+    if use_pak {
+        // Use existing functionality to find GTP files in PAK
+        let gtp_matches = find_gtp_files_in_pak(&vt_pak_path, &hashes)?;
+        tracing::info!("Found {} GTP matches in VirtualTextures.pak", gtp_matches.len());
 
-        // Derive the GTS path (same directory, base name without hash + .gts)
-        let gts_rel_path = derive_gts_path(&gtp_rel_path);
+        for vt in virtual_textures {
+            if vt.gtex_hash.is_empty() {
+                continue;
+            }
 
-        // When extracted, VT files are organized into subdirectories
-        // e.g., Albedo_Normal_Physical_5/Albedo_Normal_Physical_5_xxx.gtp
-        let gtp_extracted_path = adjust_vt_path_for_extraction(&gtp_rel_path);
-        let gts_extracted_path = adjust_vt_path_for_extraction(&gts_rel_path);
+            // Find the GTP path for this hash
+            let gtp_match = gtp_matches.iter().find(|(hash, _)| *hash == vt.gtex_hash);
+            let Some((_, gtp_rel_path)) = gtp_match else {
+                tracing::warn!("GTP not found for hash {}", vt.gtex_hash);
+                continue;
+            };
 
-        // Look for the files in the pre-extracted location
-        let gtp_path = vt_source_path.join(&gtp_extracted_path);
-        let gts_path = vt_source_path.join(&gts_extracted_path);
+            // Derive the GTS path from the GTP path
+            let gts_rel_path = derive_gts_path(gtp_rel_path);
 
-        if !gtp_path.exists() {
-            tracing::warn!("GTP file not found: {}", gtp_path.display());
-            continue;
-        }
+            tracing::info!("Virtual texture {}: GTP={}, GTS={}", vt.name, gtp_rel_path, gts_rel_path);
 
-        if !gts_path.exists() {
-            tracing::warn!("GTS file not found: {}", gts_path.display());
-            continue;
-        }
-
-        // Extract and convert the virtual texture
-        match VirtualTextureExtractor::extract_with_gts(&gtp_path, &gts_path, output_dir) {
-            Ok(()) => {
-                // The extractor creates Albedo.dds, Normal.dds, Physical.dds
-                // Rename them to include the visual name
-                for layer in &["Albedo", "Normal", "Physical"] {
-                    let src = output_dir.join(format!("{layer}.dds"));
-                    if src.exists() {
-                        let dest = output_dir.join(format!("{}_{}.dds", vt.name, layer));
-                        if std::fs::rename(&src, &dest).is_ok() {
-                            extracted_paths.push(dest);
-                        } else {
-                            extracted_paths.push(src);
-                        }
-                    }
+            match extract_virtual_texture_from_pak(
+                &vt_pak_path,
+                gtp_rel_path,
+                &gts_rel_path,
+                &vt.name,
+                output_dir,
+            ) {
+                Ok(paths) => extracted_paths.extend(paths),
+                Err(e) => {
+                    tracing::warn!("Failed to extract virtual texture {} from PAK: {}", vt.name, e);
                 }
             }
-            Err(e) => {
-                tracing::warn!("Failed to extract virtual texture {}: {}", vt.name, e);
+        }
+    } else {
+        // Use pre-extracted files
+        let vt_source = vt_source_path.unwrap();
+
+        for vt in virtual_textures {
+            if vt.gtex_hash.is_empty() {
+                continue;
+            }
+
+            // Get the GTP path from the hash
+            let gtp_rel_path = db.pak_paths.gtp_path_from_hash(&vt.gtex_hash);
+            if gtp_rel_path.is_empty() {
+                tracing::warn!("Could not derive GTP path for hash: {}", vt.gtex_hash);
+                continue;
+            }
+
+            let gts_rel_path = derive_gts_path(&gtp_rel_path);
+
+            // When extracted, VT files are organized into subdirectories
+            let gtp_extracted_path = adjust_vt_path_for_extraction(&gtp_rel_path);
+            let gts_extracted_path = adjust_vt_path_for_extraction(&gts_rel_path);
+
+            let gtp_path = vt_source.join(&gtp_extracted_path);
+            let gts_path = vt_source.join(&gts_extracted_path);
+
+            if !gtp_path.exists() {
+                tracing::warn!("GTP file not found: {}", gtp_path.display());
+                continue;
+            }
+
+            if !gts_path.exists() {
+                tracing::warn!("GTS file not found: {}", gts_path.display());
+                continue;
+            }
+
+            match extract_and_rename_virtual_texture(&gtp_path, &gts_path, &vt.name, output_dir) {
+                Ok(paths) => extracted_paths.extend(paths),
+                Err(e) => {
+                    tracing::warn!("Failed to extract virtual texture {}: {}", vt.name, e);
+                }
+            }
+        }
+    }
+
+    Ok(extracted_paths)
+}
+
+/// Find GTP files in VirtualTextures.pak matching the given hashes
+fn find_gtp_files_in_pak(pak_path: &Path, hashes: &[&str]) -> Result<Vec<(String, String)>> {
+    let all_files = PakOperations::list(pak_path)?;
+    let mut matches = Vec::new();
+
+    for file_path in &all_files {
+        if !file_path.to_lowercase().ends_with(".gtp") {
+            continue;
+        }
+
+        let filename = Path::new(file_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+
+        let stem = filename.strip_suffix(".gtp").unwrap_or(filename);
+
+        for hash in hashes {
+            if stem.ends_with(hash) {
+                matches.push(((*hash).to_string(), file_path.clone()));
+                break;
+            }
+        }
+    }
+
+    Ok(matches)
+}
+
+/// Extract a virtual texture directly from VirtualTextures.pak
+///
+/// Uses `read_file_bytes` which correctly handles split PAK archives via `archive_part`.
+fn extract_virtual_texture_from_pak(
+    vt_pak_path: &Path,
+    gtp_rel_path: &str,
+    gts_rel_path: &str,
+    vt_name: &str,
+    output_dir: &Path,
+) -> Result<Vec<PathBuf>> {
+    // Create a unique temp directory for this extraction (supports parallel processing)
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let unique_id = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let temp_dir = std::env::temp_dir().join(format!(
+        "maclarian_vt_{}_{}",
+        std::process::id(),
+        unique_id
+    ));
+    std::fs::create_dir_all(&temp_dir)?;
+
+    tracing::info!("Reading virtual texture files from PAK: GTP={}, GTS={}", gtp_rel_path, gts_rel_path);
+
+    // Read files using read_file_bytes which handles split PAKs correctly
+    let gtp_data = match PakOperations::read_file_bytes(vt_pak_path, gtp_rel_path) {
+        Ok(data) => data,
+        Err(e) => {
+            let _ = std::fs::remove_dir_all(&temp_dir);
+            return Err(Error::ConversionError(format!(
+                "Failed to read GTP from PAK: {}", e
+            )));
+        }
+    };
+
+    let gts_data = match PakOperations::read_file_bytes(vt_pak_path, gts_rel_path) {
+        Ok(data) => data,
+        Err(e) => {
+            let _ = std::fs::remove_dir_all(&temp_dir);
+            return Err(Error::ConversionError(format!(
+                "Failed to read GTS from PAK: {}", e
+            )));
+        }
+    };
+
+    // Write to temp files
+    let gtp_path = temp_dir.join(
+        Path::new(gtp_rel_path).file_name().unwrap_or_default()
+    );
+    let gts_path = temp_dir.join(
+        Path::new(gts_rel_path).file_name().unwrap_or_default()
+    );
+
+    std::fs::write(&gtp_path, &gtp_data)?;
+    std::fs::write(&gts_path, &gts_data)?;
+
+    tracing::info!("Wrote temp files: GTP={} ({} bytes), GTS={} ({} bytes)",
+        gtp_path.display(), gtp_data.len(),
+        gts_path.display(), gts_data.len()
+    );
+
+    // Extract and convert
+    let result = extract_and_rename_virtual_texture(&gtp_path, &gts_path, vt_name, output_dir);
+
+    // Clean up temp directory
+    let _ = std::fs::remove_dir_all(&temp_dir);
+
+    result
+}
+
+/// Extract virtual texture and rename output files with the visual name
+fn extract_and_rename_virtual_texture(
+    gtp_path: &Path,
+    gts_path: &Path,
+    vt_name: &str,
+    output_dir: &Path,
+) -> Result<Vec<PathBuf>> {
+    let mut extracted_paths = Vec::new();
+
+    // Extract and convert the virtual texture
+    VirtualTextureExtractor::extract_with_gts(gtp_path, gts_path, output_dir)?;
+
+    // The extractor creates BaseMap.dds, NormalMap.dds, PhysicalMap.dds
+    // Rename them to include the visual name
+    for layer in &["BaseMap", "NormalMap", "PhysicalMap"] {
+        let src = output_dir.join(format!("{layer}.dds"));
+        if src.exists() {
+            let dest = output_dir.join(format!("{}_{}.dds", vt_name, layer));
+            if std::fs::rename(&src, &dest).is_ok() {
+                extracted_paths.push(dest);
+            } else {
+                extracted_paths.push(src);
             }
         }
     }
