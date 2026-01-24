@@ -481,9 +481,18 @@ impl GtsFile {
     }
 
     /// Get tiles for a specific page file, organized by layer
-    #[must_use] 
+    ///
+    /// Prefers level 0 (full resolution) but falls back to higher level numbers
+    /// if a layer doesn't have level 0 tiles (e.g., PhysicalMap is often stored
+    /// at lower resolution).
+    #[must_use]
     pub fn get_tiles_for_page_file(&self, page_file_index: u16) -> [Vec<TileLocation>; 3] {
-        let mut tiles_by_layer: [Vec<TileLocation>; 3] = [Vec::new(), Vec::new(), Vec::new()];
+        // First pass: collect all tiles by layer and level
+        let mut tiles_by_layer_level: [std::collections::HashMap<u8, Vec<TileLocation>>; 3] = [
+            std::collections::HashMap::new(),
+            std::collections::HashMap::new(),
+            std::collections::HashMap::new(),
+        ];
 
         for tile_info in &self.flat_tile_infos {
             if tile_info.page_file_index != page_file_index {
@@ -496,24 +505,48 @@ impl GtsFile {
             }
 
             let packed = &self.packed_tiles[packed_idx];
-
-            // Only include level 0 (full resolution)
-            if packed.level != 0 {
-                continue;
-            }
-
             let layer_idx = packed.layer as usize;
+
             if layer_idx >= 3 {
                 continue;
             }
 
-            tiles_by_layer[layer_idx].push(TileLocation {
-                page: tile_info.page_index,
-                chunk: tile_info.chunk_index,
-                x: packed.x,
-                y: packed.y,
-            });
+            tiles_by_layer_level[layer_idx]
+                .entry(packed.level)
+                .or_default()
+                .push(TileLocation {
+                    page: tile_info.page_index,
+                    chunk: tile_info.chunk_index,
+                    x: packed.x,
+                    y: packed.y,
+                });
         }
+
+        // Second pass: for each layer, select the best available level (lowest number = highest res)
+        let mut tiles_by_layer: [Vec<TileLocation>; 3] = [Vec::new(), Vec::new(), Vec::new()];
+
+        for (layer_idx, level_map) in tiles_by_layer_level.iter().enumerate() {
+            if level_map.is_empty() {
+                continue;
+            }
+
+            // Find the minimum level (highest resolution available)
+            let best_level = *level_map.keys().min().unwrap();
+            tiles_by_layer[layer_idx] = level_map.get(&best_level).cloned().unwrap_or_default();
+
+            if best_level != 0 {
+                tracing::info!(
+                    "Layer {} using level {} (level 0 not available)",
+                    layer_idx, best_level
+                );
+            }
+        }
+
+        tracing::debug!(
+            "GTS num_layers={}, selected tiles by layer: [0]={}, [1]={}, [2]={}",
+            self.header.num_layers,
+            tiles_by_layer[0].len(), tiles_by_layer[1].len(), tiles_by_layer[2].len()
+        );
 
         tiles_by_layer
     }
