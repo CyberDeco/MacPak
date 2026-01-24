@@ -63,6 +63,10 @@ pub enum Commands {
         /// Delete original GR2 files after GLB conversion (keeps by default)
         #[arg(long)]
         delete_gr2: bool,
+
+        /// Convert extracted DDS textures to PNG format
+        #[arg(long)]
+        png: bool,
     },
 
     /// Convert file formats
@@ -343,6 +347,7 @@ impl Commands {
                 game_data,
                 virtual_textures,
                 delete_gr2,
+                png,
             } => extract::execute(
                 source,
                 destination,
@@ -357,6 +362,7 @@ impl Commands {
                     game_data: game_data.clone(),
                     virtual_textures: virtual_textures.clone(),
                     delete_gr2: *delete_gr2,
+                    convert_textures_to_png: *png,
                 },
             ),
             Commands::Convert {

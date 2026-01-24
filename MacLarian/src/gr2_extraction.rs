@@ -9,7 +9,7 @@
 //! The texture database is built on-the-fly from the game's `Shared.pak` file.
 //! Use `--game-data` CLI flag to specify the game installation path if auto-detection fails.
 
-use crate::converter::convert_gr2_to_glb;
+use crate::converter::{convert_gr2_to_glb, convert_dds_to_png};
 use crate::error::{Error, Result};
 use crate::virtual_texture::VirtualTextureExtractor;
 use crate::merged::{bg3_data_path, GameDataResolver, MergedDatabase, TextureRef, VirtualTextureRef};
@@ -43,6 +43,8 @@ pub struct Gr2ExtractionOptions {
     /// Path to pre-extracted virtual textures (GTP/GTS files)
     /// If None, virtual textures will be skipped
     pub virtual_textures_path: Option<PathBuf>,
+    /// Convert extracted DDS textures to PNG format
+    pub convert_to_png: bool,
 }
 
 impl Default for Gr2ExtractionOptions {
@@ -52,6 +54,7 @@ impl Default for Gr2ExtractionOptions {
             extract_textures: true,
             game_data_path: None,
             virtual_textures_path: None,
+            convert_to_png: false,
         }
     }
 }
@@ -77,9 +80,16 @@ impl Gr2ExtractionOptions {
     }
 
     /// Disable texture extraction
-    #[must_use] 
+    #[must_use]
     pub fn no_textures(mut self) -> Self {
         self.extract_textures = false;
+        self
+    }
+
+    /// Enable PNG conversion for extracted DDS textures
+    #[must_use]
+    pub fn with_png_conversion(mut self, convert: bool) -> Self {
+        self.convert_to_png = convert;
         self
     }
 }
@@ -136,7 +146,43 @@ pub fn process_extracted_gr2(
 
         if let Some(resolver) = resolver {
             let textures = extract_textures_for_gr2(gr2_path, resolver.database(), output_dir, options)?;
-            result.texture_paths = textures;
+
+            // Convert DDS to PNG if requested
+            if options.convert_to_png {
+                let mut png_paths = Vec::new();
+                for dds_path in &textures {
+                    let is_dds = dds_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map(|e| e.eq_ignore_ascii_case("dds"))
+                        .unwrap_or(false);
+                    if is_dds {
+                        let png_path = dds_path.with_extension("png");
+                        match convert_dds_to_png(dds_path, &png_path) {
+                            Ok(()) => {
+                                tracing::info!("Converted {} to PNG", dds_path.display());
+                                // Remove the DDS file after successful conversion
+                                let _ = std::fs::remove_file(dds_path);
+                                png_paths.push(png_path);
+                            }
+                            Err(e) => {
+                                result.warnings.push(format!(
+                                    "Failed to convert {} to PNG: {}",
+                                    dds_path.display(),
+                                    e
+                                ));
+                                // Keep the DDS file in the result
+                                png_paths.push(dds_path.clone());
+                            }
+                        }
+                    } else {
+                        png_paths.push(dds_path.clone());
+                    }
+                }
+                result.texture_paths = png_paths;
+            } else {
+                result.texture_paths = textures;
+            }
         } else {
             result.warnings.push(
                 "Could not find BG3 game data for texture lookup. Use --game-data to specify the path.".to_string()

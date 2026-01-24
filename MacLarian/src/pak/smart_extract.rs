@@ -247,6 +247,7 @@ fn build_processing_options(opts: &Gr2ExtractionOptions) -> Gr2ProcessingOptions
         extract_textures: opts.extract_textures || opts.extract_virtual_textures,
         game_data_path: opts.game_data_path.clone(),
         virtual_textures_path: opts.virtual_textures_path.clone(),
+        convert_to_png: opts.convert_to_png,
     }
 }
 
