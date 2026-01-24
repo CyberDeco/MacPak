@@ -33,6 +33,8 @@
 **/examples/
 /scripts/
 **/scripts/
+/data/
+**/data/
 # ==========================
 # IDEs and Editors
 # ==========================
