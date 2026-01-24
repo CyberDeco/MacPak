@@ -4518,6 +4518,7 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "chrono",
+ "clap",
  "crc32fast",
  "ddsfile",
  "fastlz-rs",
@@ -4575,7 +4576,6 @@ dependencies = [
  "sha2",
  "thiserror 1.0.69",
  "tracing",
- "tracing-subscriber",
  "uuid",
  "walkdir",
 ]

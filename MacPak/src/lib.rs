@@ -14,9 +14,6 @@ pub mod workspace;
 #[cfg(feature = "gui")]
 pub mod gui;
 
-#[cfg(feature = "cli")]
-pub mod cli;
-
 #[cfg(feature = "viewer")]
 pub mod viewer;
 

@@ -7,7 +7,7 @@ license-file.workspace = true
 repository.workspace = true
 readme = "README.md"
 keywords.workspace = true
-description = "BG3 modding toolkit for macOS - GUI, CLI, and 3D viewer for Baldur's Gate 3 mod files"
+description = "BG3 modding toolkit for macOS - GUI and 3D viewer for Baldur's Gate 3 mod files"
 
 # Binary definitions
 [[bin]]
@@ -16,17 +16,12 @@ path = "src/bin/macpak.rs"
 required-features = ["gui"]
 
 [[bin]]
-name = "macpak-cli"
-path = "src/bin/macpak-cli.rs"
-required-features = ["cli"]
-
-[[bin]]
 name = "macpak-viewer"
 path = "src/bin/macpak-viewer.rs"
 required-features = ["viewer"]
 
 [features]
-default = ["gui", "cli"]
+default = ["gui"]
 gui = [
     "dep:floem",
     "dep:floem_reactive",
@@ -54,16 +49,12 @@ gui = [
     # Config persistence
     "dep:dirs",
 ]
-cli = [
-    "dep:clap",
-    "dep:tracing-subscriber",
-]
 viewer = [
     "gui",  # viewer requires gui
     "dep:bevy",
     "dep:clap",
 ]
-full = ["gui", "cli", "viewer"]
+full = ["gui", "viewer"]
 
 [dependencies]
 # Internal - always needed (with audio feature when gui is enabled)
@@ -104,11 +95,8 @@ rayon = { version = "1.10", optional = true }
 # Config persistence
 dirs = { version = "5.0", optional = true }
 
-# CLI dependencies (optional)
-clap = { version = "4.4", features = ["derive", "cargo"], optional = true }
-tracing-subscriber = { version = "0.3", optional = true }
-
 # Viewer dependencies (optional)
+clap = { version = "4.4", features = ["derive", "cargo"], optional = true }
 bevy = { version = "0.17", default-features = false, features = [
     "bevy_asset",
     "bevy_winit",

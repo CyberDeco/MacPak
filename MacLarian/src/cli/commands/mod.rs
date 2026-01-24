@@ -6,6 +6,7 @@ pub mod create;
 pub mod list;
 pub mod gr2;
 pub mod virtual_texture;
+#[cfg(feature = "audio")]
 pub mod wem;
 
 #[derive(Subcommand)]
@@ -15,42 +16,42 @@ pub enum Commands {
         /// Source PAK file
         #[arg(short, long)]
         source: PathBuf,
-        
+
         /// Output directory
         #[arg(short, long)]
         destination: PathBuf,
     },
-    
+
     /// Convert file formats
     Convert {
         /// Source file
         #[arg(short, long)]
         source: PathBuf,
-        
+
         /// Destination file
         #[arg(short, long)]
         destination: PathBuf,
-        
+
         /// Input format (auto-detected from extension if not specified)
         #[arg(short = 'i', long)]
         input_format: Option<String>,
-        
+
         /// Output format (auto-detected from extension if not specified)
         #[arg(short = 'o', long)]
         output_format: Option<String>,
     },
-    
+
     /// Create a PAK file
     Create {
         /// Source directory
         #[arg(short, long)]
         source: PathBuf,
-        
+
         /// Output PAK file
         #[arg(short, long)]
         destination: PathBuf,
     },
-    
+
     /// List PAK contents
     List {
         /// PAK file
@@ -72,6 +73,7 @@ pub enum Commands {
     },
 
     /// WEM audio file operations
+    #[cfg(feature = "audio")]
     Wem {
         #[command(subcommand)]
         command: WemCommands,
@@ -168,6 +170,7 @@ pub enum Gr2Commands {
 }
 
 /// WEM audio commands
+#[cfg(feature = "audio")]
 #[derive(Subcommand)]
 pub enum WemCommands {
     /// Inspect a WEM file header
@@ -263,6 +266,7 @@ impl Commands {
             Commands::VirtualTexture { command } => {
                 command.execute()
             }
+            #[cfg(feature = "audio")]
             Commands::Wem { command } => {
                 command.execute()
             }
@@ -328,6 +332,7 @@ impl VirtualTextureCommands {
     }
 }
 
+#[cfg(feature = "audio")]
 impl WemCommands {
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {

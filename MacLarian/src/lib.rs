@@ -95,3 +95,7 @@ pub mod prelude {
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+// CLI module (feature-gated)
+#[cfg(feature = "cli")]
+pub mod cli;

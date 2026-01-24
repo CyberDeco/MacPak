@@ -3,16 +3,16 @@
 //! Commands for inspecting, converting, and decompressing GR2 files.
 
 use std::path::Path;
-use crate::operations::gr2 as gr2_ops;
-use maclarian::gr2_extraction::{process_extracted_gr2, Gr2ExtractionOptions};
-use maclarian::converter::gr2_gltf::convert_gr2_bytes_to_glb_with_textures;
+use crate::formats::gr2::{inspect_gr2, extract_gr2_info, decompress_gr2};
+use crate::gr2_extraction::{process_extracted_gr2, Gr2ExtractionOptions};
+use crate::converter::gr2_gltf::convert_gr2_bytes_to_glb_with_textures;
 
 /// Inspect a GR2 file and display its structure.
 pub fn inspect(path: &Path) -> anyhow::Result<()> {
     println!("Inspecting GR2 file: {}", path.display());
     println!();
 
-    let info = gr2_ops::inspect_gr2(path)?;
+    let info = inspect_gr2(path)?;
 
     println!("GR2 File Information");
     println!("====================");
@@ -29,7 +29,7 @@ pub fn inspect(path: &Path) -> anyhow::Result<()> {
             .map(|r| format!("{:.2}x", r))
             .unwrap_or_else(|| "N/A".to_string());
         println!(
-            "  [{:2}] {:8} | {:>8} → {:>8} bytes ({})",
+            "  [{:2}] {:8} | {:>8} -> {:>8} bytes ({})",
             section.index,
             section.compression,
             section.compressed_size,
@@ -40,7 +40,7 @@ pub fn inspect(path: &Path) -> anyhow::Result<()> {
 
     // Also show mesh/skeleton info
     println!();
-    match gr2_ops::extract_gr2_info(path) {
+    match extract_gr2_info(path) {
         Ok(model_info) => {
             if let Some(ref skel) = model_info.skeleton {
                 println!("Skeleton: {} ({} bones)", skel.name, skel.bone_count);
@@ -68,7 +68,7 @@ pub fn inspect(path: &Path) -> anyhow::Result<()> {
 pub fn extract_json(path: &Path, output: &Path) -> anyhow::Result<()> {
     println!("Extracting GR2 info to JSON: {}", path.display());
 
-    let model_info = gr2_ops::extract_gr2_info(path)?;
+    let model_info = extract_gr2_info(path)?;
     let json = serde_json::to_string_pretty(&model_info)?;
     std::fs::write(output, json)?;
 
@@ -94,7 +94,10 @@ pub fn decompress(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
     println!("  Source:      {}", path.display());
     println!("  Destination: {}", output_path.display());
 
-    gr2_ops::decompress_gr2(path, &output_path)?;
+    // Read, decompress, and write
+    let data = std::fs::read(path)?;
+    let decompressed = decompress_gr2(&data)?;
+    std::fs::write(&output_path, decompressed)?;
 
     let original_size = std::fs::metadata(path)?.len();
     let decompressed_size = std::fs::metadata(&output_path)?.len();
@@ -119,7 +122,7 @@ pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     println!("  Source:      {}", path.display());
     println!("  Destination: {}", output_path.display());
 
-    gr2_ops::gr2_to_glb(path, &output_path)?;
+    crate::converter::convert_gr2_to_glb(path, &output_path)?;
 
     let output_size = std::fs::metadata(&output_path)?.len();
     println!();
@@ -143,7 +146,7 @@ pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     println!();
     println!("Note: Output will be uncompressed (compression not yet implemented)");
 
-    gr2_ops::gltf_to_gr2(path, &output_path)?;
+    crate::converter::convert_gltf_to_gr2(path, &output_path)?;
 
     let output_size = std::fs::metadata(&output_path)?.len();
     println!();

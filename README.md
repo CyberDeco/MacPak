@@ -24,8 +24,8 @@ It'll be an app in Releases, bundled with a macOS binary for vgmstream. Size is 
 
 Components:
 
-- MacPak - the package itself; contains GUI and CLI
-- MacLarian - the "engine" behind MacPak (geddit, because macOS + Larian = the sports car manufacturer...?)
+- MacPak - the package itself; contains GUI
+- MacLarian - the "engine" behind MacPak (geddit, because macOS + Larian = the sports car manufacturer...?); also contains CLI
 
 This is meant to be an all-in-one tool, so if you're looking for a simple or lightweight GUI... this ain't it. I'll get to making a fleshed out wiki once it's release-worthy.
 

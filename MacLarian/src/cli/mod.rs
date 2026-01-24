@@ -1,4 +1,4 @@
-//! MacPak CLI - Command-line interface for BG3 modding toolkit
+//! MacLarian CLI - Command-line interface for Larian file format tools
 
 pub mod commands;
 
@@ -6,14 +6,14 @@ use clap::Parser;
 use commands::Commands;
 
 #[derive(Parser)]
-#[command(name = "macpak-cli")]
-#[command(about = "MacPak: a BG3 modding toolkit for macOS", long_about = None)]
+#[command(name = "maclarian")]
+#[command(about = "MacLarian: Larian file format tools for BG3", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
 }
 
-/// Run the MacPak CLI
+/// Run the MacLarian CLI
 pub fn run_cli() -> anyhow::Result<()> {
     // Setup logging
     tracing_subscriber::fmt::init();

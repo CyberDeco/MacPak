@@ -2,7 +2,7 @@
 
 use std::path::Path;
 use anyhow::Result;
-use maclarian::formats::wem::{
+use crate::formats::wem::{
     parse_wem_header, parse_wwise_vorbis_header,
     decode_wwise_vorbis_fallback, load_wem_file_vgmstream,
 };
@@ -15,7 +15,7 @@ pub fn inspect(path: &Path) -> Result<()> {
     let header = parse_wem_header(&mut cursor)?;
 
     println!("WEM File: {}", path.display());
-    println!("─────────────────────────────────");
+    println!("---------------------------------");
     println!("Format code:      {:#06x}", header.format_code);
     println!("Format name:      {}", format_name(header.format_code));
     println!("Channels:         {}", header.channels);
@@ -81,7 +81,7 @@ pub fn decode(path: &Path, output: Option<&Path>, silent_fallback: bool) -> Resu
         Ok(audio) => audio,
         Err(e) if silent_fallback => {
             // Use silent fallback when vgmstream isn't available
-            println!("⚠ vgmstream decode failed: {}", e);
+            println!("Warning: vgmstream decode failed: {}", e);
             println!("  Using silent fallback (--silent mode)...");
 
             let data = std::fs::read(path)?;
@@ -90,12 +90,12 @@ pub fn decode(path: &Path, output: Option<&Path>, silent_fallback: bool) -> Resu
             decode_wwise_vorbis_fallback(&header)?
         }
         Err(e) => {
-            println!("✗ Decode failed: {}", e);
+            println!("Decode failed: {}", e);
             return Err(e.into());
         }
     };
 
-    println!("✓ Decoded successfully!");
+    println!("Decoded successfully!");
     println!("  Channels:    {}", audio.channels);
     println!("  Sample rate: {} Hz", audio.sample_rate);
     println!("  Samples:     {}", audio.samples.len());
@@ -111,7 +111,7 @@ pub fn decode(path: &Path, output: Option<&Path>, silent_fallback: bool) -> Resu
 }
 
 /// Write decoded audio as WAV file
-fn write_wav(path: &Path, audio: &maclarian::formats::wem::DecodedAudio) -> Result<()> {
+fn write_wav(path: &Path, audio: &crate::formats::wem::DecodedAudio) -> Result<()> {
     use std::io::Write;
 
     let mut file = std::fs::File::create(path)?;

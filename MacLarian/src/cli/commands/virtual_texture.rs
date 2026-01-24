@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::Path;
 use anyhow::{Result, Context};
-use crate::operations::virtual_texture;
+use crate::virtual_texture;
 
 /// List textures in a GTS file
 pub fn list(gts_path: &Path) -> Result<()> {
@@ -45,7 +45,7 @@ pub fn extract(
     if let Some(gtp) = gtp_path {
         println!("Extracting {} with GTS {}...", gtp.display(), gts_path.display());
 
-        virtual_texture::extract_gtp(gtp, gts_path, output_dir)
+        virtual_texture::VirtualTextureExtractor::extract_with_gts(gtp, gts_path, output_dir)
             .with_context(|| "Failed to extract virtual texture")?;
 
         println!("Extraction complete -> {}", output_dir.display());

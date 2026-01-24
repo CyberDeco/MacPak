@@ -74,6 +74,22 @@ image.workspace = true           # PNG/image format support
 [features]
 default = []
 audio = []  # Enables vgmstream-based WEM decoding
+cli = ["dep:clap", "dep:tracing-subscriber"]  # CLI binary
+
+# CLI dependencies (optional)
+[dependencies.clap]
+version = "4.4"
+features = ["derive", "cargo"]
+optional = true
+
+[dependencies.tracing-subscriber]
+version = "0.3"
+optional = true
+
+[[bin]]
+name = "maclarian"
+path = "src/bin/maclarian.rs"
+required-features = ["cli"]
 
 [dev-dependencies]
 pretty_assertions.workspace = true
