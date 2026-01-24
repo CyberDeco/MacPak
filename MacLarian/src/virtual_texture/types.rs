@@ -318,30 +318,35 @@ pub struct TileLocation {
 }
 
 /// Layer type for virtual textures
+///
+/// BG3 virtual textures have 3 layers:
+/// - Layer 0: BaseMap (color/albedo)
+/// - Layer 1: NormalMap (surface normals)
+/// - Layer 2: PhysicalMap (roughness/metallic/etc)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VirtualTextureLayer {
-    Albedo = 0,
-    Normal = 1,
-    Physical = 2,
+    BaseMap = 0,
+    NormalMap = 1,
+    PhysicalMap = 2,
 }
 
 impl VirtualTextureLayer {
-    #[must_use] 
+    #[must_use]
     pub fn from_index(index: u8) -> Option<Self> {
         match index {
-            0 => Some(Self::Albedo),
-            1 => Some(Self::Normal),
-            2 => Some(Self::Physical),
+            0 => Some(Self::BaseMap),
+            1 => Some(Self::NormalMap),
+            2 => Some(Self::PhysicalMap),
             _ => None,
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Albedo => "Albedo",
-            Self::Normal => "Normal",
-            Self::Physical => "Physical",
+            Self::BaseMap => "BaseMap",
+            Self::NormalMap => "NormalMap",
+            Self::PhysicalMap => "PhysicalMap",
         }
     }
 }
