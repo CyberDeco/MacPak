@@ -2,14 +2,17 @@
 //!
 //! When extracting GR2 files from a PAK, this module can automatically:
 //! 1. Convert the GR2 to GLB format
-//! 2. Look up associated textures in the embedded database
+//! 2. Look up associated textures via [`GameDataResolver`](crate::merged::GameDataResolver)
 //! 3. Extract those textures from their source PAKs to the same output folder
 //! 4. Extract and convert virtual textures (GTP/GTS) to DDS
+//!
+//! The texture database is built on-the-fly from the game's `Shared.pak` file.
+//! Use `--game-data` CLI flag to specify the game installation path if auto-detection fails.
 
 use crate::converter::convert_gr2_to_glb;
 use crate::error::{Error, Result};
 use crate::virtual_texture::VirtualTextureExtractor;
-use crate::merged::{bg3_data_path, embedded_database_cached, MergedDatabase, TextureRef, VirtualTextureRef};
+use crate::merged::{bg3_data_path, GameDataResolver, MergedDatabase, TextureRef, VirtualTextureRef};
 use crate::pak::PakOperations;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -35,13 +38,11 @@ pub struct Gr2ExtractionOptions {
     /// Extract associated textures
     pub extract_textures: bool,
     /// Path to BG3 game data folder (for finding Textures.pak, etc.)
-    /// If None, uses the default macOS path
+    /// If None, auto-detects using GameDataResolver
     pub game_data_path: Option<PathBuf>,
     /// Path to pre-extracted virtual textures (GTP/GTS files)
     /// If None, virtual textures will be skipped
     pub virtual_textures_path: Option<PathBuf>,
-    /// Use embedded database for texture lookups
-    pub use_embedded_db: bool,
 }
 
 impl Default for Gr2ExtractionOptions {
@@ -51,7 +52,6 @@ impl Default for Gr2ExtractionOptions {
             extract_textures: true,
             game_data_path: None,
             virtual_textures_path: None,
-            use_embedded_db: true,
         }
     }
 }
@@ -127,15 +127,20 @@ pub fn process_extracted_gr2(
 
     // Step 2: Extract associated textures
     if options.extract_textures {
-        let db = if options.use_embedded_db {
-            Some(embedded_database_cached())
+        // Build resolver from game data path or auto-detect
+        let resolver = if let Some(ref game_data) = options.game_data_path {
+            GameDataResolver::new(game_data).ok()
         } else {
-            None
+            GameDataResolver::auto_detect().ok()
         };
 
-        if let Some(db) = db {
-            let textures = extract_textures_for_gr2(gr2_path, db, output_dir, options)?;
+        if let Some(resolver) = resolver {
+            let textures = extract_textures_for_gr2(gr2_path, resolver.database(), output_dir, options)?;
             result.texture_paths = textures;
+        } else {
+            result.warnings.push(
+                "Could not find BG3 game data for texture lookup. Use --game-data to specify the path.".to_string()
+            );
         }
     }
 
@@ -473,8 +478,8 @@ mod tests {
         let opts = Gr2ExtractionOptions::default();
         assert!(opts.convert_to_glb);
         assert!(opts.extract_textures);
-        assert!(opts.use_embedded_db);
         assert!(opts.game_data_path.is_none());
+        assert!(opts.virtual_textures_path.is_none());
     }
 
     #[test]
@@ -484,5 +489,12 @@ mod tests {
             .no_textures();
         assert!(!opts.convert_to_glb);
         assert!(!opts.extract_textures);
+    }
+
+    #[test]
+    fn test_options_with_game_data() {
+        let opts = Gr2ExtractionOptions::default()
+            .with_game_data_path("/path/to/game");
+        assert_eq!(opts.game_data_path, Some(PathBuf::from("/path/to/game")));
     }
 }

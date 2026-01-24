@@ -14,17 +14,19 @@
 //! # Usage
 //!
 //! ```no_run
-//! use maclarian::merged::embedded_database_cached;
+//! use maclarian::merged::GameDataResolver;
 //!
-//! // Use the embedded production database (recommended)
-//! let db = embedded_database_cached();
-//! if let Some(asset) = db.get_by_visual_name("HUM_M_ARM_Leather_A_Body") {
+//! // Auto-detect game installation and query the database
+//! let resolver = GameDataResolver::auto_detect()?;
+//! if let Some(asset) = resolver.get_by_visual_name("HUM_M_ARM_Leather_A_Body") {
 //!     println!("GR2: {}", asset.gr2_path);
 //!     println!("Textures: {:?}", asset.textures);
 //! }
+//! # Ok::<(), maclarian::error::Error>(())
 //! ```
 
 mod embedded;
+mod game_data;
 mod parser;
 mod paths;
 mod resolver;
@@ -36,7 +38,11 @@ pub use types::*;
 // Re-export resolver
 pub use resolver::MergedResolver;
 
-// Re-export embedded database functions
+// Re-export game data resolver (primary API)
+pub use game_data::{GameDataResolver, BG3_DATA_PATH_WINDOWS};
+
+// Re-export embedded database functions (deprecated, kept for backwards compatibility)
+#[deprecated(since = "0.2.0", note = "Use GameDataResolver::auto_detect() instead")]
 pub use embedded::{embedded_database, embedded_database_cached};
 
 // Re-export path helpers

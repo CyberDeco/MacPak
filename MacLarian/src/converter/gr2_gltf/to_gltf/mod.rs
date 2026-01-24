@@ -19,7 +19,7 @@ use std::path::Path;
 use crate::error::{Error, Result};
 use crate::converter::dds_png::dds_bytes_to_png_bytes;
 use crate::virtual_texture::VirtualTextureExtractor;
-use crate::merged::embedded_database_cached;
+use crate::merged::{GameDataResolver, MergedDatabase};
 use crate::pak::PakOperations;
 
 /// Convert a GR2 file to glTF format (separate .gltf and .bin files).
@@ -234,8 +234,16 @@ fn load_textures_for_gr2(
 ) -> Option<usize> {
     tracing::debug!("Loading textures for GR2: {}", gr2_filename);
 
-    // Get embedded database
-    let db = embedded_database_cached();
+    // Build resolver from game data path (parent of Textures.pak)
+    let game_data_path = textures_pak_path.parent()?;
+    let resolver = match GameDataResolver::new(game_data_path) {
+        Ok(r) => r,
+        Err(e) => {
+            warnings.push(format!("Could not create resolver: {e}"));
+            return None;
+        }
+    };
+    let db = resolver.database();
 
     // Look up visuals for this GR2
     let visuals = db.get_visuals_for_gr2(gr2_filename);
@@ -267,7 +275,7 @@ fn load_textures_for_gr2(
         if let Some(parent) = textures_pak_path.parent() {
             let vt_pak_path = parent.join("VirtualTextures.pak");
             if vt_pak_path.exists() {
-                if let Some((albedo, normal, physical)) = load_virtual_textures(&visuals, &vt_pak_path, builder, warnings) {
+                if let Some((albedo, normal, physical)) = load_virtual_textures(&visuals, &vt_pak_path, db, builder, warnings) {
                     albedo_texture_idx = albedo;
                     normal_texture_idx = normal;
                     physical_texture_idx = physical;
@@ -402,12 +410,10 @@ fn load_regular_textures(
 fn load_virtual_textures(
     visuals: &[&crate::merged::VisualAsset],
     vt_pak_path: &Path,
+    db: &MergedDatabase,
     builder: &mut GltfBuilder,
     warnings: &mut Vec<String>,
 ) -> Option<(Option<usize>, Option<usize>, Option<usize>)> {
-    // Get embedded database for GTP path lookup
-    let db = embedded_database_cached();
-
     // Collect virtual textures from visuals
     let mut vt_hashes: Vec<&str> = Vec::new();
     for visual in visuals {
