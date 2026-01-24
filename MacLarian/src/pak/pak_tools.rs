@@ -229,9 +229,22 @@ impl PakOperations {
 
         progress(1, 1, "Complete");
 
-        Ok(entries.iter()
+        Ok(entries
+            .iter()
             .map(|e| e.path.to_string_lossy().to_string())
             .collect())
+    }
+
+    /// List contents of a PAK file with detailed information
+    ///
+    /// Returns full file entries including sizes and compression info.
+    ///
+    /// # Errors
+    /// Returns an error if the PAK file cannot be read.
+    pub fn list_detailed<P: AsRef<Path>>(pak_path: P) -> Result<Vec<FileTableEntry>> {
+        let file = File::open(pak_path.as_ref())?;
+        let mut reader = LspkReader::with_path(file, pak_path.as_ref());
+        reader.list_files()
     }
 
     /// Extract specific files from a PAK to a directory

@@ -98,6 +98,16 @@ pub fn execute(
             crate::converter::convert_xml_to_loca(source, destination)?;
         }
 
+        // DDS/PNG conversions
+        ("dds", "png") => {
+            println!("Converting DDS -> PNG");
+            crate::converter::convert_dds_to_png(source, destination)?;
+        }
+        ("png", "dds") => {
+            println!("Converting PNG -> DDS (BC3 compression)");
+            crate::converter::convert_png_to_dds(source, destination)?;
+        }
+
         // Same format (copy)
         (fmt1, fmt2) if fmt1 == fmt2 => {
             println!("Source and destination formats are the same, copying file...");
@@ -114,7 +124,8 @@ pub fn execute(
                  - LSX <-> LSJ\n\
                  - GR2 -> GLB/glTF\n\
                  - GLB/glTF -> GR2\n\
-                 - LOCA <-> XML",
+                 - LOCA <-> XML\n\
+                 - DDS <-> PNG",
                 input, output
             );
         }

@@ -1,10 +1,11 @@
 use clap::Subcommand;
 use std::path::PathBuf;
-pub mod extract;
 pub mod convert;
 pub mod create;
-pub mod list;
+pub mod extract;
 pub mod gr2;
+pub mod list;
+pub mod mod_cmd;
 pub mod virtual_texture;
 #[cfg(feature = "audio")]
 pub mod wem;
@@ -20,6 +21,18 @@ pub enum Commands {
         /// Output directory
         #[arg(short, long)]
         destination: PathBuf,
+
+        /// Only extract files matching glob pattern (e.g., "*.lsf", "*_merged.lsf")
+        #[arg(long, conflicts_with = "file")]
+        filter: Option<String>,
+
+        /// Extract a single file by internal path
+        #[arg(long, conflicts_with = "filter")]
+        file: Option<String>,
+
+        /// Suppress progress bar
+        #[arg(short, long)]
+        quiet: bool,
     },
 
     /// Convert file formats
@@ -57,6 +70,18 @@ pub enum Commands {
         /// PAK file
         #[arg(short, long)]
         source: PathBuf,
+
+        /// Show detailed info (sizes, compression ratio)
+        #[arg(short, long)]
+        detailed: bool,
+
+        /// Only list files matching glob pattern (e.g., "*.gr2")
+        #[arg(long)]
+        filter: Option<String>,
+
+        /// Only show count of matching files
+        #[arg(short, long)]
+        count: bool,
     },
 
     /// GR2 file operations
@@ -72,11 +97,43 @@ pub enum Commands {
         command: VirtualTextureCommands,
     },
 
+    /// Mod utilities (validation, info.json generation)
+    Mod {
+        #[command(subcommand)]
+        command: ModCommands,
+    },
+
     /// WEM audio file operations
     #[cfg(feature = "audio")]
     Wem {
         #[command(subcommand)]
         command: WemCommands,
+    },
+}
+
+/// Mod utility commands
+#[derive(Subcommand)]
+pub enum ModCommands {
+    /// Validate mod directory structure
+    Validate {
+        /// Path to mod directory (extracted PAK contents)
+        #[arg(short, long)]
+        source: PathBuf,
+    },
+
+    /// Generate info.json for BaldursModManager
+    InfoJson {
+        /// Path to PAK file (for MD5 calculation)
+        #[arg(long)]
+        pak: PathBuf,
+
+        /// Path to extracted mod directory (for meta.lsx)
+        #[arg(long)]
+        extracted: PathBuf,
+
+        /// Output file (prints to stdout if not specified)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
     },
 }
 
@@ -243,33 +300,42 @@ pub enum VirtualTextureCommands {
 impl Commands {
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
-            Commands::Extract { source, destination } => {
-                extract::execute(source, destination)
-            }
-            Commands::Convert { source, destination, input_format, output_format } => {
-                convert::execute(
-                    source,
-                    destination,
-                    input_format.as_deref(),
-                    output_format.as_deref()
-                )
-            }
-            Commands::Create { source, destination } => {
-                create::execute(source, destination)
-            }
-            Commands::List { source } => {
-                list::execute(source)
-            }
-            Commands::Gr2 { command } => {
-                command.execute()
-            }
-            Commands::VirtualTexture { command } => {
-                command.execute()
-            }
+            Commands::Extract {
+                source,
+                destination,
+                filter,
+                file,
+                quiet,
+            } => extract::execute(
+                source,
+                destination,
+                filter.as_deref(),
+                file.as_deref(),
+                !*quiet,
+            ),
+            Commands::Convert {
+                source,
+                destination,
+                input_format,
+                output_format,
+            } => convert::execute(
+                source,
+                destination,
+                input_format.as_deref(),
+                output_format.as_deref(),
+            ),
+            Commands::Create { source, destination } => create::execute(source, destination),
+            Commands::List {
+                source,
+                detailed,
+                filter,
+                count,
+            } => list::execute(source, *detailed, filter.as_deref(), *count),
+            Commands::Gr2 { command } => command.execute(),
+            Commands::VirtualTexture { command } => command.execute(),
+            Commands::Mod { command } => command.execute(),
             #[cfg(feature = "audio")]
-            Commands::Wem { command } => {
-                command.execute()
-            }
+            Commands::Wem { command } => command.execute(),
         }
     }
 }
@@ -336,12 +402,23 @@ impl VirtualTextureCommands {
 impl WemCommands {
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
-            WemCommands::Inspect { path } => {
-                wem::inspect(path)
-            }
+            WemCommands::Inspect { path } => wem::inspect(path),
             WemCommands::Decode { path, output, silent } => {
                 wem::decode(path, output.as_deref(), *silent)
             }
+        }
+    }
+}
+
+impl ModCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            ModCommands::Validate { source } => mod_cmd::validate(source),
+            ModCommands::InfoJson {
+                pak,
+                extracted,
+                output,
+            } => mod_cmd::info_json(pak, extracted, output.as_deref()),
         }
     }
 }

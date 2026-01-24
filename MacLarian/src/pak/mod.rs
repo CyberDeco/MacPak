@@ -16,7 +16,7 @@ pub use extractor::extract_pak;
 pub use lister::list_pak_contents;
 
 // Re-export LSPK reader types
-pub use lspk::{LspkReader, PakContents, PakFile, PakPhase, PakProgress};
+pub use lspk::{FileTableEntry, LspkReader, PakContents, PakFile, PakPhase, PakProgress};
 
 // Re-export batch operations
 pub use batch::{

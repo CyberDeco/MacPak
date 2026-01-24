@@ -12,7 +12,7 @@ authors = ["CyberDeco"]
 license-file = "LICENSE"
 repository = "https://github.com/CyberDeco/MacPak"
 readme = "README.md"
-keywords = ["bg3", "baldurs-gate-3", "modding", "larian", "pak", "gr2", "granny2"]
+keywords = ["bg3", "baldurs-gate-3", "modding", "larian", "pak", "gr2", "granny2", "bitknit", "glTF"]
 
 # Workspace-wide shared dependencies
 [workspace.dependencies]

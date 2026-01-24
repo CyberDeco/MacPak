@@ -6,9 +6,8 @@ authors.workspace = true
 license-file.workspace = true
 repository.workspace = true
 readme = "README.md"
-keywords.workspace = true
 description = "Larian file format library for Baldur's Gate 3 - PAK, LSF, LSX, GR2, DDS, and more"
-categories = ["parser-implementations", "game-development", "encoding"]
+keywords = ["bg3", "baldurs-gate-3", "modding", "larian", "pak", "gr2", "granny2", "bitknit", "glTF"]
 homepage = "https://github.com/CyberDeco/MacPak"
 exclude = ["data/", ".DS_Store"]
 
@@ -74,7 +73,7 @@ image.workspace = true           # PNG/image format support
 [features]
 default = []
 audio = []  # Enables vgmstream-based WEM decoding
-cli = ["dep:clap", "dep:tracing-subscriber"]  # CLI binary
+cli = ["dep:clap", "dep:tracing-subscriber", "dep:indicatif"]  # CLI binary
 
 # CLI dependencies (optional)
 [dependencies.clap]
@@ -84,6 +83,10 @@ optional = true
 
 [dependencies.tracing-subscriber]
 version = "0.3"
+optional = true
+
+[dependencies.indicatif]
+version = "0.17"
 optional = true
 
 [[bin]]
