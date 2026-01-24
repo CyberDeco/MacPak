@@ -3,10 +3,27 @@
 use crate::error::{Error, Result};
 use super::lspk::{CompressionMethod, FileTableEntry, LspkReader, LspkWriter};
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+/// Get the path for a specific archive part file
+///
+/// For part 0, returns the base path unchanged.
+/// For part N > 0, returns `{stem}_{N}.{ext}` (e.g., `Textures_1.pak`)
+fn get_part_path(base_path: &Path, part: u8) -> Option<PathBuf> {
+    if part == 0 {
+        return Some(base_path.to_path_buf());
+    }
+
+    let stem = base_path.file_stem()?.to_str()?;
+    let ext = base_path.extension()?.to_str()?;
+    let parent = base_path.parent()?;
+
+    Some(parent.join(format!("{stem}_{part}.{ext}")))
+}
 
 /// Progress callback for PAK operations
 /// Arguments: (current, total, description)
@@ -28,6 +45,7 @@ impl PakOperations {
     ///
     /// The callback receives (current, total, filename) during file extraction.
     /// Uses parallel decompression for improved performance on multi-core systems.
+    /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
     /// # Errors
     /// Returns an error if the PAK file cannot be read or extraction fails.
@@ -39,7 +57,6 @@ impl PakOperations {
         let pak_path = pak_path.as_ref();
         let output_dir = output_dir.as_ref();
 
-        let mut file = File::open(pak_path)?;
         let mut reader = LspkReader::with_path(File::open(pak_path)?, pak_path);
 
         // Get file list without decompressing
@@ -50,32 +67,57 @@ impl PakOperations {
 
         progress(0, total_files, "Reading compressed data...");
 
-        // Phase 1: Read all compressed data sequentially (PAK is a single file)
-        let compressed_files: Vec<CompressedFile> = entries
+        // Filter entries and group by archive part for multi-part PAK support
+        let filtered_entries: Vec<_> = entries
             .iter()
             .filter(|entry| {
                 // Skip .DS_Store files
                 entry.path.file_name() != Some(std::ffi::OsStr::new(".DS_Store"))
             })
-            .filter_map(|entry| {
-                // Seek and read compressed data
-                if file.seek(SeekFrom::Start(entry.offset)).is_err() {
-                    tracing::warn!("Failed to seek to {}", entry.path.display());
-                    return None;
+            .cloned()
+            .collect();
+
+        // Group entries by archive part
+        let mut entries_by_part: HashMap<u8, Vec<FileTableEntry>> = HashMap::new();
+        for entry in filtered_entries {
+            entries_by_part.entry(entry.archive_part).or_default().push(entry);
+        }
+
+        // Phase 1: Read all compressed data sequentially from each part file
+        let mut compressed_files: Vec<CompressedFile> = Vec::new();
+
+        for (part, part_entries) in &entries_by_part {
+            let part_path = get_part_path(pak_path, *part)
+                .ok_or_else(|| Error::ConversionError(
+                    format!("Cannot determine path for archive part {part}")
+                ))?;
+
+            if !part_path.exists() {
+                tracing::warn!("Archive part file not found: {}", part_path.display());
+                continue;
+            }
+
+            let mut part_file = File::open(&part_path)?;
+
+            for entry in part_entries {
+                // Seek and read compressed data from the correct part file
+                if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
+                    tracing::warn!("Failed to seek to {} in {}", entry.path.display(), part_path.display());
+                    continue;
                 }
 
                 let mut compressed_data = vec![0u8; entry.size_compressed as usize];
-                if file.read_exact(&mut compressed_data).is_err() {
-                    tracing::warn!("Failed to read {}", entry.path.display());
-                    return None;
+                if part_file.read_exact(&mut compressed_data).is_err() {
+                    tracing::warn!("Failed to read {} from {}", entry.path.display(), part_path.display());
+                    continue;
                 }
 
-                Some(CompressedFile {
+                compressed_files.push(CompressedFile {
                     entry: entry.clone(),
                     compressed_data,
-                })
-            })
-            .collect();
+                });
+            }
+        }
 
         let files_to_process = compressed_files.len();
         let processed = AtomicUsize::new(0);
@@ -267,6 +309,7 @@ impl PakOperations {
     /// Takes a list of file paths (as they appear in the PAK) and extracts only those files.
     /// The callback receives (current, total, filename) during extraction.
     /// Uses parallel decompression for improved performance on multi-core systems.
+    /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
     /// # Errors
     /// Returns an error if the PAK file cannot be read or extraction fails.
@@ -280,8 +323,8 @@ impl PakOperations {
             return Ok(());
         }
 
-        let mut file = File::open(pak_path.as_ref())?;
-        let mut reader = LspkReader::with_path(File::open(pak_path.as_ref())?, pak_path.as_ref());
+        let pak_path = pak_path.as_ref();
+        let mut reader = LspkReader::with_path(File::open(pak_path)?, pak_path);
 
         // Build a set of requested paths for fast lookup
         let requested: std::collections::HashSet<&str> = file_paths
@@ -312,28 +355,47 @@ impl PakOperations {
 
         progress(0, entries_to_extract.len(), "Reading compressed data...");
 
-        // Phase 1: Read all compressed data sequentially (PAK is a single file)
-        let compressed_files: Vec<CompressedFile> = entries_to_extract
-            .iter()
-            .filter_map(|entry| {
-                // Seek and read compressed data
-                if file.seek(SeekFrom::Start(entry.offset)).is_err() {
-                    tracing::warn!("Failed to seek to {}", entry.path.display());
-                    return None;
+        // Group entries by archive part for multi-part PAK support
+        let mut entries_by_part: HashMap<u8, Vec<FileTableEntry>> = HashMap::new();
+        for entry in entries_to_extract {
+            entries_by_part.entry(entry.archive_part).or_default().push(entry);
+        }
+
+        // Phase 1: Read all compressed data sequentially from each part file
+        let mut compressed_files: Vec<CompressedFile> = Vec::new();
+
+        for (part, part_entries) in &entries_by_part {
+            let part_path = get_part_path(pak_path, *part)
+                .ok_or_else(|| Error::ConversionError(
+                    format!("Cannot determine path for archive part {part}")
+                ))?;
+
+            if !part_path.exists() {
+                tracing::warn!("Archive part file not found: {}", part_path.display());
+                continue;
+            }
+
+            let mut part_file = File::open(&part_path)?;
+
+            for entry in part_entries {
+                // Seek and read compressed data from the correct part file
+                if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
+                    tracing::warn!("Failed to seek to {} in {}", entry.path.display(), part_path.display());
+                    continue;
                 }
 
                 let mut compressed_data = vec![0u8; entry.size_compressed as usize];
-                if file.read_exact(&mut compressed_data).is_err() {
-                    tracing::warn!("Failed to read {}", entry.path.display());
-                    return None;
+                if part_file.read_exact(&mut compressed_data).is_err() {
+                    tracing::warn!("Failed to read {} from {}", entry.path.display(), part_path.display());
+                    continue;
                 }
 
-                Some(CompressedFile {
+                compressed_files.push(CompressedFile {
                     entry: entry.clone(),
                     compressed_data,
-                })
-            })
-            .collect();
+                });
+            }
+        }
 
         let files_to_process = compressed_files.len();
         let processed = AtomicUsize::new(0);
@@ -436,6 +498,7 @@ impl PakOperations {
     /// Returns a map of file paths to their decompressed contents.
     /// Files that fail to decompress are skipped with a warning.
     /// Uses parallel decompression for improved performance on multi-core systems.
+    /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
     /// # Errors
     /// Returns an error if the PAK cannot be read.
@@ -443,14 +506,12 @@ impl PakOperations {
         pak_path: P,
         file_paths: &[S],
     ) -> Result<std::collections::HashMap<String, Vec<u8>>> {
-        use std::collections::HashMap;
-
         if file_paths.is_empty() {
             return Ok(HashMap::new());
         }
 
-        let mut file = File::open(pak_path.as_ref())?;
-        let mut reader = LspkReader::with_path(File::open(pak_path.as_ref())?, pak_path.as_ref());
+        let pak_path = pak_path.as_ref();
+        let mut reader = LspkReader::with_path(File::open(pak_path)?, pak_path);
 
         // Build a set of requested paths
         let requested: std::collections::HashSet<&str> = file_paths
@@ -465,31 +526,50 @@ impl PakOperations {
             .filter(|e| requested.contains(e.path.to_string_lossy().as_ref()))
             .collect();
 
-        // Phase 1: Read all compressed data sequentially (PAK is a single file)
-        let compressed_files: Vec<(String, CompressedFile)> = entries_to_read
-            .iter()
-            .filter_map(|entry| {
-                // Seek and read compressed data
-                if file.seek(SeekFrom::Start(entry.offset)).is_err() {
-                    tracing::warn!("Failed to seek to {}", entry.path.display());
-                    return None;
+        // Group entries by archive part for multi-part PAK support
+        let mut entries_by_part: HashMap<u8, Vec<FileTableEntry>> = HashMap::new();
+        for entry in entries_to_read {
+            entries_by_part.entry(entry.archive_part).or_default().push(entry);
+        }
+
+        // Phase 1: Read all compressed data sequentially from each part file
+        let mut compressed_files: Vec<(String, CompressedFile)> = Vec::new();
+
+        for (part, part_entries) in &entries_by_part {
+            let part_path = get_part_path(pak_path, *part)
+                .ok_or_else(|| Error::ConversionError(
+                    format!("Cannot determine path for archive part {part}")
+                ))?;
+
+            if !part_path.exists() {
+                tracing::warn!("Archive part file not found: {}", part_path.display());
+                continue;
+            }
+
+            let mut part_file = File::open(&part_path)?;
+
+            for entry in part_entries {
+                // Seek and read compressed data from the correct part file
+                if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
+                    tracing::warn!("Failed to seek to {} in {}", entry.path.display(), part_path.display());
+                    continue;
                 }
 
                 let mut compressed_data = vec![0u8; entry.size_compressed as usize];
-                if file.read_exact(&mut compressed_data).is_err() {
-                    tracing::warn!("Failed to read {}", entry.path.display());
-                    return None;
+                if part_file.read_exact(&mut compressed_data).is_err() {
+                    tracing::warn!("Failed to read {} from {}", entry.path.display(), part_path.display());
+                    continue;
                 }
 
-                Some((
+                compressed_files.push((
                     entry.path.to_string_lossy().to_string(),
                     CompressedFile {
                         entry: entry.clone(),
                         compressed_data,
                     },
-                ))
-            })
-            .collect();
+                ));
+            }
+        }
 
         // Phase 2: Decompress in parallel and collect results
         let decompressed: Vec<(String, Vec<u8>)> = compressed_files
@@ -614,6 +694,7 @@ impl PakReaderCache {
     ///
     /// This is much faster than `PakOperations::read_file_bytes` when reading
     /// multiple files from the same PAK, as it reuses the decompressed file table.
+    /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
     /// # Errors
     /// Returns an error if the PAK cannot be read or the file is not found.
@@ -628,8 +709,14 @@ impl PakReaderCache {
             .ok_or_else(|| Error::FileNotFoundInPak(file_path.to_string()))?
             .clone();
 
-        // Read compressed data from the PAK file
-        let mut file = File::open(pak_path)?;
+        // Get the correct part file for this entry
+        let part_path = get_part_path(pak_path, entry.archive_part)
+            .ok_or_else(|| Error::ConversionError(
+                format!("Cannot determine path for archive part {}", entry.archive_part)
+            ))?;
+
+        // Read compressed data from the correct part file
+        let mut file = File::open(&part_path)?;
         file.seek(SeekFrom::Start(entry.offset))?;
 
         let mut compressed_data = vec![0u8; entry.size_compressed as usize];
@@ -642,9 +729,11 @@ impl PakReaderCache {
     /// Read multiple files' bytes in bulk with optimized I/O
     ///
     /// This is MUCH faster than calling `read_file_bytes` in a loop because:
-    /// 1. Files are sorted by offset for sequential I/O (no random seeks)
-    /// 2. All compressed data is read in one pass
+    /// 1. Files are grouped by archive part, then sorted by offset for sequential I/O
+    /// 2. All compressed data is read in one pass per part file
     /// 3. Decompression happens in parallel
+    ///
+    /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
     /// Returns a `HashMap` of `file_path` -> decompressed bytes.
     /// Files that fail to read/decompress are silently skipped.
@@ -657,7 +746,7 @@ impl PakReaderCache {
         file_paths: &[&str],
     ) -> Result<std::collections::HashMap<String, Vec<u8>>> {
         use rayon::prelude::*;
-        use std::collections::{HashMap, HashSet};
+        use std::collections::HashSet;
 
         self.ensure_loaded(pak_path)?;
 
@@ -669,7 +758,7 @@ impl PakReaderCache {
             Error::FileNotFoundInPak(pak_path.to_string_lossy().to_string())
         })?;
 
-        let mut entries_to_read: Vec<&FileTableEntry> = table
+        let entries_to_read: Vec<&FileTableEntry> = table
             .iter()
             .filter(|e| requested.contains(e.path.to_string_lossy().as_ref()))
             .collect();
@@ -678,34 +767,53 @@ impl PakReaderCache {
             return Ok(HashMap::new());
         }
 
-        // CRITICAL: Sort by offset for sequential I/O
-        entries_to_read.sort_by_key(|e| e.offset);
+        // Group entries by archive part for multi-part PAK support
+        let mut entries_by_part: HashMap<u8, Vec<&FileTableEntry>> = HashMap::new();
+        for entry in entries_to_read {
+            entries_by_part.entry(entry.archive_part).or_default().push(entry);
+        }
 
-        // Open file once for all reads
-        let mut file = File::open(pak_path)?;
+        // Phase 1: Read all compressed data sequentially from each part file
+        let mut compressed_files: Vec<(String, Vec<u8>, CompressionMethod, u32)> = Vec::new();
 
-        // Phase 1: Read all compressed data sequentially
-        let compressed_files: Vec<(String, Vec<u8>, CompressionMethod, u32)> = entries_to_read
-            .iter()
-            .filter_map(|entry| {
-                // Seek and read
-                if file.seek(SeekFrom::Start(entry.offset)).is_err() {
-                    return None;
+        for (part, mut part_entries) in entries_by_part {
+            let part_path = match get_part_path(pak_path, part) {
+                Some(p) => p,
+                None => continue,
+            };
+
+            if !part_path.exists() {
+                tracing::warn!("Archive part file not found: {}", part_path.display());
+                continue;
+            }
+
+            // Sort by offset for sequential I/O within this part
+            part_entries.sort_by_key(|e| e.offset);
+
+            let mut part_file = match File::open(&part_path) {
+                Ok(f) => f,
+                Err(_) => continue,
+            };
+
+            for entry in part_entries {
+                // Seek and read from the correct part file
+                if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
+                    continue;
                 }
 
                 let mut compressed_data = vec![0u8; entry.size_compressed as usize];
-                if file.read_exact(&mut compressed_data).is_err() {
-                    return None;
+                if part_file.read_exact(&mut compressed_data).is_err() {
+                    continue;
                 }
 
-                Some((
+                compressed_files.push((
                     entry.path.to_string_lossy().to_string(),
                     compressed_data,
                     entry.compression,
                     entry.size_decompressed,
-                ))
-            })
-            .collect();
+                ));
+            }
+        }
 
         // Phase 2: Decompress in parallel
         let results: Vec<(String, Vec<u8>)> = compressed_files
