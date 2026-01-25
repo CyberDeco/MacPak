@@ -31,7 +31,7 @@ pub mod batch;
 pub use types::*;
 pub use gts::GtsFile;
 pub use gtp::GtpFile;
-pub use extractor::{VirtualTextureExtractor, DdsWriter};
+pub use extractor::{VirtualTextureExtractor, DdsWriter, ExtractOptions};
 pub use utils::{
     list_gts, gtp_info, get_subfolder_name, find_base_name, find_gts_path, extract_all,
     GtsInfo, PageFileInfo, GtpInfo, ExtractResult,

@@ -108,6 +108,16 @@ impl DdsWriter {
     }
 }
 
+/// Options for virtual texture extraction
+#[derive(Debug, Clone, Default)]
+pub struct ExtractOptions {
+    /// Extract only these specific layers (0=BaseMap, 1=NormalMap, 2=PhysicalMap)
+    /// Empty vec means all layers
+    pub layers: Vec<usize>,
+    /// Extract all layers with numbered suffixes (_0, _1, _2)
+    pub all_layers: bool,
+}
+
 /// Virtual texture extractor
 pub struct VirtualTextureExtractor;
 
@@ -145,6 +155,19 @@ impl VirtualTextureExtractor {
         gtp_path: P1,
         gts_path: P2,
         output_dir: P3,
+    ) -> Result<()> {
+        Self::extract_with_options(gtp_path, gts_path, output_dir, &ExtractOptions::default())
+    }
+
+    /// Extract a GTP file with specific options (layer filtering, etc.)
+    ///
+    /// # Errors
+    /// Returns an error if the files cannot be read or extraction fails.
+    pub fn extract_with_options<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
+        gtp_path: P1,
+        gts_path: P2,
+        output_dir: P3,
+        options: &ExtractOptions,
     ) -> Result<()> {
         let gtp_path = gtp_path.as_ref();
         let gts_path = gts_path.as_ref();
@@ -194,8 +217,27 @@ impl VirtualTextureExtractor {
         let content_block_width = content_width.div_ceil(4);
         let content_block_height = content_height.div_ceil(4);
 
-        // Process each layer (Albedo, Normal, Physical)
-        for layer_idx in 0..3 {
+        // Determine which layers to extract based on options
+        let layers_to_extract: Vec<usize> = if options.layers.is_empty() {
+            vec![0, 1, 2]
+        } else {
+            // Validate and deduplicate layers
+            let mut layers = options.layers.clone();
+            layers.sort();
+            layers.dedup();
+            for &layer in &layers {
+                if layer >= 3 {
+                    return Err(Error::ConversionError(format!(
+                        "Invalid layer index: {}. Must be 0 (BaseMap), 1 (NormalMap), or 2 (PhysicalMap)",
+                        layer
+                    )));
+                }
+            }
+            layers
+        };
+
+        // Process selected layers
+        for layer_idx in layers_to_extract {
             let layer = VirtualTextureLayer::from_index(layer_idx as u8)
                 .ok_or_else(|| Error::ConversionError("Invalid layer index".to_string()))?;
 
@@ -265,8 +307,13 @@ impl VirtualTextureExtractor {
                 }
             }
 
-            // Write DDS file
-            let output_path = output_dir.join(format!("{}.dds", layer.as_str()));
+            // Write DDS file - use numbered suffix if all_layers is set
+            let filename = if options.all_layers {
+                format!("{}_{}.dds", layer.as_str(), layer_idx)
+            } else {
+                format!("{}.dds", layer.as_str())
+            };
+            let output_path = output_dir.join(filename);
             DdsWriter::write(&output_path, &output_data, output_width as u32, output_height as u32)?;
         }
 

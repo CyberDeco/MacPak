@@ -1,5 +1,27 @@
 use clap::Subcommand;
 use std::path::PathBuf;
+use std::str::FromStr;
+
+/// Layer specification for virtual texture extraction
+#[derive(Debug, Clone, Copy)]
+pub struct LayerArg(pub usize);
+
+impl FromStr for LayerArg {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let lower = s.to_lowercase();
+        match lower.as_str() {
+            "0" | "basemap" | "bm" | "base" => Ok(LayerArg(0)),
+            "1" | "normalmap" | "nm" | "normal" => Ok(LayerArg(1)),
+            "2" | "physicalmap" | "pm" | "physical" => Ok(LayerArg(2)),
+            _ => Err(format!(
+                "Invalid layer '{}'. Valid values: 0/BaseMap/BM/Base, 1/NormalMap/NM/Normal, 2/PhysicalMap/PM/Physical",
+                s
+            )),
+        }
+    }
+}
 pub mod convert;
 pub mod create;
 pub mod extract;
@@ -365,13 +387,34 @@ pub enum VirtualTextureCommands {
         #[arg(short, long)]
         texture: Option<String>,
 
-        /// Layer index to extract (ignored if --all-layers is set)
-        #[arg(short, long)]
-        layer: Option<usize>,
+        /// Layer(s) to extract: 0/BaseMap/BM/Base, 1/NormalMap/NM/Normal, 2/PhysicalMap/PM/Physical
+        /// Can be specified multiple times (--layer BM --layer NM) or comma-separated (--layer BM,NM)
+        #[arg(short, long, value_delimiter = ',')]
+        layer: Vec<LayerArg>,
 
         /// Extract all layers (creates _0, _1, _2 files per texture)
         #[arg(short, long)]
         all_layers: bool,
+    },
+
+    /// Batch extract multiple GTS files in parallel
+    Batch {
+        /// Input directory containing GTS files
+        #[arg(short, long)]
+        input: PathBuf,
+
+        /// Output directory for extracted textures
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Layer(s) to extract: 0/BaseMap/BM/Base, 1/NormalMap/NM/Normal, 2/PhysicalMap/PM/Physical (default: all)
+        /// Can be specified multiple times (--layer BM --layer NM) or comma-separated (--layer BM,NM)
+        #[arg(short, long, value_delimiter = ',')]
+        layer: Vec<LayerArg>,
+
+        /// Search subdirectories recursively
+        #[arg(short, long)]
+        recursive: bool,
     },
 
     /// Show info about a GTP page file
@@ -724,9 +767,12 @@ impl VirtualTextureCommands {
                     gtp_dir.as_deref(),
                     output,
                     texture.as_deref(),
-                    *layer,
+                    layer.iter().map(|l| l.0).collect(),
                     *all_layers,
                 )
+            }
+            VirtualTextureCommands::Batch { input, output, layer, recursive } => {
+                virtual_texture::batch(input, output, layer.iter().map(|l| l.0).collect(), *recursive)
             }
             VirtualTextureCommands::GtpInfo { path, gts } => {
                 virtual_texture::gtp_info(path, gts.as_deref())

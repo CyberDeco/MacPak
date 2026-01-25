@@ -1,9 +1,9 @@
 //! Virtual texture CLI commands
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use anyhow::{Result, Context};
-use crate::virtual_texture;
+use crate::virtual_texture::{self, ExtractOptions};
 
 /// List textures in a GTS file
 pub fn list(gts_path: &Path) -> Result<()> {
@@ -31,22 +31,32 @@ pub fn list(gts_path: &Path) -> Result<()> {
 /// Extract textures from GTS/GTP files
 pub fn extract(
     gts_path: &Path,
-    gtp_path: Option<&Path>,
+    gtp_dir: Option<&Path>,
     output_dir: &Path,
     _texture_name: Option<&str>,
-    _layer: Option<usize>,
-    _all_layers: bool,
+    layers: Vec<usize>,
+    all_layers: bool,
 ) -> Result<()> {
     // Create output directory
     fs::create_dir_all(output_dir)
         .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
 
-    // If a specific GTP path is provided, use it directly
-    if let Some(gtp) = gtp_path {
-        println!("Extracting {} with GTS {}...", gtp.display(), gts_path.display());
+    // Build extraction options
+    let options = ExtractOptions {
+        layers: layers.clone(),
+        all_layers,
+    };
 
-        virtual_texture::VirtualTextureExtractor::extract_with_gts(gtp, gts_path, output_dir)
-            .with_context(|| "Failed to extract virtual texture")?;
+    // If a specific GTP directory is provided, extract just GTPs from there
+    if let Some(gtp_path) = gtp_dir {
+        println!("Extracting from {} with GTS {}...", gtp_path.display(), gts_path.display());
+
+        virtual_texture::VirtualTextureExtractor::extract_with_options(
+            gtp_path,
+            gts_path,
+            output_dir,
+            &options,
+        ).with_context(|| "Failed to extract virtual texture")?;
 
         println!("Extraction complete -> {}", output_dir.display());
         return Ok(());
@@ -58,6 +68,10 @@ pub fn extract(
 
     println!("Layers: {} | Page files: {}", info.num_layers, info.page_files.len());
 
+    if !layers.is_empty() {
+        println!("Layer filter: {:?}", layers);
+    }
+
     let result = virtual_texture::extract_all(gts_path, output_dir)
         .with_context(|| "Failed to extract virtual textures")?;
 
@@ -66,6 +80,84 @@ pub fn extract(
     if !result.errors.is_empty() {
         for err in &result.errors {
             eprintln!("Warning: {}", err);
+        }
+    }
+
+    Ok(())
+}
+
+/// Batch extract multiple GTS files in parallel
+pub fn batch(
+    input_dir: &Path,
+    output_dir: &Path,
+    layers: Vec<usize>,
+    recursive: bool,
+) -> Result<()> {
+    // Find all GTS files
+    let mut gts_files = Vec::new();
+    find_gts_files(input_dir, &mut gts_files, recursive)?;
+
+    if gts_files.is_empty() {
+        println!("No GTS files found in {}", input_dir.display());
+        return Ok(());
+    }
+
+    println!("Found {} GTS files", gts_files.len());
+
+    // Create output directory
+    fs::create_dir_all(output_dir)
+        .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
+
+    if !layers.is_empty() {
+        println!("Layer filter: {:?}", layers);
+    }
+
+    // Use batch extraction
+    let result = virtual_texture::extract_batch(
+        &gts_files,
+        Some(output_dir),
+        |current, total, desc| {
+            println!("[{}/{}] {}", current, total, desc);
+        },
+    );
+
+    println!();
+    println!("Batch extraction complete:");
+    println!("  Succeeded: {}", result.success_count);
+    println!("  Failed: {}", result.error_count);
+    println!("  Total textures: {}", result.texture_count);
+
+    if result.error_count > 0 {
+        println!();
+        println!("Errors:");
+        for msg in &result.results {
+            if msg.starts_with("Failed") {
+                println!("  {}", msg);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Recursively find all GTS files in a directory
+fn find_gts_files(dir: &Path, files: &mut Vec<PathBuf>, recursive: bool) -> Result<()> {
+    if !dir.is_dir() {
+        return Ok(());
+    }
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() && recursive {
+            find_gts_files(&path, files, recursive)?;
+        } else if path.is_file() {
+            if let Some(ext) = path.extension() {
+                if ext.to_string_lossy().to_lowercase() == "gts" {
+                    files.push(path);
+                }
+            }
         }
     }
 
