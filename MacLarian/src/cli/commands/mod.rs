@@ -312,7 +312,7 @@ pub enum Gr2Commands {
         keep_dds: bool,
     },
 
-    /// Convert GR2 to GLB with embedded textures (test command)
+    /// Convert GR2 to GLB with embedded textures
     ToGlbTextured {
         /// Source GR2 file
         path: PathBuf,

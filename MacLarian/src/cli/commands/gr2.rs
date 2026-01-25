@@ -156,7 +156,7 @@ pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     Ok(())
 }
 
-/// Convert GR2 to GLB with embedded textures (for testing).
+/// Convert GR2 to GLB with embedded textures.
 pub fn convert_to_glb_textured(
     path: &Path,
     textures_pak: &Path,
