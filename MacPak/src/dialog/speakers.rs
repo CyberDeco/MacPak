@@ -3,10 +3,10 @@
 //! Dynamically loads character templates from PAK files to map
 //! speaker UUIDs to their `DisplayName` localization handles.
 
-use crate::formats::lsf::parse_lsf_bytes;
-use crate::formats::lsx::parse_lsx;
-use crate::formats::common::{extract_value, extract_translated_string};
-use crate::pak::PakOperations;
+use maclarian::formats::lsf::parse_lsf_bytes;
+use maclarian::formats::lsx::parse_lsx;
+use maclarian::formats::common::{extract_value, extract_translated_string};
+use maclarian::pak::PakOperations;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -346,7 +346,7 @@ impl SpeakerCache {
     /// Used for Origins files which define companion characters
     fn extract_speakers_from_lsx(data: &[u8]) -> Vec<(String, String)> {
         // Recursively process all nodes in all regions
-        fn process_node(node: &crate::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
+        fn process_node(node: &maclarian::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
             let mut global_template: Option<String> = None;
             let mut display_name_handle: Option<String> = None;
 

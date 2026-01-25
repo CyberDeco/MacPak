@@ -7,7 +7,6 @@
 //! - LSX (XML format)
 //! - LSJ (JSON format)
 //! - LSBC, LSBX, LSBS (legacy binary formats)
-//! - Dialog (conversation trees)
 //! - Virtual Textures (GTS/GTP)
 //! - PAK archives
 
@@ -19,12 +18,10 @@ pub mod converter;
 pub mod utils;
 pub mod merged;
 pub mod gr2_extraction;
-pub mod dyes;
 pub mod mods;
 pub mod search;
 
 // Top-level domain modules (promoted from formats/)
-pub mod dialog;
 pub mod virtual_texture;
 
 // Re-exports for convenience
@@ -38,14 +35,6 @@ pub mod prelude {
     pub use crate::formats::lsx::{LsxDocument, LsxRegion, LsxNode, LsxAttribute};
     pub use crate::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
     pub use crate::formats::gr2::decompress_gr2;
-
-    // Dialog exports (from top-level module)
-    pub use crate::dialog::{
-        Dialog, DialogNode, NodeConstructor, LocalizationCache,
-        parse_dialog, parse_dialog_bytes, parse_dialog_file,
-        parse_dialog_lsf, parse_dialog_lsf_bytes,
-        load_localization_from_pak_parallel,
-    };
 
     // Virtual texture exports (from top-level module)
     pub use crate::virtual_texture::{
@@ -68,16 +57,6 @@ pub mod prelude {
     };
     pub use crate::converter::gr2_gltf::{
         convert_gr2_bytes_to_glb_with_textures, TexturedGlbResult,
-    };
-
-    // Dyes module exports
-    pub use crate::dyes::{
-        ColorDef, ColorCategory, COLOR_REGISTRY, DEFAULT_HEX,
-        colors_by_category, required_colors, find_color,
-        ParsedDyeEntry, DyeLocalizationInfo, ImportedDyeEntry,
-        parse_item_combos, parse_object_txt, parse_lsx_dye_presets,
-        parse_root_templates_localization, parse_localization_xml,
-        generate_color_nodes, generate_all_color_nodes, hex_to_fvec3,
     };
 
     // Mods module exports

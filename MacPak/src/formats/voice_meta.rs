@@ -7,8 +7,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use rayon::prelude::*;
-use crate::formats::lsf::{parse_lsf_bytes, LsfDocument};
-use crate::pak::PakOperations;
+use maclarian::formats::lsf::{parse_lsf_bytes, LsfDocument};
+use maclarian::pak::PakOperations;
 
 /// Voice metadata entry for audio playback
 #[derive(Clone, Debug)]

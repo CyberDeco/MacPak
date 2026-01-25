@@ -265,7 +265,7 @@ pub fn parse_wwise_vorbis_header(extra_data: &[u8]) -> Result<WwiseVorbisHeader,
 }
 
 /// Find vgmstream-cli, checking app bundle first, then PATH
-#[cfg(feature = "audio")]
+#[cfg(feature = "gui")]
 fn find_vgmstream_cli() -> Option<std::path::PathBuf> {
     // 1. Check inside app bundle (for packaged .app)
     if let Ok(exe) = std::env::current_exe() {
@@ -319,7 +319,7 @@ fn find_vgmstream_cli() -> Option<std::path::PathBuf> {
 ///
 /// vgmstream is a mature library that handles all Wwise format variations.
 /// We shell out to vgmstream-cli to convert WEM to WAV, then read the result.
-#[cfg(feature = "audio")]
+#[cfg(feature = "gui")]
 fn decode_wwise_vorbis_with_vgmstream(wem_path: &std::path::Path) -> Result<DecodedAudio, WemError> {
     use std::process::Command;
 
@@ -364,7 +364,7 @@ fn decode_wwise_vorbis_with_vgmstream(wem_path: &std::path::Path) -> Result<Deco
 }
 
 /// Parse a WAV file into DecodedAudio
-#[cfg(feature = "audio")]
+#[cfg(feature = "gui")]
 fn parse_wav_to_audio(wav_data: &[u8]) -> Result<DecodedAudio, WemError> {
     use std::io::{Cursor, Read};
     use byteorder::{LittleEndian, ReadBytesExt};
@@ -474,7 +474,7 @@ fn parse_wav_to_audio(wav_data: &[u8]) -> Result<DecodedAudio, WemError> {
 ///
 /// This is the recommended way to decode BG3 voice files.
 /// Requires vgmstream-cli to be installed.
-#[cfg(feature = "audio")]
+#[cfg(feature = "gui")]
 pub fn load_wem_file_vgmstream(path: &std::path::Path) -> Result<DecodedAudio, WemError> {
     decode_wwise_vorbis_with_vgmstream(path)
 }
@@ -483,7 +483,7 @@ pub fn load_wem_file_vgmstream(path: &std::path::Path) -> Result<DecodedAudio, W
 ///
 /// This generates silent audio with correct duration when vgmstream
 /// isn't available. Useful for testing the playback pipeline.
-#[cfg(feature = "audio")]
+#[cfg(feature = "gui")]
 pub fn decode_wwise_vorbis_fallback(header: &WemHeader) -> Result<DecodedAudio, WemError> {
     let wwise_header = parse_wwise_vorbis_header(&header.extra_data)?;
 

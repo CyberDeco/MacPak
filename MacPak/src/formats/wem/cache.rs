@@ -23,7 +23,7 @@ use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use super::decoder::{DecodedAudio, WemError};
-use crate::pak::PakOperations;
+use maclarian::pak::PakOperations;
 
 /// Maximum number of audio entries to cache (prevents unbounded memory growth)
 const DEFAULT_MAX_ENTRIES: usize = 100;
@@ -329,7 +329,7 @@ impl AudioCache {
     /// # Arguments
     /// * `text_handle` - The localization handle (e.g., "h35f3e7db-fbae-48ba-bc38-bdd1005fe3f5")
     /// * `wem_filename` - The WEM filename from VoiceMeta (e.g., "v518fab8f..._h35f3e7db....wem")
-    #[cfg(feature = "audio")]
+    #[cfg(feature = "gui")]
     pub fn get_or_load(
         &mut self,
         text_handle: &str,
@@ -377,7 +377,7 @@ impl AudioCache {
     }
 
     /// Load audio from an extracted directory
-    #[cfg(feature = "audio")]
+    #[cfg(feature = "gui")]
     fn load_from_directory(&self, wem_filename: &str) -> Result<(DecodedAudio, PathBuf), AudioCacheError> {
         let wem_path = if self.indexed {
             // O(1) lookup from pre-built index
@@ -400,7 +400,7 @@ impl AudioCache {
     }
 
     /// Load audio from a PAK file (extracts to temp file, decodes, cleans up)
-    #[cfg(feature = "audio")]
+    #[cfg(feature = "gui")]
     fn load_from_pak(&self, wem_filename: &str) -> Result<(DecodedAudio, PathBuf), AudioCacheError> {
         let pak_path = self.voice_path.as_ref()
             .ok_or(AudioCacheError::VoicePathNotSet)?;
@@ -529,7 +529,7 @@ fn normalize_handle(handle: &str) -> String {
 
 /// Find the .wem file for a given filename in the voice directory
 /// This is a fallback when the index wasn't built - prefer using the index for O(1) lookups.
-#[cfg(feature = "audio")]
+#[cfg(feature = "gui")]
 fn find_wem_file(voice_path: &Path, wem_filename: &str) -> Result<PathBuf, AudioCacheError> {
     // Common search paths for voice files
     let search_dirs = [
@@ -558,7 +558,7 @@ fn find_wem_file(voice_path: &Path, wem_filename: &str) -> Result<PathBuf, Audio
 }
 
 /// Recursively search for a file
-#[cfg(feature = "audio")]
+#[cfg(feature = "gui")]
 fn find_file_recursive(dir: &Path, filename: &str) -> Option<PathBuf> {
     let entries = std::fs::read_dir(dir).ok()?;
 

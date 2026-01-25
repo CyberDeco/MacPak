@@ -3,10 +3,10 @@
 //! Uses pre-indexing - all flag names are loaded once when PAK sources are
 //! configured, then lookups are O(1) `HashMap` access.
 
-use crate::formats::lsf::parse_lsf_bytes;
-use crate::formats::lsx::parse_lsx;
-use crate::formats::common::extract_value;
-use crate::pak::PakOperations;
+use maclarian::formats::lsf::parse_lsf_bytes;
+use maclarian::formats::lsx::parse_lsx;
+use maclarian::formats::common::extract_value;
+use maclarian::pak::PakOperations;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -227,7 +227,7 @@ impl FlagCache {
     /// Extract UUID and name pairs from `ScriptFlags` LSX (XML) bytes
     fn extract_flags_from_lsx(data: &[u8]) -> Vec<(String, String)> {
         // Recursively process all nodes in all regions
-        fn process_node(node: &crate::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
+        fn process_node(node: &maclarian::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
             // ScriptFlags.lsx uses "ScriptFlag" nodes with "name" and "UUID" attributes
             if node.id == "ScriptFlag" {
                 let mut flag_name: Option<String> = None;

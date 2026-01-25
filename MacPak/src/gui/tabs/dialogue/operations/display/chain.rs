@@ -1,6 +1,6 @@
 //! Chain traversal helpers for following node chains to find text
 
-use maclarian::dialog::{Dialog, DialogNode, NodeConstructor};
+use crate::dialog::{Dialog, DialogNode, NodeConstructor};
 
 /// Result of following a node chain to find text
 pub struct ChainResult {

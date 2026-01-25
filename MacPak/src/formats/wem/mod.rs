@@ -36,5 +36,5 @@ pub use decoder::{
 
 pub use cache::{AudioCache, AudioCacheError, CachedAudio, CacheStats};
 
-#[cfg(feature = "audio")]
+#[cfg(feature = "gui")]
 pub use decoder::load_wem_file_vgmstream;

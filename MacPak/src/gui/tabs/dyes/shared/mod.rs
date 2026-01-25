@@ -10,8 +10,8 @@ pub mod helpers;
 pub mod selector;
 pub mod styles;
 
-// Re-export from maclarian for backwards compatibility
-pub use maclarian::dyes::{
+// Re-export from local dyes module (moved from maclarian)
+pub use crate::dyes::{
     // Registry
     ColorCategory, ColorDef, COLOR_REGISTRY, DEFAULT_HEX, COLOR_COUNT,
     colors_by_category, required_colors, find_color,

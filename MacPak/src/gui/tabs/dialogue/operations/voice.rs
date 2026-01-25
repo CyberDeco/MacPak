@@ -1,14 +1,14 @@
-//! Voice metadata operations - thin wrapper around maclarian's voice_meta module
+//! Voice metadata operations
 //!
-//! The heavy lifting (parallel loading, parsing) is done in maclarian.
+//! Provides parallel loading and parsing of voice metadata.
 //! This module provides cache management for the GUI.
 
 use std::path::Path;
 use std::sync::{Arc, RwLock};
-use maclarian::formats::voice_meta::{VoiceMetaCache, find_voice_meta_path};
+use crate::formats::voice_meta::{VoiceMetaCache, find_voice_meta_path};
 
 // Re-export for convenience
-pub use maclarian::formats::voice_meta::find_voice_files_path;
+pub use crate::formats::voice_meta::find_voice_files_path;
 
 /// Load voice metadata from VoiceMeta.pak or extracted Soundbanks folder
 /// Populates the cache with text_handle -> VoiceMetaEntry mappings
@@ -33,11 +33,11 @@ pub fn load_voice_meta(
         return 0;
     };
 
-    // Load using maclarian's parallel loader
+    // Load using parallel loader
     let result = if voice_meta_path.is_file() {
-        maclarian::formats::voice_meta::load_voice_meta_from_pak(&voice_meta_path)
+        crate::formats::voice_meta::load_voice_meta_from_pak(&voice_meta_path)
     } else {
-        maclarian::formats::voice_meta::load_voice_meta_from_folder(&voice_meta_path)
+        crate::formats::voice_meta::load_voice_meta_from_folder(&voice_meta_path)
     };
 
     match result {

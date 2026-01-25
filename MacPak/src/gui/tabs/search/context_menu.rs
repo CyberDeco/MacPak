@@ -7,8 +7,8 @@ use floem::ext_event::create_ext_action;
 use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 use floem_reactive::Scope;
-use maclarian::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
-use maclarian::formats::wem::AudioCache;
+use crate::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
+use crate::formats::wem::AudioCache;
 use maclarian::pak::PakOperations;
 use crate::gui::tabs::dialogue::operations::{load_voice_meta, find_voice_files_path};
 

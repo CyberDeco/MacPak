@@ -14,7 +14,7 @@
 //! # Usage
 //!
 //! ```no_run
-//! use maclarian::dialog::{parse_dialog, LocalizationCache};
+//! use macpak::dialog::{parse_dialog, LocalizationCache};
 //! use maclarian::formats::lsj::read_lsj;
 //!
 //! // Load and parse a dialog file
@@ -71,7 +71,7 @@ pub use difficulty::{
 pub fn parse_dialog_bytes(data: &[u8]) -> Result<Dialog, DialogParseError> {
     let content = std::str::from_utf8(data)
         .map_err(|e| DialogParseError::InvalidFormat(format!("Invalid UTF-8: {e}")))?;
-    let doc = crate::formats::lsj::parse_lsj(content)
+    let doc = maclarian::formats::lsj::parse_lsj(content)
         .map_err(|e| DialogParseError::InvalidFormat(e.to_string()))?;
     parse_dialog(&doc)
 }
@@ -81,7 +81,7 @@ pub fn parse_dialog_bytes(data: &[u8]) -> Result<Dialog, DialogParseError> {
 /// # Errors
 /// Returns an error if the file cannot be read or parsed as a dialog.
 pub fn parse_dialog_file<P: AsRef<std::path::Path>>(path: P) -> Result<Dialog, DialogParseError> {
-    let doc = crate::formats::lsj::read_lsj(path)
+    let doc = maclarian::formats::lsj::read_lsj(path)
         .map_err(|e| DialogParseError::IoError(std::io::Error::other(
             e.to_string()
         )))?;
@@ -106,9 +106,9 @@ pub fn parse_dialog_lsf<P: AsRef<std::path::Path>>(path: P) -> Result<Dialog, Di
 /// # Errors
 /// Returns an error if the data cannot be parsed through the conversion pipeline.
 pub fn parse_dialog_lsf_bytes(data: &[u8]) -> Result<Dialog, DialogParseError> {
-    use crate::converter::{to_lsx, to_lsj};
-    use crate::formats::lsf::parse_lsf_bytes;
-    use crate::formats::lsx::parse_lsx;
+    use maclarian::converter::{to_lsx, to_lsj};
+    use maclarian::formats::lsf::parse_lsf_bytes;
+    use maclarian::formats::lsx::parse_lsx;
 
     // Parse LSF binary
     let lsf_doc = parse_lsf_bytes(data)

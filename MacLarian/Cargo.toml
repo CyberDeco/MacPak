@@ -75,7 +75,6 @@ image.workspace = true           # PNG/image format support
 
 [features]
 default = []
-audio = []  # Enables vgmstream-based WEM decoding
 cli = ["dep:clap", "dep:tracing-subscriber", "dep:indicatif"]  # CLI binary
 
 # CLI dependencies (optional)

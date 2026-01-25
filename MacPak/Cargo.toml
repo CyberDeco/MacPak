@@ -57,8 +57,8 @@ viewer = [
 full = ["gui", "viewer"]
 
 [dependencies]
-# Internal - always needed (with audio feature when gui is enabled)
-maclarian = { workspace = true, features = ["audio"] }
+# Internal - always needed
+maclarian = { workspace = true }
 
 # Core dependencies - always needed
 thiserror.workspace = true

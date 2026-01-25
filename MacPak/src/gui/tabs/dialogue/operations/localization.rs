@@ -3,11 +3,11 @@
 //! These functions are used for on-demand localization loading and may be
 //! called when switching languages or loading dialogs that need text resolution.
 //!
-//! Uses maclarian's parallel .loca file parsing for optimal performance.
+//! Uses parallel .loca file parsing for optimal performance.
 
 use std::path::Path;
 use floem::reactive::SignalUpdate;
-use maclarian::dialog::{get_available_languages, load_localization_from_pak_parallel};
+use crate::dialog::{get_available_languages, load_localization_from_pak_parallel};
 use crate::gui::state::DialogueState;
 
 /// Try to load localization from a game data folder

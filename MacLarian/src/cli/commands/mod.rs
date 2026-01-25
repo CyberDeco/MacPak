@@ -33,8 +33,6 @@ pub mod pak;
 pub mod search;
 pub mod texture;
 pub mod virtual_texture;
-#[cfg(feature = "audio")]
-pub mod wem;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -169,13 +167,6 @@ pub enum Commands {
     Mod {
         #[command(subcommand)]
         command: ModCommands,
-    },
-
-    /// WEM audio file operations
-    #[cfg(feature = "audio")]
-    Wem {
-        #[command(subcommand)]
-        command: WemCommands,
     },
 
     /// Search PAK file contents
@@ -333,31 +324,6 @@ pub enum Gr2Commands {
         /// Output GLB file (defaults to same name with .textured.glb extension)
         #[arg(short, long)]
         output: Option<PathBuf>,
-    },
-}
-
-/// WEM audio commands
-#[cfg(feature = "audio")]
-#[derive(Subcommand)]
-pub enum WemCommands {
-    /// Inspect a WEM file header
-    Inspect {
-        /// WEM file to inspect
-        path: PathBuf,
-    },
-
-    /// Decode a WEM file to WAV (requires vgmstream-cli)
-    Decode {
-        /// Source WEM file
-        path: PathBuf,
-
-        /// Output WAV file (optional)
-        #[arg(short, long)]
-        output: Option<PathBuf>,
-
-        /// Use silent fallback if vgmstream unavailable (outputs silence with correct duration)
-        #[arg(long)]
-        silent: bool,
     },
 }
 
@@ -706,8 +672,6 @@ impl Commands {
             Commands::Gr2 { command } => command.execute(),
             Commands::VirtualTexture { command } => command.execute(),
             Commands::Mod { command } => command.execute(),
-            #[cfg(feature = "audio")]
-            Commands::Wem { command } => command.execute(),
             Commands::Search { command } => command.execute(),
             Commands::Index { command } => command.execute(),
             Commands::Pak { command } => command.execute(),
@@ -776,18 +740,6 @@ impl VirtualTextureCommands {
             }
             VirtualTextureCommands::GtpInfo { path, gts } => {
                 virtual_texture::gtp_info(path, gts.as_deref())
-            }
-        }
-    }
-}
-
-#[cfg(feature = "audio")]
-impl WemCommands {
-    pub fn execute(&self) -> anyhow::Result<()> {
-        match self {
-            WemCommands::Inspect { path } => wem::inspect(path),
-            WemCommands::Decode { path, output, silent } => {
-                wem::decode(path, output.as_deref(), *silent)
             }
         }
     }

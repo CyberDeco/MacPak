@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 use floem::reactive::{SignalGet, SignalUpdate};
-use maclarian::dialog::{parse_dialog_file, parse_dialog_bytes, parse_dialog_lsf_bytes, Dialog};
+use crate::dialog::{parse_dialog_file, parse_dialog_bytes, parse_dialog_lsf_bytes, Dialog};
 use maclarian::pak::PakOperations;
 use crate::gui::state::{DialogueState, DialogSource, DialogEntry, DisplayNode};
 use super::display::{build_display_nodes, resolve_speaker_names, resolve_localized_text, resolve_flag_names, resolve_difficulty_classes};

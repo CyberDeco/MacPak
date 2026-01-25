@@ -3,8 +3,8 @@
 //! Loads localization strings from BG3's language .pak files on demand
 //! and caches them for efficient lookup.
 
-use crate::formats::loca::{read_loca, parse_loca_bytes, LocaResource};
-use crate::pak::PakOperations;
+use maclarian::formats::loca::{read_loca, parse_loca_bytes, LocaResource};
+use maclarian::pak::PakOperations;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 

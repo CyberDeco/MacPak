@@ -10,6 +10,11 @@ pub mod index;
 pub mod operations;
 pub mod workspace;
 
+// GUI-specific modules (moved from MacLarian)
+pub mod dialog;
+pub mod dyes;
+pub mod formats;
+
 // Feature-gated modules
 #[cfg(feature = "gui")]
 pub mod gui;

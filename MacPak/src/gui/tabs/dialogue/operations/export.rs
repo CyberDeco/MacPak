@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::fmt::Write;
 
 use floem::reactive::{SignalGet, SignalUpdate};
-use maclarian::dialog::{Dialog, NodeConstructor};
+use crate::dialog::{Dialog, NodeConstructor};
 
 use crate::gui::state::DialogueState;
 

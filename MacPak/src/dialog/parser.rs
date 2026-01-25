@@ -2,7 +2,7 @@
 //!
 //! Extracts dialog data from the generic LSJ format into typed Dialog structures.
 
-use crate::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
+use maclarian::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
 use super::types::{Dialog, SpeakerInfo, DialogNode, NodeConstructor, GameData, FlagGroup, FlagType, Flag, TaggedText, Rule, RuleGroup, TagTextEntry, DialogEditorData};
 
 /// Parse a dialog from an LSJ document

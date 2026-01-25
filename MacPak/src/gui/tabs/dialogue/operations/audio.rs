@@ -1,14 +1,14 @@
 //! Audio playback operations for dialogue voice lines
 //!
 //! This module provides the rodio-based playback infrastructure.
-//! WEM decoding is handled by maclarian's wem module via vgmstream.
+//! WEM decoding is handled by the wem module via vgmstream.
 //! Decoded audio is cached via AudioCache for efficient replay.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use floem::reactive::SignalUpdate;
 use rodio::{OutputStream, OutputStreamHandle, Sink, Source};
-use maclarian::formats::wem::{AudioCacheError, DecodedAudio, WemError};
+use crate::formats::wem::{AudioCacheError, DecodedAudio, WemError};
 
 use crate::gui::state::DialogueState;
 
@@ -58,7 +58,7 @@ impl AudioPlayer {
 
     /// Play a WEM file from disk using vgmstream
     pub fn play_file(&self, path: &Path) -> Result<(), AudioError> {
-        let audio = maclarian::formats::wem::load_wem_file_vgmstream(path)?;
+        let audio = crate::formats::wem::load_wem_file_vgmstream(path)?;
         self.play(audio)
     }
 

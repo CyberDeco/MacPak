@@ -1,7 +1,7 @@
 //! Map building helpers for dialogue tree construction
 
 use std::collections::{HashMap, HashSet};
-use maclarian::dialog::{Dialog, NodeConstructor};
+use crate::dialog::{Dialog, NodeConstructor};
 
 /// Build a map from node UUIDs to logicalnames inherited from Alias nodes that reference them
 pub fn build_alias_logicalname_map(dialog: &Dialog) -> HashMap<String, String> {

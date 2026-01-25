@@ -3,8 +3,8 @@
 //! Loads DifficultyClasses.lsx files from PAK sources to map DC GUIDs
 //! to their difficulty values and names.
 
-use crate::formats::lsx::parse_lsx;
-use crate::pak::PakOperations;
+use maclarian::formats::lsx::parse_lsx;
+use maclarian::pak::PakOperations;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -168,7 +168,7 @@ impl DifficultyClassCache {
     /// Extract (UUID, Name, Difficulty) tuples from DifficultyClasses.lsx bytes
     fn extract_dcs_from_lsx(data: &[u8]) -> Vec<(String, String, i32)> {
         // Process all regions and their nodes
-        fn process_node(node: &crate::formats::lsx::LsxNode, results: &mut Vec<(String, String, i32)>) {
+        fn process_node(node: &maclarian::formats::lsx::LsxNode, results: &mut Vec<(String, String, i32)>) {
             // DifficultyClass nodes have UUID, Name, and Difficulties attributes
             if node.id == "DifficultyClass" {
                 let mut uuid: Option<String> = None;

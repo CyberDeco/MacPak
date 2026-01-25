@@ -3,10 +3,10 @@
 use floem::prelude::*;
 use std::collections::HashMap;
 
-// Import from maclarian dyes module
-use maclarian::dyes::{ColorCategory, COLOR_REGISTRY, DEFAULT_HEX};
-// Re-export ImportedDyeEntry from maclarian for public use
-pub use maclarian::dyes::ImportedDyeEntry;
+// Import from local dyes module (moved from maclarian)
+use crate::dyes::{ColorCategory, COLOR_REGISTRY, DEFAULT_HEX};
+// Re-export ImportedDyeEntry for public use
+pub use crate::dyes::ImportedDyeEntry;
 
 /// Vendor table definition for dye distribution
 #[derive(Clone, Debug)]
@@ -91,7 +91,7 @@ impl DyeColorEntry {
     }
 }
 
-// ImportedDyeEntry is now imported from maclarian::dyes
+// ImportedDyeEntry is imported from local dyes module
 
 /// A generated dye entry created in the current session
 #[derive(Clone, Debug)]
