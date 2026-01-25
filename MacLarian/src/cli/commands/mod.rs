@@ -5,7 +5,11 @@ pub mod create;
 pub mod extract;
 pub mod gr2;
 pub mod list;
+pub mod loca;
 pub mod mod_cmd;
+pub mod pak;
+pub mod search;
+pub mod texture;
 pub mod virtual_texture;
 #[cfg(feature = "audio")]
 pub mod wem;
@@ -101,6 +105,10 @@ pub enum Commands {
         /// Output PAK file
         #[arg(short, long)]
         destination: PathBuf,
+
+        /// Compression method (lz4, zlib, none). Default: lz4
+        #[arg(short, long, default_value = "lz4")]
+        compression: String,
     },
 
     /// List PAK contents
@@ -146,6 +154,36 @@ pub enum Commands {
     Wem {
         #[command(subcommand)]
         command: WemCommands,
+    },
+
+    /// Search PAK file contents
+    Search {
+        #[command(subcommand)]
+        command: SearchCommands,
+    },
+
+    /// Build and manage search indexes
+    Index {
+        #[command(subcommand)]
+        command: IndexCommands,
+    },
+
+    /// PAK file utilities (batch operations, info)
+    Pak {
+        #[command(subcommand)]
+        command: PakCommands,
+    },
+
+    /// LOCA localization file operations
+    Loca {
+        #[command(subcommand)]
+        command: LocaCommands,
+    },
+
+    /// Texture operations (DDS/PNG conversion)
+    Texture {
+        #[command(subcommand)]
+        command: TextureCommands,
     },
 }
 
@@ -347,6 +385,225 @@ pub enum VirtualTextureCommands {
     },
 }
 
+/// Search commands
+#[derive(Subcommand)]
+pub enum SearchCommands {
+    /// Search for files by filename (case-insensitive)
+    #[command(name = "filename")]
+    FileName {
+        /// PAK file to search
+        pak: PathBuf,
+
+        /// Search term
+        query: String,
+
+        /// Filter by file type (lsx, lsf, gr2, dds, etc.)
+        #[arg(short = 't', long = "type")]
+        type_filter: Option<String>,
+    },
+
+    /// Search for files by path (case-insensitive substring match)
+    Path {
+        /// PAK file to search
+        pak: PathBuf,
+
+        /// Search term
+        query: String,
+
+        /// Filter by file type (lsx, lsf, gr2, dds, etc.)
+        #[arg(short = 't', long = "type")]
+        type_filter: Option<String>,
+    },
+
+    /// Search for files by UUID (handles various formats)
+    #[command(name = "uuid")]
+    Uuid {
+        /// PAK file to search
+        pak: PathBuf,
+
+        /// UUID to search for
+        uuid: String,
+    },
+
+    /// Full-text content search (slower, searches file contents)
+    Content {
+        /// PAK file to search
+        pak: PathBuf,
+
+        /// Search query
+        query: String,
+
+        /// Maximum results to return
+        #[arg(short, long, default_value = "50")]
+        limit: usize,
+    },
+
+    /// Search using a pre-built index (faster for repeated searches)
+    #[command(name = "index")]
+    FromIndex {
+        /// Directory containing the exported index
+        index_dir: PathBuf,
+
+        /// Search query
+        query: String,
+
+        /// Maximum results to return
+        #[arg(short, long, default_value = "50")]
+        limit: usize,
+    },
+}
+
+/// Index commands
+#[derive(Subcommand)]
+pub enum IndexCommands {
+    /// Build a search index from PAK files
+    Build {
+        /// PAK file(s) to index
+        #[arg(required = true)]
+        paks: Vec<PathBuf>,
+
+        /// Output directory for the index
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Build full-text index (slower, enables content search)
+        #[arg(long)]
+        fulltext: bool,
+    },
+
+    /// Show statistics about an index
+    Stats {
+        /// Directory containing the index
+        index_dir: PathBuf,
+    },
+}
+
+/// PAK utility commands
+#[derive(Subcommand)]
+pub enum PakCommands {
+    /// Show detailed info about a PAK file (file counts, compression stats)
+    Info {
+        /// PAK file to analyze
+        pak: PathBuf,
+    },
+
+    /// Find all PAK files in a directory
+    Find {
+        /// Directory to search
+        dir: PathBuf,
+    },
+
+    /// Batch extract multiple PAK files
+    BatchExtract {
+        /// Source directory containing PAK files
+        #[arg(short, long)]
+        source: PathBuf,
+
+        /// Destination directory for extracted files
+        #[arg(short, long)]
+        dest: PathBuf,
+    },
+
+    /// Batch create PAK files from folders
+    BatchCreate {
+        /// Source directory containing folders to pack
+        #[arg(short, long)]
+        source: PathBuf,
+
+        /// Destination directory for PAK files
+        #[arg(short, long)]
+        dest: PathBuf,
+    },
+}
+
+/// LOCA localization file commands
+#[derive(Subcommand)]
+pub enum LocaCommands {
+    /// List entries in a LOCA file
+    List {
+        /// LOCA file to read
+        path: PathBuf,
+
+        /// Maximum entries to display
+        #[arg(short, long)]
+        limit: Option<usize>,
+    },
+
+    /// Get a specific entry by handle/key
+    Get {
+        /// LOCA file to read
+        path: PathBuf,
+
+        /// Handle or partial key to search for
+        handle: String,
+    },
+
+    /// Search for entries containing text
+    Search {
+        /// LOCA file to read
+        path: PathBuf,
+
+        /// Text to search for
+        query: String,
+
+        /// Maximum results to return
+        #[arg(short, long, default_value = "50")]
+        limit: usize,
+    },
+
+    /// Export LOCA file to XML format
+    Export {
+        /// Source LOCA file
+        path: PathBuf,
+
+        /// Output XML file
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+}
+
+/// Texture operation commands
+#[derive(Subcommand)]
+pub enum TextureCommands {
+    /// Show info about a DDS texture file
+    Info {
+        /// DDS file to analyze
+        path: PathBuf,
+    },
+
+    /// Convert a texture file (DDS<->PNG)
+    Convert {
+        /// Input file (DDS or PNG)
+        input: PathBuf,
+
+        /// Output file (PNG or DDS)
+        output: PathBuf,
+
+        /// DDS format when converting to DDS (bc1, bc2, bc3, rgba)
+        #[arg(short, long, default_value = "bc3")]
+        format: Option<String>,
+    },
+
+    /// Batch convert textures in a directory
+    BatchConvert {
+        /// Directory containing textures
+        #[arg(short, long)]
+        dir: PathBuf,
+
+        /// Output directory
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Target format (png or dds)
+        #[arg(short, long)]
+        to: String,
+
+        /// DDS format when converting to DDS (bc1, bc2, bc3, rgba)
+        #[arg(long)]
+        dds_format: Option<String>,
+    },
+}
+
 impl Commands {
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
@@ -394,7 +651,9 @@ impl Commands {
                 input_format.as_deref(),
                 output_format.as_deref(),
             ),
-            Commands::Create { source, destination } => create::execute(source, destination),
+            Commands::Create { source, destination, compression } => {
+                create::execute(source, destination, compression)
+            }
             Commands::List {
                 source,
                 detailed,
@@ -406,6 +665,11 @@ impl Commands {
             Commands::Mod { command } => command.execute(),
             #[cfg(feature = "audio")]
             Commands::Wem { command } => command.execute(),
+            Commands::Search { command } => command.execute(),
+            Commands::Index { command } => command.execute(),
+            Commands::Pak { command } => command.execute(),
+            Commands::Loca { command } => command.execute(),
+            Commands::Texture { command } => command.execute(),
         }
     }
 }
@@ -492,6 +756,90 @@ impl ModCommands {
                 extracted,
                 output,
             } => mod_cmd::info_json(pak, extracted, output.as_deref()),
+        }
+    }
+}
+
+impl SearchCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            SearchCommands::FileName {
+                pak,
+                query,
+                type_filter,
+            } => search::search_filename(pak, query, type_filter.as_deref()),
+            SearchCommands::Path {
+                pak,
+                query,
+                type_filter,
+            } => search::search_path(pak, query, type_filter.as_deref()),
+            SearchCommands::Uuid { pak, uuid } => search::search_uuid(pak, uuid),
+            SearchCommands::Content { pak, query, limit } => {
+                search::search_content(pak, query, *limit)
+            }
+            SearchCommands::FromIndex {
+                index_dir,
+                query,
+                limit,
+            } => search::search_index(index_dir, query, *limit),
+        }
+    }
+}
+
+impl IndexCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            IndexCommands::Build {
+                paks,
+                output,
+                fulltext,
+            } => {
+                // Build index from multiple PAKs
+                for pak in paks {
+                    search::build_index(pak, Some(output), *fulltext)?;
+                }
+                Ok(())
+            }
+            IndexCommands::Stats { index_dir } => search::index_stats(index_dir),
+        }
+    }
+}
+
+impl PakCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            PakCommands::Info { pak } => pak::info(pak),
+            PakCommands::Find { dir } => pak::find(dir),
+            PakCommands::BatchExtract { source, dest } => pak::batch_extract_cmd(source, dest),
+            PakCommands::BatchCreate { source, dest } => pak::batch_create_cmd(source, dest),
+        }
+    }
+}
+
+impl LocaCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            LocaCommands::List { path, limit } => loca::list(path, *limit),
+            LocaCommands::Get { path, handle } => loca::get(path, handle),
+            LocaCommands::Search { path, query, limit } => loca::search(path, query, *limit),
+            LocaCommands::Export { path, output } => loca::export_xml(path, output),
+        }
+    }
+}
+
+impl TextureCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            TextureCommands::Info { path } => texture::info(path),
+            TextureCommands::Convert { input, output, format } => {
+                texture::convert(input, output, format.as_deref())
+            }
+            TextureCommands::BatchConvert {
+                dir,
+                output,
+                to,
+                dds_format,
+            } => texture::batch_convert(dir, output, to, dds_format.as_deref()),
         }
     }
 }

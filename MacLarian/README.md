@@ -144,6 +144,11 @@ cargo run --features cli -- <command>
 | `vt` | Virtual texture (GTS/GTP) operations |
 | `mod` | Mod utilities (validation, info.json) |
 | `wem` | WEM audio operations (requires `audio` feature) |
+| `search` | Search PAK file contents |
+| `index` | Build and manage search indexes |
+| `pak` | PAK batch operations and info |
+| `loca` | LOCA localization file operations |
+| `texture` | Texture conversion (DDS/PNG) |
 
 ---
 
@@ -202,13 +207,28 @@ maclarian extract -s Models.pak -d ./models --bundle --bg3-path /path/to/Data --
 Create a PAK archive from a directory.
 
 ```bash
-maclarian create -s <source_dir> -d <output.pak>
+maclarian create -s <source_dir> -d <output.pak> [-c <compression>]
 ```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-s, --source` | Source directory |
+| `-d, --destination` | Output PAK file |
+| `-c, --compression` | Compression method: `lz4` (default), `zlib`, `none` |
 
 **Examples:**
 
 ```bash
+# Create with default LZ4 compression
 maclarian create -s ./my_mod -d MyMod.pak
+
+# Create with Zlib compression
+maclarian create -s ./my_mod -d MyMod.pak -c zlib
+
+# Create uncompressed PAK
+maclarian create -s ./my_mod -d MyMod.pak -c none
 ```
 
 ---
@@ -461,6 +481,219 @@ maclarian wem decode <file.wem> [-o output.wav]
 |------|-------------|
 | `-o, --output <file>` | Output WAV file |
 | `--silent` | Use silent fallback if vgmstream unavailable |
+
+---
+
+### `search` - Search PAK Contents
+
+Search for files within PAK archives.
+
+#### `search filename` - Search by Filename
+
+```bash
+maclarian search filename <pak> <query> [-t <type>]
+```
+
+#### `search path` - Search by Path
+
+```bash
+maclarian search path <pak> <query> [-t <type>]
+```
+
+#### `search uuid` - Search by UUID
+
+```bash
+maclarian search uuid <pak> <uuid>
+```
+
+#### `search content` - Full-text Search
+
+Search within file contents (slower, builds index first).
+
+```bash
+maclarian search content <pak> <query> [-l <limit>]
+```
+
+**Examples:**
+
+```bash
+# Find files containing "Barbarian" in filename
+maclarian search filename Shared.pak "Barbarian"
+
+# Find LSX files in a specific path
+maclarian search path Shared.pak "Creatures" -t lsx
+
+# Search file contents
+maclarian search content Shared.pak "character ability" -l 20
+```
+
+---
+
+### `index` - Search Index Management
+
+Build and manage persistent search indexes for faster repeated searches.
+
+#### `index build` - Build Index
+
+```bash
+maclarian index build <pak...> -o <output_dir> [--fulltext]
+```
+
+#### `index stats` - Show Index Statistics
+
+```bash
+maclarian index stats <index_dir>
+```
+
+**Examples:**
+
+```bash
+# Build index with full-text support
+maclarian index build Shared.pak Gustav.pak -o ./my_index --fulltext
+
+# Check index statistics
+maclarian index stats ./my_index
+```
+
+---
+
+### `pak` - PAK Utilities
+
+Advanced PAK operations including batch processing and analysis.
+
+#### `pak info` - PAK Statistics
+
+Show detailed statistics about a PAK file.
+
+```bash
+maclarian pak info <pak>
+```
+
+Shows: file counts by type, compression ratio, largest files.
+
+#### `pak find` - Find PAK Files
+
+Find all PAK files in a directory.
+
+```bash
+maclarian pak find <directory>
+```
+
+#### `pak batch-extract` - Batch Extract
+
+Extract multiple PAK files in parallel.
+
+```bash
+maclarian pak batch-extract -s <source_dir> -d <dest_dir>
+```
+
+#### `pak batch-create` - Batch Create
+
+Create multiple PAK files from folders.
+
+```bash
+maclarian pak batch-create -s <source_dir> -d <dest_dir>
+```
+
+**Examples:**
+
+```bash
+# Show PAK statistics
+maclarian pak info Shared.pak
+
+# Find all PAKs in BG3 Data folder
+maclarian pak find ~/BG3/Data
+
+# Extract all PAKs in a directory
+maclarian pak batch-extract -s ./paks -d ./extracted
+```
+
+---
+
+### `loca` - Localization Operations
+
+Work with LOCA localization files.
+
+#### `loca list` - List Entries
+
+```bash
+maclarian loca list <file.loca> [-l <limit>]
+```
+
+#### `loca get` - Get Entry by Handle
+
+```bash
+maclarian loca get <file.loca> <handle>
+```
+
+#### `loca search` - Search Text
+
+```bash
+maclarian loca search <file.loca> <query> [-l <limit>]
+```
+
+#### `loca export` - Export to XML
+
+```bash
+maclarian loca export <file.loca> -o <output.xml>
+```
+
+**Examples:**
+
+```bash
+# List first 20 entries
+maclarian loca list english.loca -l 20
+
+# Search for specific text
+maclarian loca search english.loca "Hello traveler"
+
+# Export to XML for editing
+maclarian loca export english.loca -o english.xml
+```
+
+---
+
+### `texture` - Texture Operations
+
+Convert between DDS and PNG texture formats.
+
+#### `texture info` - Show DDS Info
+
+```bash
+maclarian texture info <file.dds>
+```
+
+Shows: dimensions, format, mip levels.
+
+#### `texture convert` - Convert Texture
+
+```bash
+maclarian texture convert <input> <output> [-f <format>]
+```
+
+Formats for DDS output: `bc1`, `bc2`, `bc3` (default), `rgba`
+
+#### `texture batch-convert` - Batch Convert
+
+```bash
+maclarian texture batch-convert -d <dir> -o <output_dir> -t <png|dds> [--dds-format <fmt>]
+```
+
+**Examples:**
+
+```bash
+# Show DDS info
+maclarian texture info albedo.dds
+
+# Convert DDS to PNG
+maclarian texture convert albedo.dds albedo.png
+
+# Convert PNG to DDS (BC3 compression)
+maclarian texture convert albedo.png albedo.dds -f bc3
+
+# Batch convert all DDS to PNG
+maclarian texture batch-convert -d ./textures -o ./png_out -t png
+```
 
 ## License
 
