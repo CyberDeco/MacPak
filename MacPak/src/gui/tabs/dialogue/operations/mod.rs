@@ -4,7 +4,6 @@ mod file_ops;
 mod loading;
 mod display;
 mod export;
-mod localization;
 mod voice;
 mod audio;
 
