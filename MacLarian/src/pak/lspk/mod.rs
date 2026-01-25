@@ -11,21 +11,19 @@ mod reader;
 mod types;
 mod writer;
 
-pub use reader::LspkReader;
-pub use types::*;
-pub use writer::LspkWriter;
+// Internal-only exports (used by pak_tools and other internal modules)
+pub(crate) use reader::LspkReader;
+pub(crate) use writer::LspkWriter;
 
-/// LSPK magic bytes
-pub const MAGIC: [u8; 4] = [b'L', b'S', b'P', b'K'];
+// Public types that users need
+pub use types::{CompressionMethod, FileTableEntry, PakContents, PakFile, PakPhase, PakProgress};
 
-/// Minimum supported PAK version
-pub const MIN_VERSION: u32 = 15;
+// Internal constants
+pub(crate) const MAGIC: [u8; 4] = [b'L', b'S', b'P', b'K'];
+pub(crate) const MIN_VERSION: u32 = 15;
+pub(crate) const MAX_VERSION: u32 = 18;
+pub(crate) const PATH_LENGTH: usize = 256;
+pub(crate) const TABLE_ENTRY_SIZE: usize = 272;
 
-/// Maximum supported PAK version
-pub const MAX_VERSION: u32 = 18;
-
-/// Length of file path in table entry
-pub const PATH_LENGTH: usize = 256;
-
-/// Size of a decompressed table entry
-pub const TABLE_ENTRY_SIZE: usize = 272;
+// Internal header types (used by reader)
+pub(crate) use types::{LspkFooter, LspkHeader};

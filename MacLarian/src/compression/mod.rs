@@ -2,9 +2,10 @@
 
 use crate::error::{Error, Result};
 
-pub mod lz4;
-pub mod fastlz;
-// pub mod zstd;
+// Internal compression backends (not public API)
+pub(crate) mod lz4;
+pub(crate) mod fastlz;
+// pub(crate) mod zstd;
 
 /// Compress data using LZ4
 ///

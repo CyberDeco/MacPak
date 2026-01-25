@@ -11,14 +11,17 @@
 
 mod format;
 mod decompress;
-pub mod inspect;
+mod inspect;
 
-pub use format::{
-    Gr2File, Gr2Magic, Gr2Header, SectionHeader, SectionRef,
-    Compression, PointerSize, Endian, Relocation,
-    magic, tags,
-};
-pub use decompress::decompress_bitknit;
+// Internal format types (used by decompress_gr2 and other internal modules)
+use format::{Gr2File, Compression};
+use decompress::decompress_bitknit;
+
+// Crate-internal exports for other modules that need these
+pub(crate) use format::PointerSize;
+pub(crate) use decompress::decompress_bitknit as bitknit_decompress;
+
+// Public inspection API
 pub use inspect::{
     inspect_gr2, extract_gr2_info,
     Gr2Info, SectionInfo, Gr2MeshInfo, Gr2SkeletonInfo, Gr2BoneInfo, Gr2ModelInfo,

@@ -45,5 +45,3 @@ pub use paths::{
     bg3_data_path, expand_tilde, path_with_tilde, virtual_textures_pak_path, BG3_DATA_PATH_MACOS,
 };
 
-// Re-export parser functions (for advanced use)
-pub use parser::{merge_databases, resolve_references};

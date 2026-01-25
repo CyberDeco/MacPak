@@ -9,7 +9,7 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::error::{Error, Result};
-use crate::formats::gr2::decompress_bitknit;
+use crate::formats::gr2::bitknit_decompress as decompress_bitknit;
 use super::utils::half_to_f32;
 
 // ============================================================================

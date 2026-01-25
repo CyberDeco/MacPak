@@ -1,3 +1,4 @@
 //! LZ4 compression wrapper
-
-pub use crate::compression::{compress, decompress, decompress_with_size};
+//!
+//! This module exists for potential future LZ4-specific utilities.
+//! The main compression functions are in the parent module.

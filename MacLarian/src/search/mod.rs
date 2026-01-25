@@ -20,9 +20,9 @@
 
 #![allow(clippy::cast_possible_truncation)]
 
-pub mod content_cache;
-pub mod extract;
-pub mod fulltext;
+mod content_cache;
+pub(crate) mod extract;
+mod fulltext;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -34,8 +34,11 @@ use crate::error::Result;
 use crate::pak::lspk::LspkReader;
 use crate::pak::PakReaderCache;
 
-pub use content_cache::{ContentCache, CachedContent, ContentCacheStats, ContentMatch};
-pub use fulltext::{FullTextIndex, FullTextResult};
+// Internal use within search module
+use fulltext::FullTextIndex;
+
+// Public exports
+pub use fulltext::FullTextResult;
 
 /// File type classification for filtering
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

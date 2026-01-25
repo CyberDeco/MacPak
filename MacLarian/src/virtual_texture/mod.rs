@@ -20,22 +20,28 @@
 //! ).unwrap();
 //! ```
 
-pub mod types;
-pub mod gts;
-pub mod gtp;
-pub mod extractor;
-pub mod utils;
-pub mod batch;
+mod types;
+mod gts;
+mod gtp;
+mod extractor;
+mod utils;
+mod batch;
 
-// Re-exports
+// Re-exports - public types
 pub use types::*;
 pub use gts::GtsFile;
 pub use gtp::GtpFile;
-pub use extractor::{VirtualTextureExtractor, DdsWriter, ExtractOptions};
+
+// Public extractor
+pub use extractor::VirtualTextureExtractor;
+
+// Utility functions
 pub use utils::{
     list_gts, gtp_info, get_subfolder_name, find_base_name, find_gts_path, extract_all,
     GtsInfo, PageFileInfo, GtpInfo, ExtractResult,
 };
+
+// Batch operations
 pub use batch::{
     extract_gts_file, extract_batch, GtsExtractResult, BatchExtractResult,
 };

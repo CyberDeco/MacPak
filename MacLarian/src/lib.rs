@@ -1,14 +1,63 @@
 #![allow(non_snake_case)]
-//! `MacLarian` - Larian Studios file format library for macOS
+//! # MacLarian
 //!
-//! This library provides tools for working with Baldur's Gate 3 and other
-//! Larian Studios game file formats, including:
-//! - LSF (binary format)
-//! - LSX (XML format)
-//! - LSJ (JSON format)
-//! - LSBC, LSBX, LSBS (legacy binary formats)
-//! - Virtual Textures (GTS/GTP)
-//! - PAK archives
+//! A pure-Rust library for working with Baldur's Gate 3 and Larian Studios file formats.
+//!
+//! ## Supported Formats
+//!
+//! - **PAK archives** - Extract, create, and list game asset packages
+//! - **LSF/LSX/LSJ** - Binary, XML, and JSON document formats
+//! - **GR2** - Granny2 mesh files with BitKnit decompression
+//! - **Virtual Textures** - GTS/GTP streaming texture extraction
+//! - **LOCA** - Localization files
+//! - **DDS/PNG** - Texture conversion
+//!
+//! ## Quick Start
+//!
+//! ### Working with PAK Archives
+//!
+//! ```no_run
+//! use maclarian::pak::PakOperations;
+//!
+//! // List contents of a PAK file
+//! let files = PakOperations::list("Shared.pak")?;
+//! println!("Found {} files", files.len());
+//!
+//! // Extract a PAK file
+//! PakOperations::extract("Shared.pak", "output/")?;
+//!
+//! // Read a specific file without extracting
+//! let data = PakOperations::read_file_bytes("Shared.pak", "Public/Shared/meta.lsx")?;
+//! # Ok::<(), maclarian::Error>(())
+//! ```
+//!
+//! ### Converting Document Formats
+//!
+//! ```no_run
+//! use maclarian::converter::convert_lsf_to_lsx;
+//!
+//! // Convert LSF (binary) to LSX (XML) file
+//! convert_lsf_to_lsx("meta.lsf", "meta.lsx")?;
+//! # Ok::<(), maclarian::Error>(())
+//! ```
+//!
+//! ### Using the Prelude
+//!
+//! The prelude provides convenient access to commonly used types:
+//!
+//! ```
+//! use maclarian::prelude::*;
+//!
+//! // Now you have access to:
+//! // - PakOperations, SearchIndex, FileType
+//! // - LsfDocument, LsxDocument, LsjDocument
+//! // - VirtualTextureExtractor, GtsFile, GtpFile
+//! // - Error, Result, and more
+//! ```
+//!
+//! ## Feature Flags
+//!
+//! - `cli` - Enables the `maclarian` command-line binary
 
 pub mod error;
 pub mod formats;
@@ -65,10 +114,9 @@ pub mod prelude {
         validate_mod_structure, ModValidationResult,
     };
 
-    // Search module exports
+    // Search module exports (public types only)
     pub use crate::search::{
-        SearchIndex, IndexedFile, FileType,
-        ContentCache, CachedContent, ContentCacheStats, ContentMatch,
+        SearchIndex, IndexedFile, FileType, FullTextResult,
     };
 }
 

@@ -91,17 +91,6 @@ let glb_data = convert_gr2_bytes_to_glb(&gr2_data)?;
 std::fs::write("model.glb", glb_data)?;
 ```
 
-### Working with Character Dialogs
-
-```rust
-use maclarian::dialog::parse_dialog_lsf_bytes;
-
-let data = std::fs::read("dialog.lsf")?;
-let dialog = parse_dialog_lsf_bytes(&data)?;
-
-println!("Dialog has {} nodes", dialog.nodes.len());
-```
-
 ## Prelude
 
 For convenience, commonly used types are re-exported in the prelude:

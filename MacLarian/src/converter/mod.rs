@@ -10,7 +10,7 @@
 //! - GR2 (Granny2) ↔ glTF - 3D model conversion
 //! - DDS ↔ PNG - Texture conversion
 
-pub mod lsf_lsx_lsj;
+pub(crate) mod lsf_lsx_lsj;
 pub mod loca;
 pub mod gr2_gltf;
 mod dds_png;
@@ -19,7 +19,7 @@ mod dds_png;
 /// The callback receives a message describing the current step.
 pub type ProgressCallback<'a> = &'a dyn Fn(&str);
 
-// Re-export LSF/LSX/LSJ conversions from subdirectory
+// Re-export LSF/LSX/LSJ conversions - primary API only
 pub use lsf_lsx_lsj::{
     // Primary conversion functions
     convert_lsf_to_lsx, convert_lsx_to_lsf,
@@ -28,9 +28,7 @@ pub use lsf_lsx_lsj::{
     // With-progress variants
     convert_lsx_to_lsj_with_progress, convert_lsj_to_lsx_with_progress,
     convert_lsf_to_lsj_with_progress, convert_lsj_to_lsf_with_progress,
-    // Helper functions
-    to_lsx, from_lsx, to_lsj, lsj_to_lsx_doc,
-    // Convenience aliases
+    // Convenience aliases (shorter names)
     lsf_to_lsx, lsx_to_lsf, lsx_to_lsj, lsj_to_lsx, lsf_to_lsj, lsj_to_lsf,
     // Convenience aliases with progress
     lsx_to_lsj_with_progress, lsj_to_lsx_with_progress,
