@@ -15,10 +15,17 @@ pub fn file_select_content(state: PakOpsState) -> impl IntoView {
     let pak_path = state.file_select_pak;
     let ext_filter = state.file_select_filter;
 
+    // GR2 options signals
+    let gr2_convert = state.gr2_auto_convert;
+    let gr2_textures = state.gr2_auto_textures;
+    let gr2_virtual_textures = state.gr2_auto_virtual_textures;
+    let keep_gr2 = state.keep_original_gr2;
+
     let state_extract = state.clone();
     let state_cancel = state.clone();
     let state_select_all = state.clone();
     let state_deselect = state.clone();
+    let state_bundle = state.clone();
 
     let filtered_files = move || {
         let filter = ext_filter.get().to_lowercase();
@@ -171,6 +178,15 @@ pub fn file_select_content(state: PakOpsState) -> impl IntoView {
                 .border_radius(4.0)
                 .background(Color::WHITE)
         }),
+        // GR2 Processing Options (shown only when GR2 files are selected)
+        gr2_options_panel(
+            gr2_convert,
+            gr2_textures,
+            gr2_virtual_textures,
+            keep_gr2,
+            state_bundle.clone(),
+            selected,
+        ),
         h_stack((
             empty().style(|s| s.flex_grow(1.0)),
             button("Cancel")
@@ -221,6 +237,105 @@ pub fn file_select_content(state: PakOpsState) -> impl IntoView {
             .border_color(Color::rgb8(200, 200, 200))
             .border_radius(8.0)
             .width(800.0)
-            .max_height(500.0)
+            .max_height(600.0)
+    })
+}
+
+/// GR2 Processing Options panel (hidden when no GR2 files are selected)
+fn gr2_options_panel(
+    gr2_convert: RwSignal<bool>,
+    gr2_textures: RwSignal<bool>,
+    gr2_virtual_textures: RwSignal<bool>,
+    keep_gr2: RwSignal<bool>,
+    _state: PakOpsState,
+    selected: RwSignal<std::collections::HashSet<String>>,
+) -> impl View {
+    // Check if all options are enabled (bundle mode)
+    let is_bundle = move || {
+        gr2_convert.get() && gr2_textures.get() && gr2_virtual_textures.get()
+    };
+
+    // Check if selection contains GR2 files
+    let has_gr2 = move || {
+        selected.get().iter().any(|f| f.to_lowercase().ends_with(".gr2"))
+    };
+
+    v_stack((
+        label(|| "GR2 Processing Options").style(|s| {
+            s.font_size(13.0)
+                .font_weight(Weight::BOLD)
+                .margin_bottom(8.0)
+        }),
+        // Full Bundle checkbox
+        h_stack((
+            checkbox(is_bundle)
+                .on_update(move |checked| {
+                    gr2_convert.set(checked);
+                    gr2_textures.set(checked);
+                    gr2_virtual_textures.set(checked);
+                })
+                .style(|s| s.margin_right(8.0)),
+            label(|| "Full Bundle")
+                .style(|s| s.font_size(12.0).font_weight(Weight::MEDIUM)),
+            label(|| " (convert + all textures)")
+                .style(|s| s.font_size(11.0).color(Color::rgb8(100, 100, 100))),
+        ))
+        .style(|s| s.items_center().margin_bottom(6.0)),
+        // Individual options
+        h_stack((
+            // Convert to GLB
+            h_stack((
+                checkbox(move || gr2_convert.get())
+                    .on_update(move |checked| gr2_convert.set(checked))
+                    .style(|s| s.margin_right(6.0)),
+                label(|| "Convert to GLB")
+                    .style(|s| s.font_size(11.0)),
+            ))
+            .style(|s| s.items_center().margin_right(16.0)),
+            // Extract textures
+            h_stack((
+                checkbox(move || gr2_textures.get())
+                    .on_update(move |checked| gr2_textures.set(checked))
+                    .style(|s| s.margin_right(6.0)),
+                label(|| "Extract textures")
+                    .style(|s| s.font_size(11.0)),
+            ))
+            .style(|s| s.items_center().margin_right(16.0)),
+            // Extract virtual textures
+            h_stack((
+                checkbox(move || gr2_virtual_textures.get())
+                    .on_update(move |checked| gr2_virtual_textures.set(checked))
+                    .style(|s| s.margin_right(6.0)),
+                label(|| "Extract virtual textures")
+                    .style(|s| s.font_size(11.0)),
+            ))
+            .style(|s| s.items_center().margin_right(16.0)),
+            // Keep original GR2
+            h_stack((
+                checkbox(move || keep_gr2.get())
+                    .on_update(move |checked| keep_gr2.set(checked))
+                    .style(|s| s.margin_right(6.0)),
+                label(|| "Keep original GR2")
+                    .style(|s| s.font_size(11.0)),
+            ))
+            .style(|s| s.items_center()),
+        ))
+        .style(|s| s.margin_left(20.0).flex_wrap(floem::style::FlexWrap::Wrap)),
+    ))
+    .style(move |s| {
+        let visible = has_gr2();
+        let s = s
+            .width_full()
+            .margin_top(12.0)
+            .padding(12.0)
+            .background(Color::rgb8(248, 248, 248))
+            .border(1.0)
+            .border_color(Color::rgb8(220, 220, 220))
+            .border_radius(4.0);
+        if visible {
+            s
+        } else {
+            s.display(floem::style::Display::None)
+        }
     })
 }

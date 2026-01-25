@@ -9,7 +9,7 @@ use maclarian::virtual_texture::{extract_gts_file, extract_batch as vt_extract_b
 use super::types::{VtResult, create_result_sender, get_shared_progress};
 
 /// Extract textures from a single GTS file
-pub fn extract_single(state: VirtualTexturesState) {
+pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
     let gts_path = match state.gts_file.get() {
         Some(path) => path,
         None => return,
@@ -17,6 +17,9 @@ pub fn extract_single(state: VirtualTexturesState) {
 
     let _layer = state.selected_layer.get();
     let output_dir = state.batch_output_dir.get();
+    let _from_pak = state.from_pak.get_untracked();
+    let convert_to_png = state.convert_to_png.get_untracked();
+    let _game_data = if game_data_path.is_empty() { None } else { Some(PathBuf::from(&game_data_path)) };
 
     state.is_extracting.set(true);
     state.status_message.set("Extracting...".to_string());
@@ -44,10 +47,37 @@ pub fn extract_single(state: VirtualTexturesState) {
 
         match result {
             Ok(extract_result) => {
+                // Convert to PNG if requested (scan output directory for DDS files)
+                let mut png_converted = 0;
+                if convert_to_png {
+                    let search_dir = output_path
+                        .map(|p| p.to_path_buf())
+                        .unwrap_or_else(|| Path::new(&gts_path).parent().unwrap_or(Path::new(".")).to_path_buf());
+
+                    if let Ok(entries) = std::fs::read_dir(&search_dir) {
+                        for entry in entries.filter_map(|e| e.ok()) {
+                            let path = entry.path();
+                            if let Some(ext) = path.extension() {
+                                if ext.to_string_lossy().to_lowercase() == "dds" {
+                                    let png_path = path.with_extension("png");
+                                    if maclarian::converter::convert_dds_to_png(&path, &png_path).is_ok() {
+                                        png_converted += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 progress.update(1, 1, "Complete");
+                let texture_info = if png_converted > 0 {
+                    format!("{} (converted {} to PNG)", extract_result.texture_count, png_converted)
+                } else {
+                    format!("{}", extract_result.texture_count)
+                };
                 send_result(VtResult::SingleDone {
                     success: true,
-                    gts_name,
+                    gts_name: format!("{} - {} textures", gts_name, texture_info),
                     texture_count: extract_result.texture_count,
                     error: None,
                 });
@@ -65,7 +95,7 @@ pub fn extract_single(state: VirtualTexturesState) {
 }
 
 /// Extract textures from multiple GTS files
-pub fn extract_batch(state: VirtualTexturesState) {
+pub fn extract_batch(state: VirtualTexturesState, game_data_path: String) {
     let files = state.batch_gts_files.get();
     if files.is_empty() {
         return;
@@ -73,6 +103,9 @@ pub fn extract_batch(state: VirtualTexturesState) {
 
     let _layer = state.selected_layer.get();
     let output_dir = state.batch_output_dir.get();
+    let _from_pak = state.from_pak.get_untracked();
+    let convert_to_png = state.convert_to_png.get_untracked();
+    let _game_data = if game_data_path.is_empty() { None } else { Some(PathBuf::from(&game_data_path)) };
 
     state.is_extracting.set(true);
     state.status_message.set("Extracting...".to_string());
@@ -95,13 +128,38 @@ pub fn extract_batch(state: VirtualTexturesState) {
             |current, total, desc| progress.update(current, total, desc),
         );
 
+        // Convert to PNG if requested (scan output directory for DDS files)
+        let mut png_converted = 0;
+        if convert_to_png {
+            if let Some(out_dir) = output_path {
+                if let Ok(entries) = std::fs::read_dir(out_dir) {
+                    for entry in entries.filter_map(|e| e.ok()) {
+                        let path = entry.path();
+                        if let Some(ext) = path.extension() {
+                            if ext.to_string_lossy().to_lowercase() == "dds" {
+                                let png_path = path.with_extension("png");
+                                if maclarian::converter::convert_dds_to_png(&path, &png_path).is_ok() {
+                                    png_converted += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         progress.update(total, total, "Complete");
+
+        let mut results = result.results.clone();
+        if png_converted > 0 {
+            results.push(format!("Converted {} DDS files to PNG", png_converted));
+        }
 
         send_result(VtResult::BatchDone {
             success_count: result.success_count,
             error_count: result.error_count,
             texture_count: result.texture_count,
-            results: result.results,
+            results,
         });
     });
 }

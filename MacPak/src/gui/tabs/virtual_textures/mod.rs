@@ -15,10 +15,10 @@ use floem::prelude::*;
 use floem::style::Position;
 
 use crate::gui::shared::{header_section, progress_overlay, results_section};
-use crate::gui::state::{AppState, VirtualTexturesState};
+use crate::gui::state::{AppState, ConfigState, VirtualTexturesState};
 use sections::operations_row;
 
-pub fn virtual_textures_tab(_app_state: AppState, vt_state: VirtualTexturesState) -> impl IntoView {
+pub fn virtual_textures_tab(_app_state: AppState, vt_state: VirtualTexturesState, config_state: ConfigState) -> impl IntoView {
     let state = vt_state.clone();
 
     v_stack((
@@ -27,7 +27,7 @@ pub fn virtual_textures_tab(_app_state: AppState, vt_state: VirtualTexturesState
         // Main content area
         v_stack((
             // Operations row
-            operations_row(vt_state.clone()),
+            operations_row(vt_state.clone(), config_state),
             // Results area (using shared component)
             results_section(vt_state.clone()),
         ))

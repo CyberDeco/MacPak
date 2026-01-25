@@ -45,6 +45,8 @@ pub struct Gr2ExtractionOptions {
     pub virtual_textures_path: Option<PathBuf>,
     /// Convert extracted DDS textures to PNG format
     pub convert_to_png: bool,
+    /// Keep the original DDS files when converting to PNG
+    pub keep_original_dds: bool,
 }
 
 impl Default for Gr2ExtractionOptions {
@@ -55,6 +57,7 @@ impl Default for Gr2ExtractionOptions {
             game_data_path: None,
             virtual_textures_path: None,
             convert_to_png: false,
+            keep_original_dds: false,
         }
     }
 }
@@ -161,8 +164,10 @@ pub fn process_extracted_gr2(
                         match convert_dds_to_png(dds_path, &png_path) {
                             Ok(()) => {
                                 tracing::info!("Converted {} to PNG", dds_path.display());
-                                // Remove the DDS file after successful conversion
-                                let _ = std::fs::remove_file(dds_path);
+                                // Remove the DDS file after successful conversion (unless keep_original_dds)
+                                if !options.keep_original_dds {
+                                    let _ = std::fs::remove_file(dds_path);
+                                }
                                 png_paths.push(png_path);
                             }
                             Err(e) => {
@@ -172,6 +177,99 @@ pub fn process_extracted_gr2(
                                     e
                                 ));
                                 // Keep the DDS file in the result
+                                png_paths.push(dds_path.clone());
+                            }
+                        }
+                    } else {
+                        png_paths.push(dds_path.clone());
+                    }
+                }
+                result.texture_paths = png_paths;
+            } else {
+                result.texture_paths = textures;
+            }
+        } else {
+            result.warnings.push(
+                "Could not find BG3 game data for texture lookup. Use --game-data to specify the path.".to_string()
+            );
+        }
+    }
+
+    Ok(result)
+}
+
+/// Process an extracted GR2 file with a custom output directory.
+///
+/// Same as `process_extracted_gr2` but outputs to the specified directory
+/// instead of the GR2 file's parent directory.
+pub fn process_extracted_gr2_to_dir(
+    gr2_path: &Path,
+    output_dir: &Path,
+    options: &Gr2ExtractionOptions,
+) -> Result<Gr2ExtractionResult> {
+    let mut result = Gr2ExtractionResult {
+        gr2_path: gr2_path.to_path_buf(),
+        glb_path: None,
+        texture_paths: Vec::new(),
+        warnings: Vec::new(),
+    };
+
+    // Create output directory if it doesn't exist
+    std::fs::create_dir_all(output_dir).map_err(|e| {
+        Error::ConversionError(format!("Failed to create output directory: {e}"))
+    })?;
+
+    // Step 1: Convert GR2 to GLB (if requested)
+    if options.convert_to_glb {
+        let glb_name = gr2_path.file_stem().unwrap_or_default();
+        let glb_path = output_dir.join(format!("{}.glb", glb_name.to_string_lossy()));
+        match convert_gr2_to_glb(gr2_path, &glb_path) {
+            Ok(()) => {
+                result.glb_path = Some(glb_path);
+            }
+            Err(e) => {
+                result.warnings.push(format!("Failed to convert to GLB: {e}"));
+            }
+        }
+    }
+
+    // Step 2: Extract associated textures
+    if options.extract_textures {
+        // Build resolver from game data path or auto-detect
+        let resolver = if let Some(ref game_data) = options.game_data_path {
+            GameDataResolver::new(game_data).ok()
+        } else {
+            GameDataResolver::auto_detect().ok()
+        };
+
+        if let Some(resolver) = resolver {
+            let textures = extract_textures_for_gr2(gr2_path, resolver.database(), output_dir, options)?;
+
+            // Convert DDS to PNG if requested
+            if options.convert_to_png {
+                let mut png_paths = Vec::new();
+                for dds_path in &textures {
+                    let is_dds = dds_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map(|e| e.eq_ignore_ascii_case("dds"))
+                        .unwrap_or(false);
+                    if is_dds {
+                        let png_path = dds_path.with_extension("png");
+                        match convert_dds_to_png(dds_path, &png_path) {
+                            Ok(()) => {
+                                tracing::info!("Converted {} to PNG", dds_path.display());
+                                if !options.keep_original_dds {
+                                    let _ = std::fs::remove_file(dds_path);
+                                }
+                                png_paths.push(png_path);
+                            }
+                            Err(e) => {
+                                result.warnings.push(format!(
+                                    "Failed to convert {} to PNG: {}",
+                                    dds_path.display(),
+                                    e
+                                ));
                                 png_paths.push(dds_path.clone());
                             }
                         }

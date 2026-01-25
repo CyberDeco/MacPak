@@ -25,7 +25,6 @@
 //! # Ok::<(), maclarian::error::Error>(())
 //! ```
 
-mod embedded;
 mod game_data;
 mod parser;
 mod paths;
@@ -40,10 +39,6 @@ pub use resolver::MergedResolver;
 
 // Re-export game data resolver (primary API)
 pub use game_data::{GameDataResolver, BG3_DATA_PATH_WINDOWS};
-
-// Re-export embedded database functions (deprecated, kept for backwards compatibility)
-#[deprecated(since = "0.2.0", note = "Use GameDataResolver::auto_detect() instead")]
-pub use embedded::{embedded_database, embedded_database_cached};
 
 // Re-export path helpers
 pub use paths::{

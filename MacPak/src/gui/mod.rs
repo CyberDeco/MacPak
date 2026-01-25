@@ -88,7 +88,9 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     let browser_state_for_keyboard = browser_state.clone();
     let pak_ops_state_for_keyboard = pak_ops_state.clone();
     let gr2_state_for_keyboard = gr2_state.clone();
+    let config_state_for_gr2_keyboard = config_state.clone();
     let vt_state_for_keyboard = vt_state.clone();
+    let config_state_for_vt_keyboard = config_state.clone();
     let dyes_state_for_keyboard = dyes_state.clone();
     let config_state_for_dialogue = config_state.clone();
 
@@ -199,8 +201,8 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
                     0 => open_folder_dialog(browser_state_for_keyboard.clone()), // Browser - open folder
                     1 => open_file_dialog(editor_tabs_for_keyboard.clone()),     // Editor - open file
                     2 => extract_pak_file(pak_ops_state_for_keyboard.clone()),   // PAK Ops - extract PAK
-                    3 => open_gr2_file(gr2_state_for_keyboard.clone()),          // GR2 - open GR2 file
-                    4 => open_gts_file(vt_state_for_keyboard.clone()),           // Textures - open GTS file
+                    3 => open_gr2_file(gr2_state_for_keyboard.clone(), config_state_for_gr2_keyboard.clone()),          // GR2 - open GR2 file
+                    4 => open_gts_file(vt_state_for_keyboard.clone(), config_state_for_vt_keyboard.clone()),           // Textures - open GTS file
                     5 => {
                         // Dyes - import from mod folder
                         // Create temporary signals for display (actual data stored in state)
@@ -357,8 +359,8 @@ fn tab_content(
                 0 => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
                 1 => editor_tab(app_state.clone(), editor_tabs_state.clone()).into_any(),
                 2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone()).into_any(),
-                3 => gr2_tab(app_state.clone(), gr2_state.clone()).into_any(),
-                4 => virtual_textures_tab(app_state.clone(), vt_state.clone()).into_any(),
+                3 => gr2_tab(app_state.clone(), gr2_state.clone(), config_state.clone()).into_any(),
+                4 => virtual_textures_tab(app_state.clone(), vt_state.clone(), config_state.clone()).into_any(),
                 5 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
                 6 => search_tab(app_state.clone(), search_state.clone(), config_state.clone(), editor_tabs_state.clone(), dialogue_state.clone(), active_tab).into_any(),
                 7 => dialogue_tab(app_state.clone(), dialogue_state.clone(), config_state.clone()).into_any(),

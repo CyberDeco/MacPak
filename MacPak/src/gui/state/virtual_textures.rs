@@ -36,6 +36,10 @@ pub struct VirtualTexturesState {
 
     // Working directory for file dialogs
     pub working_dir: RwSignal<Option<String>>,
+
+    // Extraction mode options
+    pub from_pak: RwSignal<bool>,         // true = extract from PAK, false = from files
+    pub convert_to_png: RwSignal<bool>,   // Convert DDS to PNG after extraction
 }
 
 impl VirtualTexturesState {
@@ -50,6 +54,9 @@ impl VirtualTexturesState {
             results_log: RwSignal::new(ImVector::new()),
             status_message: RwSignal::new(String::new()),
             working_dir: RwSignal::new(None),
+            // Extraction mode options
+            from_pak: RwSignal::new(true),       // Default to PAK mode
+            convert_to_png: RwSignal::new(false),
         }
     }
 

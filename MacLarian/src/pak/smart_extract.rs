@@ -242,12 +242,11 @@ fn process_single_gr2(
 fn build_processing_options(opts: &Gr2ExtractionOptions) -> Gr2ProcessingOptions {
     Gr2ProcessingOptions {
         convert_to_glb: opts.convert_to_glb,
-        // Enable texture extraction if either regular or virtual textures are requested
-        // The virtual_textures_path presence controls actual VT extraction
-        extract_textures: opts.extract_textures || opts.extract_virtual_textures,
+        extract_textures: opts.extract_textures,
         game_data_path: opts.game_data_path.clone(),
         virtual_textures_path: opts.virtual_textures_path.clone(),
         convert_to_png: opts.convert_to_png,
+        keep_original_dds: opts.keep_original_dds,
     }
 }
 

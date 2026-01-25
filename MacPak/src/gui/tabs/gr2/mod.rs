@@ -15,10 +15,10 @@ use floem::prelude::*;
 use floem::style::Position;
 
 use crate::gui::shared::{header_section, progress_overlay, results_section};
-use crate::gui::state::{AppState, Gr2State};
+use crate::gui::state::{AppState, ConfigState, Gr2State};
 use sections::operations_row;
 
-pub fn gr2_tab(_app_state: AppState, gr2_state: Gr2State) -> impl IntoView {
+pub fn gr2_tab(_app_state: AppState, gr2_state: Gr2State, config_state: ConfigState) -> impl IntoView {
     let state = gr2_state.clone();
 
     v_stack((
@@ -27,7 +27,7 @@ pub fn gr2_tab(_app_state: AppState, gr2_state: Gr2State) -> impl IntoView {
         // Main content area
         v_stack((
             // Operations row - 3 columns
-            operations_row(gr2_state.clone()),
+            operations_row(gr2_state.clone(), config_state),
             // Results area (using shared component)
             results_section(gr2_state.clone()),
         ))

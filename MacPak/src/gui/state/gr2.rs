@@ -32,6 +32,12 @@ pub struct Gr2State {
 
     // Working directory for file dialogs
     pub working_dir: RwSignal<Option<String>>,
+
+    // Bundle options for texture extraction
+    pub extract_textures: RwSignal<bool>,
+    pub convert_to_png: RwSignal<bool>,
+    pub keep_original_dds: RwSignal<bool>,
+    pub keep_original_gr2: RwSignal<bool>,
 }
 
 impl Gr2State {
@@ -44,6 +50,11 @@ impl Gr2State {
             results_log: RwSignal::new(ImVector::new()),
             status_message: RwSignal::new(String::new()),
             working_dir: RwSignal::new(None),
+            // Bundle options (disabled by default)
+            extract_textures: RwSignal::new(false),
+            convert_to_png: RwSignal::new(false),
+            keep_original_dds: RwSignal::new(false),
+            keep_original_gr2: RwSignal::new(false),
         }
     }
 

@@ -65,7 +65,7 @@ pub mod prelude {
     pub use crate::merged::{MergedResolver, MergedDatabase, VisualAsset};
     pub use crate::gr2_extraction::{
         Gr2ExtractionOptions, Gr2ExtractionResult,
-        process_extracted_gr2, extract_gr2_with_textures,
+        process_extracted_gr2, process_extracted_gr2_to_dir, extract_gr2_with_textures,
     };
     pub use crate::converter::gr2_gltf::{
         convert_gr2_bytes_to_glb_with_textures, TexturedGlbResult,

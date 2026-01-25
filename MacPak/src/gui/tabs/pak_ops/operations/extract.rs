@@ -174,6 +174,17 @@ pub fn execute_individual_extract(state: PakOpsState) {
         return;
     }
 
+    // Capture GR2 options before closing dialog
+    let gr2_convert = state.gr2_auto_convert.get();
+    let gr2_textures = state.gr2_auto_textures.get();
+    let gr2_virtual_textures = state.gr2_auto_virtual_textures.get();
+    let keep_original = state.keep_original_gr2.get();
+    let game_data = state.game_data_path.get();
+    let virtual_textures = state.virtual_textures_path.get();
+
+    // Check if any GR2 processing is enabled
+    let use_smart_extract = gr2_convert || gr2_textures || gr2_virtual_textures;
+
     // Close the dialog
     state.active_dialog.set(ActiveDialog::None);
 
@@ -189,7 +200,18 @@ pub fn execute_individual_extract(state: PakOpsState) {
     let dest_path = dest_dir.to_string_lossy().to_string();
 
     state.clear_results();
-    state.add_result(&format!("Extracting {} files...", selected.len()));
+
+    if use_smart_extract {
+        let gr2_count = selected.iter().filter(|f| f.to_lowercase().ends_with(".gr2")).count();
+        state.add_result(&format!(
+            "Extracting {} files ({} GR2 with processing)...",
+            selected.len(),
+            gr2_count
+        ));
+    } else {
+        state.add_result(&format!("Extracting {} files...", selected.len()));
+    }
+
     state.is_extracting.set(true);
     state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
@@ -201,28 +223,73 @@ pub fn execute_individual_extract(state: PakOpsState) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = maclarian::pak::PakOperations::extract_files_with_progress(
-            &pak_path,
-            &dest_path,
-            &selected,
-            &|current, total, description| {
-                progress_sender(current, total, description);
-            },
-        );
+        let pak_result = if use_smart_extract {
+            // Build extraction options
+            let extraction_opts = maclarian::pak::Gr2ExtractionOptions::new()
+                .with_convert_to_glb(gr2_convert)
+                .with_extract_textures(gr2_textures)
+                .with_extract_virtual_textures(gr2_virtual_textures)
+                .with_keep_original(keep_original)
+                .with_game_data_path(game_data.map(std::path::PathBuf::from))
+                .with_virtual_textures_path(virtual_textures.map(std::path::PathBuf::from));
 
-        let pak_result = match result {
-            Ok(_) => PakResult::IndividualExtractDone {
-                success: true,
-                message: String::new(),
-                files: selected,
-                dest: dest_path,
-            },
-            Err(e) => PakResult::IndividualExtractDone {
-                success: false,
-                message: e.to_string(),
-                files: Vec::new(),
-                dest: dest_path,
-            },
+            let result = maclarian::pak::extract_files_smart(
+                &pak_path,
+                &dest_path,
+                &selected,
+                extraction_opts,
+                &|current, total, description| {
+                    progress_sender(current, total, description);
+                },
+            );
+
+            match result {
+                Ok(smart_result) => {
+                    let message = format!(
+                        "{} GR2s processed, {} GLB created, {} textures extracted",
+                        smart_result.gr2s_processed,
+                        smart_result.glb_files_created,
+                        smart_result.textures_extracted
+                    );
+                    PakResult::IndividualExtractDone {
+                        success: true,
+                        message,
+                        files: selected,
+                        dest: dest_path,
+                    }
+                }
+                Err(e) => PakResult::IndividualExtractDone {
+                    success: false,
+                    message: e.to_string(),
+                    files: Vec::new(),
+                    dest: dest_path,
+                },
+            }
+        } else {
+            // Standard extraction
+            let result = maclarian::pak::PakOperations::extract_files_with_progress(
+                &pak_path,
+                &dest_path,
+                &selected,
+                &|current, total, description| {
+                    progress_sender(current, total, description);
+                },
+            );
+
+            match result {
+                Ok(_) => PakResult::IndividualExtractDone {
+                    success: true,
+                    message: String::new(),
+                    files: selected,
+                    dest: dest_path,
+                },
+                Err(e) => PakResult::IndividualExtractDone {
+                    success: false,
+                    message: e.to_string(),
+                    files: Vec::new(),
+                    dest: dest_path,
+                },
+            }
         };
 
         send(pak_result);

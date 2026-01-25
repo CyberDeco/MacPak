@@ -50,6 +50,10 @@ pub struct Gr2ExtractionOptions {
     /// Convert extracted DDS textures to PNG format
     /// Default: false (keep as DDS)
     pub convert_to_png: bool,
+
+    /// Keep the original DDS texture files after conversion to PNG
+    /// Default: false (delete DDS after PNG conversion)
+    pub keep_original_dds: bool,
 }
 
 impl Gr2ExtractionOptions {
@@ -64,6 +68,7 @@ impl Gr2ExtractionOptions {
             virtual_textures_path: None,
             keep_original_gr2: true,
             convert_to_png: false,
+            keep_original_dds: false,
         }
     }
 
@@ -80,6 +85,7 @@ impl Gr2ExtractionOptions {
             virtual_textures_path: None,
             keep_original_gr2: true,
             convert_to_png: false,
+            keep_original_dds: false,
         }
     }
 
@@ -135,6 +141,13 @@ impl Gr2ExtractionOptions {
     #[must_use]
     pub fn with_convert_to_png(mut self, convert: bool) -> Self {
         self.convert_to_png = convert;
+        self
+    }
+
+    /// Set whether to keep original DDS files after PNG conversion.
+    #[must_use]
+    pub fn with_keep_original_dds(mut self, keep: bool) -> Self {
+        self.keep_original_dds = keep;
         self
     }
 }
