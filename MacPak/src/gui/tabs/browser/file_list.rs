@@ -1,6 +1,6 @@
 //! File list widget with sortable columns and keyboard navigation
 
-use floem::event::EventPropagation;
+use floem::event::{EventListener, EventPropagation};
 use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::text::Weight;
@@ -184,6 +184,9 @@ fn file_list_content(
                     let idx = files.get().iter().position(|f| f.path == file_path);
 
                     file_row(file, selected, idx, state_row.clone(), file_list_width)
+                        // Stop PointerDown propagation to prevent scroll container from
+                        // resetting scroll position when clicking on rows
+                        .on_event_stop(EventListener::PointerDown, |_| {})
                         .on_click_stop(move |_| {
                             // Cancel any ongoing rename when clicking elsewhere
                             state_row.renaming_path.set(None);
@@ -454,6 +457,9 @@ fn sortable_header(
             .border_radius(4.0)
             .flex_grow(if column == SortColumn::Name { 1.0 } else { 0.0 })
     })
+    // Stop PointerDown propagation to prevent scroll container from
+    // resetting scroll position when clicking on headers
+    .on_event_stop(EventListener::PointerDown, |_| {})
     .on_click_stop(move |_| {
         let current = sort_column.get();
         if current == column {
