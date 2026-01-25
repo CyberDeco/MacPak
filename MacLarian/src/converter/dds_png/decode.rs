@@ -480,18 +480,42 @@ fn decode_bc5_block(
 // BC7 - High quality, 4x4 blocks, 16 bytes each (8 modes)
 // ============================================================================
 
-fn decode_bc7(_data: &[u8], width: usize, height: usize) -> Result<Vec<u8>> {
-    // BC7 is complex with 8 different modes. For now, return a placeholder.
-    // TODO: Implement full BC7 decoding or use an external crate
-    let mut rgba = vec![128u8; width * height * 4];
+fn decode_bc7(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>> {
+    let mut rgba = vec![0u8; width * height * 4];
+    let blocks_x = width.div_ceil(4);
+    let blocks_y = height.div_ceil(4);
 
-    // Set alpha to 255 for all pixels
-    for i in (3..rgba.len()).step_by(4) {
-        rgba[i] = 255;
+    // Temporary buffer for a single 4x4 block (16 pixels * 4 bytes = 64 bytes)
+    // Pitch is 4 pixels * 4 bytes per pixel = 16 bytes per row
+    let mut block_rgba = [0u8; 64];
+    let block_pitch = 16;
+
+    for by in 0..blocks_y {
+        for bx in 0..blocks_x {
+            let block_idx = (by * blocks_x + bx) * 16;
+            if block_idx + 16 > data.len() {
+                break;
+            }
+            let block = &data[block_idx..block_idx + 16];
+
+            // Decode the 4x4 block to RGBA
+            bcdec_rs::bc7(block, &mut block_rgba, block_pitch);
+
+            // Copy decoded pixels to output
+            for py in 0..4 {
+                for px in 0..4 {
+                    let fx = bx * 4 + px;
+                    let fy = by * 4 + py;
+                    if fx >= width || fy >= height {
+                        continue;
+                    }
+                    let src_idx = (py * 4 + px) * 4;
+                    let dst_idx = (fy * width + fx) * 4;
+                    rgba[dst_idx..dst_idx + 4].copy_from_slice(&block_rgba[src_idx..src_idx + 4]);
+                }
+            }
+        }
     }
-
-    // Note: Full BC7 implementation is complex. Consider using bcdec or similar.
-    tracing::warn!("BC7 decoding not fully implemented - returning placeholder");
 
     Ok(rgba)
 }

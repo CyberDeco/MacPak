@@ -67,6 +67,7 @@ tantivy.workspace = true
 tracing.workspace = true         # Structured logging
 
 # Image/Texture handling
+bcdec_rs.workspace = true        # BC7 texture decompression
 ddsfile.workspace = true         # DDS texture file format
 image.workspace = true           # PNG/image format support
 
