@@ -4,6 +4,7 @@
 
 mod context_menu;
 mod file_list;
+mod gr2_dialog;
 mod operations;
 mod preview;
 mod preview_3d;
@@ -14,8 +15,9 @@ mod toolbar;
 use floem::prelude::*;
 use floem::style::Position;
 
-use crate::gui::state::{AppState, BrowserState, EditorTabsState};
+use crate::gui::state::{AppState, BrowserState, ConfigState, EditorTabsState};
 use file_list::file_list;
+use gr2_dialog::gr2_conversion_dialog;
 use preview::preview_panel;
 use status_bar::browser_status_bar;
 use toolbar::browser_toolbar;
@@ -29,8 +31,10 @@ pub fn browser_tab(
     browser_state: BrowserState,
     editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
+    config_state: ConfigState,
 ) -> impl IntoView {
     let browser_state_overlay = browser_state.clone();
+    let browser_state_dialog = browser_state.clone();
 
     let main_content = v_stack((
         browser_toolbar(browser_state.clone()),
@@ -44,8 +48,12 @@ pub fn browser_tab(
             .min_height(0.0)  // Allow shrinking for scroll to work
     });
 
-    // Stack main content with loading overlay
-    (main_content, loading_overlay(browser_state_overlay))
+    // Stack main content with loading overlay and GR2 dialog
+    (
+        main_content,
+        loading_overlay(browser_state_overlay),
+        gr2_conversion_dialog(browser_state_dialog, config_state),
+    )
         .style(|s| {
             s.width_full()
                 .height_full()

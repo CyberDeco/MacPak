@@ -157,6 +157,21 @@ pub fn show_file_context_menu(
                     })
             );
         }
+
+        // GR2 conversion options
+        if ext_lower == "gr2" {
+            menu = menu.separator();
+            let path = file_path.clone();
+            let browser_state = state.clone();
+            menu = menu.entry(
+                MenuItem::new("Convert to...")
+                    .action(move || {
+                        // Show GR2 conversion dialog
+                        browser_state.gr2_convert_path.set(Some(path.clone()));
+                        browser_state.show_gr2_dialog.set(true);
+                    })
+            );
+        }
     }
 
     menu = menu.separator();

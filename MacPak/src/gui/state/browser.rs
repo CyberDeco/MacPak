@@ -49,6 +49,14 @@ pub struct BrowserState {
     // Loading overlay state (for conversions)
     pub is_loading: RwSignal<bool>,
     pub loading_message: RwSignal<String>,
+    // GR2 conversion dialog state
+    pub show_gr2_dialog: RwSignal<bool>,
+    pub gr2_convert_path: RwSignal<Option<String>>,  // Path of GR2 file to convert
+    pub gr2_extract_gr2: RwSignal<bool>,
+    pub gr2_convert_to_glb: RwSignal<bool>,
+    pub gr2_convert_to_gltf: RwSignal<bool>,
+    pub gr2_extract_textures: RwSignal<bool>,
+    pub gr2_convert_to_png: RwSignal<bool>,
 }
 
 impl BrowserState {
@@ -77,6 +85,14 @@ impl BrowserState {
             file_list_width: RwSignal::new(600.0),  // Default width in pixels
             is_loading: RwSignal::new(false),
             loading_message: RwSignal::new(String::new()),
+            // GR2 conversion dialog
+            show_gr2_dialog: RwSignal::new(false),
+            gr2_convert_path: RwSignal::new(None),
+            gr2_extract_gr2: RwSignal::new(true),
+            gr2_convert_to_glb: RwSignal::new(true),
+            gr2_convert_to_gltf: RwSignal::new(false),
+            gr2_extract_textures: RwSignal::new(false),
+            gr2_convert_to_png: RwSignal::new(false),
         }
     }
 
