@@ -14,7 +14,7 @@ use crate::gui::tabs::dialogue::operations::{load_voice_meta, find_voice_files_p
 
 use crate::gui::state::{DialogueState, DialogSource, EditorTabsState, SearchResult, SearchState};
 
-use super::operations::copy_to_clipboard;
+use super::operations::{copy_to_clipboard, extract_single_result};
 
 /// Show context menu for a search result
 pub fn show_search_result_context_menu(
@@ -72,11 +72,14 @@ pub fn show_search_result_context_menu(
 
     menu = menu.separator();
 
-    // Extract File
+    // Extract File (shows options dialog)
+    let state_for_extract = state.clone();
+    let internal_path = result_for_extract.path.clone();
+    let pak_path = result_for_extract.pak_path.clone();
     menu = menu.entry(
         MenuItem::new("Extract File...")
             .action(move || {
-                extract_search_result(&result_for_extract);
+                extract_single_result(state_for_extract.clone(), internal_path.clone(), pak_path.clone());
             })
     );
 
@@ -153,46 +156,6 @@ fn open_result_in_editor(
             }
             Err(e) => {
                 send(Err(format!("Extraction failed: {}", e)));
-            }
-        }
-    });
-}
-
-/// Extract a search result to a user-selected location
-fn extract_search_result(result: &SearchResult) {
-    use maclarian::pak::PakOperations;
-
-    let pak_path = result.pak_path.clone();
-    let file_path = result.path.clone();
-
-    // Get destination folder
-    let dest = match rfd::FileDialog::new()
-        .set_title("Extract File To...")
-        .pick_folder()
-    {
-        Some(d) => d,
-        None => return,
-    };
-
-    // Extract in background
-    std::thread::spawn(move || {
-        match PakOperations::extract_files_with_progress(
-            &pak_path,
-            &dest,
-            &[file_path.as_str()],
-            &|_, _, _| {},
-        ) {
-            Ok(_) => {
-                rfd::MessageDialog::new()
-                    .set_title("Extraction Complete")
-                    .set_description(&format!("File extracted to:\n{}", dest.display()))
-                    .show();
-            }
-            Err(e) => {
-                rfd::MessageDialog::new()
-                    .set_title("Extraction Failed")
-                    .set_description(&e.to_string())
-                    .show();
             }
         }
     });

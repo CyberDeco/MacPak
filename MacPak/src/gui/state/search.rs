@@ -91,6 +91,19 @@ pub struct SearchState {
     pub show_all_matches: RwSignal<bool>,
     /// Current file for "Show All Matches" dialog
     pub all_matches_file: RwSignal<Option<SearchResult>>,
+
+    // Extraction dialog state
+    /// Show extraction options dialog
+    pub show_extract_dialog: RwSignal<bool>,
+    /// Files pending extraction (set before showing dialog)
+    pub pending_extract_files: RwSignal<Vec<(String, std::path::PathBuf)>>, // (internal_path, pak_path)
+
+    // GR2 bundle options for extraction
+    pub gr2_extract_gr2: RwSignal<bool>,
+    pub gr2_convert_to_glb: RwSignal<bool>,
+    pub gr2_convert_to_gltf: RwSignal<bool>,
+    pub gr2_extract_textures: RwSignal<bool>,
+    pub gr2_convert_to_png: RwSignal<bool>,
 }
 
 impl SearchState {
@@ -114,6 +127,17 @@ impl SearchState {
             selected_results: RwSignal::new(HashSet::new()),
             show_all_matches: RwSignal::new(false),
             all_matches_file: RwSignal::new(None),
+
+            // Extraction dialog
+            show_extract_dialog: RwSignal::new(false),
+            pending_extract_files: RwSignal::new(Vec::new()),
+
+            // GR2 options default to off (user opts in)
+            gr2_extract_gr2: RwSignal::new(true),
+            gr2_convert_to_glb: RwSignal::new(false),
+            gr2_convert_to_gltf: RwSignal::new(false),
+            gr2_extract_textures: RwSignal::new(false),
+            gr2_convert_to_png: RwSignal::new(false),
         }
     }
 
