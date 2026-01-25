@@ -7,8 +7,6 @@
 use crate::error::{Error, Result};
 use ddsfile::{AlphaMode, D3DFormat, Dds, DxgiFormat, NewDxgiParams};
 
-use super::decode::bc1_colors;
-
 /// DDS compression format for PNG to DDS conversion
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DdsFormat {
@@ -368,8 +366,50 @@ pub fn rgb_to_565(r: u8, g: u8, b: u8) -> u16 {
 
 /// Generate BC1 color palette from endpoints (for encoding)
 fn bc1_encode_colors(c0: u16, c1: u16) -> [[u8; 4]; 4] {
-    // Use the shared decoder function
-    bc1_colors(c0, c1)
+    // Expand 5-bit/6-bit color components to 8-bit
+    let expand5 = |v: u8| (v << 3) | (v >> 2);
+    let expand6 = |v: u8| (v << 2) | (v >> 4);
+
+    let r0 = expand5(((c0 >> 11) & 0x1F) as u8);
+    let g0 = expand6(((c0 >> 5) & 0x3F) as u8);
+    let b0 = expand5((c0 & 0x1F) as u8);
+
+    let r1 = expand5(((c1 >> 11) & 0x1F) as u8);
+    let g1 = expand6(((c1 >> 5) & 0x3F) as u8);
+    let b1 = expand5((c1 & 0x1F) as u8);
+
+    if c0 > c1 {
+        // 4-color mode (opaque)
+        [
+            [r0, g0, b0, 255],
+            [r1, g1, b1, 255],
+            [
+                ((2 * u16::from(r0) + u16::from(r1)) / 3) as u8,
+                ((2 * u16::from(g0) + u16::from(g1)) / 3) as u8,
+                ((2 * u16::from(b0) + u16::from(b1)) / 3) as u8,
+                255,
+            ],
+            [
+                ((u16::from(r0) + 2 * u16::from(r1)) / 3) as u8,
+                ((u16::from(g0) + 2 * u16::from(g1)) / 3) as u8,
+                ((u16::from(b0) + 2 * u16::from(b1)) / 3) as u8,
+                255,
+            ],
+        ]
+    } else {
+        // 3-color mode with transparency
+        [
+            [r0, g0, b0, 255],
+            [r1, g1, b1, 255],
+            [
+                u16::midpoint(u16::from(r0), u16::from(r1)) as u8,
+                u16::midpoint(u16::from(g0), u16::from(g1)) as u8,
+                u16::midpoint(u16::from(b0), u16::from(b1)) as u8,
+                255,
+            ],
+            [0, 0, 0, 0], // Transparent
+        ]
+    }
 }
 
 /// Find the closest color in the palette
