@@ -1,8 +1,10 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! `.loca` file reading and parsing
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! .loca file reading and parsing
+
+#![allow(clippy::cast_possible_truncation)]
 
 use super::{LocalizedText, LocaResource, LOCA_SIGNATURE, KEY_SIZE};
 use crate::error::{Error, Result};

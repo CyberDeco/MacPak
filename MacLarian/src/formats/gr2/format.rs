@@ -1,10 +1,12 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! GR2 file format structures
 //!
-//! Based on RAD Game Tools Granny2 format, version 2.11.8.0
+//! Based on RAD Game Tools Granny2 format, version 2.11.8.0.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+
+#![allow(clippy::cast_possible_truncation)]
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Read, Seek, SeekFrom};

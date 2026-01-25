@@ -1,5 +1,7 @@
 //! Type definitions for merged LSX asset database
 
+#![allow(clippy::doc_markdown)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;

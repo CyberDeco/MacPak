@@ -33,6 +33,15 @@
 //! (no temp files). First query takes ~1-2 seconds for ~50 _merged.lsf files.
 //! Subsequent queries are instant due to `OnceLock` caching.
 
+#![allow(
+    clippy::collapsible_if,
+    clippy::items_after_statements,
+    clippy::option_if_let_else,
+    clippy::doc_markdown,
+    clippy::missing_errors_doc,
+    clippy::map_unwrap_or
+)]
+
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 

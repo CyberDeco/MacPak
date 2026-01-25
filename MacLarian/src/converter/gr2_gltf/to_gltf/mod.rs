@@ -1,10 +1,19 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! GR2 to glTF converter
 //!
 //! Converts Granny2 GR2 files to glTF 2.0 format.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::too_many_lines,
+    clippy::collapsible_if,
+    clippy::struct_excessive_bools
+)]
 
 mod gr2_reader;
 mod gltf;

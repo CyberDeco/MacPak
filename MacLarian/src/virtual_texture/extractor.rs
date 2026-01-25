@@ -1,10 +1,18 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! Virtual texture extraction and combining
 //!
 //! Extracts GTP tiles and combines them into full Albedo, Normal, and Physical textures.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::too_many_lines,
+    clippy::missing_panics_doc,
+    clippy::stable_sort_primitive
+)]
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -228,8 +236,7 @@ impl VirtualTextureExtractor {
             for &layer in &layers {
                 if layer >= 3 {
                     return Err(Error::ConversionError(format!(
-                        "Invalid layer index: {}. Must be 0 (BaseMap), 1 (NormalMap), or 2 (PhysicalMap)",
-                        layer
+                        "Invalid layer index: {layer}. Must be 0 (BaseMap), 1 (NormalMap), or 2 (PhysicalMap)"
                     )));
                 }
             }

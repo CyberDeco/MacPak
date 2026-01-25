@@ -18,6 +18,8 @@
 //! let lsx_only = index.search_filename("Barbarian", Some(FileType::Lsx));
 //! ```
 
+#![allow(clippy::cast_possible_truncation)]
+
 pub mod content_cache;
 pub mod extract;
 pub mod fulltext;

@@ -1,11 +1,14 @@
 //! `BitKnit` decompression algorithm for Granny2 files
-//! SPDX-FileCopyrightText: 2025 Cyberdeco (`MacPak`, `PolyForm` Noncommercial), 2025 Legiayayana (Knit, EUPL-1.2), 2024 eiz (pybg3, MIT)
-//!
-//! SPDX-License-Identifier: MIT
 //!
 //! `BitKnit` compression code is adapted from these clean room implementations:
-//!    <https://github.com/neptuwunium/Knit/blob/develop/Knit/Compression/GrannyBitKnitCompression.cs>
-//!    <https://github.com/eiz/pybg3/blob/9ebda24314822bf35580e74bb7917f666ae046c6/src/rans.h>
+//! - <https://github.com/neptuwunium/Knit/blob/develop/Knit/Compression/GrannyBitKnitCompression.cs>
+//! - <https://github.com/eiz/pybg3/blob/9ebda24314822bf35580e74bb7917f666ae046c6/src/rans.h>
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco` (`MacPak`, `PolyForm` Noncommercial), 2025 Legiayayana (Knit, EUPL-1.2), 2024 eiz (pybg3, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+
+#![allow(clippy::cast_possible_truncation)]
 
 use crate::error::{Error, Result};
 
@@ -426,8 +429,9 @@ impl Bitknit2State {
 
         // Validate copy offset
         if copy_offset as usize > self.index {
+            let index = self.index;
             return Err(crate::error::Error::DecompressionError(
-                format!("Copy offset {} exceeds current position {}", copy_offset, self.index)
+                format!("Copy offset {copy_offset} exceeds current position {index}")
             ));
         }
 

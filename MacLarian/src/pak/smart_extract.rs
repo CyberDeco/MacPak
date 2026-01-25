@@ -17,11 +17,13 @@
 //!     "output/directory",
 //!     &["Models/Characters/Human/HUM_M_ARM_Leather_A_Body.GR2"],
 //!     Gr2ExtractionOptions::bundle(),
-//!     &|current, total, name| println!("{}/{}: {}", current, total, name),
+//!     &|current, total, name| println!("{current}/{total}: {name}"),
 //! ).unwrap();
 //!
 //! println!("Extracted {} files, processed {} GR2s", result.files_extracted, result.gr2s_processed);
 //! ```
+
+#![allow(clippy::needless_pass_by_value, clippy::collapsible_if)]
 
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
@@ -184,11 +186,8 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
                 result.warnings.extend(proc_result.warnings);
             }
             Err(e) => {
-                result.warnings.push(format!(
-                    "Failed to process {}: {}",
-                    gr2_path.display(),
-                    e
-                ));
+                let path_display = gr2_path.display();
+                result.warnings.push(format!("Failed to process {path_display}: {e}"));
             }
         }
     }
@@ -238,7 +237,7 @@ fn process_single_gr2(
     Ok(result)
 }
 
-/// Build Gr2ProcessingOptions from Gr2ExtractionOptions
+/// Build `Gr2ProcessingOptions` from `Gr2ExtractionOptions`
 fn build_processing_options(opts: &Gr2ExtractionOptions) -> Gr2ProcessingOptions {
     Gr2ProcessingOptions {
         convert_to_glb: opts.convert_to_glb,

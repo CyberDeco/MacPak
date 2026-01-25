@@ -1,9 +1,10 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! LSX file writing
+//!
+//! `LSLib`'s metadata output purposefully maintained as an homage.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! LSX file writing
-//! `LSLib`'s metadata output purposefully maintained as an homage
 
 use super::document::{LsxDocument, LsxNode};
 use crate::error::Result;

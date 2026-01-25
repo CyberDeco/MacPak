@@ -310,6 +310,7 @@ pub fn serialize_translated_string(
     
     // Write handle length (including null terminator)
     let handle_len = if handle.is_empty() { 0 } else { handle.len() + 1 };
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     buffer.write_i32::<LittleEndian>(handle_len as i32)?;
     
     // Write handle string
@@ -460,7 +461,8 @@ pub fn extract_translated_string(values: &[u8], offset: usize, length: usize) ->
     let mut cursor = Cursor::new(bytes);
     
     let version = cursor.read_u16::<LittleEndian>()?;
-    let handle_length = cursor.read_i32::<LittleEndian>()? as usize;
+    #[allow(clippy::cast_sign_loss)]
+    let handle_length = cursor.read_i32::<LittleEndian>()?.max(0) as usize;
     
     if handle_length == 0 {
         return Ok((String::new(), version, None));

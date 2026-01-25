@@ -1,8 +1,15 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! LSX to LSF conversion
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! LSX to LSF conversion
+
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::wrong_self_convention
+)]
 
 use crate::error::{Error, Result};
 use crate::formats::lsf::{self, LsfDocument, LsfNode, LsfAttribute, LsfMetadataFormat};

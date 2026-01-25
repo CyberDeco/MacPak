@@ -3,6 +3,8 @@
 //! This module provides configuration options for smart extraction operations
 //! that can automatically convert GR2 files and extract associated textures.
 
+#![allow(clippy::struct_excessive_bools)]
+
 use std::path::PathBuf;
 
 /// Options for GR2 file processing during extraction.
@@ -32,7 +34,7 @@ pub struct Gr2ExtractionOptions {
     /// Extract DDS textures associated with each GR2 file
     pub extract_textures: bool,
 
-    /// Extract virtual textures (GTex files) associated with each GR2 file
+    /// Extract virtual textures (`GTex` files) associated with each GR2 file
     pub extract_virtual_textures: bool,
 
     /// Path to the game's Data folder (containing Shared.pak, Textures.pak, etc.)
@@ -40,7 +42,7 @@ pub struct Gr2ExtractionOptions {
     pub game_data_path: Option<PathBuf>,
 
     /// Path to the Virtual Textures folder (containing .gts/.gtp files)
-    /// If None, auto-detection will be attempted based on game_data_path.
+    /// If None, auto-detection will be attempted based on `game_data_path`.
     pub virtual_textures_path: Option<PathBuf>,
 
     /// Keep the original GR2 file after conversion to GLB

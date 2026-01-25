@@ -9,6 +9,19 @@
 //! The texture database is built on-the-fly from the game's `Shared.pak` file.
 //! Use `--bg3-path` CLI flag to specify the game installation path if auto-detection fails.
 
+#![allow(
+    clippy::struct_excessive_bools,
+    clippy::collapsible_if,
+    clippy::doc_markdown,
+    clippy::missing_errors_doc,
+    clippy::must_use_candidate,
+    clippy::option_if_let_else,
+    clippy::redundant_closure_for_method_calls,
+    clippy::uninlined_format_args,
+    clippy::return_self_not_must_use,
+    clippy::map_unwrap_or
+)]
+
 use crate::converter::{convert_gr2_to_glb, convert_dds_to_png};
 use crate::error::{Error, Result};
 use crate::virtual_texture::VirtualTextureExtractor;

@@ -1,5 +1,11 @@
 //! PAK archive operations
 
+#![allow(
+    clippy::too_many_lines,
+    clippy::manual_let_else,
+    clippy::cast_possible_truncation
+)]
+
 use crate::error::{Error, Result};
 use super::lspk::{CompressionMethod, FileTableEntry, LspkReader, LspkWriter};
 use rayon::prelude::*;

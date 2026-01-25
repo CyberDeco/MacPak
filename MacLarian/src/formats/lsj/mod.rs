@@ -1,8 +1,8 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! LSJ (JSON) format module
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! LSJ (JSON) format module
 
 mod reader;
 mod writer;

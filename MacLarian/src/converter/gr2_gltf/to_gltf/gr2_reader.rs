@@ -1,8 +1,10 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! GR2 format structures and parser.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! GR2 format structures and parser.
+
+#![allow(clippy::trivially_copy_pass_by_ref, clippy::needless_range_loop)]
 
 use byteorder::{LittleEndian, ReadBytesExt};
 

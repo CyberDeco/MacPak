@@ -1,11 +1,11 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! Batch virtual texture extraction operations
 //!
 //! This module provides high-level functions for extracting GTS/GTP virtual textures,
 //! including parallel batch extraction.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -130,7 +130,8 @@ where
         for (i, page_file) in gts.page_files.iter().enumerate() {
             let gtp_path = gts_dir.join(&page_file.filename);
 
-            progress(i, total_page_files, &format!("Extracting {}...", page_file.filename));
+            let filename = &page_file.filename;
+            progress(i, total_page_files, &format!("Extracting {filename}..."));
 
             if gtp_path.exists() {
                 // Create a subdirectory for this GTP's output
@@ -145,12 +146,14 @@ where
                 ) {
                     Ok(()) => extracted_count += 1,
                     Err(e) => {
-                        tracing::warn!("Failed to extract {}: {}", page_file.filename, e);
+                        let filename = &page_file.filename;
+                        tracing::warn!("Failed to extract {filename}: {e}");
                         failed_count += 1;
                     }
                 }
             } else {
-                tracing::warn!("GTP file not found: {}", gtp_path.display());
+                let path_display = gtp_path.display();
+                tracing::warn!("GTP file not found: {path_display}");
                 failed_count += 1;
             }
         }

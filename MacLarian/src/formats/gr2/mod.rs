@@ -1,11 +1,13 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! GR2 (Granny2) file format support
 //!
 //! This module provides parsing and decompression for Granny2 GR2 files
 //! used by Baldur's Gate 3 and Divinity: Original Sin 2.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+
+#![allow(clippy::cast_possible_truncation)]
 
 mod format;
 mod decompress;
@@ -56,8 +58,9 @@ pub fn decompress_gr2(data: &[u8]) -> Result<Vec<u8>> {
                 decompress_bitknit(compressed, section.uncompressed_size as usize)?
             }
             Compression::Oodle0 | Compression::Oodle1 => {
+                let compression = section.compression;
                 return Err(Error::DecompressionError(
-                    format!("Oodle compression not supported (format {:?})", section.compression)
+                    format!("Oodle compression not supported (format {compression:?})")
                 ));
             }
         };

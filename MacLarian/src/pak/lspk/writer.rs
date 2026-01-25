@@ -1,10 +1,12 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT), 2023 saghm (xiba, Apache-2.0)
-//!
-//! SPDX-License-Identifier: MIT AND Apache-2.0
-//!
 //! LSPK PAK file writer with progress callbacks
 //!
 //! Uses parallel compression for improved performance on multi-core systems.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT), 2023 saghm (xiba, Apache-2.0)
+//!
+//! SPDX-License-Identifier: MIT AND Apache-2.0
+
+#![allow(clippy::cast_possible_truncation, clippy::too_many_lines)]
 
 use std::collections::VecDeque;
 use std::fs::OpenOptions;
@@ -243,10 +245,10 @@ impl LspkWriter {
 
         for entry in compressed_entries {
             let size_compressed: u32 = entry.compressed_data.len().try_into().map_err(|_| {
+                let path_display = entry.path.display();
+                let len = entry.compressed_data.len();
                 Error::ConversionError(format!(
-                    "Compressed file {} is too large: {} bytes",
-                    entry.path.display(),
-                    entry.compressed_data.len()
+                    "Compressed file {path_display} is too large: {len} bytes"
                 ))
             })?;
 
@@ -266,7 +268,8 @@ impl LspkWriter {
 
         // Write footer: number of files
         let num_files: u32 = written_entries.len().try_into().map_err(|_| {
-            Error::ConversionError(format!("Too many files: {}", written_entries.len()))
+            let count = written_entries.len();
+            Error::ConversionError(format!("Too many files: {count}"))
         })?;
         output.write_all(&num_files.to_le_bytes())?;
 
@@ -296,10 +299,8 @@ impl LspkWriter {
         // Compress and write file table
         let compressed_table = lz4_flex::block::compress(&table_data);
         let table_size: u32 = compressed_table.len().try_into().map_err(|_| {
-            Error::ConversionError(format!(
-                "File table too large: {} bytes",
-                compressed_table.len()
-            ))
+            let len = compressed_table.len();
+            Error::ConversionError(format!("File table too large: {len} bytes"))
         })?;
 
         output.write_all(&table_size.to_le_bytes())?;

@@ -1,8 +1,10 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! LSX file reading
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! LSX file reading (from your original lsx.rs)
+
+#![allow(clippy::too_many_lines)]
 
 use super::document::{LsxDocument, LsxRegion, LsxNode, LsxAttribute};
 use crate::error::{Error, Result};

@@ -1,4 +1,4 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
 //!
@@ -9,7 +9,7 @@
 //!
 //! Note: Compression is currently disabled. Files are written uncompressed.
 
-#![allow(dead_code)]
+#![allow(dead_code, clippy::vec_init_then_push)]
 
 use std::collections::HashMap;
 use std::fs::File;

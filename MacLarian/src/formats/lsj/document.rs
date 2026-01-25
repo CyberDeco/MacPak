@@ -1,8 +1,10 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! LSJ document structures
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! LSJ document structures
+
+#![allow(clippy::cast_possible_truncation)]
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;

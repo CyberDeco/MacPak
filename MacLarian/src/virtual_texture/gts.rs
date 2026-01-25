@@ -1,7 +1,3 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! GTS (Game Texture Set) file reader
 //!
 //! GTS files contain metadata about virtual textures, including:
@@ -9,6 +5,19 @@
 //! - Parameter blocks for each codec type
 //! - Page file references
 //! - Tile mapping information
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::many_single_char_names,
+    clippy::too_many_lines,
+    clippy::used_underscore_binding,
+    clippy::doc_markdown,
+    clippy::missing_panics_doc
+)]
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -47,10 +56,10 @@ impl GtsFile {
         let header = Self::read_header(reader)?;
 
         if header.magic != GtsHeader::MAGIC {
+            let magic = header.magic;
+            let expected = GtsHeader::MAGIC;
             return Err(Error::ConversionError(format!(
-                "Invalid GTS magic: 0x{:08X}, expected 0x{:08X}",
-                header.magic,
-                GtsHeader::MAGIC
+                "Invalid GTS magic: 0x{magic:08X}, expected 0x{expected:08X}"
             )));
         }
 
@@ -536,16 +545,17 @@ impl GtsFile {
 
             if best_level != 0 {
                 tracing::info!(
-                    "Layer {} using level {} (level 0 not available)",
-                    layer_idx, best_level
+                    "Layer {layer_idx} using level {best_level} (level 0 not available)"
                 );
             }
         }
 
+        let num_layers = self.header.num_layers;
+        let l0 = tiles_by_layer[0].len();
+        let l1 = tiles_by_layer[1].len();
+        let l2 = tiles_by_layer[2].len();
         tracing::debug!(
-            "GTS num_layers={}, selected tiles by layer: [0]={}, [1]={}, [2]={}",
-            self.header.num_layers,
-            tiles_by_layer[0].len(), tiles_by_layer[1].len(), tiles_by_layer[2].len()
+            "GTS num_layers={num_layers}, selected tiles by layer: [0]={l0}, [1]={l1}, [2]={l2}"
         );
 
         tiles_by_layer

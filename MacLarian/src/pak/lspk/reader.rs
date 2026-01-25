@@ -1,8 +1,10 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT), 2023 saghm (xiba, Apache-2.0)
+//! LSPK PAK file reader with progress callbacks and error recovery
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT), 2023 saghm (xiba, Apache-2.0)
 //!
 //! SPDX-License-Identifier: MIT AND Apache-2.0
-//!
-//! LSPK PAK file reader with progress callbacks and error recovery
+
+#![allow(clippy::cast_possible_truncation)]
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -84,8 +86,9 @@ impl<R: Read + Seek> LspkReader<R> {
                 ))?;
 
             if !part_path.exists() {
+                let path_display = part_path.display();
                 return Err(Error::ConversionError(
-                    format!("Archive part file not found: {}", part_path.display())
+                    format!("Archive part file not found: {path_display}")
                 ));
             }
 
@@ -318,11 +321,10 @@ impl<R: Read + Seek> LspkReader<R> {
             return Ok(decompressed);
         }
 
+        let path_display = path.display();
+        let compressed_len = compressed.len();
         Err(Error::DecompressionError(format!(
-            "Failed to decompress LZ4 data for {}: all methods failed (compressed: {} bytes, expected: {} bytes)",
-            path.display(),
-            compressed.len(),
-            expected_size
+            "Failed to decompress LZ4 data for {path_display}: all methods failed (compressed: {compressed_len} bytes, expected: {expected_size} bytes)"
         )))
     }
 
@@ -334,11 +336,12 @@ impl<R: Read + Seek> LspkReader<R> {
         let mut decompressed = Vec::with_capacity(expected_size);
 
         decoder.read_to_end(&mut decompressed)
-            .map_err(|e| Error::DecompressionError(format!(
-                "Failed to decompress Zlib data for {}: {}",
-                path.display(),
-                e
-            )))?;
+            .map_err(|e| {
+                let path_display = path.display();
+                Error::DecompressionError(format!(
+                    "Failed to decompress Zlib data for {path_display}: {e}"
+                ))
+            })?;
 
         Ok(decompressed)
     }

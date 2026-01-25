@@ -1,11 +1,13 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! GTP (Game Texture Page) file reader
 //!
 //! GTP files contain the actual tile data for virtual textures.
 //! Each file consists of pages, and each page contains multiple chunks (tiles).
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
@@ -54,10 +56,10 @@ impl<R: Read + Seek> GtpFile<R> {
         let header = Self::read_header(&mut reader)?;
 
         if header.magic != GtpHeader::MAGIC {
+            let magic = header.magic;
+            let expected = GtpHeader::MAGIC;
             return Err(Error::ConversionError(format!(
-                "Invalid GTP magic: 0x{:08X}, expected 0x{:08X}",
-                header.magic,
-                GtpHeader::MAGIC
+                "Invalid GTP magic: 0x{magic:08X}, expected 0x{expected:08X}"
             )));
         }
 
@@ -140,19 +142,16 @@ impl<R: Read + Seek> GtpFile<R> {
         gts: &GtsFile,
     ) -> Result<Vec<u8>> {
         if page_index >= self.chunk_offsets.len() {
+            let max = self.chunk_offsets.len();
             return Err(Error::ConversionError(format!(
-                "Page index {} out of range (max {})",
-                page_index,
-                self.chunk_offsets.len()
+                "Page index {page_index} out of range (max {max})"
             )));
         }
 
         if chunk_index >= self.chunk_offsets[page_index].len() {
+            let max = self.chunk_offsets[page_index].len();
             return Err(Error::ConversionError(format!(
-                "Chunk index {} out of range for page {} (max {})",
-                chunk_index,
-                page_index,
-                self.chunk_offsets[page_index].len()
+                "Chunk index {chunk_index} out of range for page {page_index} (max {max})"
             )));
         }
 

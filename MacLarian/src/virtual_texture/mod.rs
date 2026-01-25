@@ -1,8 +1,8 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! Virtual texture format handlers (GTS/GTP)
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! Virtual texture format handlers (GTS/GTP)
 //!
 //! This module provides support for BG3's virtual texture system:
 //! - GTS (Game Texture Set) - metadata files describing texture layouts

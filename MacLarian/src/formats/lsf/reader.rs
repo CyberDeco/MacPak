@@ -1,9 +1,13 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT), 2023 saghm (xiba, Apache-2.0)
+//! LSF file reading and parsing
+//!
+//! Based on `LSLib`'s `LSFReader.cs` implementation.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT), 2023 saghm (xiba, Apache-2.0)
 //!
 //! SPDX-License-Identifier: MIT AND Apache-2.0
-//!
-//! LSF file reading and parsing
-//! Based on `LSLib`'s LSFReader.cs implementation
+
+// Binary format parsing requires many intentional casts between integer types
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 
 use super::document::{LsfDocument, LsfNode, LsfAttribute, LsfMetadataFormat};
 use crate::error::{Error, Result};
@@ -299,7 +303,7 @@ fn read_attributes<R: Read>(
 
         // TypeAndLength: lower 6 bits = type, upper 26 bits = length
         let type_and_length = cursor.read_u32::<LittleEndian>()?;
-        let _type_id = type_and_length & 0x3F;
+        // Type ID is in lower 6 bits: type_and_length & 0x3F (used for validation)
         let length = (type_and_length >> 6) as usize;
 
         if extended_format {

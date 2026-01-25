@@ -1,10 +1,12 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! Shared utilities for GR2 ↔ glTF conversions
 //!
 //! Contains common data conversion functions used by both directions.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
+
+#![allow(clippy::cast_possible_truncation, clippy::if_same_then_else)]
 
 use glam::{Mat3, Quat, Vec3};
 use half::f16;

@@ -1,7 +1,3 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT), 2023 saghm (xiba, Apache-2.0)
-//!
-//! SPDX-License-Identifier: MIT AND Apache-2.0
-//!
 //! LSF file writing and serialization
 //!
 //! # Compression Format Convention
@@ -14,6 +10,13 @@
 //! This matches `LSLib`'s behavior where `allowChunked=false` uses Block format
 //! and `allowChunked=true` uses Frame format. The compression flags in the header
 //! (0x22 = LZ4 + `DefaultCompress`) indicate the method but not per-section format.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT), 2023 saghm (xiba, Apache-2.0)
+//!
+//! SPDX-License-Identifier: MIT AND Apache-2.0
+
+// Binary format writing requires many intentional casts between integer types
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 
 use super::document::LsfDocument;
 use crate::error::Result;

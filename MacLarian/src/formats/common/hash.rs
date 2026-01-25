@@ -1,8 +1,8 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! Hashing utilities
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! Hashing utilities
 
 /// DJB2 hash algorithm (used by `LSLib`)
 #[must_use] 

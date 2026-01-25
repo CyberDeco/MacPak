@@ -1,8 +1,10 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT), 2023 saghm (xiba, Apache-2.0)
+//! LSF document structure definitions
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT), 2023 saghm (xiba, Apache-2.0)
 //!
 //! SPDX-License-Identifier: MIT AND Apache-2.0
-//!
-//! LSF document structure definitions
+
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 
 use crate::error::{Error, Result};
 
@@ -85,8 +87,8 @@ impl LsfDocument {
             .ok_or_else(|| {
                 let bucket_size = self.names.get(outer).map_or(0, std::vec::Vec::len);
                 Error::InvalidStringIndex(format!(
-                    "outer={}, inner={} (bucket has {} strings, total {} buckets)",
-                    outer, inner, bucket_size, self.names.len()
+                    "outer={outer}, inner={inner} (bucket has {bucket_size} strings, total {} buckets)",
+                    self.names.len()
                 ))
             })
     }

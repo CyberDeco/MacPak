@@ -1,8 +1,8 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! LSJ file writing
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! LSJ file writing
 
 use super::document::LsjDocument;
 use crate::error::Result;
@@ -25,13 +25,13 @@ pub fn write_lsj<P: AsRef<Path>>(doc: &LsjDocument, path: P) -> Result<()> {
 /// Returns an error if JSON serialization fails.
 pub fn serialize_lsj(doc: &LsjDocument) -> Result<String> {
     let json = serde_json::to_string_pretty(doc)?;
-    
-    // Convert space indentation to tabs (matching LSLib output)
+
+    // Convert space indentation to tabs (matching `LSLib` output)
     let json = convert_spaces_to_tabs(&json);
-    
-    // Convert to Windows line endings (matching LSLib output on Windows)
+
+    // Convert to Windows line endings (matching `LSLib` output on Windows)
     let json = json.replace('\n', "\r\n");
-    
+
     Ok(json)
 }
 
@@ -44,7 +44,7 @@ fn convert_spaces_to_tabs(json: &str) -> String {
             // Convert pairs of spaces to tabs
             let tabs = "\t".repeat(leading_spaces / 2);
             // Return line with tabs instead of spaces
-            format!("{}{}", tabs, line.trim_start())
+            format!("{tabs}{}", line.trim_start())
         })
         .collect::<Vec<_>>()
         .join("\n")

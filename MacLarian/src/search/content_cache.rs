@@ -5,6 +5,8 @@
 //!
 //! Modeled after the `AudioCache` pattern.
 
+#![allow(clippy::cast_precision_loss)]
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 

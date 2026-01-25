@@ -1,8 +1,10 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! glTF 2.0 document builder.
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! glTF 2.0 document builder.
+
+#![allow(clippy::same_item_push)]
 
 use std::collections::HashMap;
 use std::fs::File;
