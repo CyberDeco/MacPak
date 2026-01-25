@@ -84,7 +84,7 @@ multiple-crate-versions = { level = "allow", priority = 1 }
 case-sensitive-file-extension-comparisons = { level = "allow", priority = 1 } # paths are lowercased before comparison
 unreadable-literal = { level = "allow", priority = 1 } # hex magic numbers and bit masks are more readable without separators
 similar-names = { level = "allow", priority = 1 } # lsx_doc/lsj_doc/lsf_doc are intentionally similar
-single-char-binding-names = { level = "allow", priority = 1 } # math variables like x, y, z are clearer short
+many-single-char-names = { level = "allow", priority = 1 } # math variables like x, y, z are clearer short
 match-same-arms = { level = "allow", priority = 1 } # explicit arms for documentation even when same as wildcard
 unused-self = { level = "allow", priority = 1 } # methods kept as methods for API consistency
 unnecessary-wraps = { level = "allow", priority = 1 } # Result/Option returns for API consistency and future error handling

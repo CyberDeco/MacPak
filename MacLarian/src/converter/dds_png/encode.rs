@@ -1,8 +1,15 @@
-//! SPDX-FileCopyrightText: 2025 CyberDeco, 2015 Norbyte (LSLib, MIT)
+//! DDS encoding - Block Compression (BC) compression
+//!
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
-//!
-//! DDS encoding - Block Compression (BC) compression
+
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::needless_range_loop,
+    clippy::trivially_copy_pass_by_ref
+)]
 
 use crate::error::{Error, Result};
 use ddsfile::{AlphaMode, D3DFormat, Dds, DxgiFormat, NewDxgiParams};
