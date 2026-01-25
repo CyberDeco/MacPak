@@ -9,7 +9,8 @@
 //! # Usage
 //!
 //! ```no_run
-//! use maclarian::pak::{Gr2ExtractionOptions, extract_files_smart};
+//! use maclarian::pak::extract_files_smart;
+//! use maclarian::gr2_extraction::Gr2ExtractionOptions;
 //!
 //! // Extract with full GR2 processing
 //! let result = extract_files_smart(
@@ -30,11 +31,10 @@ use std::path::{Path, PathBuf};
 
 use crate::error::Result;
 use crate::gr2_extraction::{
-    Gr2ExtractionOptions as Gr2ProcessingOptions,
-    Gr2ExtractionResult as Gr2ProcessingResult,
+    Gr2ExtractionOptions,
+    Gr2ExtractionResult,
     process_extracted_gr2,
 };
-use super::extraction_options::Gr2ExtractionOptions;
 use super::pak_tools::{PakOperations, ProgressCallback};
 
 /// Result of a smart extraction operation
@@ -147,19 +147,15 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
     // Phase 3: Process GR2 files
     progress(0, gr2_paths.len(), "Processing GR2 files...");
 
-    // Build processing options from extraction options
-    let processing_opts = build_processing_options(&options);
-
     // Process GR2 files in parallel
-    let processing_results: Vec<(PathBuf, std::result::Result<Gr2ProcessingResult, String>)> =
+    let processing_results: Vec<(PathBuf, std::result::Result<Gr2ExtractionResult, String>)> =
         gr2_paths
             .par_iter()
             .map(|gr2_path| {
                 let folder_result = process_single_gr2(
                     gr2_path,
                     output_dir,
-                    &processing_opts,
-                    options.keep_original_gr2,
+                    &options,
                 );
                 (gr2_path.clone(), folder_result)
             })
@@ -199,9 +195,8 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
 fn process_single_gr2(
     gr2_path: &Path,
     output_base: &Path,
-    options: &Gr2ProcessingOptions,
-    keep_original: bool,
-) -> std::result::Result<Gr2ProcessingResult, String> {
+    options: &Gr2ExtractionOptions,
+) -> std::result::Result<Gr2ExtractionResult, String> {
     // Get the GR2 filename without extension for the folder name
     let gr2_filename = gr2_path
         .file_name()
@@ -230,23 +225,11 @@ fn process_single_gr2(
         .map_err(|e| e.to_string())?;
 
     // Optionally delete the original GR2 after conversion
-    if !keep_original && result.glb_path.is_some() {
+    if !options.keep_original_gr2 && result.glb_path.is_some() {
         let _ = std::fs::remove_file(&new_gr2_path);
     }
 
     Ok(result)
-}
-
-/// Build `Gr2ProcessingOptions` from `Gr2ExtractionOptions`
-fn build_processing_options(opts: &Gr2ExtractionOptions) -> Gr2ProcessingOptions {
-    Gr2ProcessingOptions {
-        convert_to_glb: opts.convert_to_glb,
-        extract_textures: opts.extract_textures,
-        game_data_path: opts.game_data_path.clone(),
-        virtual_textures_path: opts.virtual_textures_path.clone(),
-        convert_to_png: opts.convert_to_png,
-        keep_original_dds: opts.keep_original_dds,
-    }
 }
 
 /// Clean up empty directories between a file path and the base directory

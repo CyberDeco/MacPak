@@ -7,151 +7,154 @@ use std::io::{Cursor, Read};
 
 pub type TypeId = u32;
 
-// Type constants
-pub const TYPE_NONE: TypeId = 0;
-pub const TYPE_UINT8: TypeId = 1;
-pub const TYPE_INT16: TypeId = 2;
-pub const TYPE_UINT16: TypeId = 3;
-pub const TYPE_INT32: TypeId = 4;
-pub const TYPE_UINT32: TypeId = 5;
-pub const TYPE_FLOAT: TypeId = 6;
-pub const TYPE_DOUBLE: TypeId = 7;
-pub const TYPE_IVEC2: TypeId = 8;
-pub const TYPE_IVEC3: TypeId = 9;
-pub const TYPE_IVEC4: TypeId = 10;
-pub const TYPE_FVEC2: TypeId = 11;
-pub const TYPE_FVEC3: TypeId = 12;
-pub const TYPE_FVEC4: TypeId = 13;
-pub const TYPE_MAT2X2: TypeId = 14;
-pub const TYPE_MAT3X3: TypeId = 15;
-pub const TYPE_MAT3X4: TypeId = 16;
-pub const TYPE_MAT4X3: TypeId = 17;
-pub const TYPE_MAT4X4: TypeId = 18;
-pub const TYPE_BOOL: TypeId = 19;
-pub const TYPE_STRING: TypeId = 20;
-pub const TYPE_PATH: TypeId = 21;
-pub const TYPE_FIXEDSTRING: TypeId = 22;
-pub const TYPE_LSSTRING: TypeId = 23;
-pub const TYPE_UINT64: TypeId = 24;
-pub const TYPE_SCRATCHBUFFER: TypeId = 25;
-pub const TYPE_OLD_INT64: TypeId = 26;
-pub const TYPE_INT8: TypeId = 27;
-pub const TYPE_TRANSLATEDSTRING: TypeId = 28;
-pub const TYPE_WSTRING: TypeId = 29;
-pub const TYPE_LSWSTRING: TypeId = 30;
-pub const TYPE_GUID: TypeId = 31;
-pub const TYPE_INT64: TypeId = 32;
-pub const TYPE_TRANSLATEDFSSTRING: TypeId = 33;
+// Type constants used internally for type identification
+pub(crate) const TYPE_NONE: TypeId = 0;
+pub(crate) const TYPE_UINT8: TypeId = 1;
+pub(crate) const TYPE_INT16: TypeId = 2;
+pub(crate) const TYPE_UINT16: TypeId = 3;
+pub(crate) const TYPE_INT32: TypeId = 4;
+pub(crate) const TYPE_UINT32: TypeId = 5;
+pub(crate) const TYPE_FLOAT: TypeId = 6;
+pub(crate) const TYPE_DOUBLE: TypeId = 7;
+pub(crate) const TYPE_IVEC2: TypeId = 8;
+pub(crate) const TYPE_IVEC3: TypeId = 9;
+pub(crate) const TYPE_IVEC4: TypeId = 10;
+pub(crate) const TYPE_FVEC2: TypeId = 11;
+pub(crate) const TYPE_FVEC3: TypeId = 12;
+pub(crate) const TYPE_FVEC4: TypeId = 13;
+pub(crate) const TYPE_MAT2X2: TypeId = 14;
+pub(crate) const TYPE_MAT3X3: TypeId = 15;
+pub(crate) const TYPE_MAT3X4: TypeId = 16;
+pub(crate) const TYPE_MAT4X3: TypeId = 17;
+pub(crate) const TYPE_MAT4X4: TypeId = 18;
+pub(crate) const TYPE_BOOL: TypeId = 19;
+pub(crate) const TYPE_STRING: TypeId = 20;
+pub(crate) const TYPE_PATH: TypeId = 21;
+pub(crate) const TYPE_FIXEDSTRING: TypeId = 22;
+pub(crate) const TYPE_LSSTRING: TypeId = 23;
+pub(crate) const TYPE_UINT64: TypeId = 24;
+pub(crate) const TYPE_SCRATCHBUFFER: TypeId = 25;
+pub(crate) const TYPE_OLD_INT64: TypeId = 26;
+pub(crate) const TYPE_INT8: TypeId = 27;
+pub(crate) const TYPE_TRANSLATEDSTRING: TypeId = 28;
+pub(crate) const TYPE_WSTRING: TypeId = 29;
+pub(crate) const TYPE_LSWSTRING: TypeId = 30;
+pub(crate) const TYPE_GUID: TypeId = 31;
+pub(crate) const TYPE_INT64: TypeId = 32;
+pub(crate) const TYPE_TRANSLATEDFSSTRING: TypeId = 33;
 
 /// Get the human-readable name for a type ID
-#[must_use] 
+#[must_use]
 pub fn get_type_name(type_id: TypeId) -> &'static str {
     match type_id {
-        0 => "None",
-        1 => "uint8",
-        2 => "int16",
-        3 => "uint16",
-        4 => "int32",
-        5 => "uint32",
-        6 => "float",
-        7 => "double",
-        8 => "ivec2",
-        9 => "ivec3",
-        10 => "ivec4",
-        11 => "fvec2",
-        12 => "fvec3",
-        13 => "fvec4",
-        14 => "mat2x2",
-        15 => "mat3x3",
-        16 => "mat3x4",
-        17 => "mat4x3",
-        18 => "mat4x4",
-        19 => "bool",
-        20 => "string",
-        21 => "path",
-        22 => "FixedString",
-        23 => "LSString",
-        24 => "uint64",
-        25 => "ScratchBuffer",
-        26 => "old_int64",
-        27 => "int8",
-        28 => "TranslatedString",
-        29 => "WString",
-        30 => "LSWString",
-        31 => "guid",
-        32 => "int64",
-        33 => "TranslatedFSString",
+        TYPE_NONE => "None",
+        TYPE_UINT8 => "uint8",
+        TYPE_INT16 => "int16",
+        TYPE_UINT16 => "uint16",
+        TYPE_INT32 => "int32",
+        TYPE_UINT32 => "uint32",
+        TYPE_FLOAT => "float",
+        TYPE_DOUBLE => "double",
+        TYPE_IVEC2 => "ivec2",
+        TYPE_IVEC3 => "ivec3",
+        TYPE_IVEC4 => "ivec4",
+        TYPE_FVEC2 => "fvec2",
+        TYPE_FVEC3 => "fvec3",
+        TYPE_FVEC4 => "fvec4",
+        TYPE_MAT2X2 => "mat2x2",
+        TYPE_MAT3X3 => "mat3x3",
+        TYPE_MAT3X4 => "mat3x4",
+        TYPE_MAT4X3 => "mat4x3",
+        TYPE_MAT4X4 => "mat4x4",
+        TYPE_BOOL => "bool",
+        TYPE_STRING => "string",
+        TYPE_PATH => "path",
+        TYPE_FIXEDSTRING => "FixedString",
+        TYPE_LSSTRING => "LSString",
+        TYPE_UINT64 => "uint64",
+        TYPE_SCRATCHBUFFER => "ScratchBuffer",
+        TYPE_OLD_INT64 => "old_int64",
+        TYPE_INT8 => "int8",
+        TYPE_TRANSLATEDSTRING => "TranslatedString",
+        TYPE_WSTRING => "WString",
+        TYPE_LSWSTRING => "LSWString",
+        TYPE_GUID => "guid",
+        TYPE_INT64 => "int64",
+        TYPE_TRANSLATEDFSSTRING => "TranslatedFSString",
         _ => "Unknown",
     }
 }
 
 /// Convert type name string to type ID
-#[must_use] 
+#[must_use]
 pub fn type_name_to_id(type_name: &str) -> TypeId {
     match type_name {
-        "None" => 0,
-        "uint8" | "Byte" => 1,
-        "int16" | "Short" => 2,
-        "uint16" | "UShort" => 3,
-        "int32" | "Int" => 4,
-        "uint32" | "UInt" => 5,
-        "float" | "Float" => 6,
-        "double" | "Double" => 7,
-        "ivec2" | "IVec2" => 8,
-        "ivec3" | "IVec3" => 9,
-        "ivec4" | "IVec4" => 10,
-        "fvec2" | "Vec2" => 11,
-        "fvec3" | "Vec3" => 12,
-        "fvec4" | "Vec4" => 13,
-        "mat2x2" | "Mat2" => 14,
-        "mat3x3" | "Mat3" => 15,
-        "mat3x4" | "Mat3x4" => 16,
-        "mat4x3" | "Mat4x3" => 17,
-        "mat4x4" | "Mat4" => 18,
-        "bool" | "Bool" => 19,
-        "string" | "String" => 20,
-        "path" | "Path" => 21,
-        "FixedString" => 22,
-        "LSString" => 23,
-        "uint64" | "ULongLong" => 24,
-        "ScratchBuffer" => 25,
-        "old_int64" | "Long" => 26,
-        "int8" | "Int8" => 27,
-        "TranslatedString" => 28,
-        "WString" => 29,
-        "LSWString" => 30,
-        "guid" | "UUID" => 31,
-        "int64" | "Int64" => 32,
-        "TranslatedFSString" => 33,
-        _ => 0,
+        "None" => TYPE_NONE,
+        "uint8" | "Byte" => TYPE_UINT8,
+        "int16" | "Short" => TYPE_INT16,
+        "uint16" | "UShort" => TYPE_UINT16,
+        "int32" | "Int" => TYPE_INT32,
+        "uint32" | "UInt" => TYPE_UINT32,
+        "float" | "Float" => TYPE_FLOAT,
+        "double" | "Double" => TYPE_DOUBLE,
+        "ivec2" | "IVec2" => TYPE_IVEC2,
+        "ivec3" | "IVec3" => TYPE_IVEC3,
+        "ivec4" | "IVec4" => TYPE_IVEC4,
+        "fvec2" | "Vec2" => TYPE_FVEC2,
+        "fvec3" | "Vec3" => TYPE_FVEC3,
+        "fvec4" | "Vec4" => TYPE_FVEC4,
+        "mat2x2" | "Mat2" => TYPE_MAT2X2,
+        "mat3x3" | "Mat3" => TYPE_MAT3X3,
+        "mat3x4" | "Mat3x4" => TYPE_MAT3X4,
+        "mat4x3" | "Mat4x3" => TYPE_MAT4X3,
+        "mat4x4" | "Mat4" => TYPE_MAT4X4,
+        "bool" | "Bool" => TYPE_BOOL,
+        "string" | "String" => TYPE_STRING,
+        "path" | "Path" => TYPE_PATH,
+        "FixedString" => TYPE_FIXEDSTRING,
+        "LSString" => TYPE_LSSTRING,
+        "uint64" | "ULongLong" => TYPE_UINT64,
+        "ScratchBuffer" => TYPE_SCRATCHBUFFER,
+        "old_int64" | "Long" => TYPE_OLD_INT64,
+        "int8" | "Int8" => TYPE_INT8,
+        "TranslatedString" => TYPE_TRANSLATEDSTRING,
+        "WString" => TYPE_WSTRING,
+        "LSWString" => TYPE_LSWSTRING,
+        "guid" | "UUID" => TYPE_GUID,
+        "int64" | "Int64" => TYPE_INT64,
+        "TranslatedFSString" => TYPE_TRANSLATEDFSSTRING,
+        _ => TYPE_NONE,
     }
 }
 
 /// Check if a type is numeric
-#[must_use] 
+#[must_use]
 pub fn is_numeric(type_id: TypeId) -> bool {
-    matches!(type_id, 1 | 2 | 3 | 4 | 5 | 6 | 7 | 24 | 26 | 27 | 32)
+    matches!(type_id,
+        TYPE_UINT8 | TYPE_INT16 | TYPE_UINT16 | TYPE_INT32 | TYPE_UINT32 |
+        TYPE_FLOAT | TYPE_DOUBLE | TYPE_UINT64 | TYPE_OLD_INT64 | TYPE_INT8 | TYPE_INT64
+    )
 }
 
 /// Get column count for vector/matrix types
-#[must_use] 
+#[must_use]
 pub fn get_columns(type_id: TypeId) -> Option<usize> {
     match type_id {
-        8 | 11 | 14 => Some(2),  // ivec2, fvec2, mat2x2
-        9 | 12 | 15 | 17 => Some(3),  // ivec3, fvec3, mat3x3, mat4x3
-        10 | 13 | 16 | 18 => Some(4),  // ivec4, fvec4, mat3x4, mat4x4
+        TYPE_IVEC2 | TYPE_FVEC2 | TYPE_MAT2X2 => Some(2),
+        TYPE_IVEC3 | TYPE_FVEC3 | TYPE_MAT3X3 | TYPE_MAT4X3 => Some(3),
+        TYPE_IVEC4 | TYPE_FVEC4 | TYPE_MAT3X4 | TYPE_MAT4X4 => Some(4),
         _ => None,
     }
 }
 
 /// Get row count for matrix types
-#[must_use] 
+#[must_use]
 pub fn get_rows(type_id: TypeId) -> Option<usize> {
     match type_id {
-        8..=13 => Some(1),  // vectors
-        14 => Some(2),  // mat2x2
-        15 | 16 => Some(3),  // mat3x3, mat3x4
-        17 | 18 => Some(4),  // mat4x3, mat4x4
+        TYPE_IVEC2 | TYPE_IVEC3 | TYPE_IVEC4 | TYPE_FVEC2 | TYPE_FVEC3 | TYPE_FVEC4 => Some(1),
+        TYPE_MAT2X2 => Some(2),
+        TYPE_MAT3X3 | TYPE_MAT3X4 => Some(3),
+        TYPE_MAT4X3 | TYPE_MAT4X4 => Some(4),
         _ => None,
     }
 }
@@ -166,15 +169,15 @@ pub fn get_rows(type_id: TypeId) -> Option<usize> {
 /// Returns an error if serialization fails for the given type.
 pub fn serialize_value(buffer: &mut Vec<u8>, type_id: TypeId, value_str: &str) -> Result<usize> {
     let start = buffer.len();
-    
+
     match type_id {
         // String types (null-terminated)
-        20 | 21 | 22 | 23 | 29 | 30 => {
+        TYPE_STRING | TYPE_PATH | TYPE_FIXEDSTRING | TYPE_LSSTRING | TYPE_WSTRING | TYPE_LSWSTRING => {
             buffer.extend_from_slice(value_str.as_bytes());
             buffer.push(0); // null terminator
         }
         // Bool
-        19 => {
+        TYPE_BOOL => {
             let val = match value_str {
                 "True" | "true" | "1" => 1u8,
                 _ => 0u8,
@@ -182,36 +185,38 @@ pub fn serialize_value(buffer: &mut Vec<u8>, type_id: TypeId, value_str: &str) -
             buffer.push(val);
         }
         // Integer types
-        0 => {} // None type, no value
-        1 | 27 => buffer.push(value_str.parse().unwrap_or(0)),
-        2 => buffer.write_i16::<LittleEndian>(value_str.parse().unwrap_or(0))?,
-        3 => buffer.write_u16::<LittleEndian>(value_str.parse().unwrap_or(0))?,
-        4 => buffer.write_i32::<LittleEndian>(value_str.parse().unwrap_or(0))?,
-        5 => buffer.write_u32::<LittleEndian>(value_str.parse().unwrap_or(0))?,
-        24 => buffer.write_u64::<LittleEndian>(value_str.parse().unwrap_or(0))?,
-        26 | 32 => buffer.write_i64::<LittleEndian>(value_str.parse().unwrap_or(0))?,
+        TYPE_NONE => {} // None type, no value
+        TYPE_UINT8 | TYPE_INT8 => buffer.push(value_str.parse().unwrap_or(0)),
+        TYPE_INT16 => buffer.write_i16::<LittleEndian>(value_str.parse().unwrap_or(0))?,
+        TYPE_UINT16 => buffer.write_u16::<LittleEndian>(value_str.parse().unwrap_or(0))?,
+        TYPE_INT32 => buffer.write_i32::<LittleEndian>(value_str.parse().unwrap_or(0))?,
+        TYPE_UINT32 => buffer.write_u32::<LittleEndian>(value_str.parse().unwrap_or(0))?,
+        TYPE_UINT64 => buffer.write_u64::<LittleEndian>(value_str.parse().unwrap_or(0))?,
+        TYPE_OLD_INT64 | TYPE_INT64 => buffer.write_i64::<LittleEndian>(value_str.parse().unwrap_or(0))?,
         // Float types
-        6 => buffer.write_f32::<LittleEndian>(value_str.parse().unwrap_or(0.0))?,
-        7 => buffer.write_f64::<LittleEndian>(value_str.parse().unwrap_or(0.0))?,
+        TYPE_FLOAT => buffer.write_f32::<LittleEndian>(value_str.parse().unwrap_or(0.0))?,
+        TYPE_DOUBLE => buffer.write_f64::<LittleEndian>(value_str.parse().unwrap_or(0.0))?,
         // Vector types (space-separated values)
-        8 => serialize_ivec(buffer, value_str, 2)?,
-        9 => serialize_ivec(buffer, value_str, 3)?,
-        10 => serialize_ivec(buffer, value_str, 4)?,
-        11 => serialize_fvec(buffer, value_str, 2)?,
-        12 => serialize_fvec(buffer, value_str, 3)?,
-        13 => serialize_fvec(buffer, value_str, 4)?,
+        TYPE_IVEC2 => serialize_ivec(buffer, value_str, 2)?,
+        TYPE_IVEC3 => serialize_ivec(buffer, value_str, 3)?,
+        TYPE_IVEC4 => serialize_ivec(buffer, value_str, 4)?,
+        TYPE_FVEC2 => serialize_fvec(buffer, value_str, 2)?,
+        TYPE_FVEC3 => serialize_fvec(buffer, value_str, 3)?,
+        TYPE_FVEC4 => serialize_fvec(buffer, value_str, 4)?,
         // Matrix types
-        14..=18 => serialize_matrix(buffer, value_str)?,
+        TYPE_MAT2X2 | TYPE_MAT3X3 | TYPE_MAT3X4 | TYPE_MAT4X3 | TYPE_MAT4X4 => {
+            serialize_matrix(buffer, value_str)?;
+        }
         // UUID
-        31 => serialize_uuid(buffer, value_str)?,
+        TYPE_GUID => serialize_uuid(buffer, value_str)?,
         // Binary types
-        25 => {
+        TYPE_SCRATCHBUFFER => {
             let decoded = BASE64.decode(value_str).unwrap_or_default();
             buffer.extend_from_slice(&decoded);
         }
         _ => {}
     }
-    
+
     Ok(buffer.len() - start)
 }
 
@@ -336,42 +341,42 @@ pub fn extract_value(values: &[u8], offset: usize, length: usize, type_id: TypeI
     if offset + length > values.len() {
         return Ok(String::new());
     }
-    
+
     let bytes = &values[offset..offset + length];
-    
+
     Ok(match type_id {
         // String types (null-terminated)
-        20 | 21 | 22 | 23 | 29 | 30 => {
+        TYPE_STRING | TYPE_PATH | TYPE_FIXEDSTRING | TYPE_LSSTRING | TYPE_WSTRING | TYPE_LSWSTRING => {
             let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
             String::from_utf8_lossy(&bytes[..end]).into_owned()
         }
         // Bool
-        19 => if bytes.first() == Some(&1) { "True" } else { "False" }.to_string(),
+        TYPE_BOOL => if bytes.first() == Some(&1) { "True" } else { "False" }.to_string(),
         // Integer types
-        0 => String::new(),
-        1 | 27 => bytes.first().map(std::string::ToString::to_string).unwrap_or_default(),
-        2 => i16::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
-        3 => u16::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
-        4 => i32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
-        5 => u32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
-        24 => u64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
-        26 | 32 => i64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_NONE => String::new(),
+        TYPE_UINT8 | TYPE_INT8 => bytes.first().map(std::string::ToString::to_string).unwrap_or_default(),
+        TYPE_INT16 => i16::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_UINT16 => u16::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_INT32 => i32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_UINT32 => u32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_UINT64 => u64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_OLD_INT64 | TYPE_INT64 => i64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         // Float types
-        6 => f32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
-        7 => f64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_FLOAT => f32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_DOUBLE => f64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         // Vector types
-        8 => format_ivec(bytes, 2),
-        9 => format_ivec(bytes, 3),
-        10 => format_ivec(bytes, 4),
-        11 => format_fvec(bytes, 2),
-        12 => format_fvec(bytes, 3),
-        13 => format_fvec(bytes, 4),
+        TYPE_IVEC2 => format_ivec(bytes, 2),
+        TYPE_IVEC3 => format_ivec(bytes, 3),
+        TYPE_IVEC4 => format_ivec(bytes, 4),
+        TYPE_FVEC2 => format_fvec(bytes, 2),
+        TYPE_FVEC3 => format_fvec(bytes, 3),
+        TYPE_FVEC4 => format_fvec(bytes, 4),
         // Matrix types
-        14..=18 => format_matrix(bytes),
+        TYPE_MAT2X2 | TYPE_MAT3X3 | TYPE_MAT3X4 | TYPE_MAT4X3 | TYPE_MAT4X4 => format_matrix(bytes),
         // UUID
-        31 => format_uuid(bytes),
+        TYPE_GUID => format_uuid(bytes),
         // Binary types
-        25 => BASE64.encode(bytes),
+        TYPE_SCRATCHBUFFER => BASE64.encode(bytes),
         // Unknown
         _ => {
             let byte_list: Vec<String> = bytes.iter().map(std::string::ToString::to_string).collect();

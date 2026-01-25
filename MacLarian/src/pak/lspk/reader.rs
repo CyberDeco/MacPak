@@ -96,7 +96,7 @@ impl<R: Read + Seek> LspkReader<R> {
             self.part_readers.insert(part, BufReader::new(file));
         }
 
-        Ok(self.part_readers.get_mut(&part).unwrap())
+        Ok(self.part_readers.get_mut(&part).expect("part reader just inserted"))
     }
 }
 
@@ -142,7 +142,7 @@ impl<R: Read + Seek> LspkReader<R> {
             footer_offset,
         });
 
-        Ok(self.header.as_ref().unwrap())
+        Ok(self.header.as_ref().expect("header was just set"))
     }
 
     /// Read and parse the PAK file footer
@@ -172,7 +172,7 @@ impl<R: Read + Seek> LspkReader<R> {
             table_size_compressed,
         });
 
-        Ok(self.footer.as_ref().unwrap())
+        Ok(self.footer.as_ref().expect("footer was just set"))
     }
 
     /// Read and decompress the file table
@@ -185,7 +185,8 @@ impl<R: Read + Seek> LspkReader<R> {
     pub fn read_file_table(&mut self) -> Result<&[FileTableEntry]> {
         let footer = self.footer.as_ref()
             .ok_or_else(|| Error::ConversionError("Footer not read yet".to_string()))?;
-        let header = self.header.as_ref().unwrap();
+        let header = self.header.as_ref()
+            .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?;
 
         let num_files = footer.num_files as usize;
         let table_size_compressed = footer.table_size_compressed as usize;
@@ -227,8 +228,8 @@ impl<R: Read + Seek> LspkReader<R> {
 
         // Offset: bytes 256-261 (6 bytes)
         // The offset is stored as a 6-byte value
-        let offset_low = u32::from_le_bytes(bytes[256..260].try_into().unwrap());
-        let offset_high = u16::from_le_bytes(bytes[260..262].try_into().unwrap());
+        let offset_low = u32::from_le_bytes(bytes[256..260].try_into().expect("fixed-size slice"));
+        let offset_high = u16::from_le_bytes(bytes[260..262].try_into().expect("fixed-size slice"));
         let mut offset = u64::from(offset_low) | (u64::from(offset_high) << 32);
 
         // Mask out flag bits - offset uses lower 48 bits
@@ -242,10 +243,10 @@ impl<R: Read + Seek> LspkReader<R> {
         let compression = CompressionMethod::from_flags(flags);
 
         // Compressed size: bytes 264-267
-        let size_compressed = u32::from_le_bytes(bytes[264..268].try_into().unwrap());
+        let size_compressed = u32::from_le_bytes(bytes[264..268].try_into().expect("fixed-size slice"));
 
         // Decompressed size: bytes 268-271
-        let size_decompressed = u32::from_le_bytes(bytes[268..272].try_into().unwrap());
+        let size_decompressed = u32::from_le_bytes(bytes[268..272].try_into().expect("fixed-size slice"));
 
         Ok(FileTableEntry {
             path,
@@ -387,7 +388,9 @@ impl<R: Read + Seek> LspkReader<R> {
         });
         self.read_file_table()?;
 
-        let version = self.header.as_ref().unwrap().version;
+        let version = self.header.as_ref()
+            .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?
+            .version;
         let mut contents = PakContents::new(version);
         let total_files = self.file_table.len();
 

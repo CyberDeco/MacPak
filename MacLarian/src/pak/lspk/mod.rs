@@ -16,7 +16,10 @@ pub(crate) use reader::LspkReader;
 pub(crate) use writer::LspkWriter;
 
 // Public types that users need
-pub use types::{CompressionMethod, FileTableEntry, PakContents, PakFile, PakPhase, PakProgress};
+pub use types::{CompressionMethod, PakContents, PakFile};
+
+// Internal types (used within the crate)
+pub(crate) use types::{FileTableEntry, PakPhase, PakProgress};
 
 // Internal constants
 pub(crate) const MAGIC: [u8; 4] = [b'L', b'S', b'P', b'K'];

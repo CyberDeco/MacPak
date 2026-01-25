@@ -12,7 +12,7 @@
 /// GTS codec types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
-pub enum GtsCodec {
+pub(crate) enum GtsCodec {
     Uniform = 0,
     Color420 = 1,
     Normal = 2,
@@ -22,13 +22,13 @@ pub enum GtsCodec {
     Codec15Normal = 6,
     RawNormal = 7,
     Half = 8,
-    BC = 9,
+    Bc = 9,
     MultiChannel = 10,
-    ASTC = 11,
+    Astc = 11,
 }
 
 impl GtsCodec {
-    #[must_use] 
+    #[must_use]
     pub fn from_u32(value: u32) -> Option<Self> {
         match value {
             0 => Some(Self::Uniform),
@@ -40,9 +40,9 @@ impl GtsCodec {
             6 => Some(Self::Codec15Normal),
             7 => Some(Self::RawNormal),
             8 => Some(Self::Half),
-            9 => Some(Self::BC),
+            9 => Some(Self::Bc),
             10 => Some(Self::MultiChannel),
-            11 => Some(Self::ASTC),
+            11 => Some(Self::Astc),
             _ => None,
         }
     }
@@ -51,7 +51,7 @@ impl GtsCodec {
 /// GTS data types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
-pub enum GtsDataType {
+pub(crate) enum GtsDataType {
     R8G8B8Srgb = 0,
     R8G8B8A8Srgb = 1,
     X8Y8Z0Tangent = 2,
@@ -173,7 +173,7 @@ impl GtsHeader {
 
 /// GTS parameter block header (20 bytes)
 #[derive(Debug, Clone)]
-pub struct GtsParameterBlockHeader {
+pub(crate) struct GtsParameterBlockHeader {
     pub parameter_block_id: u32,
     pub codec: GtsCodec,
     pub parameter_block_size: u32,
@@ -236,7 +236,7 @@ impl GtsBCParameterBlock {
 
 /// Uniform codec parameter block (16 bytes)
 #[derive(Debug, Clone)]
-pub struct GtsUniformParameterBlock {
+pub(crate) struct GtsUniformParameterBlock {
     pub version: u16,
     pub a_unused: u16,
     pub width: u32,
@@ -246,7 +246,7 @@ pub struct GtsUniformParameterBlock {
 
 /// Parameter block data
 #[derive(Debug, Clone)]
-pub enum GtsParameterBlock {
+pub(crate) enum GtsParameterBlock {
     BC(GtsBCParameterBlock),
     Uniform(GtsUniformParameterBlock),
     Unknown,
@@ -304,7 +304,7 @@ impl GtpHeader {
 
 /// GTP chunk header (12 bytes)
 #[derive(Debug, Clone)]
-pub struct GtpChunkHeader {
+pub(crate) struct GtpChunkHeader {
     pub codec: GtsCodec,
     pub parameter_block_id: u32,
     pub size: u32,

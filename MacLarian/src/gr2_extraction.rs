@@ -50,12 +50,16 @@ pub struct Gr2ExtractionOptions {
     pub convert_to_glb: bool,
     /// Extract associated textures
     pub extract_textures: bool,
+    /// Extract virtual textures (GTex files) associated with each GR2 file
+    pub extract_virtual_textures: bool,
     /// Path to BG3 install folder (for finding Textures.pak, etc.)
     /// If None, auto-detects using GameDataResolver
     pub game_data_path: Option<PathBuf>,
     /// Path to pre-extracted virtual textures (GTP/GTS files)
     /// If None, virtual textures will be skipped
     pub virtual_textures_path: Option<PathBuf>,
+    /// Keep the original GR2 file after conversion to GLB (default: true)
+    pub keep_original_gr2: bool,
     /// Convert extracted DDS textures to PNG format
     pub convert_to_png: bool,
     /// Keep the original DDS files when converting to PNG
@@ -67,8 +71,10 @@ impl Default for Gr2ExtractionOptions {
         Self {
             convert_to_glb: true,
             extract_textures: true,
+            extract_virtual_textures: false,
             game_data_path: None,
             virtual_textures_path: None,
+            keep_original_gr2: true,
             convert_to_png: false,
             keep_original_dds: false,
         }
@@ -76,20 +82,60 @@ impl Default for Gr2ExtractionOptions {
 }
 
 impl Gr2ExtractionOptions {
+    /// Create new options with all processing disabled.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            convert_to_glb: false,
+            extract_textures: false,
+            extract_virtual_textures: false,
+            game_data_path: None,
+            virtual_textures_path: None,
+            keep_original_gr2: true,
+            convert_to_png: false,
+            keep_original_dds: false,
+        }
+    }
+
+    /// Create options with all GR2 processing enabled (bundle mode).
+    ///
+    /// This is equivalent to the `--bundle` CLI flag.
+    #[must_use]
+    pub fn bundle() -> Self {
+        Self {
+            convert_to_glb: true,
+            extract_textures: true,
+            extract_virtual_textures: true,
+            game_data_path: None,
+            virtual_textures_path: None,
+            keep_original_gr2: true,
+            convert_to_png: false,
+            keep_original_dds: false,
+        }
+    }
+
+    /// Check if any GR2 processing options are enabled.
+    #[must_use]
+    pub fn has_gr2_processing(&self) -> bool {
+        self.convert_to_glb || self.extract_textures || self.extract_virtual_textures
+    }
+
     /// Create options with custom game data path
+    #[must_use]
     pub fn with_game_data_path(mut self, path: impl Into<PathBuf>) -> Self {
         self.game_data_path = Some(path.into());
         self
     }
 
     /// Set path to pre-extracted virtual textures (GTP/GTS files)
+    #[must_use]
     pub fn with_virtual_textures_path(mut self, path: impl Into<PathBuf>) -> Self {
         self.virtual_textures_path = Some(path.into());
         self
     }
 
     /// Disable GLB conversion
-    #[must_use] 
+    #[must_use]
     pub fn no_conversion(mut self) -> Self {
         self.convert_to_glb = false;
         self
@@ -106,6 +152,41 @@ impl Gr2ExtractionOptions {
     #[must_use]
     pub fn with_png_conversion(mut self, convert: bool) -> Self {
         self.convert_to_png = convert;
+        self
+    }
+
+    /// Set whether to convert GR2 to GLB.
+    #[must_use]
+    pub fn with_convert_to_glb(mut self, convert: bool) -> Self {
+        self.convert_to_glb = convert;
+        self
+    }
+
+    /// Set whether to extract DDS textures.
+    #[must_use]
+    pub fn with_extract_textures(mut self, extract: bool) -> Self {
+        self.extract_textures = extract;
+        self
+    }
+
+    /// Set whether to extract virtual textures.
+    #[must_use]
+    pub fn with_extract_virtual_textures(mut self, extract: bool) -> Self {
+        self.extract_virtual_textures = extract;
+        self
+    }
+
+    /// Set whether to keep the original GR2 after conversion.
+    #[must_use]
+    pub fn with_keep_original(mut self, keep: bool) -> Self {
+        self.keep_original_gr2 = keep;
+        self
+    }
+
+    /// Set whether to keep original DDS files after PNG conversion.
+    #[must_use]
+    pub fn with_keep_original_dds(mut self, keep: bool) -> Self {
+        self.keep_original_dds = keep;
         self
     }
 }

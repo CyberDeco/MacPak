@@ -146,7 +146,7 @@ impl ContentCache {
             self.stats.hits += 1;
             self.access_order.retain(|k| k != &key);
             self.access_order.push(key.clone());
-            return Ok(self.entries.get(&key).unwrap());
+            return Ok(self.entries.get(&key).expect("key exists per contains_key check"));
         }
 
         self.stats.misses += 1;
@@ -199,7 +199,7 @@ impl ContentCache {
         self.entries.insert(key.clone(), cached);
         self.access_order.push(key.clone());
 
-        Ok(self.entries.get(&key).unwrap())
+        Ok(self.entries.get(&key).expect("entry was just inserted"))
     }
 
     /// Search content for a query string

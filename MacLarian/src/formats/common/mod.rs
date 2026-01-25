@@ -1,7 +1,9 @@
 //! Common types and utilities shared across all Larian formats
 
 pub mod types;
-pub mod hash;
+pub(crate) mod hash;
 
 pub use types::*;
-pub use hash::*;
+
+// Internal re-export for converter module
+pub(crate) use hash::hash_string_lslib;

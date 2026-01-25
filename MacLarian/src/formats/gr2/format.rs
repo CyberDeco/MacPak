@@ -393,6 +393,11 @@ impl Gr2File {
             return Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()));
         }
 
+        // Verify endianness - we only support little-endian GR2 files
+        if magic.endian()? == Endian::Big {
+            return Err(Error::DecompressionError("Big-endian GR2 files are not supported".to_string()));
+        }
+
         // Read main header (offset 0x20)
         cursor.seek(SeekFrom::Start(0x20))?;
         let header = Gr2Header::read(&mut cursor)?;
@@ -448,14 +453,6 @@ impl Gr2File {
     /// Returns an error if the magic signature is invalid.
     pub fn pointer_size(&self) -> Result<PointerSize> {
         self.magic.pointer_size()
-    }
-
-    /// Get endianness
-    ///
-    /// # Errors
-    /// Returns an error if the magic signature is invalid.
-    pub fn endian(&self) -> Result<Endian> {
-        self.magic.endian()
     }
 }
 

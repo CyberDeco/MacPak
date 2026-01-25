@@ -169,14 +169,14 @@ pub enum PakPhase {
 }
 
 impl PakPhase {
-    #[must_use] 
-    pub fn as_str(&self) -> &'static str {
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
         match self {
-            PakPhase::ReadingHeader => "Reading header",
-            PakPhase::ReadingTable => "Reading file table",
-            PakPhase::DecompressingFiles => "Decompressing files",
-            PakPhase::WritingFiles => "Writing files",
-            PakPhase::Complete => "Complete",
+            Self::ReadingHeader => "Reading header",
+            Self::ReadingTable => "Reading file table",
+            Self::DecompressingFiles => "Decompressing files",
+            Self::WritingFiles => "Writing files",
+            Self::Complete => "Complete",
         }
     }
 }

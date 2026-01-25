@@ -143,9 +143,9 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
 
 /// Detect if extended format (16-byte) or V2 format (12-byte) based on data size
 fn detect_extended_format(data_size: usize, version_hint: bool) -> bool {
-    if data_size.is_multiple_of(16) && !data_size.is_multiple_of(12) {
+    if data_size % 16 == 0 && data_size % 12 != 0 {
         true  // Only divisible by 16
-    } else if data_size.is_multiple_of(12) && !data_size.is_multiple_of(16) {
+    } else if data_size % 12 == 0 && data_size % 16 != 0 {
         false // Only divisible by 12
     } else {
         // Divisible by both (or neither), fall back to hint

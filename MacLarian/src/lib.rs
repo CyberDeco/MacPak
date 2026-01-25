@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-//! # MacLarian
+//! # `MacLarian`
 //!
 //! A pure-Rust library for working with Baldur's Gate 3 and Larian Studios file formats.
 //!
@@ -7,7 +7,7 @@
 //!
 //! - **PAK archives** - Extract, create, and list game asset packages
 //! - **LSF/LSX/LSJ** - Binary, XML, and JSON document formats
-//! - **GR2** - Granny2 mesh files with BitKnit decompression
+//! - **GR2** - Granny2 mesh files with `BitKnit` decompression
 //! - **Virtual Textures** - GTS/GTP streaming texture extraction
 //! - **LOCA** - Localization files
 //! - **DDS/PNG** - Texture conversion

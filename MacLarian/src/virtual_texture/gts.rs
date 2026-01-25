@@ -31,7 +31,7 @@ use super::types::{GtsHeader, GtsParameterBlock, GtsPageFileInfo, GtsPackedTileI
 #[derive(Debug)]
 pub struct GtsFile {
     pub header: GtsHeader,
-    pub parameter_blocks: HashMap<u32, GtsParameterBlock>,
+    pub(crate) parameter_blocks: HashMap<u32, GtsParameterBlock>,
     pub page_files: Vec<GtsPageFileInfo>,
     pub packed_tiles: Vec<GtsPackedTileId>,
     pub flat_tile_infos: Vec<GtsFlatTileInfo>,
@@ -251,7 +251,7 @@ impl GtsFile {
             reader.read_exact(&mut buf8)?;
             let file_info_offset = u64::from_le_bytes(buf8);
 
-            let codec = GtsCodec::from_u32(codec_val).unwrap_or(GtsCodec::BC);
+            let codec = GtsCodec::from_u32(codec_val).unwrap_or(GtsCodec::Bc);
 
             // Save position and read parameter block
             let pos = reader.stream_position()?;
@@ -259,7 +259,7 @@ impl GtsFile {
             reader.seek(SeekFrom::Start(file_info_offset))?;
 
             let block = match codec {
-                GtsCodec::BC => {
+                GtsCodec::Bc => {
                     let bc_block = Self::read_bc_parameter_block(reader)?;
                     GtsParameterBlock::BC(bc_block)
                 }
@@ -540,7 +540,7 @@ impl GtsFile {
             }
 
             // Find the minimum level (highest resolution available)
-            let best_level = *level_map.keys().min().unwrap();
+            let best_level = *level_map.keys().min().expect("level_map is non-empty");
             tiles_by_layer[layer_idx] = level_map.get(&best_level).cloned().unwrap_or_default();
 
             if best_level != 0 {

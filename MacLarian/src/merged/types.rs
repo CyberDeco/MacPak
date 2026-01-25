@@ -58,7 +58,7 @@ pub struct VirtualTextureRef {
 
 /// Pak file paths for resolving assets
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct PakPaths {
+pub(crate) struct PakPaths {
     /// Pak containing GR2 mesh files (typically "Models.pak")
     pub models: String,
     /// Pak containing DDS texture files (typically "Textures.pak")
@@ -97,7 +97,7 @@ impl PakPaths {
 
 /// A material definition from `MaterialBank`
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MaterialDef {
+pub(crate) struct MaterialDef {
     /// Material resource ID (GUID)
     pub id: String,
     /// Human-readable name
@@ -129,7 +129,7 @@ pub struct MergedDatabase {
     /// Source file this database was built from
     pub source_path: String,
     /// Pak file paths for resolving assets
-    pub pak_paths: PakPaths,
+    pub(crate) pak_paths: PakPaths,
     /// Visual assets indexed by their ID (GUID)
     pub visuals_by_id: HashMap<String, VisualAsset>,
     /// Visual ID indexed by visual name (e.g., "`HUM_M_ARM_Robe_C_Bracers_1`" -> ID)
@@ -137,7 +137,7 @@ pub struct MergedDatabase {
     /// Visual IDs indexed by GR2 filename (one GR2 can have multiple visuals)
     pub visuals_by_gr2: HashMap<String, Vec<String>>,
     /// Materials indexed by their ID
-    pub materials: HashMap<String, MaterialDef>,
+    pub(crate) materials: HashMap<String, MaterialDef>,
     /// Textures indexed by their ID
     pub textures: HashMap<String, TextureRef>,
     /// Virtual textures indexed by their ID

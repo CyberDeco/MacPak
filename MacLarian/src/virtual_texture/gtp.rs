@@ -170,7 +170,7 @@ impl<R: Read + Seek> GtpFile<R> {
 
         // Decompress based on codec
         match chunk_header.codec {
-            GtsCodec::BC => {
+            GtsCodec::Bc => {
                 let method = gts.get_compression_method(chunk_header.parameter_block_id);
 
                 // Calculate expected output size for BC5/DXT5
@@ -206,7 +206,7 @@ impl<R: Read + Seek> GtpFile<R> {
         self.reader.read_exact(&mut buf4)?;
         let size = u32::from_le_bytes(buf4);
 
-        let codec = GtsCodec::from_u32(codec_val).unwrap_or(GtsCodec::BC);
+        let codec = GtsCodec::from_u32(codec_val).unwrap_or(GtsCodec::Bc);
 
         Ok(GtpChunkHeader {
             codec,

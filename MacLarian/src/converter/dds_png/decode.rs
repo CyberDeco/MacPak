@@ -230,10 +230,10 @@ fn decode_bc(data: &[u8], width: usize, height: usize, format: BcFormat) -> Resu
 
 /// Decode BC6H HDR textures to RGBA8 (tone-mapped from float)
 fn decode_bc6h(data: &[u8], width: usize, height: usize, signed: bool) -> Result<Vec<u8>> {
+    const BLOCK_SIZE: usize = 16;
     let mut rgba = vec![0u8; width * height * 4];
     let blocks_x = width.div_ceil(4);
     let blocks_y = height.div_ceil(4);
-    const BLOCK_SIZE: usize = 16;
 
     // Temporary buffer for a single 4x4 block of RGB floats (16 pixels * 3 floats * 4 bytes = 192 bytes)
     let mut block_rgb = [0f32; 48];
@@ -279,6 +279,7 @@ fn decode_bc6h(data: &[u8], width: usize, height: usize, signed: bool) -> Result
 }
 
 /// Tone map HDR float value to 8-bit using Reinhard operator
+#[allow(clippy::cast_sign_loss)] // Value is clamped to 0.0-255.0, always non-negative
 fn tone_map_hdr(value: f32) -> u8 {
     // Clamp negative values
     let v = value.max(0.0);

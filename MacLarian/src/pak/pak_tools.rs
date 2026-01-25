@@ -643,7 +643,7 @@ struct CompressedFile {
 /// The file table decompression is the critical bottleneck: if a PAK has
 /// 50,000 files and we search 1,000 of them, without caching we'd decompress
 /// the file table 1,000 times. With caching, we decompress it once.
-pub struct PakReaderCache {
+pub(crate) struct PakReaderCache {
     /// Cached file tables keyed by PAK path
     tables: std::collections::HashMap<PathBuf, Vec<FileTableEntry>>,
     /// Maximum number of PAK tables to cache

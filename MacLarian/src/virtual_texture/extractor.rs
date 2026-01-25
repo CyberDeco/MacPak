@@ -255,10 +255,10 @@ impl VirtualTextureExtractor {
             }
 
             // Find bounds
-            let min_x = tiles.iter().map(|t| t.x).min().unwrap() as usize;
-            let max_x = tiles.iter().map(|t| t.x).max().unwrap() as usize;
-            let min_y = tiles.iter().map(|t| t.y).min().unwrap() as usize;
-            let max_y = tiles.iter().map(|t| t.y).max().unwrap() as usize;
+            let min_x = tiles.iter().map(|t| t.x).min().expect("tiles is non-empty") as usize;
+            let max_x = tiles.iter().map(|t| t.x).max().expect("tiles is non-empty") as usize;
+            let min_y = tiles.iter().map(|t| t.y).min().expect("tiles is non-empty") as usize;
+            let max_y = tiles.iter().map(|t| t.y).max().expect("tiles is non-empty") as usize;
 
             let width_tiles = max_x - min_x + 1;
             let height_tiles = max_y - min_y + 1;
