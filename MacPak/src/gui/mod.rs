@@ -358,7 +358,7 @@ fn tab_content(
             match tab_index {
                 0 => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab).into_any(),
                 1 => editor_tab(app_state.clone(), editor_tabs_state.clone()).into_any(),
-                2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone()).into_any(),
+                2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone(), config_state.clone()).into_any(),
                 3 => gr2_tab(app_state.clone(), gr2_state.clone(), config_state.clone()).into_any(),
                 4 => virtual_textures_tab(app_state.clone(), vt_state.clone(), config_state.clone()).into_any(),
                 5 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),

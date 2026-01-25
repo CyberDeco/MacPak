@@ -15,12 +15,12 @@ pub use operations::extract_pak_file;
 use floem::prelude::*;
 use floem::style::Position;
 
-use crate::gui::state::{AppState, PakOpsState};
+use crate::gui::state::{AppState, ConfigState, PakOpsState};
 use dialogs::dialog_overlay;
 use results::results_area;
 use sections::{header_section, operations_row};
 
-pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState) -> impl IntoView {
+pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState, config_state: ConfigState) -> impl IntoView {
     v_stack((
         // Header with title and status message
         header_section(pak_state.clone()),
@@ -41,7 +41,7 @@ pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState) -> impl IntoVie
                 .gap(16.0)
         }),
         // Single unified dialog overlay - replaces 5 separate overlays
-        dialog_overlay(pak_state),
+        dialog_overlay(pak_state, config_state),
     ))
     .style(|s| {
         s.width_full()

@@ -843,7 +843,7 @@ pub fn execute_extraction(state: SearchState, config: crate::gui::state::ConfigS
                         .with_extract_virtual_textures(extract_textures) // Included with texture extraction
                         .with_keep_original(extract_gr2)
                         .with_convert_to_png(convert_to_png)
-                        .with_keep_original_dds(!convert_to_png) // Keep DDS if not converting to PNG
+                        .with_keep_original_dds(extract_textures) // Keep DDS if "Extract textures DDS" is checked
                         .with_game_data_path(if game_data.is_empty() { None } else { Some(PathBuf::from(&game_data)) })
                         .with_virtual_textures_path(None); // Uses game data path for VT lookup
 

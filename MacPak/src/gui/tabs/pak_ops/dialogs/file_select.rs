@@ -6,26 +6,27 @@ use floem::views::{text_input, virtual_list, VirtualDirection, VirtualItemSize};
 use im::Vector as ImVector;
 use std::path::Path;
 
-use crate::gui::state::{ActiveDialog, PakOpsState};
+use crate::gui::state::{ActiveDialog, ConfigState, PakOpsState};
 use super::super::operations::execute_individual_extract;
 
-pub fn file_select_content(state: PakOpsState) -> impl IntoView {
+pub fn file_select_content(state: PakOpsState, config_state: ConfigState) -> impl IntoView {
     let files = state.file_select_list;
     let selected = state.file_select_selected;
-    let pak_path = state.file_select_pak;
+    let pak_path_signal = state.file_select_pak;
     let ext_filter = state.file_select_filter;
 
     // GR2 options signals
-    let gr2_convert = state.gr2_auto_convert;
-    let gr2_textures = state.gr2_auto_textures;
-    let gr2_virtual_textures = state.gr2_auto_virtual_textures;
-    let keep_gr2 = state.keep_original_gr2;
+    let extract_gr2 = state.gr2_extract_gr2;
+    let convert_to_glb = state.gr2_convert_to_glb;
+    let convert_to_gltf = state.gr2_convert_to_gltf;
+    let extract_textures = state.gr2_extract_textures;
+    let convert_to_png = state.gr2_convert_to_png;
+    let game_data_path = config_state.bg3_data_path;
 
     let state_extract = state.clone();
     let state_cancel = state.clone();
     let state_select_all = state.clone();
     let state_deselect = state.clone();
-    let state_bundle = state.clone();
 
     let filtered_files = move || {
         let filter = ext_filter.get().to_lowercase();
@@ -40,7 +41,7 @@ pub fn file_select_content(state: PakOpsState) -> impl IntoView {
         }
     };
 
-    let pak_name = pak_path.get()
+    let pak_name = pak_path_signal.get()
         .map(|p| Path::new(&p).file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "PAK".to_string()))
@@ -180,11 +181,13 @@ pub fn file_select_content(state: PakOpsState) -> impl IntoView {
         }),
         // GR2 Processing Options (shown only when GR2 files are selected)
         gr2_options_panel(
-            gr2_convert,
-            gr2_textures,
-            gr2_virtual_textures,
-            keep_gr2,
-            state_bundle.clone(),
+            extract_gr2,
+            convert_to_glb,
+            convert_to_gltf,
+            extract_textures,
+            convert_to_png,
+            game_data_path,
+            pak_path_signal,
             selected,
         ),
         h_stack((
@@ -237,27 +240,57 @@ pub fn file_select_content(state: PakOpsState) -> impl IntoView {
             .border_color(Color::rgb8(200, 200, 200))
             .border_radius(8.0)
             .width(800.0)
-            .max_height(600.0)
+            .max_height(750.0)
     })
 }
 
 /// GR2 Processing Options panel (hidden when no GR2 files are selected)
 fn gr2_options_panel(
-    gr2_convert: RwSignal<bool>,
-    gr2_textures: RwSignal<bool>,
-    gr2_virtual_textures: RwSignal<bool>,
-    keep_gr2: RwSignal<bool>,
-    _state: PakOpsState,
+    extract_gr2: RwSignal<bool>,
+    convert_to_glb: RwSignal<bool>,
+    convert_to_gltf: RwSignal<bool>,
+    extract_textures: RwSignal<bool>,
+    convert_to_png: RwSignal<bool>,
+    game_data_path: RwSignal<String>,
+    pak_path: RwSignal<Option<String>>,
     selected: RwSignal<std::collections::HashSet<String>>,
 ) -> impl View {
     // Check if all options are enabled (bundle mode)
     let is_bundle = move || {
-        gr2_convert.get() && gr2_textures.get() && gr2_virtual_textures.get()
+        extract_gr2.get() && convert_to_glb.get() && extract_textures.get() && convert_to_png.get()
     };
 
     // Check if selection contains GR2 files
     let has_gr2 = move || {
         selected.get().iter().any(|f| f.to_lowercase().ends_with(".gr2"))
+    };
+
+    // Show warning only when:
+    // 1. Texture extraction is enabled
+    // 2. Game data path is configured but doesn't exist on disk
+    // 3. The PAK is located within the game data path (game PAK)
+    // For mod PAKs, texture extraction is a TODO - don't show warning
+    let needs_warning = move || {
+        if !extract_textures.get() {
+            return false;
+        }
+
+        let data_path = game_data_path.get();
+        if data_path.is_empty() {
+            // Path not configured - can't determine if game PAK, don't warn
+            return false;
+        }
+
+        let path_exists = std::path::Path::new(&data_path).is_dir();
+        if path_exists {
+            // Path is valid - texture extraction will work, no warning needed
+            return false;
+        }
+
+        // Path is configured but doesn't exist - check if PAK is within that path (game PAK)
+        pak_path.get()
+            .map(|p| p.starts_with(&data_path))
+            .unwrap_or(false)
     };
 
     v_stack((
@@ -270,57 +303,106 @@ fn gr2_options_panel(
         h_stack((
             checkbox(is_bundle)
                 .on_update(move |checked| {
-                    gr2_convert.set(checked);
-                    gr2_textures.set(checked);
-                    gr2_virtual_textures.set(checked);
+                    extract_gr2.set(checked);
+                    convert_to_glb.set(checked);
+                    convert_to_gltf.set(false); // GLB takes precedence
+                    extract_textures.set(checked);
+                    convert_to_png.set(checked);
                 })
                 .style(|s| s.margin_right(8.0)),
             label(|| "Full Bundle")
                 .style(|s| s.font_size(12.0).font_weight(Weight::MEDIUM)),
-            label(|| " (convert + all textures)")
+            label(|| " (all options)")
                 .style(|s| s.font_size(11.0).color(Color::rgb8(100, 100, 100))),
         ))
-        .style(|s| s.items_center().margin_bottom(6.0)),
-        // Individual options
+        .style(|s| s.items_center().margin_bottom(10.0)),
+
+        // Extract GR2
         h_stack((
-            // Convert to GLB
-            h_stack((
-                checkbox(move || gr2_convert.get())
-                    .on_update(move |checked| gr2_convert.set(checked))
-                    .style(|s| s.margin_right(6.0)),
-                label(|| "Convert to GLB")
-                    .style(|s| s.font_size(11.0)),
-            ))
-            .style(|s| s.items_center().margin_right(16.0)),
-            // Extract textures
-            h_stack((
-                checkbox(move || gr2_textures.get())
-                    .on_update(move |checked| gr2_textures.set(checked))
-                    .style(|s| s.margin_right(6.0)),
-                label(|| "Extract textures")
-                    .style(|s| s.font_size(11.0)),
-            ))
-            .style(|s| s.items_center().margin_right(16.0)),
-            // Extract virtual textures
-            h_stack((
-                checkbox(move || gr2_virtual_textures.get())
-                    .on_update(move |checked| gr2_virtual_textures.set(checked))
-                    .style(|s| s.margin_right(6.0)),
-                label(|| "Extract virtual textures")
-                    .style(|s| s.font_size(11.0)),
-            ))
-            .style(|s| s.items_center().margin_right(16.0)),
-            // Keep original GR2
-            h_stack((
-                checkbox(move || keep_gr2.get())
-                    .on_update(move |checked| keep_gr2.set(checked))
-                    .style(|s| s.margin_right(6.0)),
-                label(|| "Keep original GR2")
-                    .style(|s| s.font_size(11.0)),
-            ))
-            .style(|s| s.items_center()),
+            checkbox(move || extract_gr2.get())
+                .on_update(move |checked| extract_gr2.set(checked))
+                .style(|s| s.margin_right(6.0)),
+            label(|| "Extract GR2")
+                .style(|s| s.font_size(12.0)),
         ))
-        .style(|s| s.margin_left(20.0).flex_wrap(floem::style::FlexWrap::Wrap)),
+        .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
+
+        // Convert to GLB
+        h_stack((
+            checkbox(move || convert_to_glb.get())
+                .on_update(move |checked| {
+                    convert_to_glb.set(checked);
+                    if checked {
+                        convert_to_gltf.set(false);
+                    }
+                })
+                .style(|s| s.margin_right(6.0)),
+            label(|| "Convert to GLB")
+                .style(move |s| {
+                    let disabled = convert_to_gltf.get();
+                    s.font_size(12.0)
+                        .color(if disabled { Color::rgb8(160, 160, 160) } else { Color::BLACK })
+                }),
+        ))
+        .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
+
+        // Convert to glTF
+        h_stack((
+            checkbox(move || convert_to_gltf.get())
+                .on_update(move |checked| {
+                    convert_to_gltf.set(checked);
+                    if checked {
+                        convert_to_glb.set(false);
+                    }
+                })
+                .style(|s| s.margin_right(6.0)),
+            label(|| "Convert to glTF")
+                .style(move |s| {
+                    let disabled = convert_to_glb.get();
+                    s.font_size(12.0)
+                        .color(if disabled { Color::rgb8(160, 160, 160) } else { Color::BLACK })
+                }),
+        ))
+        .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
+
+        // Extract textures DDS
+        h_stack((
+            checkbox(move || extract_textures.get())
+                .on_update(move |checked| extract_textures.set(checked))
+                .style(|s| s.margin_right(6.0)),
+            label(|| "Extract textures DDS")
+                .style(|s| s.font_size(12.0)),
+        ))
+        .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
+
+        // Convert textures DDS to PNG
+        h_stack((
+            checkbox(move || convert_to_png.get())
+                .on_update(move |checked| convert_to_png.set(checked))
+                .style(|s| s.margin_right(6.0)),
+            label(|| "Convert textures DDS to PNG")
+                .style(|s| s.font_size(12.0)),
+        ))
+        .style(|s| s.items_center().margin_left(20.0)),
+
+        // Warning when textures enabled but path not configured
+        dyn_container(
+            needs_warning,
+            move |show_warning| {
+                if show_warning {
+                    label(|| "Warning: BG3 game data path not set in Settings")
+                        .style(|s| {
+                            s.font_size(11.0)
+                                .color(Color::rgb8(180, 80, 30))
+                                .margin_top(8.0)
+                                .margin_left(20.0)
+                        })
+                        .into_any()
+                } else {
+                    empty().into_any()
+                }
+            },
+        ),
     ))
     .style(move |s| {
         let visible = has_gr2();

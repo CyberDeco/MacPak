@@ -175,15 +175,15 @@ pub fn execute_individual_extract(state: PakOpsState) {
     }
 
     // Capture GR2 options before closing dialog
-    let gr2_convert = state.gr2_auto_convert.get();
-    let gr2_textures = state.gr2_auto_textures.get();
-    let gr2_virtual_textures = state.gr2_auto_virtual_textures.get();
-    let keep_original = state.keep_original_gr2.get();
+    let extract_gr2 = state.gr2_extract_gr2.get();
+    let convert_to_glb = state.gr2_convert_to_glb.get();
+    let convert_to_gltf = state.gr2_convert_to_gltf.get();
+    let extract_textures = state.gr2_extract_textures.get();
+    let convert_to_png = state.gr2_convert_to_png.get();
     let game_data = state.game_data_path.get();
-    let virtual_textures = state.virtual_textures_path.get();
 
-    // Check if any GR2 processing is enabled
-    let use_smart_extract = gr2_convert || gr2_textures || gr2_virtual_textures;
+    // Check if any GR2 processing is enabled (beyond just extracting the GR2)
+    let use_smart_extract = convert_to_glb || convert_to_gltf || extract_textures;
 
     // Close the dialog
     state.active_dialog.set(ActiveDialog::None);
@@ -225,13 +225,16 @@ pub fn execute_individual_extract(state: PakOpsState) {
     thread::spawn(move || {
         let pak_result = if use_smart_extract {
             // Build extraction options
+            // Note: glTF output uses the same converter but outputs .gltf + .bin instead of .glb
             let extraction_opts = maclarian::pak::Gr2ExtractionOptions::new()
-                .with_convert_to_glb(gr2_convert)
-                .with_extract_textures(gr2_textures)
-                .with_extract_virtual_textures(gr2_virtual_textures)
-                .with_keep_original(keep_original)
+                .with_convert_to_glb(convert_to_glb || convert_to_gltf)
+                .with_extract_textures(extract_textures)
+                .with_extract_virtual_textures(extract_textures) // Included with texture extraction
+                .with_keep_original(extract_gr2)
+                .with_convert_to_png(convert_to_png)
+                .with_keep_original_dds(extract_textures) // Keep DDS if "Extract textures DDS" is checked
                 .with_game_data_path(game_data.map(std::path::PathBuf::from))
-                .with_virtual_textures_path(virtual_textures.map(std::path::PathBuf::from));
+                .with_virtual_textures_path(None); // Uses game data path for VT lookup
 
             let result = maclarian::pak::extract_files_smart(
                 &pak_path,

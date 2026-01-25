@@ -18,7 +18,7 @@ use floem::prelude::*;
 use floem_reactive::create_effect;
 use std::time::Duration;
 
-use crate::gui::state::{ActiveDialog, PakOpsState};
+use crate::gui::state::{ActiveDialog, ConfigState, PakOpsState};
 use super::types::get_shared_progress;
 
 use create_options::create_options_content;
@@ -28,7 +28,7 @@ use folder_drop_action::folder_drop_action_content;
 use progress::progress_content;
 
 /// Unified dialog overlay - only ONE dyn_container checking ONE signal
-pub fn dialog_overlay(state: PakOpsState) -> impl IntoView {
+pub fn dialog_overlay(state: PakOpsState, config_state: ConfigState) -> impl IntoView {
     let active = state.active_dialog;
 
     // Use persistent state signals to avoid accumulation on tab switch
@@ -96,11 +96,13 @@ pub fn dialog_overlay(state: PakOpsState) -> impl IntoView {
 
     let state_for_content = state.clone();
     let state_for_escape = state.clone();
+    let config_for_content = config_state;
 
     dyn_container(
         move || active.get(),
         move |dialog| {
             let state = state_for_content.clone();
+            let config = config_for_content.clone();
 
             // When None, return empty - the dyn_container styling handles visibility
             if dialog == ActiveDialog::None {
@@ -115,7 +117,7 @@ pub fn dialog_overlay(state: PakOpsState) -> impl IntoView {
                 }
                 ActiveDialog::CreateOptions => create_options_content(state).into_any(),
                 ActiveDialog::DropAction => drop_action_content(state).into_any(),
-                ActiveDialog::FileSelect => file_select_content(state).into_any(),
+                ActiveDialog::FileSelect => file_select_content(state, config).into_any(),
                 ActiveDialog::FolderDropAction => folder_drop_action_content(state).into_any(),
             }
         },

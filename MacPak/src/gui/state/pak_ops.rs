@@ -92,12 +92,12 @@ pub struct PakOpsState {
     pub file_select_filter: RwSignal<String>,
 
     // GR2 extraction options (shown when GR2 files are in selection)
-    pub gr2_auto_convert: RwSignal<bool>,
-    pub gr2_auto_textures: RwSignal<bool>,
-    pub gr2_auto_virtual_textures: RwSignal<bool>,
-    pub keep_original_gr2: RwSignal<bool>,
+    pub gr2_extract_gr2: RwSignal<bool>,
+    pub gr2_convert_to_glb: RwSignal<bool>,
+    pub gr2_convert_to_gltf: RwSignal<bool>,
+    pub gr2_extract_textures: RwSignal<bool>,
+    pub gr2_convert_to_png: RwSignal<bool>,
     pub game_data_path: RwSignal<Option<String>>,
-    pub virtual_textures_path: RwSignal<Option<String>>,
 
     // Progress polling signals (persistent to avoid accumulation on tab switch)
     pub polled_pct: RwSignal<u32>,
@@ -142,12 +142,12 @@ impl PakOpsState {
             file_select_filter: RwSignal::new(String::new()),
 
             // GR2 options default to off (user opts in)
-            gr2_auto_convert: RwSignal::new(false),
-            gr2_auto_textures: RwSignal::new(false),
-            gr2_auto_virtual_textures: RwSignal::new(false),
-            keep_original_gr2: RwSignal::new(true),
+            gr2_extract_gr2: RwSignal::new(true),
+            gr2_convert_to_glb: RwSignal::new(false),
+            gr2_convert_to_gltf: RwSignal::new(false),
+            gr2_extract_textures: RwSignal::new(false),
+            gr2_convert_to_png: RwSignal::new(false),
             game_data_path: RwSignal::new(None),
-            virtual_textures_path: RwSignal::new(None),
 
             polled_pct: RwSignal::new(0),
             polled_current: RwSignal::new(0),
