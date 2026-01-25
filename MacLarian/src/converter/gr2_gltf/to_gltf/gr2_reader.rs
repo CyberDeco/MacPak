@@ -173,7 +173,7 @@ impl Gr2Reader {
     /// This function does not panic under normal conditions.
     pub fn new(file_data: &[u8]) -> Result<Self> {
         if file_data.len() < 16 {
-            return Err(Error::Decompression("GR2 file too small".to_string()));
+            return Err(Error::DecompressionError("GR2 file too small".to_string()));
         }
 
         let magic: [u8; 16] = file_data[0..16].try_into().unwrap();
@@ -182,13 +182,13 @@ impl Gr2Reader {
         } else if magic == MAGIC_LE32 {
             false
         } else {
-            return Err(Error::Decompression("Invalid GR2 magic signature".to_string()));
+            return Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()));
         };
 
         let mut cursor = std::io::Cursor::new(&file_data[0x20..]);
         let version = cursor.read_u32::<LittleEndian>()?;
         if version != 6 && version != 7 {
-            return Err(Error::Decompression(format!("Unsupported GR2 version: {version}")));
+            return Err(Error::DecompressionError(format!("Unsupported GR2 version: {version}")));
         }
 
         cursor.set_position(12);
@@ -240,7 +240,7 @@ impl Gr2Reader {
             let decompressed = match section.compression {
                 0 => compressed.to_vec(),
                 4 => decompress_bitknit(compressed, section.uncompressed_size as usize)?,
-                c => return Err(Error::Decompression(format!("Unsupported compression: {c}"))),
+                c => return Err(Error::DecompressionError(format!("Unsupported compression: {c}"))),
             };
 
             let dest_end = current_offset + decompressed.len();

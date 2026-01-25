@@ -15,7 +15,7 @@ pub struct Gr2CliOptions {
     pub extract_textures: bool,
     /// Extract virtual textures (--extract-virtual-textures)
     pub extract_virtual_textures: bool,
-    /// Path to game data folder (--game-data)
+    /// Path to BG3 install folder (--bg3-path)
     pub game_data: Option<PathBuf>,
     /// Path to virtual textures folder (--virtual-textures)
     pub virtual_textures: Option<PathBuf>,

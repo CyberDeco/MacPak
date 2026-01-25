@@ -52,8 +52,8 @@ pub enum Commands {
         #[arg(long)]
         extract_virtual_textures: bool,
 
-        /// Path to BG3 game data folder (for Textures.pak, Shared.pak)
-        #[arg(long)]
+        /// Path to BG3 install folder (containing Textures.pak, Shared.pak, etc.)
+        #[arg(long = "bg3-path")]
         game_data: Option<PathBuf>,
 
         /// Path to pre-extracted virtual textures (GTP/GTS files)
@@ -232,8 +232,8 @@ pub enum Gr2Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
 
-        /// Path to BG3 game data folder (for Textures.pak)
-        #[arg(long)]
+        /// Path to BG3 install folder (containing Textures.pak)
+        #[arg(long = "bg3-path")]
         game_data: Option<PathBuf>,
 
         /// Path to pre-extracted virtual textures (GTP/GTS files)

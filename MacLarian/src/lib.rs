@@ -46,7 +46,6 @@ pub mod prelude {
         parse_dialog_lsf, parse_dialog_lsf_bytes,
         load_localization_from_pak_parallel,
     };
-    pub use crate::dialog::export::generate_html as generate_dialog_html;
 
     // Virtual texture exports (from top-level module)
     pub use crate::virtual_texture::{

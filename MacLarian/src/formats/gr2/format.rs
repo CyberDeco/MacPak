@@ -71,7 +71,7 @@ impl Compression {
             1 => Ok(Compression::Oodle0),
             2 => Ok(Compression::Oodle1),
             4 => Ok(Compression::BitKnit),
-            _ => Err(Error::Decompression(format!("Unsupported GR2 compression format: {value}"))),
+            _ => Err(Error::DecompressionError(format!("Unsupported GR2 compression format: {value}"))),
         }
     }
 }
@@ -134,7 +134,7 @@ impl Gr2Magic {
         } else if self.signature == magic::LE64 || self.signature == magic::BE64 {
             Ok(PointerSize::Bit64)
         } else {
-            Err(Error::Decompression("Invalid GR2 magic signature".to_string()))
+            Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()))
         }
     }
 
@@ -148,7 +148,7 @@ impl Gr2Magic {
         } else if self.signature == magic::BE32 || self.signature == magic::BE64 {
             Ok(Endian::Big)
         } else {
-            Err(Error::Decompression("Invalid GR2 magic signature".to_string()))
+            Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()))
         }
     }
 
@@ -211,7 +211,7 @@ impl Gr2Header {
     pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
         let version = reader.read_u32::<LittleEndian>()?;
         if version != 6 && version != 7 {
-            return Err(Error::Decompression(format!("Unsupported GR2 version: {version}")));
+            return Err(Error::DecompressionError(format!("Unsupported GR2 version: {version}")));
         }
 
         let file_size = reader.read_u32::<LittleEndian>()?;
@@ -388,7 +388,7 @@ impl Gr2File {
         // Read magic block (offset 0)
         let magic = Gr2Magic::read(&mut cursor)?;
         if !magic.is_valid() {
-            return Err(Error::Decompression("Invalid GR2 magic signature".to_string()));
+            return Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()));
         }
 
         // Read main header (offset 0x20)
@@ -418,7 +418,7 @@ impl Gr2File {
     /// Returns an error if the section index is invalid or data is truncated.
     pub fn section_compressed_data(&self, index: usize) -> Result<&[u8]> {
         let section = self.sections.get(index)
-            .ok_or_else(|| Error::Decompression(format!("Invalid section index: {index}")))?;
+            .ok_or_else(|| Error::DecompressionError(format!("Invalid section index: {index}")))?;
 
         if section.is_empty() {
             return Ok(&[]);

@@ -321,7 +321,7 @@ impl Bitknit2State {
 
         // Check magic
         if stream.pop() != BITKNIT_MAGIC {
-            return Err(Error::Decompression("Invalid BitKnit magic".to_string()));
+            return Err(Error::DecompressionError("Invalid BitKnit magic".to_string()));
         }
 
         while self.index < self.output.len() {
@@ -426,7 +426,7 @@ impl Bitknit2State {
 
         // Validate copy offset
         if copy_offset as usize > self.index {
-            return Err(crate::error::Error::Decompression(
+            return Err(crate::error::Error::DecompressionError(
                 format!("Copy offset {} exceeds current position {}", copy_offset, self.index)
             ));
         }

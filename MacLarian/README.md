@@ -1,6 +1,12 @@
 # MacLarian
 
-macOS-focused Larian file format library and toolkit for Baldur's Gate 3 modding.
+[![Crates.io](https://img.shields.io/crates/v/maclarian.svg)](https://crates.io/crates/maclarian)
+[![Documentation](https://docs.rs/maclarian/badge.svg)](https://docs.rs/maclarian)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](../LICENSE)
+
+A Larian file format library and toolkit for Baldur's Gate 3 file handling and modding.
+
+> **Note:** This crate is in active development (0.x). The API may change between releases.
 
 MacLarian provides pure Rust implementations for reading and writing Larian Studios'
 proprietary file formats, with no external binary dependencies (including no reliance
@@ -28,6 +34,24 @@ Add to your `Cargo.toml`:
 [dependencies]
 maclarian = "0.1"
 ```
+
+## Requirements
+
+- **Rust 1.75+** (uses 2024 edition features)
+- **Optional:** For WEM audio decoding, install [vgmstream-cli](https://github.com/vgmstream/vgmstream):
+  - macOS: `brew install vgmstream`
+  - Windows/Linux: See [vgmstream releases](https://github.com/vgmstream/vgmstream/releases)
+
+## Platform Support
+
+| Feature | macOS | Windows | Linux |
+|---------|-------|---------|-------|
+| Core library (format parsing) | Full | Full | Full |
+| Game data auto-detection | Full | Limited | None |
+| CLI tools | Full | Full | Full |
+| Audio decoding | Full | Manual path | Manual path |
+
+**Note:** The core library for reading/writing PAK, LSF, LSX, GR2, and other formats works on all platforms. However, automatic BG3 game installation detection (`GameDataResolver::auto_detect()`) currently only works reliably on macOS. Windows and Linux users should use `--bg3-path <path>` to specify the BG3 install folder manually.
 
 ## Quick Start
 
@@ -149,7 +173,7 @@ maclarian extract -s <source.pak> -d <destination>
 | `--convert-gr2` | Convert extracted GR2 files to GLB |
 | `--extract-textures` | Extract DDS textures associated with GR2 files |
 | `--extract-virtual-textures` | Extract virtual textures (GTex) for GR2 files |
-| `--game-data <path>` | Path to BG3 Data folder (for Textures.pak, Shared.pak) |
+| `--bg3-path <path>` | Path to BG3 install folder (for Textures.pak, Shared.pak) |
 | `--virtual-textures <path>` | Path to pre-extracted virtual textures (GTS/GTP) |
 | `--delete-gr2` | Delete original GR2 files after GLB conversion |
 | `--png` | Convert extracted DDS textures to PNG |
@@ -165,10 +189,10 @@ maclarian extract -s Shared.pak -d ./extracted
 maclarian extract -s Shared.pak -d ./extracted --filter "*.lsf"
 
 # Extract with full GR2 processing
-maclarian extract -s Models.pak -d ./models --bundle --game-data /path/to/Data
+maclarian extract -s Models.pak -d ./models --bundle --bg3-path /path/to/Data
 
 # Extract GR2s and convert textures to PNG
-maclarian extract -s Models.pak -d ./models --bundle --game-data /path/to/Data --png
+maclarian extract -s Models.pak -d ./models --bundle --bg3-path /path/to/Data --png
 ```
 
 ---
@@ -302,7 +326,7 @@ maclarian gr2 bundle <file.gr2> [options]
 | Flag | Description |
 |------|-------------|
 | `-o, --output <dir>` | Output directory (defaults to GR2 location) |
-| `--game-data <path>` | Path to BG3 Data folder (for texture lookup) |
+| `--bg3-path <path>` | Path to BG3 install folder (for texture lookup) |
 | `--virtual-textures <path>` | Path to pre-extracted virtual textures |
 | `--no-glb` | Skip GLB/glTF conversion (only extract textures) |
 | `--no-textures` | Skip texture extraction (only convert model) |
@@ -314,16 +338,16 @@ maclarian gr2 bundle <file.gr2> [options]
 
 ```bash
 # Basic bundle (GLB + DDS textures)
-maclarian gr2 bundle model.gr2 --game-data ~/BG3/Data
+maclarian gr2 bundle model.gr2 --bg3-path ~/BG3/Data
 
 # Bundle as glTF with PNG textures
-maclarian gr2 bundle model.gr2 --game-data ~/BG3/Data --gltf --png
+maclarian gr2 bundle model.gr2 --bg3-path ~/BG3/Data --gltf --png
 
 # Bundle keeping both DDS and PNG
-maclarian gr2 bundle model.gr2 --game-data ~/BG3/Data --png --keep-dds
+maclarian gr2 bundle model.gr2 --bg3-path ~/BG3/Data --png --keep-dds
 
 # Only extract textures, no model conversion
-maclarian gr2 bundle model.gr2 --game-data ~/BG3/Data --no-glb
+maclarian gr2 bundle model.gr2 --bg3-path ~/BG3/Data --no-glb
 ```
 
 #### `gr2 extract` - Extract to JSON

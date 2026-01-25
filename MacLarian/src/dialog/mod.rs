@@ -40,7 +40,6 @@ mod localization;
 mod flags;
 mod speakers;
 mod difficulty;
-pub mod export;
 
 pub use types::*;
 pub use parser::{parse_dialog, DialogParseError};

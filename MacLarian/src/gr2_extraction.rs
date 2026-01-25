@@ -7,7 +7,7 @@
 //! 4. Extract and convert virtual textures (GTP/GTS) to DDS
 //!
 //! The texture database is built on-the-fly from the game's `Shared.pak` file.
-//! Use `--game-data` CLI flag to specify the game installation path if auto-detection fails.
+//! Use `--bg3-path` CLI flag to specify the game installation path if auto-detection fails.
 
 use crate::converter::{convert_gr2_to_glb, convert_dds_to_png};
 use crate::error::{Error, Result};
@@ -37,7 +37,7 @@ pub struct Gr2ExtractionOptions {
     pub convert_to_glb: bool,
     /// Extract associated textures
     pub extract_textures: bool,
-    /// Path to BG3 game data folder (for finding Textures.pak, etc.)
+    /// Path to BG3 install folder (for finding Textures.pak, etc.)
     /// If None, auto-detects using GameDataResolver
     pub game_data_path: Option<PathBuf>,
     /// Path to pre-extracted virtual textures (GTP/GTS files)
@@ -190,7 +190,7 @@ pub fn process_extracted_gr2(
             }
         } else {
             result.warnings.push(
-                "Could not find BG3 game data for texture lookup. Use --game-data to specify the path.".to_string()
+                "Could not find BG3 install path for texture lookup. Use --bg3-path to specify the path.".to_string()
             );
         }
     }
@@ -283,7 +283,7 @@ pub fn process_extracted_gr2_to_dir(
             }
         } else {
             result.warnings.push(
-                "Could not find BG3 game data for texture lookup. Use --game-data to specify the path.".to_string()
+                "Could not find BG3 install path for texture lookup. Use --bg3-path to specify the path.".to_string()
             );
         }
     }
@@ -323,7 +323,7 @@ fn extract_textures_for_gr2(
         .clone()
         .or_else(bg3_data_path)
         .ok_or_else(|| Error::ConversionError(
-            "Could not determine BG3 game data path".to_string()
+            "Could not determine BG3 install path".to_string()
         ))?;
 
     // Collect unique textures from all visuals

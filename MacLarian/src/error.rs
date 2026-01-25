@@ -22,9 +22,6 @@ pub enum Error {
     #[error("Decompression failed: {0}")]
     DecompressionError(String),
 
-    #[error("Decompression error: {0}")]
-    Decompression(String),
-
     #[error("Unexpected end of file")]
     UnexpectedEof,
     

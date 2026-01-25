@@ -27,12 +27,6 @@ pub enum WemError {
     OggError(String),
 }
 
-/// WEM format codes
-#[allow(dead_code)]
-const FORMAT_PCM: u16 = 0x0001;
-#[allow(dead_code)]
-const FORMAT_WWISE_VORBIS: u16 = 0xFFFF;
-
 /// RIFF chunk identifiers
 const RIFF_MAGIC: &[u8; 4] = b"RIFF";
 const WAVE_MAGIC: &[u8; 4] = b"WAVE";
@@ -178,91 +172,6 @@ pub fn parse_wem_header<R: Read + Seek>(reader: &mut R) -> Result<WemHeader, Wem
     }
 
     Ok(header)
-}
-
-/// Decode WEM file to PCM audio
-///
-/// # Errors
-/// Returns an error if decoding fails
-#[allow(dead_code)]
-pub fn decode_wem<R: Read + Seek>(reader: &mut R) -> Result<DecodedAudio, WemError> {
-    let header = parse_wem_header(reader)?;
-
-    match header.format_code {
-        FORMAT_PCM => decode_pcm(reader, &header),
-        FORMAT_WWISE_VORBIS => decode_wwise_vorbis(reader, &header),
-        other => Err(WemError::UnsupportedFormat(other)),
-    }
-}
-
-/// Decode PCM audio (simple case)
-#[allow(dead_code)]
-fn decode_pcm<R: Read + Seek>(reader: &mut R, header: &WemHeader) -> Result<DecodedAudio, WemError> {
-    reader.seek(SeekFrom::Start(header.data_offset))?;
-
-    let bytes_per_sample = if header.bits_per_sample > 0 {
-        (header.bits_per_sample / 8) as usize
-    } else {
-        2 // Default to 16-bit
-    };
-
-    let num_samples = header.data_size as usize / bytes_per_sample;
-    let mut samples = Vec::with_capacity(num_samples);
-
-    match bytes_per_sample {
-        1 => {
-            // 8-bit unsigned PCM
-            for _ in 0..num_samples {
-                let sample = reader.read_u8()? as i16;
-                samples.push((sample - 128) * 256); // Convert to i16 range
-            }
-        }
-        2 => {
-            // 16-bit signed PCM
-            for _ in 0..num_samples {
-                samples.push(reader.read_i16::<LittleEndian>()?);
-            }
-        }
-        _ => {
-            return Err(WemError::UnsupportedFormat(header.format_code));
-        }
-    }
-
-    Ok(DecodedAudio {
-        samples,
-        channels: header.channels,
-        sample_rate: header.sample_rate,
-    })
-}
-
-/// Decode Wwise Vorbis audio
-///
-/// Wwise Vorbis format overview:
-/// - Uses format code 0xFFFF
-/// - fmt extra_data contains Wwise-specific setup info
-/// - Audio data is raw Vorbis packets without Ogg framing
-///
-/// Note: In-memory Wwise Vorbis decoding is not supported.
-/// Use `load_wem_file_vgmstream()` with a file path instead.
-#[allow(dead_code)]
-#[cfg(feature = "audio")]
-fn decode_wwise_vorbis<R: Read + Seek>(_reader: &mut R, header: &WemHeader) -> Result<DecodedAudio, WemError> {
-    // Parse header for diagnostic info
-    let wwise_header = parse_wwise_vorbis_header(&header.extra_data)?;
-    let duration = wwise_header.sample_count as f32 / header.sample_rate as f32;
-
-    Err(WemError::VorbisDecode(format!(
-        "Wwise Vorbis in-memory decoding not supported. \
-         Use load_wem_file_vgmstream() with a file path. \
-         (Audio: {:.2}s, {} channels, {} Hz)",
-        duration, header.channels, header.sample_rate
-    )))
-}
-
-#[allow(dead_code)]
-#[cfg(not(feature = "audio"))]
-fn decode_wwise_vorbis<R: Read + Seek>(_reader: &mut R, _header: &WemHeader) -> Result<DecodedAudio, WemError> {
-    Err(WemError::VorbisDecode("Audio feature not enabled".to_string()))
 }
 
 /// Parsed Wwise Vorbis header from fmt extra_data

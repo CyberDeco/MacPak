@@ -1,7 +1,7 @@
 //! On-the-fly game data resolver for GR2-to-texture mappings
 //!
 //! This module provides [`GameDataResolver`], which lazily builds the asset database
-//! from game PAK files on first use. This replaces the embedded 18MB JSON database
+//! from game PAK files on first use. This replaces the reliance on a database
 //! with dynamic retrieval.
 //!
 //! # Usage
@@ -25,6 +25,7 @@
 //! The resolver searches for game data in platform-specific Steam paths:
 //! - macOS: `~/Library/Application Support/Steam/steamapps/common/Baldurs Gate 3/...`
 //! - Windows: `C:\Program Files (x86)\Steam\steamapps\common\Baldurs Gate 3\Data`
+//! - Linux: Not supported (don't know the install path)
 //!
 //! # Performance
 //!
@@ -134,7 +135,7 @@ impl GameDataResolver {
         }
 
         Err(Error::InvalidPath(
-            "Could not find BG3 game data. Use --game-data to specify the path.".to_string()
+            "Could not find BG3 install path. Use --bg3-path to specify the path.".to_string()
         ))
     }
 

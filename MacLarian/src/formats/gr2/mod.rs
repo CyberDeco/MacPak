@@ -56,7 +56,7 @@ pub fn decompress_gr2(data: &[u8]) -> Result<Vec<u8>> {
                 decompress_bitknit(compressed, section.uncompressed_size as usize)?
             }
             Compression::Oodle0 | Compression::Oodle1 => {
-                return Err(Error::Decompression(
+                return Err(Error::DecompressionError(
                     format!("Oodle compression not supported (format {:?})", section.compression)
                 ));
             }
