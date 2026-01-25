@@ -67,6 +67,10 @@ pub enum Commands {
         /// Convert extracted DDS textures to PNG format
         #[arg(long)]
         png: bool,
+
+        /// Keep original DDS files after PNG conversion
+        #[arg(long)]
+        keep_dds: bool,
     },
 
     /// Convert file formats
@@ -219,7 +223,7 @@ pub enum Gr2Commands {
         output: Option<PathBuf>,
     },
 
-    /// Convert GR2 to GLB and extract associated textures
+    /// Convert GR2 to GLB/glTF and extract associated textures
     Bundle {
         /// Source GR2 file
         path: PathBuf,
@@ -236,13 +240,25 @@ pub enum Gr2Commands {
         #[arg(long)]
         virtual_textures: Option<PathBuf>,
 
-        /// Skip GLB conversion (only extract textures)
+        /// Skip GLB/glTF conversion (only extract textures)
         #[arg(long)]
         no_glb: bool,
 
-        /// Skip texture extraction (only convert to GLB)
+        /// Skip texture extraction (only convert to GLB/glTF)
         #[arg(long)]
         no_textures: bool,
+
+        /// Output as glTF instead of GLB (outputs .gltf + .bin files)
+        #[arg(long)]
+        gltf: bool,
+
+        /// Convert extracted DDS textures to PNG format
+        #[arg(long)]
+        png: bool,
+
+        /// Keep original DDS files after PNG conversion
+        #[arg(long)]
+        keep_dds: bool,
     },
 
     /// Convert GR2 to GLB with embedded textures (test command)
@@ -348,6 +364,7 @@ impl Commands {
                 virtual_textures,
                 delete_gr2,
                 png,
+                keep_dds,
             } => extract::execute(
                 source,
                 destination,
@@ -363,6 +380,7 @@ impl Commands {
                     virtual_textures: virtual_textures.clone(),
                     delete_gr2: *delete_gr2,
                     convert_textures_to_png: *png,
+                    keep_original_dds: *keep_dds,
                 },
             ),
             Commands::Convert {
@@ -410,7 +428,7 @@ impl Gr2Commands {
             Gr2Commands::FromGltf { path, output } => {
                 gr2::convert_to_gr2(path, output.as_deref())
             }
-            Gr2Commands::Bundle { path, output, game_data, virtual_textures, no_glb, no_textures } => {
+            Gr2Commands::Bundle { path, output, game_data, virtual_textures, no_glb, no_textures, gltf, png, keep_dds } => {
                 gr2::bundle(
                     path,
                     output.as_deref(),
@@ -418,6 +436,9 @@ impl Gr2Commands {
                     virtual_textures.as_deref(),
                     *no_glb,
                     *no_textures,
+                    *gltf,
+                    *png,
+                    *keep_dds,
                 )
             }
             Gr2Commands::ToGlbTextured { path, textures_pak, output } => {

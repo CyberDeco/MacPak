@@ -203,7 +203,7 @@ pub fn convert_to_glb_textured(
     Ok(())
 }
 
-/// Bundle a GR2 file: convert to GLB and extract associated textures.
+/// Bundle a GR2 file: convert to GLB/glTF and extract associated textures.
 pub fn bundle(
     path: &Path,
     output: Option<&Path>,
@@ -211,9 +211,15 @@ pub fn bundle(
     virtual_textures: Option<&Path>,
     no_glb: bool,
     no_textures: bool,
+    use_gltf: bool,
+    convert_to_png: bool,
+    keep_original_dds: bool,
 ) -> anyhow::Result<()> {
+    let format_name = if use_gltf { "glTF" } else { "GLB" };
+
     // Determine output directory
-    let output_dir = if let Some(out) = output {
+    // For glTF, always use a subdirectory since it outputs multiple files
+    let base_output_dir = if let Some(out) = output {
         out.to_path_buf()
     } else {
         path.parent()
@@ -221,16 +227,30 @@ pub fn bundle(
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
     };
 
+    let stem = path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
+
+    // Use subdirectory for glTF (multiple files) or when extracting textures
+    let output_dir = if use_gltf || !no_textures {
+        base_output_dir.join(stem)
+    } else {
+        base_output_dir
+    };
+
     println!("Bundling GR2 file with textures...");
     println!("  Source:     {}", path.display());
     println!("  Output dir: {}", output_dir.display());
+    println!("  Format:     {}", format_name);
 
     // Build options
     let mut options = Gr2ExtractionOptions::default();
 
     if no_glb {
         options = options.no_conversion();
-        println!("  GLB conversion: disabled");
+        println!("  {} conversion: disabled", format_name);
+    } else if use_gltf {
+        options.convert_to_glb = false; // We'll handle glTF conversion separately
     }
 
     if no_textures {
@@ -248,26 +268,55 @@ pub fn bundle(
         println!("  Virtual textures: {}", vt.display());
     }
 
+    if convert_to_png {
+        options.convert_to_png = true;
+        println!("  Convert textures to PNG: enabled");
+    }
+
+    if keep_original_dds {
+        options.keep_original_dds = true;
+        println!("  Keep original DDS: enabled");
+    }
+
     println!();
 
-    // If output dir is different from source dir, copy GR2 there first
-    let gr2_in_output = if output_dir != path.parent().unwrap_or(Path::new("")) {
-        std::fs::create_dir_all(&output_dir)?;
-        let dest = output_dir.join(path.file_name().unwrap_or_default());
-        std::fs::copy(path, &dest)?;
-        dest
+    // Create output directory
+    std::fs::create_dir_all(&output_dir)?;
+
+    // Copy GR2 to output dir
+    let gr2_in_output = output_dir.join(path.file_name().unwrap_or_default());
+    if path != gr2_in_output {
+        std::fs::copy(path, &gr2_in_output)?;
+    }
+
+    // Handle conversion based on format
+    let glb_path = if !no_glb {
+        if use_gltf {
+            // Convert to glTF
+            let gltf_path = output_dir.join(format!("{}.gltf", stem));
+            crate::converter::convert_gr2_to_gltf(path, &gltf_path)?;
+            // Don't run the normal GLB conversion in process_extracted_gr2
+            options = options.no_conversion();
+            Some(gltf_path)
+        } else {
+            None // Let process_extracted_gr2 handle GLB conversion
+        }
     } else {
-        path.to_path_buf()
+        None
     };
 
-    // Process the GR2
+    // Process the GR2 (texture extraction, and GLB conversion if not glTF)
     let result = process_extracted_gr2(&gr2_in_output, &options)?;
 
     // Report results
     println!("Bundle complete!");
     println!();
 
-    if let Some(glb) = &result.glb_path {
+    // Show the glTF/GLB output
+    if let Some(ref gltf) = glb_path {
+        let size = std::fs::metadata(gltf).map(|m| m.len()).unwrap_or(0);
+        println!("  {}: {} ({} bytes)", format_name, gltf.file_name().unwrap_or_default().to_string_lossy(), size);
+    } else if let Some(glb) = &result.glb_path {
         let size = std::fs::metadata(glb).map(|m| m.len()).unwrap_or(0);
         println!("  GLB: {} ({} bytes)", glb.file_name().unwrap_or_default().to_string_lossy(), size);
     }

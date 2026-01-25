@@ -23,6 +23,8 @@ pub struct Gr2CliOptions {
     pub delete_gr2: bool,
     /// Convert extracted DDS textures to PNG (--png)
     pub convert_textures_to_png: bool,
+    /// Keep original DDS files after PNG conversion (--keep-dds)
+    pub keep_original_dds: bool,
 }
 
 impl Gr2CliOptions {
@@ -42,6 +44,7 @@ impl Gr2CliOptions {
                 .with_virtual_textures_path(self.virtual_textures.clone())
                 .with_keep_original(!self.delete_gr2)
                 .with_convert_to_png(self.convert_textures_to_png)
+                .with_keep_original_dds(self.keep_original_dds)
         } else {
             Gr2ExtractionOptions::new()
                 .with_convert_to_glb(self.convert_gr2)
@@ -51,6 +54,7 @@ impl Gr2CliOptions {
                 .with_virtual_textures_path(self.virtual_textures.clone())
                 .with_keep_original(!self.delete_gr2)
                 .with_convert_to_png(self.convert_textures_to_png)
+                .with_keep_original_dds(self.keep_original_dds)
         }
     }
 }
