@@ -24,7 +24,7 @@ pub fn f32_to_half(value: f32) -> u16 {
 }
 
 /// Decode `QTangent` quaternion to normal and tangent vectors.
-#[must_use] 
+#[must_use]
 pub fn decode_qtangent(qt: &[i16; 4]) -> ([f32; 3], [f32; 4]) {
     let q: [f32; 4] = [
         f32::from(qt[0]) / 32767.0,
@@ -33,7 +33,18 @@ pub fn decode_qtangent(qt: &[i16; 4]) -> ([f32; 3], [f32; 4]) {
         f32::from(qt[3]) / 32767.0,
     ];
 
-    let (qx, qy, qz, qw) = (q[0], q[1], q[2], q[3]);
+    // Extract handedness from sign of W before normalizing
+    let handedness = if q[3] < 0.0 { -1.0 } else { 1.0 };
+
+    // If W is negative, the quaternion was negated during encoding to store handedness.
+    // Un-negate it to get the canonical quaternion (W >= 0) for axis extraction.
+    // This is necessary because negating all four components affects the tangent
+    // calculation (the normal is invariant under quaternion negation).
+    let (qx, qy, qz, qw) = if q[3] < 0.0 {
+        (-q[0], -q[1], -q[2], -q[3])
+    } else {
+        (q[0], q[1], q[2], q[3])
+    };
 
     // Normal (Z axis of rotation matrix)
     let normal = [
@@ -42,12 +53,11 @@ pub fn decode_qtangent(qt: &[i16; 4]) -> ([f32; 3], [f32; 4]) {
         1.0 - 2.0 * (qx * qx + qy * qy),
     ];
 
-    // Tangent (X axis) with handedness stored in sign of w
-    let handedness = if qw < 0.0 { -1.0 } else { 1.0 };
+    // Tangent (X axis) - using canonical quaternion (W >= 0)
     let tangent = [
         1.0 - 2.0 * (qy * qy + qz * qz),
-        2.0 * (qx * qy + qw.abs() * qz),
-        2.0 * (qx * qz - qw.abs() * qy),
+        2.0 * (qx * qy + qw * qz),
+        2.0 * (qx * qz - qw * qy),
         handedness,
     ];
 
@@ -56,15 +66,17 @@ pub fn decode_qtangent(qt: &[i16; 4]) -> ([f32; 3], [f32; 4]) {
 
 /// Encode normal and tangent vectors to `QTangent` quaternion.
 /// This is the inverse of `decode_qtangent`.
-#[must_use] 
+#[must_use]
 pub fn encode_qtangent(normal: &[f32; 3], tangent: &[f32; 4]) -> [i16; 4] {
     // Normalize inputs
     let n = Vec3::from_array(*normal).normalize_or_zero();
     let t = Vec3::new(tangent[0], tangent[1], tangent[2]).normalize_or_zero();
     let handedness = tangent[3];
 
-    // Compute binormal
-    let b = n.cross(t) * handedness;
+    // Compute binormal WITHOUT flipping by handedness.
+    // This ensures we always have a valid rotation matrix (determinant = +1).
+    // The handedness will be encoded separately in the sign of W.
+    let b = n.cross(t);
 
     // Build rotation matrix from TBN (tangent, binormal, normal as columns)
     let mat = Mat3::from_cols(t, b, n);
@@ -75,11 +87,13 @@ pub fn encode_qtangent(normal: &[f32; 3], tangent: &[f32; 4]) -> [i16; 4] {
     // Normalize quaternion
     quat = quat.normalize();
 
-    // Encode handedness in sign of W
-    // If handedness is negative, ensure W is negative
-    if handedness < 0.0 && quat.w > 0.0 {
+    // Canonicalize: ensure W >= 0 first
+    if quat.w < 0.0 {
         quat = -quat;
-    } else if handedness >= 0.0 && quat.w < 0.0 {
+    }
+
+    // Now encode handedness: if negative, flip to make W negative
+    if handedness < 0.0 {
         quat = -quat;
     }
 
