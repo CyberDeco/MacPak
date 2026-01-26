@@ -2,9 +2,18 @@
 
 use std::path::Path;
 
-/// Validate mod directory structure
+/// Validate mod structure (folder or PAK file)
 pub fn validate(source: &Path) -> anyhow::Result<()> {
-    let result = crate::mods::validate_mod_structure(source);
+    // Detect if source is a PAK file or folder
+    let is_pak = source
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("pak"));
+
+    let result = if is_pak {
+        crate::mods::validate_pak_mod_structure(source)?
+    } else {
+        crate::mods::validate_mod_structure(source)
+    };
 
     // Print structure elements
     if !result.structure.is_empty() {

@@ -20,4 +20,4 @@ pub use extract::{
     extract_individual_files, extract_pak_file,
 };
 pub use list::{list_dropped_file, list_pak_contents};
-pub use validate::{validate_dropped_folder, validate_mod_structure};
+pub use validate::{validate_dropped_folder, validate_dropped_pak, validate_mod_structure, validate_pak_mod_structure};

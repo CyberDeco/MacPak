@@ -14,6 +14,7 @@ pub enum ActiveDialog {
     DropAction,
     FileSelect,
     FolderDropAction,
+    ValidateChoice,
 }
 
 /// Compression options for PAK creation

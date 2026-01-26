@@ -9,4 +9,4 @@ pub mod info_json;
 pub mod validation;
 
 pub use info_json::{generate_info_json, InfoJsonResult};
-pub use validation::{validate_mod_structure, ModValidationResult};
+pub use validation::{validate_mod_structure, validate_pak_mod_structure, ModValidationResult};

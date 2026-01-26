@@ -7,6 +7,7 @@ use std::path::Path;
 use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::operations::{
     extract_dropped_file, extract_individual_dropped_file, list_dropped_file,
+    validate_dropped_pak,
 };
 
 pub fn drop_action_content(state: PakOpsState) -> impl IntoView {
@@ -20,10 +21,12 @@ pub fn drop_action_content(state: PakOpsState) -> impl IntoView {
     let state_extract = state.clone();
     let state_individual = state.clone();
     let state_list = state.clone();
+    let state_validate = state.clone();
     let state_cancel = state.clone();
     let file_path_extract = file_path.clone();
     let file_path_individual = file_path.clone();
     let file_path_list = file_path.clone();
+    let file_path_validate = file_path.clone();
 
     v_stack((
         label(move || format!("Dropped: {}", file_name)).style(|s| {
@@ -74,6 +77,19 @@ pub fn drop_action_content(state: PakOpsState) -> impl IntoView {
                     .color(Color::WHITE)
                     .border_radius(4.0)
                     .hover(|s| s.background(Color::rgb8(56, 142, 60)))
+            }),
+        button("✓ Validate Mod Structure")
+            .action(move || {
+                validate_dropped_pak(state_validate.clone(), file_path_validate.clone());
+            })
+            .style(|s| {
+                s.width_full()
+                    .padding_vert(10.0)
+                    .margin_bottom(8.0)
+                    .background(Color::rgb8(255, 152, 0))
+                    .color(Color::WHITE)
+                    .border_radius(4.0)
+                    .hover(|s| s.background(Color::rgb8(245, 124, 0)))
             }),
         button("Cancel")
             .action(move || {

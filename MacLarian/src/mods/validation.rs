@@ -2,6 +2,8 @@
 
 use std::path::Path;
 
+use crate::pak::PakOperations;
+
 /// Result of mod structure validation
 #[derive(Clone, Debug)]
 pub struct ModValidationResult {
@@ -77,6 +79,62 @@ pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
         structure,
         warnings,
     }
+}
+
+/// Validate mod structure within a PAK file
+///
+/// Checks for:
+/// - Standard mod directories (Mods, Public, Localization)
+/// - Presence of meta.lsx file
+///
+/// # Arguments
+/// * `pak_path` - Path to the PAK file to validate
+///
+/// # Returns
+/// `ModValidationResult` with validation status and details
+///
+/// # Errors
+/// Returns an error if the PAK file cannot be read
+pub fn validate_pak_mod_structure(pak_path: &Path) -> crate::error::Result<ModValidationResult> {
+    let files = PakOperations::list(pak_path)?;
+
+    let mut valid = true;
+    let mut structure = Vec::new();
+    let mut warnings = Vec::new();
+
+    // Check for common mod directories
+    let expected_dirs = ["Mods/", "Public/", "Localization/"];
+    for dir_name in expected_dirs {
+        if files.iter().any(|f| f.starts_with(dir_name)) {
+            structure.push(format!("+ {dir_name}"));
+        }
+    }
+
+    // Check for meta.lsx
+    let meta_files: Vec<_> = files
+        .iter()
+        .filter(|f| f.ends_with("meta.lsx"))
+        .collect();
+
+    if meta_files.is_empty() {
+        warnings.push("No meta.lsx found - mod may not load properly".to_string());
+        valid = false;
+    } else {
+        for meta in meta_files {
+            structure.push(format!("+ {meta}"));
+        }
+    }
+
+    if structure.is_empty() {
+        warnings.push("No standard mod directories found (Mods/, Public/, Localization/)".to_string());
+        valid = false;
+    }
+
+    Ok(ModValidationResult {
+        valid,
+        structure,
+        warnings,
+    })
 }
 
 #[cfg(test)]

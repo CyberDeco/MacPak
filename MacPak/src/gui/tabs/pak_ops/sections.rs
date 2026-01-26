@@ -7,7 +7,7 @@ use floem::text::Weight;
 use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::operations::{
     batch_create_paks, batch_extract_paks, create_pak_file, extract_individual_files,
-    extract_pak_file, list_pak_contents, rebuild_pak_file, validate_mod_structure,
+    extract_pak_file, list_pak_contents, rebuild_pak_file,
 };
 use super::results::is_error_message;
 
@@ -118,9 +118,9 @@ fn create_group(state: PakOpsState) -> impl IntoView {
         operation_button("🔧 Rebuild Modified PAK", state.clone(), move || {
             rebuild_pak_file(state2.clone());
         }),
-        // Validate button
+        // Validate button - shows dialog to choose folder or PAK
         operation_button("✓ Validate Mod Structure", state.clone(), move || {
-            validate_mod_structure(state3.clone());
+            state3.active_dialog.set(ActiveDialog::ValidateChoice);
         }),
         // Batch Create button
         operation_button("🔧 Batch Create PAKs", state.clone(), move || {

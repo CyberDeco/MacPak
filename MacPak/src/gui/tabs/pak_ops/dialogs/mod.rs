@@ -10,6 +10,7 @@ mod drop_action;
 mod file_select;
 mod folder_drop_action;
 mod progress;
+mod validate_choice;
 
 use floem::action::exec_after;
 use floem::event::{Event, EventListener};
@@ -26,6 +27,7 @@ use drop_action::drop_action_content;
 use file_select::file_select_content;
 use folder_drop_action::folder_drop_action_content;
 use progress::progress_content;
+use validate_choice::validate_choice_content;
 
 /// Unified dialog overlay - only ONE dyn_container checking ONE signal
 pub fn dialog_overlay(state: PakOpsState, config_state: ConfigState) -> impl IntoView {
@@ -119,6 +121,7 @@ pub fn dialog_overlay(state: PakOpsState, config_state: ConfigState) -> impl Int
                 ActiveDialog::DropAction => drop_action_content(state).into_any(),
                 ActiveDialog::FileSelect => file_select_content(state, config).into_any(),
                 ActiveDialog::FolderDropAction => folder_drop_action_content(state).into_any(),
+                ActiveDialog::ValidateChoice => validate_choice_content(state).into_any(),
             }
         },
     )
@@ -165,6 +168,9 @@ pub fn dialog_overlay(state: PakOpsState, config_state: ConfigState) -> impl Int
                     }
                     ActiveDialog::FolderDropAction => {
                         state.dropped_folder.set(None);
+                        state.active_dialog.set(ActiveDialog::None);
+                    }
+                    ActiveDialog::ValidateChoice => {
                         state.active_dialog.set(ActiveDialog::None);
                     }
                 }
