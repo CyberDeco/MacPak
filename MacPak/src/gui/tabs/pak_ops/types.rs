@@ -6,6 +6,7 @@ use floem_reactive::Scope;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
+use maclarian::pak::PakProgress;
 use crate::gui::state::{ActiveDialog, PakOpsState};
 
 /// Result type for background PAK operations
@@ -159,11 +160,12 @@ pub fn create_result_sender(state: PakOpsState) -> impl FnOnce(PakResult) {
 }
 
 /// Create a reusable sender for progress updates that uses shared atomic state
-pub fn create_progress_sender(_state: PakOpsState) -> impl Fn(usize, usize, &str) + Send + Clone {
+pub fn create_progress_sender(_state: PakOpsState) -> impl Fn(&PakProgress) + Send + Sync + Clone {
     let shared = get_shared_progress().clone();
 
-    move |current: usize, total: usize, description: &str| {
-        shared.update(current, total, description);
+    move |progress: &PakProgress| {
+        let description = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+        shared.update(progress.current, progress.total, description);
     }
 }
 

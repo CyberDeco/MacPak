@@ -187,14 +187,16 @@ pub fn execute(
                 source,
                 destination,
                 &matching_refs,
-                &|_current, _total, name| {
+                &|progress| {
                     let n = count.fetch_add(1, Ordering::SeqCst) + 1;
                     pb.set_position(n as u64);
-                    let short_name = Path::new(name)
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or(name);
-                    pb.set_message(short_name.to_string());
+                    if let Some(name) = &progress.current_file {
+                        let short_name = Path::new(name)
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or(name);
+                        pb.set_message(short_name.to_string());
+                    }
                 },
             )?;
 
@@ -223,14 +225,16 @@ pub fn execute(
         let pb = create_progress_bar(total, "Extracting");
         let count = AtomicUsize::new(0);
 
-        PakOperations::extract_with_progress(source, destination, &|_current, _total, name| {
+        PakOperations::extract_with_progress(source, destination, &|progress| {
             let n = count.fetch_add(1, Ordering::SeqCst) + 1;
             pb.set_position(n as u64);
-            let short_name = Path::new(name)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or(name);
-            pb.set_message(short_name.to_string());
+            if let Some(name) = &progress.current_file {
+                let short_name = Path::new(name)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or(name);
+                pb.set_message(short_name.to_string());
+            }
         })?;
 
         pb.finish_with_message("done");

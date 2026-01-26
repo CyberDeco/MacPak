@@ -17,11 +17,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rayon::prelude::*;
 
 use crate::error::{Error, Result};
-use super::{CompressionMethod, MAGIC, MAX_VERSION, PATH_LENGTH, TABLE_ENTRY_SIZE};
+use super::{CompressionMethod, MAGIC, MAX_VERSION, PATH_LENGTH, TABLE_ENTRY_SIZE, PakPhase, PakProgress};
 
-/// Progress callback type for write operations
-/// Must be Sync + Send to support parallel compression.
-pub type WriteProgressCallback<'a> = &'a (dyn Fn(usize, usize, &str) + Sync + Send);
+/// Progress callback type for write operations.
+///
+/// Receives a [`PakProgress`] struct with phase, current/total counts, and optional filename.
+/// Must be `Sync + Send` to support parallel compression.
+pub type WriteProgressCallback<'a> = &'a (dyn Fn(&PakProgress) + Sync + Send);
 
 /// File to be written to the PAK
 struct FileEntry {
@@ -139,8 +141,9 @@ impl LspkWriter {
     ///
     /// # Errors
     /// Returns an error if the file cannot be written.
+    #[allow(dead_code)] // Library API
     pub fn write(self, output_path: impl AsRef<Path>) -> Result<()> {
-        self.write_with_progress(output_path, &|_, _, _| {})
+        self.write_with_progress(output_path, &|_| {})
     }
 
     /// Write the PAK file with progress callback
@@ -165,16 +168,14 @@ impl LspkWriter {
 
         let total_files = self.files.len();
         let processed = AtomicUsize::new(0);
-        let compression = self.compression;
-
-        let compress_label = match compression {
-            CompressionMethod::None => "Storing",
-            CompressionMethod::Lz4 => "Compressing",
-            CompressionMethod::Zlib => "Compressing",
-        };
 
         // Phase 1: Compress all files in parallel
-        progress(0, total_files, "Compressing files...");
+        progress(&PakProgress {
+            phase: PakPhase::CompressingFiles,
+            current: 0,
+            total: total_files,
+            current_file: None,
+        });
 
         let compression_results: Vec<std::result::Result<CompressedEntry, String>> = self
             .files
@@ -186,7 +187,12 @@ impl LspkWriter {
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
-                progress(current, total_files, &format!("{compress_label} {file_name}"));
+                progress(&PakProgress {
+                    phase: PakPhase::CompressingFiles,
+                    current,
+                    total: total_files,
+                    current_file: Some(file_name.clone()),
+                });
 
                 let size_decompressed = file.data.len();
 
@@ -195,7 +201,7 @@ impl LspkWriter {
                     .try_into()
                     .map_err(|_| format!("File {file_name} is too large: {size_decompressed} bytes"))?;
 
-                let compressed_data = match compression {
+                let compressed_data = match self.compression {
                     CompressionMethod::None => file.data.clone(),
                     CompressionMethod::Lz4 => lz4_flex::block::compress(&file.data),
                     CompressionMethod::Zlib => {
@@ -229,7 +235,12 @@ impl LspkWriter {
         }
 
         // Phase 2: Write compressed data sequentially (to maintain correct offsets)
-        progress(total_files, total_files, "Writing PAK file...");
+        progress(&PakProgress {
+            phase: PakPhase::WritingFiles,
+            current: total_files,
+            total: total_files,
+            current_file: None,
+        });
 
         let mut output = OpenOptions::new()
             .create(true)
@@ -276,7 +287,12 @@ impl LspkWriter {
         output.write_all(&num_files.to_le_bytes())?;
 
         // Build file table
-        progress(total_files, total_files, "Building file table...");
+        progress(&PakProgress {
+            phase: PakPhase::WritingTable,
+            current: total_files,
+            total: total_files,
+            current_file: None,
+        });
 
         let mut table_data = Vec::with_capacity(TABLE_ENTRY_SIZE * written_entries.len());
 
@@ -312,19 +328,26 @@ impl LspkWriter {
         output.seek(SeekFrom::Start(8))?;
         output.write_all(&footer_offset.to_le_bytes())?;
 
-        progress(total_files, total_files, "Complete");
+        progress(&PakProgress {
+            phase: PakPhase::Complete,
+            current: total_files,
+            total: total_files,
+            current_file: None,
+        });
 
         Ok(())
     }
 
     /// Get the number of files that will be written
-    #[must_use] 
+    #[allow(dead_code)] // Public API for callers to inspect writer state
+    #[must_use]
     pub fn file_count(&self) -> usize {
         self.files.len()
     }
 
     /// Get the root path
-    #[must_use] 
+    #[allow(dead_code)] // Public API for callers to inspect writer state
+    #[must_use]
     pub fn root_path(&self) -> &Path {
         &self.root_path
     }

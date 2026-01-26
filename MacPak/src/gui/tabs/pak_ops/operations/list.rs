@@ -56,9 +56,7 @@ pub fn list_pak_contents(state: PakOpsState) {
     thread::spawn(move || {
         let result = maclarian::pak::PakOperations::list_with_progress(
             &pak_path,
-            &|current, total, description| {
-                progress_sender(current, total, description);
-            },
+            &progress_sender,
         );
 
         let pak_result = match result {
@@ -107,9 +105,7 @@ pub fn list_dropped_file(state: PakOpsState, pak_path: String) {
     thread::spawn(move || {
         let result = maclarian::pak::PakOperations::list_with_progress(
             &pak_path,
-            &|current, total, description| {
-                progress_sender(current, total, description);
-            },
+            &progress_sender,
         );
 
         let pak_result = match result {

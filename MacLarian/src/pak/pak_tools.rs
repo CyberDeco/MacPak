@@ -7,7 +7,7 @@
 )]
 
 use crate::error::{Error, Result};
-use super::lspk::{CompressionMethod, FileTableEntry, LspkReader, LspkWriter};
+use super::lspk::{CompressionMethod, FileTableEntry, LspkReader, LspkWriter, PakPhase, PakProgress};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
@@ -31,10 +31,26 @@ fn get_part_path(base_path: &Path, part: u8) -> Option<PathBuf> {
     Some(parent.join(format!("{stem}_{part}.{ext}")))
 }
 
-/// Progress callback for PAK operations
-/// Arguments: (current, total, description)
-/// Must be Sync + Send to support parallel decompression.
-pub type ProgressCallback<'a> = &'a (dyn Fn(usize, usize, &str) + Sync + Send);
+/// Progress callback for PAK operations.
+///
+/// Receives a [`PakProgress`] struct with phase, current/total counts, and optional filename.
+/// Must be `Sync + Send` to support parallel decompression/compression.
+///
+/// # Example
+/// ```ignore
+/// use maclarian::pak::{PakOperations, PakPhase};
+///
+/// PakOperations::extract_with_progress(pak, dest, &|progress| {
+///     match progress.phase {
+///         PakPhase::ReadingTable => println!("Reading file table..."),
+///         PakPhase::DecompressingFiles => {
+///             println!("{}/{}: {:?}", progress.current, progress.total, progress.current_file);
+///         }
+///         _ => {}
+///     }
+/// })?;
+/// ```
+pub type ProgressCallback<'a> = &'a (dyn Fn(&PakProgress) + Sync + Send);
 
 pub struct PakOperations;
 
@@ -44,12 +60,12 @@ impl PakOperations {
     /// # Errors
     /// Returns an error if the PAK file cannot be read or extraction fails.
     pub fn extract<P: AsRef<Path>>(pak_path: P, output_dir: P) -> Result<()> {
-        Self::extract_with_progress(pak_path, output_dir, &|_, _, _| {})
+        Self::extract_with_progress(pak_path, output_dir, &|_| {})
     }
 
     /// Extract a PAK file to a directory with progress callback
     ///
-    /// The callback receives (current, total, filename) during file extraction.
+    /// The callback receives [`PakProgress`] with phase and file information.
     /// Uses parallel decompression for improved performance on multi-core systems.
     /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
@@ -65,13 +81,17 @@ impl PakOperations {
 
         let mut reader = LspkReader::with_path(File::open(pak_path)?, pak_path);
 
+        progress(&PakProgress {
+            phase: PakPhase::ReadingTable,
+            current: 0,
+            total: 1,
+            current_file: None,
+        });
+
         // Get file list without decompressing
         let entries = reader.list_files()?;
-        let total_files = entries.len();
 
         std::fs::create_dir_all(output_dir)?;
-
-        progress(0, total_files, "Reading compressed data...");
 
         // Filter entries and group by archive part for multi-part PAK support
         let filtered_entries: Vec<_> = entries
@@ -140,7 +160,12 @@ impl PakOperations {
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
-                progress(current, files_to_process, &file_name);
+                progress(&PakProgress {
+                    phase: PakPhase::DecompressingFiles,
+                    current,
+                    total: files_to_process,
+                    current_file: Some(file_name.clone()),
+                });
 
                 // Decompress
                 let data = match decompress_data(
@@ -206,7 +231,7 @@ impl PakOperations {
     /// # Errors
     /// Returns an error if the directory cannot be read or PAK creation fails.
     pub fn create<P: AsRef<Path>>(source_dir: P, output_pak: P) -> Result<()> {
-        Self::create_with_progress(source_dir, output_pak, &|_, _, _| {})
+        Self::create_with_progress(source_dir, output_pak, &|_| {})
     }
 
     /// Create a PAK file from a directory with progress callback
@@ -232,7 +257,7 @@ impl PakOperations {
         output_pak: P,
         compression: CompressionMethod,
     ) -> Result<()> {
-        Self::create_with_compression_and_progress(source_dir, output_pak, compression, &|_, _, _| {})
+        Self::create_with_compression_and_progress(source_dir, output_pak, compression, &|_| {})
     }
 
     /// Create a PAK file from a directory with compression and progress callback
@@ -256,7 +281,7 @@ impl PakOperations {
     /// # Errors
     /// Returns an error if the PAK file cannot be read.
     pub fn list<P: AsRef<Path>>(pak_path: P) -> Result<Vec<String>> {
-        Self::list_with_progress(pak_path, &|_, _, _| {})
+        Self::list_with_progress(pak_path, &|_| {})
     }
 
     /// List contents of a PAK file with progress callback
@@ -271,11 +296,21 @@ impl PakOperations {
 
         let mut reader = LspkReader::with_path(file, pak_path.as_ref());
 
-        progress(0, 1, "Reading PAK...");
+        progress(&PakProgress {
+            phase: PakPhase::ReadingHeader,
+            current: 0,
+            total: 1,
+            current_file: None,
+        });
 
         let entries = reader.list_files()?;
 
-        progress(1, 1, "Complete");
+        progress(&PakProgress {
+            phase: PakPhase::Complete,
+            current: entries.len(),
+            total: entries.len(),
+            current_file: None,
+        });
 
         Ok(entries
             .iter()
@@ -307,13 +342,13 @@ impl PakOperations {
         output_dir: P,
         file_paths: &[S],
     ) -> Result<()> {
-        Self::extract_files_with_progress(pak_path, output_dir, file_paths, &|_, _, _| {})
+        Self::extract_files_with_progress(pak_path, output_dir, file_paths, &|_| {})
     }
 
     /// Extract specific files from a PAK to a directory with progress callback
     ///
     /// Takes a list of file paths (as they appear in the PAK) and extracts only those files.
-    /// The callback receives (current, total, filename) during extraction.
+    /// The callback receives [`PakProgress`] with phase and file information.
     /// Uses parallel decompression for improved performance on multi-core systems.
     /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
@@ -359,7 +394,13 @@ impl PakOperations {
 
         std::fs::create_dir_all(&output_dir)?;
 
-        progress(0, entries_to_extract.len(), "Reading compressed data...");
+        let total_to_extract = entries_to_extract.len();
+        progress(&PakProgress {
+            phase: PakPhase::ReadingTable,
+            current: 0,
+            total: total_to_extract,
+            current_file: None,
+        });
 
         // Group entries by archive part for multi-part PAK support
         let mut entries_by_part: HashMap<u8, Vec<FileTableEntry>> = HashMap::new();
@@ -418,7 +459,12 @@ impl PakOperations {
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
-                progress(current, files_to_process, &file_name);
+                progress(&PakProgress {
+                    phase: PakPhase::DecompressingFiles,
+                    current,
+                    total: files_to_process,
+                    current_file: Some(file_name.clone()),
+                });
 
                 // Decompress
                 let data = match decompress_data(

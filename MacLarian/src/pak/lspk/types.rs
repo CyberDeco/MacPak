@@ -169,19 +169,29 @@ pub enum PakPhase {
     ReadingTable,
     /// Decompressing individual files
     DecompressingFiles,
-    /// Writing files to disk
+    /// Scanning files in a directory (during PAK creation)
+    ScanningFiles,
+    /// Compressing files (during PAK creation)
+    CompressingFiles,
+    /// Writing file table to PAK
+    WritingTable,
+    /// Writing files to disk (during extraction)
     WritingFiles,
     /// Operation complete
     Complete,
 }
 
 impl PakPhase {
+    /// Get a human-readable description of this phase
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::ReadingHeader => "Reading header",
             Self::ReadingTable => "Reading file table",
             Self::DecompressingFiles => "Decompressing files",
+            Self::ScanningFiles => "Scanning files",
+            Self::CompressingFiles => "Compressing files",
+            Self::WritingTable => "Writing file table",
             Self::WritingFiles => "Writing files",
             Self::Complete => "Complete",
         }

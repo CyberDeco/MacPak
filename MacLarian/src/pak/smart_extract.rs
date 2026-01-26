@@ -9,7 +9,7 @@
 //! # Usage
 //!
 //! ```no_run
-//! use maclarian::pak::extract_files_smart;
+//! use maclarian::pak::{extract_files_smart, PakPhase};
 //! use maclarian::gr2_extraction::Gr2ExtractionOptions;
 //!
 //! // Extract with full GR2 processing
@@ -18,7 +18,7 @@
 //!     "output/directory",
 //!     &["Models/Characters/Human/HUM_M_ARM_Leather_A_Body.GR2"],
 //!     Gr2ExtractionOptions::bundle(),
-//!     &|current, total, name| println!("{current}/{total}: {name}"),
+//!     &|progress| println!("{}/{}: {:?}", progress.current, progress.total, progress.current_file),
 //! ).unwrap();
 //!
 //! println!("Extracted {} files, processed {} GR2s", result.files_extracted, result.gr2s_processed);
@@ -35,6 +35,7 @@ use crate::gr2_extraction::{
     Gr2ExtractionResult,
     process_extracted_gr2,
 };
+use super::lspk::{PakPhase, PakProgress};
 use super::pak_tools::{PakOperations, ProgressCallback};
 
 /// Result of a smart extraction operation
@@ -97,7 +98,7 @@ impl SmartExtractionResult {
 /// * `output_dir` - Directory where files will be extracted
 /// * `file_paths` - List of file paths within the PAK to extract
 /// * `options` - GR2 processing options
-/// * `progress` - Progress callback (current, total, description)
+/// * `progress` - Progress callback receiving [`PakProgress`] with phase and file info
 ///
 /// # Errors
 ///
@@ -120,7 +121,12 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
     }
 
     // Phase 1: Extract all files normally
-    progress(0, file_paths.len(), "Extracting files from PAK...");
+    progress(&PakProgress {
+        phase: PakPhase::DecompressingFiles,
+        current: 0,
+        total: file_paths.len(),
+        current_file: None,
+    });
     PakOperations::extract_files_with_progress(pak_path, output_dir, file_paths, progress)?;
     result.files_extracted = file_paths.len();
 
@@ -145,7 +151,12 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
     }
 
     // Phase 3: Process GR2 files
-    progress(0, gr2_paths.len(), "Processing GR2 files...");
+    progress(&PakProgress {
+        phase: PakPhase::WritingFiles,
+        current: 0,
+        total: gr2_paths.len(),
+        current_file: Some("Processing GR2 files...".to_string()),
+    });
 
     // Process GR2 files in parallel
     let processing_results: Vec<(PathBuf, std::result::Result<Gr2ExtractionResult, String>)> =

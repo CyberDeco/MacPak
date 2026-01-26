@@ -6,6 +6,8 @@
 //!
 //! SPDX-License-Identifier: MIT
 
+// Format specification fields - kept for documentation and future extensibility
+#![allow(dead_code)]
 #![allow(clippy::cast_possible_truncation)]
 
 use byteorder::{LittleEndian, ReadBytesExt};

@@ -819,8 +819,8 @@ pub fn execute_extraction(state: SearchState, config: crate::gui::state::ConfigS
             // Extract non-GR2 files with standard extraction
             if !other_files.is_empty() {
                 let paths: Vec<&str> = other_files.iter().map(|s| s.as_str()).collect();
-                match PakOperations::extract_files_with_progress(&pak_path, &dest, &paths, &|current, _total, _| {
-                    SEARCH_PROGRESS.set(total_extracted + current, total_files, format!("Extracting from {}", pak_path.file_name().unwrap_or_default().to_string_lossy()));
+                match PakOperations::extract_files_with_progress(&pak_path, &dest, &paths, &|progress| {
+                    SEARCH_PROGRESS.set(total_extracted + progress.current, total_files, format!("Extracting from {}", pak_path.file_name().unwrap_or_default().to_string_lossy()));
                 }) {
                     Ok(_) => total_extracted += paths.len(),
                     Err(e) => {
@@ -852,8 +852,9 @@ pub fn execute_extraction(state: SearchState, config: crate::gui::state::ConfigS
                         &dest,
                         &gr2_paths.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
                         extraction_opts,
-                        &|current, _total, desc| {
-                            SEARCH_PROGRESS.set(total_extracted + current, total_files, desc.to_string());
+                        &|progress| {
+                            let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+                            SEARCH_PROGRESS.set(total_extracted + progress.current, total_files, desc.to_string());
                         },
                     ) {
                         Ok(result) => {
@@ -869,8 +870,8 @@ pub fn execute_extraction(state: SearchState, config: crate::gui::state::ConfigS
                     }
                 } else {
                     // Standard extraction for GR2 files
-                    match PakOperations::extract_files_with_progress(&pak_path, &dest, &gr2_paths, &|current, _total, _| {
-                        SEARCH_PROGRESS.set(total_extracted + current, total_files, format!("Extracting from {}", pak_path.file_name().unwrap_or_default().to_string_lossy()));
+                    match PakOperations::extract_files_with_progress(&pak_path, &dest, &gr2_paths, &|progress| {
+                        SEARCH_PROGRESS.set(total_extracted + progress.current, total_files, format!("Extracting from {}", pak_path.file_name().unwrap_or_default().to_string_lossy()));
                     }) {
                         Ok(_) => total_extracted += gr2_paths.len(),
                         Err(e) => {

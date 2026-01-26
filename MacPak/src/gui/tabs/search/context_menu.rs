@@ -148,7 +148,7 @@ fn open_result_in_editor(
             &pak_path,
             &temp_dir,
             &[file_path.as_str()],
-            &|_, _, _| {},
+            &|_| {},
         ) {
             Ok(_) => {
                 let extracted = temp_dir.join(&file_path);

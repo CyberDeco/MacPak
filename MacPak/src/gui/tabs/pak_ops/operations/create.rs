@@ -252,9 +252,7 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
             &source,
             &dest,
             mac_compression,
-            &|current, total, description| {
-                progress_sender(current, total, description);
-            },
+            &progress_sender,
         );
 
         let pak_result = match result {
