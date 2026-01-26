@@ -36,8 +36,15 @@ const TAG_BG3: u32 = 0xE57F0039;
 /// GR2 format version
 const VERSION: u32 = 7;
 
-/// Section count (we use 6 sections like typical GR2 files)
-const NUM_SECTIONS: u32 = 6;
+/// Section count (7 sections for BG3 GR2 files)
+/// Section 0: Main (root object, strings, misc data)
+/// Section 1: TrackGroups (animations) - empty for static meshes
+/// Section 2: Skeleton data
+/// Section 3: Mesh structs
+/// Section 4: Type definitions
+/// Section 5: Vertex data
+/// Section 6: Index data
+const NUM_SECTIONS: u32 = 7;
 
 // Member types
 const MEMBER_NONE: u32 = 0;
@@ -275,12 +282,13 @@ impl Gr2Writer {
     fn build_sections(&self) -> Result<(Vec<Section>, u32, u32)> {
         // Initialize sections
         // Section 0: Main (root object, strings, misc data)
-        // Section 1: TrackGroups (animations) - empty for now
-        // Section 2: Skeleton
-        // Section 3: Mesh
+        // Section 1: TrackGroups (animations) - empty for static meshes
+        // Section 2: Skeleton data
+        // Section 3: Mesh structs
         // Section 4: Type definitions
         // Section 5: Vertex data
-        let mut sections: Vec<Section> = (0..6).map(|_| Section::new()).collect();
+        // Section 6: Index data
+        let mut sections: Vec<Section> = (0..7).map(|_| Section::new()).collect();
 
         // Collect all strings we need
         let mut all_strings: Vec<&str> = Vec::new();
@@ -474,20 +482,20 @@ impl Gr2Writer {
             vertex_data_offsets.push(vertex_data_offset);
         }
 
-        // Write indices to section 5
+        // Write indices to section 6 (separate from vertex data)
         let mut index_offsets: Vec<u32> = Vec::new();
         for mesh in &self.meshes {
-            sections[5].align(4);
-            let index_offset = sections[5].pos();
+            sections[6].align(4);
+            let index_offset = sections[6].pos();
             // Use 16-bit indices if possible
             let use_16bit = mesh.indices.iter().all(|&i| i <= 65535);
             if use_16bit {
                 for &idx in &mesh.indices {
-                    sections[5].write_u16(idx as u16);
+                    sections[6].write_u16(idx as u16);
                 }
             } else {
                 for &idx in &mesh.indices {
-                    sections[5].write_u32(idx);
+                    sections[6].write_u32(idx);
                 }
             }
             index_offsets.push(index_offset);
@@ -600,10 +608,10 @@ impl Gr2Writer {
                 // Indices (32-bit, empty)
                 sections[3].write_null_array();
                 // Indices16
-                sections[3].write_array_ref(mesh.indices.len() as u32, 5, index_offsets[i]);
+                sections[3].write_array_ref(mesh.indices.len() as u32, 6, index_offsets[i]);
             } else {
                 // Indices (32-bit)
-                sections[3].write_array_ref(mesh.indices.len() as u32, 5, index_offsets[i]);
+                sections[3].write_array_ref(mesh.indices.len() as u32, 6, index_offsets[i]);
                 // Indices16 (empty)
                 sections[3].write_null_array();
             }
