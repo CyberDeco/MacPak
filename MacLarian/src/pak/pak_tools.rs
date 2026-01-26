@@ -755,7 +755,8 @@ impl PakReaderCache {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
+    /// // PakReaderCache is internal API (pub(crate))
     /// use std::path::Path;
     /// use maclarian::pak::PakReaderCache;
     ///
