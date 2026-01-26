@@ -933,12 +933,14 @@ fn perform_gr2_conversion(
         let options = maclarian::gr2_extraction::Gr2ExtractionOptions {
             convert_to_glb: false, // Already converted above if needed
             extract_textures: true,
+            extract_virtual_textures: false,
             game_data_path: if game_data_path.is_empty() {
                 None
             } else {
                 Some(std::path::PathBuf::from(game_data_path))
             },
             virtual_textures_path: None,
+            keep_original_gr2: true,
             convert_to_png,
             // Keep DDS if "Extract textures DDS" is checked (even if also converting to PNG)
             keep_original_dds: true,

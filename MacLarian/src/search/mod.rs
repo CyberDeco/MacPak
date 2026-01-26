@@ -20,7 +20,7 @@
 
 #![allow(clippy::cast_possible_truncation)]
 
-mod content_cache;
+pub mod content_cache;
 pub(crate) mod extract;
 mod fulltext;
 
@@ -39,6 +39,7 @@ use fulltext::FullTextIndex;
 
 // Public exports
 pub use fulltext::FullTextResult;
+pub use content_cache::ContentCache;
 
 /// File type classification for filtering
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

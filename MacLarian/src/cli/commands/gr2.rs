@@ -258,13 +258,13 @@ pub fn bundle(
         println!("  Texture extraction: disabled");
     }
 
-    if let Some(gd) = game_data {
-        options = options.with_game_data_path(gd);
+    if let Some(ref gd) = game_data {
+        options = options.with_game_data_path(game_data.clone());
         println!("  Game data: {}", gd.display());
     }
 
-    if let Some(vt) = virtual_textures {
-        options = options.with_virtual_textures_path(vt);
+    if let Some(ref vt) = virtual_textures {
+        options = options.with_virtual_textures_path(virtual_textures.clone());
         println!("  Virtual textures: {}", vt.display());
     }
 

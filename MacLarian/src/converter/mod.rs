@@ -33,6 +33,8 @@ pub use lsf_lsx_lsj::{
     // Convenience aliases with progress
     lsx_to_lsj_with_progress, lsj_to_lsx_with_progress,
     lsf_to_lsj_with_progress, lsj_to_lsf_with_progress,
+    // In-memory conversion functions
+    to_lsx, from_lsx, to_lsj,
 };
 
 // GR2/glTF conversion exports

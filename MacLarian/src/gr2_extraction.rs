@@ -122,15 +122,15 @@ impl Gr2ExtractionOptions {
 
     /// Create options with custom game data path
     #[must_use]
-    pub fn with_game_data_path(mut self, path: impl Into<PathBuf>) -> Self {
-        self.game_data_path = Some(path.into());
+    pub fn with_game_data_path<P: Into<PathBuf>>(mut self, path: Option<P>) -> Self {
+        self.game_data_path = path.map(Into::into);
         self
     }
 
     /// Set path to pre-extracted virtual textures (GTP/GTS files)
     #[must_use]
-    pub fn with_virtual_textures_path(mut self, path: impl Into<PathBuf>) -> Self {
-        self.virtual_textures_path = Some(path.into());
+    pub fn with_virtual_textures_path<P: Into<PathBuf>>(mut self, path: Option<P>) -> Self {
+        self.virtual_textures_path = path.map(Into::into);
         self
     }
 
@@ -153,6 +153,12 @@ impl Gr2ExtractionOptions {
     pub fn with_png_conversion(mut self, convert: bool) -> Self {
         self.convert_to_png = convert;
         self
+    }
+
+    /// Alias for [`Self::with_png_conversion`]
+    #[must_use]
+    pub fn with_convert_to_png(self, convert: bool) -> Self {
+        self.with_png_conversion(convert)
     }
 
     /// Set whether to convert GR2 to GLB.
@@ -1021,7 +1027,7 @@ mod tests {
     #[test]
     fn test_options_with_game_data() {
         let opts = Gr2ExtractionOptions::default()
-            .with_game_data_path("/path/to/game");
+            .with_game_data_path(Some("/path/to/game"));
         assert_eq!(opts.game_data_path, Some(PathBuf::from("/path/to/game")));
     }
 }

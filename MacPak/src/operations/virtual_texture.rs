@@ -10,7 +10,7 @@ use crate::{Error, Result};
 // Re-export types from maclarian for convenience
 pub use maclarian::virtual_texture::{
     GtsFile, GtpFile, GtsHeader, GtsPageFileInfo, GtpHeader,
-    VirtualTextureExtractor, DdsWriter,
+    VirtualTextureExtractor,
     // Utility functions and types
     list_gts as maclarian_list_gts, gtp_info as maclarian_gtp_info,
     find_gts_path, find_base_name, get_subfolder_name, extract_all as maclarian_extract_all,

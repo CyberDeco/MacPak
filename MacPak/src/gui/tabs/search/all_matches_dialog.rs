@@ -6,7 +6,7 @@ use floem::ext_event::create_ext_action;
 use floem::prelude::*;
 use floem::text::Weight;
 use floem_reactive::{create_effect, Scope};
-use maclarian::converter::lsf_lsx_lsj::to_lsx;
+use maclarian::converter::to_lsx;
 use maclarian::formats::lsf::parse_lsf_bytes;
 use maclarian::pak::PakOperations;
 

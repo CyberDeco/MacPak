@@ -88,12 +88,14 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
             let options = maclarian::gr2_extraction::Gr2ExtractionOptions {
                 convert_to_glb: false, // Already converted
                 extract_textures,
+                extract_virtual_textures: false,
                 game_data_path: if game_data_path.is_empty() {
                     None
                 } else {
                     Some(PathBuf::from(&game_data_path))
                 },
                 virtual_textures_path: None,
+                keep_original_gr2: true,
                 convert_to_png,
                 keep_original_dds,
             };
@@ -252,12 +254,14 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                             let options = maclarian::gr2_extraction::Gr2ExtractionOptions {
                                 convert_to_glb: false,
                                 extract_textures,
+                                extract_virtual_textures: false,
                                 game_data_path: if game_data_path.is_empty() {
                                     None
                                 } else {
                                     Some(PathBuf::from(&game_data_path))
                                 },
                                 virtual_textures_path: None,
+                                keep_original_gr2: true,
                                 convert_to_png,
                                 keep_original_dds,
                             };
