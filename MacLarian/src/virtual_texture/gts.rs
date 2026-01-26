@@ -25,7 +25,7 @@ use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
 use crate::error::{Error, Result};
-use super::types::{GtsHeader, GtsParameterBlock, GtsPageFileInfo, GtsPackedTileId, GtsFlatTileInfo, GtsCodec, GtsBCParameterBlock, GtsUniformParameterBlock, GtsDataType, TileCompression, TileLocation};
+use super::types::{GtsHeader, GtsParameterBlock, GtsPageFileInfo, GtsPackedTileId, GtsFlatTileInfo, GtsCodec, GtsBCParameterBlock, TileCompression, TileLocation};
 
 /// GTS file reader and parser
 #[derive(Debug)]
@@ -264,8 +264,9 @@ impl GtsFile {
                     GtsParameterBlock::BC(bc_block)
                 }
                 GtsCodec::Uniform => {
-                    let uniform_block = Self::read_uniform_parameter_block(reader)?;
-                    GtsParameterBlock::Uniform(uniform_block)
+                    return Err(Error::InvalidFormat(
+                        "Uniform codec virtual textures are not supported".to_string(),
+                    ));
                 }
                 _ => GtsParameterBlock::Unknown,
             };
@@ -340,32 +341,6 @@ impl GtsFile {
             e3,
             e4,
             f,
-        })
-    }
-
-    fn read_uniform_parameter_block<R: Read>(reader: &mut R) -> Result<GtsUniformParameterBlock> {
-        let mut buf2 = [0u8; 2];
-        let mut buf4 = [0u8; 4];
-
-        reader.read_exact(&mut buf2)?;
-        let version = u16::from_le_bytes(buf2);
-        reader.read_exact(&mut buf2)?;
-        let a_unused = u16::from_le_bytes(buf2);
-        reader.read_exact(&mut buf4)?;
-        let width = u32::from_le_bytes(buf4);
-        reader.read_exact(&mut buf4)?;
-        let height = u32::from_le_bytes(buf4);
-        reader.read_exact(&mut buf4)?;
-        let data_type_val = u32::from_le_bytes(buf4);
-
-        let data_type = GtsDataType::from_u32(data_type_val).unwrap_or(GtsDataType::R8G8B8Srgb);
-
-        Ok(GtsUniformParameterBlock {
-            version,
-            a_unused,
-            width,
-            height,
-            data_type,
         })
     }
 
