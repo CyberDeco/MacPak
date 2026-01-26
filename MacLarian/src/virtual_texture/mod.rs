@@ -33,7 +33,7 @@ pub use gts::GtsFile;
 pub use gtp::GtpFile;
 
 // Public extractor
-pub use extractor::VirtualTextureExtractor;
+pub use extractor::{VirtualTextureExtractor, ExtractOptions};
 
 // Utility functions
 pub use utils::{
