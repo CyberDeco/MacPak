@@ -46,20 +46,22 @@ pub fn find_pak_files<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
     pak_files
 }
 
-/// Find all packable folders (directories with files)
+/// Find all packable folders (immediate subdirectories that contain files)
 ///
-/// Recursively searches for directories that contain at least one file,
-/// making them suitable for packing into PAK archives.
+/// Finds immediate subdirectories of the given directory that contain at least
+/// one file (recursively), making them suitable for packing into PAK archives.
+/// Each subdirectory becomes one PAK file containing all its contents.
 ///
 /// # Arguments
 /// * `dir` - Root directory to search
 ///
 /// # Returns
-/// A sorted list of paths to directories that contain files.
+/// A sorted list of immediate subdirectory paths that contain files.
 pub fn find_packable_folders<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
     let mut folders: Vec<_> = WalkDir::new(dir)
         .follow_links(true)
         .min_depth(1) // Skip the root directory itself
+        .max_depth(1) // Only immediate subdirectories
         .into_iter()
         .filter_map(std::result::Result::ok)
         .filter(|e| {
@@ -67,20 +69,23 @@ pub fn find_packable_folders<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
             if !path.is_dir() {
                 return false;
             }
-            // Check if this directory contains any files (not just subdirs)
-            std::fs::read_dir(path)
-                .ok()
-                .is_some_and(|entries| {
-                    entries
-                        .filter_map(std::result::Result::ok)
-                        .any(|e| e.path().is_file())
-                })
+            // Check if this directory contains any files (recursively)
+            contains_files_recursive(path)
         })
         .map(|e| e.path().to_path_buf())
         .collect();
 
     folders.sort();
     folders
+}
+
+/// Check if a directory contains any files (recursively)
+fn contains_files_recursive(dir: &Path) -> bool {
+    WalkDir::new(dir)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(std::result::Result::ok)
+        .any(|e| e.path().is_file())
 }
 
 /// Batch extract PAK files in parallel
