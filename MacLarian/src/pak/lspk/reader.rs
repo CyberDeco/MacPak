@@ -34,19 +34,10 @@ pub struct LspkReader<R: Read + Seek> {
 }
 
 impl<R: Read + Seek> LspkReader<R> {
-    /// Create a new reader from a Read + Seek source
-    pub fn new(reader: R) -> Self {
-        Self {
-            reader: BufReader::new(reader),
-            header: None,
-            footer: None,
-            file_table: Vec::new(),
-            pak_path: None,
-            part_readers: HashMap::new(),
-        }
-    }
-
-    /// Create a new reader with path information for multi-part archive support
+    /// Create a new reader with path information for multi-part archive support.
+    ///
+    /// The path is required to support multi-part archives like `Textures.pak`
+    /// which split data across `Textures_1.pak`, `Textures_2.pak`, etc.
     pub fn with_path(reader: R, path: impl AsRef<Path>) -> Self {
         Self {
             reader: BufReader::new(reader),
@@ -450,12 +441,14 @@ impl<R: Read + Seek> LspkReader<R> {
         Ok(self.file_table.clone())
     }
 
-    /// Get the PAK version
+    /// Get the PAK version (after header has been read).
+    #[allow(dead_code)] // Library API for quick metadata access
     pub fn version(&self) -> Option<u32> {
         self.header.as_ref().map(|h| h.version)
     }
 
-    /// Get the number of files in the PAK
+    /// Get the number of files in the PAK (after footer has been read).
+    #[allow(dead_code)] // Library API for quick metadata access
     pub fn file_count(&self) -> Option<u32> {
         self.footer.as_ref().map(|f| f.num_files)
     }

@@ -43,6 +43,9 @@ impl CompressionMethod {
 #[derive(Debug, Clone)]
 pub struct LspkHeader {
     /// Magic bytes (should be "LSPK")
+    ///
+    /// Validated during parsing but retained for format completeness.
+    #[allow(dead_code)]
     pub magic: [u8; 4],
     /// Version number
     pub version: u32,
@@ -79,6 +82,10 @@ pub struct FileTableEntry {
 }
 
 /// Header of an LSPK v16/v18 PAK file (extended format)
+///
+/// This format was used in BG3 Early Access (Patch 4). Retained for format
+/// documentation and potential backwards compatibility.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct LspkHeaderV16 {
     /// Version number

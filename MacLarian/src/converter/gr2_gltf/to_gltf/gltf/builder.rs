@@ -596,20 +596,6 @@ impl GltfBuilder {
         let uvs: Vec<[f32; 2]> = mesh_data.vertices.iter().map(|v| v.uv).collect();
         let colors: Vec<[u8; 4]> = mesh_data.vertices.iter().map(|v| v.color).collect();
 
-        // Clean joints/weights: glTF requires joint index to be 0 when weight is 0
-        let (joints, weights): (Vec<[u8; 4]>, Vec<[u8; 4]>) = mesh_data.vertices.iter()
-            .map(|v| {
-                let mut j = v.bone_indices;
-                let w = v.bone_weights;
-                for i in 0..4 {
-                    if w[i] == 0 {
-                        j[i] = 0;
-                    }
-                }
-                (j, w)
-            })
-            .unzip();
-
         // Decode QTangent to normal/tangent
         let (normals, tangents): (Vec<[f32; 3]>, Vec<[f32; 4]>) = mesh_data
             .vertices
@@ -626,8 +612,6 @@ impl GltfBuilder {
         let tan_idx = self.add_tangents(&tangents);
         let uv_idx = self.add_texcoords(&uvs);
         let color_idx = self.add_colors(&colors);
-        let joints_idx = self.add_joints(&joints);
-        let weights_idx = self.add_weights(&weights);
 
         let mut attributes = HashMap::new();
         attributes.insert("POSITION".to_string(), pos_idx);
@@ -635,8 +619,28 @@ impl GltfBuilder {
         attributes.insert("TANGENT".to_string(), tan_idx);
         attributes.insert("TEXCOORD_0".to_string(), uv_idx);
         attributes.insert("COLOR_0".to_string(), color_idx);
-        attributes.insert("JOINTS_0".to_string(), joints_idx);
-        attributes.insert("WEIGHTS_0".to_string(), weights_idx);
+
+        // Only add joints/weights if mesh has skinning
+        if skin_idx.is_some() {
+            // Clean joints/weights: glTF requires joint index to be 0 when weight is 0
+            let (joints, weights): (Vec<[u8; 4]>, Vec<[u8; 4]>) = mesh_data.vertices.iter()
+                .map(|v| {
+                    let mut j = v.bone_indices;
+                    let w = v.bone_weights;
+                    for i in 0..4 {
+                        if w[i] == 0 {
+                            j[i] = 0;
+                        }
+                    }
+                    (j, w)
+                })
+                .unzip();
+
+            let joints_idx = self.add_joints(&joints);
+            let weights_idx = self.add_weights(&weights);
+            attributes.insert("JOINTS_0".to_string(), joints_idx);
+            attributes.insert("WEIGHTS_0".to_string(), weights_idx);
+        }
 
         // Add indices - flip winding order to account for X-axis negation
         let indices_idx = if mesh_data.indices.is_empty() {

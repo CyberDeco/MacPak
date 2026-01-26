@@ -3,7 +3,6 @@
 //! Provides instant deep search by pre-indexing file content during "Build Index".
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use tantivy::collector::TopDocs;
 use tantivy::query::QueryParser;
@@ -323,9 +322,6 @@ impl Default for FullTextIndex {
         Self::new().expect("Failed to create default FullTextIndex")
     }
 }
-
-/// Thread-safe wrapper for `FullTextIndex`
-pub type SharedFullTextIndex = Arc<FullTextIndex>;
 
 /// Extract search terms from a query string, skipping boolean operators
 fn extract_search_terms(query: &str) -> Vec<String> {

@@ -47,6 +47,7 @@ struct CompressedEntry {
 }
 
 /// LSPK PAK file writer
+#[allow(dead_code)] // Library API - root_path kept for future use
 pub struct LspkWriter {
     /// Root path of the mod directory
     root_path: PathBuf,
@@ -76,7 +77,8 @@ impl LspkWriter {
     }
 
     /// Set the PAK version to write
-    #[must_use] 
+    #[must_use]
+    #[allow(dead_code)] // Library API
     pub fn with_version(mut self, version: u32) -> Self {
         self.version = version;
         self

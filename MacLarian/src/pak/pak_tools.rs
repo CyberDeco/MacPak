@@ -696,14 +696,38 @@ impl PakReaderCache {
         self.access_order.push(pak_path.to_path_buf());
     }
 
-    /// Read a file's bytes using the cached file table
+    /// Read a single file's bytes using the cached file table.
     ///
-    /// This is much faster than `PakOperations::read_file_bytes` when reading
-    /// multiple files from the same PAK, as it reuses the decompressed file table.
-    /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
+    /// This is faster than [`PakOperations::read_file_bytes`] when reading multiple
+    /// files from the same PAK, as it caches the decompressed file table in memory.
+    /// The first call loads and caches the table; subsequent calls reuse it.
+    ///
+    /// For reading many files at once, prefer [`read_files_bulk`](Self::read_files_bulk)
+    /// which optimizes I/O by sorting reads by disk offset.
+    ///
+    /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    /// use maclarian::pak::PakReaderCache;
+    ///
+    /// let mut cache = PakReaderCache::new(4); // Cache up to 4 PAKs
+    /// let pak = Path::new("Shared.pak");
+    ///
+    /// // First read loads the file table
+    /// let meta = cache.read_file_bytes(pak, "Public/Shared/meta.lsx")?;
+    ///
+    /// // Subsequent reads reuse the cached table (fast)
+    /// let other = cache.read_file_bytes(pak, "Public/Shared/other.lsf")?;
+    /// # Ok::<(), maclarian::Error>(())
+    /// ```
     ///
     /// # Errors
+    ///
     /// Returns an error if the PAK cannot be read or the file is not found.
+    #[allow(dead_code)] // Library API for on-demand cached file reading
     pub fn read_file_bytes(&mut self, pak_path: &Path, file_path: &str) -> Result<Vec<u8>> {
         self.ensure_loaded(pak_path)?;
 

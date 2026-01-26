@@ -252,12 +252,6 @@ impl Gr2Header {
             string_table_crc,
         })
     }
-
-    /// Get header size based on version
-    #[must_use] 
-    pub fn size(&self) -> usize {
-        if self.version == 7 { 88 } else { 72 }
-    }
 }
 
 /// Section header (44 bytes each)
@@ -288,8 +282,6 @@ pub struct SectionHeader {
 }
 
 impl SectionHeader {
-    pub const SIZE: usize = 44;
-
     /// # Errors
     /// Returns an error if reading fails or if the compression format is unsupported.
     pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
