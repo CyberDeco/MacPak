@@ -115,6 +115,14 @@ pub use lsf_lsx_lsj::{
 // GR2/glTF conversion exports
 pub use gr2_gltf::{convert_gr2_to_glb, convert_gr2_to_gltf, convert_gr2_bytes_to_glb};
 pub use gr2_gltf::{convert_gltf_to_gr2, convert_gltf_bytes_to_gr2};
+pub use gr2_gltf::{
+    convert_gr2_to_glb_with_progress,
+    convert_gr2_to_gltf_with_progress,
+    convert_gr2_bytes_to_glb_with_progress,
+    convert_gltf_to_gr2_with_progress,
+    convert_gltf_bytes_to_gr2_with_progress,
+};
+pub use gr2_gltf::{Gr2Progress, Gr2Phase, Gr2ProgressCallback};
 
 // LOCA conversion exports
 pub use loca::{convert_loca_to_xml, loca_to_xml_string, convert_xml_to_loca, loca_from_xml};

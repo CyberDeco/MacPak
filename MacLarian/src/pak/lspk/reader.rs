@@ -18,8 +18,10 @@ use super::{
     PakPhase, PakProgress, MAGIC, MAX_VERSION, MIN_VERSION, PATH_LENGTH, TABLE_ENTRY_SIZE,
 };
 
-/// Progress callback type
-pub type ProgressCallback<'a> = &'a dyn Fn(&PakProgress);
+/// Progress callback type for read operations.
+///
+/// Must be `Sync + Send` to support parallel decompression.
+pub type ProgressCallback<'a> = &'a (dyn Fn(&PakProgress) + Sync + Send);
 
 /// LSPK PAK file reader
 pub struct LspkReader<R: Read + Seek> {
