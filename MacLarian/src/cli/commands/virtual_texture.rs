@@ -225,10 +225,8 @@ pub fn create(
     if let Some(comp) = compression {
         let pref = match comp.to_lowercase().as_str() {
             "raw" => TileCompressionPreference::Raw,
-            "lz4" => TileCompressionPreference::Lz4,
             "fastlz" => TileCompressionPreference::FastLZ,
-            "best" => TileCompressionPreference::Best,
-            _ => anyhow::bail!("Unknown compression: {}. Use: raw, lz4, fastlz, or best", comp),
+            _ => anyhow::bail!("Unknown compression: {}. Use: raw or fastlz (default)", comp),
         };
         builder = builder.compression(pref);
     }

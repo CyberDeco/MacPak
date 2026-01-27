@@ -381,7 +381,7 @@ pub enum VirtualTextureCommands {
         #[arg(short, long)]
         output: PathBuf,
 
-        /// Compression method: raw, lz4, fastlz, best (default: best)
+        /// Compression method: raw, fastlz (default: fastlz)
         #[arg(short, long)]
         compression: Option<String>,
 

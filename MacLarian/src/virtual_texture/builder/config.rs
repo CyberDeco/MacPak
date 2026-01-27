@@ -10,13 +10,9 @@ use std::path::PathBuf;
 pub enum TileCompressionPreference {
     /// Raw (uncompressed)
     Raw,
-    /// LZ4 compression (recommended, best compatibility)
+    /// FastLZ compression (what BG3 uses)
     #[default]
-    Lz4,
-    /// FastLZ compression (currently has compatibility issues)
     FastLZ,
-    /// Automatically choose best compression (currently uses LZ4)
-    Best,
 }
 
 impl TileCompressionPreference {
@@ -27,10 +23,6 @@ impl TileCompressionPreference {
             Self::Raw => (
                 b"raw\0\0\0\0\0\0\0\0\0\0\0\0\0",
                 b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
-            ),
-            Self::Lz4 | Self::Best => (
-                b"lz4\0\0\0\0\0\0\0\0\0\0\0\0\0",
-                b"lz40.1.0\0\0\0\0\0\0\0\0",
             ),
             Self::FastLZ => (
                 b"lz77\0\0\0\0\0\0\0\0\0\0\0\0",
@@ -103,7 +95,7 @@ impl Default for TileSetConfiguration {
             tile_height: 144,
             tile_border: 8,
             page_size: 0x0010_0000, // 1MB
-            compression: TileCompressionPreference::Best,
+            compression: TileCompressionPreference::FastLZ,
             embed_mip: true,
             deduplicate: true,
         }
