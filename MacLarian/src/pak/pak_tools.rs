@@ -93,134 +93,99 @@ impl PakOperations {
 
         std::fs::create_dir_all(output_dir)?;
 
-        // Filter entries and group by archive part for multi-part PAK support
+        // Filter entries (skip .DS_Store files)
         let filtered_entries: Vec<_> = entries
-            .iter()
+            .into_iter()
             .filter(|entry| {
-                // Skip .DS_Store files
                 entry.path.file_name() != Some(std::ffi::OsStr::new(".DS_Store"))
             })
-            .cloned()
             .collect();
 
-        // Group entries by archive part
-        let mut entries_by_part: HashMap<u8, Vec<FileTableEntry>> = HashMap::new();
-        for entry in filtered_entries {
-            entries_by_part.entry(entry.archive_part).or_default().push(entry);
-        }
-
-        // Phase 1: Read all compressed data sequentially from each part file
-        let mut compressed_files: Vec<CompressedFile> = Vec::new();
-        let total_entries: usize = entries_by_part.values().map(|v| v.len()).sum();
-        let mut read_count = 0usize;
-
-        for (part, part_entries) in &entries_by_part {
-            let part_path = get_part_path(pak_path, *part)
-                .ok_or_else(|| Error::ConversionError(
-                    format!("Cannot determine path for archive part {part}")
-                ))?;
-
-            if !part_path.exists() {
-                tracing::warn!("Archive part file not found: {}", part_path.display());
-                continue;
-            }
-
-            let mut part_file = File::open(&part_path)?;
-
-            for entry in part_entries {
-                read_count += 1;
-                let file_name = entry.path.file_name()
-                    .map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
-
-                // Update progress during sequential read phase
-                progress(&PakProgress {
-                    phase: PakPhase::ReadingTable,
-                    current: read_count,
-                    total: total_entries,
-                    current_file: Some(file_name),
-                });
-
-                // Seek and read compressed data from the correct part file
-                if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
-                    tracing::warn!("Failed to seek to {} in {}", entry.path.display(), part_path.display());
-                    continue;
-                }
-
-                let mut compressed_data = vec![0u8; entry.size_compressed as usize];
-                if part_file.read_exact(&mut compressed_data).is_err() {
-                    tracing::warn!("Failed to read {} from {}", entry.path.display(), part_path.display());
-                    continue;
-                }
-
-                compressed_files.push(CompressedFile {
-                    entry: entry.clone(),
-                    compressed_data,
-                });
-            }
-        }
-
-        let files_to_process = compressed_files.len();
+        let total_files = filtered_entries.len();
         let processed = AtomicUsize::new(0);
         let error_count = AtomicUsize::new(0);
 
-        // Phase 2: Decompress and write in parallel
-        let errors: Vec<(PathBuf, String)> = compressed_files
+        // Single-pass parallel extraction: each thread opens its own file handle
+        let errors: Vec<(PathBuf, String)> = filtered_entries
             .par_iter()
-            .filter_map(|cf| {
-                let file_name = cf
-                    .entry
-                    .path
-                    .file_name().map_or_else(|| cf.entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+            .filter_map(|entry| {
+                let file_name = entry.path.file_name()
+                    .map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
                 progress(&PakProgress {
                     phase: PakPhase::DecompressingFiles,
                     current,
-                    total: files_to_process,
+                    total: total_files,
                     current_file: Some(file_name.clone()),
                 });
 
+                // Get the correct part file path for this entry
+                let part_path = match get_part_path(pak_path, entry.archive_part) {
+                    Some(p) => p,
+                    None => {
+                        error_count.fetch_add(1, Ordering::SeqCst);
+                        return Some((entry.path.clone(), format!("Cannot determine path for archive part {}", entry.archive_part)));
+                    }
+                };
+
+                // Open file handle for this thread, seek, and read
+                let mut file = match File::open(&part_path) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        error_count.fetch_add(1, Ordering::SeqCst);
+                        return Some((entry.path.clone(), format!("Failed to open {}: {e}", part_path.display())));
+                    }
+                };
+
+                if let Err(e) = file.seek(SeekFrom::Start(entry.offset)) {
+                    error_count.fetch_add(1, Ordering::SeqCst);
+                    return Some((entry.path.clone(), format!("Failed to seek: {e}")));
+                }
+
+                let mut compressed_data = vec![0u8; entry.size_compressed as usize];
+                if let Err(e) = file.read_exact(&mut compressed_data) {
+                    error_count.fetch_add(1, Ordering::SeqCst);
+                    return Some((entry.path.clone(), format!("Failed to read: {e}")));
+                }
+
                 // Decompress
-                let data = match decompress_data(
-                    &cf.compressed_data,
-                    cf.entry.compression,
-                    cf.entry.size_decompressed,
-                ) {
+                let data = match decompress_data(&compressed_data, entry.compression, entry.size_decompressed) {
                     Ok(data) => data,
                     Err(e) => {
                         error_count.fetch_add(1, Ordering::SeqCst);
-                        tracing::warn!("Failed to decompress {}: {}", cf.entry.path.display(), e);
-                        return Some((cf.entry.path.clone(), e.to_string()));
+                        tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
+                        return Some((entry.path.clone(), e.to_string()));
                     }
                 };
 
                 // Calculate output path (handle virtual texture subfolders)
                 let output_path = if is_virtual_texture_file(&file_name) {
                     if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
-                        if let Some(parent) = cf.entry.path.parent() {
+                        if let Some(parent) = entry.path.parent() {
                             output_dir.join(parent).join(&subfolder).join(&file_name)
                         } else {
                             output_dir.join(&subfolder).join(&file_name)
                         }
                     } else {
-                        output_dir.join(&cf.entry.path)
+                        output_dir.join(&entry.path)
                     }
                 } else {
-                    output_dir.join(&cf.entry.path)
+                    output_dir.join(&entry.path)
                 };
 
                 // Create parent directories (idempotent)
                 if let Some(parent) = output_path.parent()
                     && let Err(e) = std::fs::create_dir_all(parent) {
                         error_count.fetch_add(1, Ordering::SeqCst);
-                        return Some((cf.entry.path.clone(), format!("Failed to create dir: {e}")));
+                        return Some((entry.path.clone(), format!("Failed to create dir: {e}")));
                     }
 
                 // Write file
                 if let Err(e) = std::fs::write(&output_path, &data) {
                     error_count.fetch_add(1, Ordering::SeqCst);
-                    return Some((cf.entry.path.clone(), format!("Failed to write: {e}")));
+                    return Some((entry.path.clone(), format!("Failed to write: {e}")));
                 }
 
                 None
@@ -231,7 +196,7 @@ impl PakOperations {
         if !errors.is_empty() {
             return Err(Error::ConversionError(format!(
                 "Extracted {} files with {} errors. First error: {}",
-                files_to_process - errors.len(),
+                total_files - errors.len(),
                 errors.len(),
                 errors[0].1
             )));
@@ -408,122 +373,84 @@ impl PakOperations {
 
         std::fs::create_dir_all(&output_dir)?;
 
-        let total_to_extract = entries_to_extract.len();
-
-        // Group entries by archive part for multi-part PAK support
-        let mut entries_by_part: HashMap<u8, Vec<FileTableEntry>> = HashMap::new();
-        for entry in entries_to_extract {
-            entries_by_part.entry(entry.archive_part).or_default().push(entry);
-        }
-
-        // Phase 1: Read all compressed data sequentially from each part file
-        let mut compressed_files: Vec<CompressedFile> = Vec::new();
-        let mut read_count = 0usize;
-
-        for (part, part_entries) in &entries_by_part {
-            let part_path = get_part_path(pak_path, *part)
-                .ok_or_else(|| Error::ConversionError(
-                    format!("Cannot determine path for archive part {part}")
-                ))?;
-
-            if !part_path.exists() {
-                tracing::warn!("Archive part file not found: {}", part_path.display());
-                continue;
-            }
-
-            let mut part_file = File::open(&part_path)?;
-
-            for entry in part_entries {
-                read_count += 1;
-                let file_name = entry.path.file_name()
-                    .map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
-
-                // Update progress during sequential read phase
-                progress(&PakProgress {
-                    phase: PakPhase::ReadingTable,
-                    current: read_count,
-                    total: total_to_extract,
-                    current_file: Some(file_name),
-                });
-
-                // Seek and read compressed data from the correct part file
-                if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
-                    tracing::warn!("Failed to seek to {} in {}", entry.path.display(), part_path.display());
-                    continue;
-                }
-
-                let mut compressed_data = vec![0u8; entry.size_compressed as usize];
-                if part_file.read_exact(&mut compressed_data).is_err() {
-                    tracing::warn!("Failed to read {} from {}", entry.path.display(), part_path.display());
-                    continue;
-                }
-
-                compressed_files.push(CompressedFile {
-                    entry: entry.clone(),
-                    compressed_data,
-                });
-            }
-        }
-
-        let files_to_process = compressed_files.len();
+        let total_files = entries_to_extract.len();
         let processed = AtomicUsize::new(0);
         let output_dir = output_dir.as_ref();
 
-        // Phase 2: Decompress and write in parallel
-        let errors: Vec<(PathBuf, String)> = compressed_files
+        // Single-pass parallel extraction: each thread opens its own file handle
+        let errors: Vec<(PathBuf, String)> = entries_to_extract
             .par_iter()
-            .filter_map(|cf| {
-                let file_name = cf
-                    .entry
-                    .path
-                    .file_name().map_or_else(|| cf.entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+            .filter_map(|entry| {
+                let file_name = entry.path.file_name()
+                    .map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
                 progress(&PakProgress {
                     phase: PakPhase::DecompressingFiles,
                     current,
-                    total: files_to_process,
+                    total: total_files,
                     current_file: Some(file_name.clone()),
                 });
 
+                // Get the correct part file path for this entry
+                let part_path = match get_part_path(pak_path, entry.archive_part) {
+                    Some(p) => p,
+                    None => {
+                        return Some((entry.path.clone(), format!("Cannot determine path for archive part {}", entry.archive_part)));
+                    }
+                };
+
+                // Open file handle for this thread, seek, and read
+                let mut file = match File::open(&part_path) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        return Some((entry.path.clone(), format!("Failed to open {}: {e}", part_path.display())));
+                    }
+                };
+
+                if let Err(e) = file.seek(SeekFrom::Start(entry.offset)) {
+                    return Some((entry.path.clone(), format!("Failed to seek: {e}")));
+                }
+
+                let mut compressed_data = vec![0u8; entry.size_compressed as usize];
+                if let Err(e) = file.read_exact(&mut compressed_data) {
+                    return Some((entry.path.clone(), format!("Failed to read: {e}")));
+                }
+
                 // Decompress
-                let data = match decompress_data(
-                    &cf.compressed_data,
-                    cf.entry.compression,
-                    cf.entry.size_decompressed,
-                ) {
+                let data = match decompress_data(&compressed_data, entry.compression, entry.size_decompressed) {
                     Ok(data) => data,
                     Err(e) => {
-                        tracing::warn!("Failed to decompress {}: {}", cf.entry.path.display(), e);
-                        return Some((cf.entry.path.clone(), e.to_string()));
+                        tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
+                        return Some((entry.path.clone(), e.to_string()));
                     }
                 };
 
                 // Calculate output path (handle virtual texture subfolders)
                 let output_path = if is_virtual_texture_file(&file_name) {
                     if let Some(subfolder) = get_virtual_texture_subfolder(&file_name) {
-                        if let Some(parent) = cf.entry.path.parent() {
+                        if let Some(parent) = entry.path.parent() {
                             output_dir.join(parent).join(&subfolder).join(&file_name)
                         } else {
                             output_dir.join(&subfolder).join(&file_name)
                         }
                     } else {
-                        output_dir.join(&cf.entry.path)
+                        output_dir.join(&entry.path)
                     }
                 } else {
-                    output_dir.join(&cf.entry.path)
+                    output_dir.join(&entry.path)
                 };
 
                 // Create parent directories (idempotent)
                 if let Some(parent) = output_path.parent()
                     && let Err(e) = std::fs::create_dir_all(parent) {
-                        return Some((cf.entry.path.clone(), format!("Failed to create dir: {e}")));
+                        return Some((entry.path.clone(), format!("Failed to create dir: {e}")));
                     }
 
                 // Write file
                 if let Err(e) = std::fs::write(&output_path, &data) {
-                    return Some((cf.entry.path.clone(), format!("Failed to write: {e}")));
+                    return Some((entry.path.clone(), format!("Failed to write: {e}")));
                 }
 
                 None
@@ -534,7 +461,7 @@ impl PakOperations {
         if !errors.is_empty() {
             return Err(Error::ConversionError(format!(
                 "Extracted {} files with {} errors. First error: {}",
-                files_to_process - errors.len(),
+                total_files - errors.len(),
                 errors.len(),
                 errors[0].1
             )));
