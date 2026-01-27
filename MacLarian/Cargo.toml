@@ -72,7 +72,7 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 
 [features]
 default = ["cli"]
-cli = ["dep:clap", "dep:tracing-subscriber", "dep:indicatif"]
+cli = ["dep:clap", "dep:tracing-subscriber", "dep:indicatif", "dep:console"]
 
 # CLI dependencies (optional)
 [dependencies.clap]

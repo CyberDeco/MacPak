@@ -5,28 +5,14 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Result, Context};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::ProgressBar;
 
+use crate::cli::progress::{bar_style, spinner_style};
 use crate::virtual_texture;
 use crate::virtual_texture::{VTexProgress, VTexPhase};
 use crate::virtual_texture::builder::{
     VirtualTextureBuilder, SourceTexture, TileCompressionPreference,
 };
-
-/// Create a standard progress bar style
-fn progress_style() -> ProgressStyle {
-    ProgressStyle::default_bar()
-        .template("{msg} [{bar:40.cyan/blue}] {pos}/{len} ({percent}%)")
-        .expect("valid template")
-        .progress_chars("##-")
-}
-
-/// Create a spinner style for indeterminate progress
-fn spinner_style() -> ProgressStyle {
-    ProgressStyle::default_spinner()
-        .template("{spinner:.cyan} {msg}")
-        .expect("valid template")
-}
 
 /// List textures in a GTS file
 pub fn list(gts_path: &Path) -> Result<()> {
@@ -77,7 +63,7 @@ pub fn extract(
         pb
     } else {
         let pb = ProgressBar::new(1); // Will be updated when we know the total
-        pb.set_style(progress_style());
+        pb.set_style(bar_style());
         pb
     };
 
@@ -136,7 +122,7 @@ pub fn batch(
 
     // Create progress bar
     let pb = ProgressBar::new(gts_files.len() as u64);
-    pb.set_style(progress_style());
+    pb.set_style(bar_style());
 
     let result = virtual_texture::extract_batch(
         &gts_files,
@@ -299,7 +285,7 @@ pub fn create(
         if progress.phase == VTexPhase::Compressing {
             if prev_phase != phase_num {
                 // Phase just changed to compressing - switch to bar style
-                pb.set_style(progress_style());
+                pb.set_style(bar_style());
                 pb.set_length(progress.total as u64);
             }
             pb.set_position(progress.current as u64);

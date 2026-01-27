@@ -4558,6 +4558,7 @@ dependencies = [
  "byteorder",
  "chrono",
  "clap",
+ "console",
  "crc32fast",
  "ddsfile",
  "fastlz-rs",

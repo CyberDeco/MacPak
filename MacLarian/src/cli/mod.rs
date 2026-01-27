@@ -1,6 +1,7 @@
 //! MacLarian CLI - Command-line interface for Larian file format tools
 
 pub mod commands;
+pub mod progress;
 
 use clap::Parser;
 use commands::Commands;

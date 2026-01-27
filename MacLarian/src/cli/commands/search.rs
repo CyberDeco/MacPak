@@ -1,57 +1,52 @@
 //! CLI commands for searching PAK contents
 
 use std::path::Path;
+use std::time::Instant;
 
-use indicatif::{ProgressBar, ProgressStyle};
-
+use crate::cli::progress::{print_step, print_done, simple_spinner, LOOKING_GLASS, LINK, DISK, SPARKLE};
 use crate::search::{FileType, SearchIndex};
 
 /// Build a search index from a PAK file
 pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow::Result<()> {
-    println!("Building search index from: {}", pak.display());
+    let started = Instant::now();
+    let total_steps = if fulltext { 3 } else { 2 } + if output.is_some() { 1 } else { 0 };
+    let mut step = 1;
+
+    print_step(step, total_steps, LOOKING_GLASS, &format!("Reading {}...", pak.display()));
+    step += 1;
 
     let mut index = SearchIndex::new();
     index.build_index(&[pak.to_path_buf()])?;
 
-    println!("Indexed {} files", index.file_count());
+    print_step(step, total_steps, LINK, &format!("Indexed {} files", index.file_count()));
+    step += 1;
 
     if fulltext {
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.cyan} [{elapsed_precise}] {msg}")
-                .expect("valid template"),
-        );
-        pb.enable_steady_tick(std::time::Duration::from_millis(100));
+        print_step(step, total_steps, LINK, "Building full-text index...");
+        step += 1;
 
-        println!("Building full-text index (this may take a while)...");
+        let pb = simple_spinner("Indexing content...");
         let doc_count = index.build_fulltext_index(&|progress| {
             let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
             pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
         })?;
-
         pb.finish_and_clear();
-        println!("Indexed {} documents for full-text search", doc_count);
+
+        println!("  {} Indexed {} documents for full-text search", SPARKLE, doc_count);
     }
 
     if let Some(out) = output {
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.cyan} {msg}")
-                .expect("valid template"),
-        );
-        pb.enable_steady_tick(std::time::Duration::from_millis(100));
+        print_step(step, total_steps, DISK, &format!("Exporting to {}...", out.display()));
 
+        let pb = simple_spinner("Exporting...");
         index.export_index_with_progress(out, &|progress| {
             let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
             pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
         })?;
-
         pb.finish_and_clear();
-        println!("Index exported to: {}", out.display());
     }
 
+    print_done(started.elapsed());
     Ok(())
 }
 
@@ -63,15 +58,7 @@ pub fn search_filename(
 ) -> anyhow::Result<()> {
     let mut index = SearchIndex::new();
 
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.cyan} {msg}")
-            .expect("valid template"),
-    );
-    pb.set_message("Building index...");
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
-
+    let pb = simple_spinner("Building index...");
     index.build_index(&[pak.to_path_buf()])?;
     pb.finish_and_clear();
 
@@ -99,15 +86,7 @@ pub fn search_filename(
 pub fn search_path(pak: &Path, query: &str, type_filter: Option<&str>) -> anyhow::Result<()> {
     let mut index = SearchIndex::new();
 
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.cyan} {msg}")
-            .expect("valid template"),
-    );
-    pb.set_message("Building index...");
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
-
+    let pb = simple_spinner("Building index...");
     index.build_index(&[pak.to_path_buf()])?;
     pb.finish_and_clear();
 
@@ -135,15 +114,7 @@ pub fn search_path(pak: &Path, query: &str, type_filter: Option<&str>) -> anyhow
 pub fn search_uuid(pak: &Path, uuid: &str) -> anyhow::Result<()> {
     let mut index = SearchIndex::new();
 
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.cyan} {msg}")
-            .expect("valid template"),
-    );
-    pb.set_message("Building index...");
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
-
+    let pb = simple_spinner("Building index...");
     index.build_index(&[pak.to_path_buf()])?;
     pb.finish_and_clear();
 
@@ -168,26 +139,23 @@ pub fn search_uuid(pak: &Path, uuid: &str) -> anyhow::Result<()> {
 
 /// Full-text content search
 pub fn search_content(pak: &Path, query: &str, limit: usize) -> anyhow::Result<()> {
+    let started = std::time::Instant::now();
     let mut index = SearchIndex::new();
 
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.cyan} [{elapsed_precise}] {msg}")
-            .expect("valid template"),
-    );
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
-
-    pb.set_message("Building file index...");
+    print_step(1, 2, LOOKING_GLASS, &format!("Reading {}...", pak.display()));
+    let pb = simple_spinner("Building index...");
     index.build_index(&[pak.to_path_buf()])?;
+    pb.finish_and_clear();
 
-    pb.set_message("Building full-text index...");
+    print_step(2, 2, LINK, "Building full-text index...");
+    let pb = simple_spinner("Indexing content...");
     index.build_fulltext_index(&|progress| {
         let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
         pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
     })?;
-
     pb.finish_and_clear();
+
+    print_done(started.elapsed());
 
     if let Some(results) = index.search_fulltext(query, limit) {
         if results.is_empty() {

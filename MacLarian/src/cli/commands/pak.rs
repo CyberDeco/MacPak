@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::time::Instant;
 
-use indicatif::{ProgressBar, ProgressStyle};
-
+use crate::cli::progress::{print_step, print_done, simple_bar, LOOKING_GLASS, PACKAGE, SPARKLE};
 use crate::pak::{batch_create, batch_extract, find_pak_files, find_packable_folders, PakOperations};
 use crate::search::FileType;
 
@@ -105,6 +105,9 @@ pub fn find(dir: &Path) -> anyhow::Result<()> {
 
 /// Batch extract PAK files
 pub fn batch_extract_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
+    let started = Instant::now();
+
+    print_step(1, 2, LOOKING_GLASS, "Scanning for PAK files...");
     let paks = find_pak_files(source);
 
     if paks.is_empty() {
@@ -112,31 +115,23 @@ pub fn batch_extract_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    println!("Found {} PAK files to extract", paks.len());
+    print_step(2, 2, PACKAGE, &format!("Extracting {} PAK files...", paks.len()));
 
-    let pb = ProgressBar::new(paks.len() as u64);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{msg} [{bar:40.cyan/blue}] {pos}/{len} ({percent}%)")
-            .expect("valid template")
-            .progress_chars("##-"),
-    );
-
+    let pb = simple_bar(paks.len() as u64, "Extracting");
     let result = batch_extract(&paks, source, dest, |progress| {
         pb.set_position(progress.current as u64);
         if let Some(ref name) = progress.current_file {
             pb.set_message(name.clone());
         }
     });
-
     pb.finish_and_clear();
 
-    println!();
-    println!("Extraction complete:");
-    println!("  Success: {}", result.success_count);
-    println!("  Failed: {}", result.fail_count);
+    print_done(started.elapsed());
 
+    println!();
+    println!("  {} Success: {}", SPARKLE, result.success_count);
     if result.fail_count > 0 {
+        println!("  Failed: {}", result.fail_count);
         println!();
         println!("Failures:");
         for msg in result.results.iter().filter(|m| m.starts_with("Failed")) {
@@ -149,6 +144,9 @@ pub fn batch_extract_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
 
 /// Batch create PAK files
 pub fn batch_create_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
+    let started = Instant::now();
+
+    print_step(1, 2, LOOKING_GLASS, "Scanning for packable folders...");
     let folders = find_packable_folders(source);
 
     if folders.is_empty() {
@@ -156,31 +154,23 @@ pub fn batch_create_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    println!("Found {} folders to pack", folders.len());
+    print_step(2, 2, PACKAGE, &format!("Creating {} PAK files...", folders.len()));
 
-    let pb = ProgressBar::new(folders.len() as u64);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{msg} [{bar:40.cyan/blue}] {pos}/{len} ({percent}%)")
-            .expect("valid template")
-            .progress_chars("##-"),
-    );
-
+    let pb = simple_bar(folders.len() as u64, "Creating");
     let result = batch_create(&folders, source, dest, |progress| {
         pb.set_position(progress.current as u64);
         if let Some(ref name) = progress.current_file {
             pb.set_message(name.clone());
         }
     });
-
     pb.finish_and_clear();
 
-    println!();
-    println!("Creation complete:");
-    println!("  Success: {}", result.success_count);
-    println!("  Failed: {}", result.fail_count);
+    print_done(started.elapsed());
 
+    println!();
+    println!("  {} Success: {}", SPARKLE, result.success_count);
     if result.fail_count > 0 {
+        println!("  Failed: {}", result.fail_count);
         println!();
         println!("Failures:");
         for msg in result.results.iter().filter(|m| m.starts_with("Failed")) {

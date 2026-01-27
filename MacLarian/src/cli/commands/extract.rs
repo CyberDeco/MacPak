@@ -1,8 +1,9 @@
 //! CLI command for PAK extraction
 
-use indicatif::{ProgressBar, ProgressStyle};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+use crate::cli::progress::simple_bar;
 
 /// GR2 processing options from CLI flags
 #[derive(Debug, Clone, Default)]
@@ -103,18 +104,6 @@ fn matches_glob_recursive(pattern: &[char], text: &[char], pi: usize, ti: usize)
     }
 }
 
-/// Create a progress bar with consistent styling
-fn create_progress_bar(total: u64, message: &str) -> ProgressBar {
-    let pb = ProgressBar::new(total);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{msg} [{bar:40.cyan/blue}] {pos}/{len} ({percent}%) {wide_msg}")
-            .expect("valid template")
-            .progress_chars("█▓░"),
-    );
-    pb.set_message(message.to_string());
-    pb
-}
 
 pub fn execute(
     source: &Path,
@@ -179,7 +168,7 @@ pub fn execute(
         if use_smart_extract {
             execute_smart_extraction(source, destination, &matching, &gr2_options, progress)?;
         } else if progress {
-            let pb = create_progress_bar(matching.len() as u64, "Extracting");
+            let pb = simple_bar(matching.len() as u64, "Extracting");
             let count = AtomicUsize::new(0);
 
             let matching_refs: Vec<&str> = matching.iter().map(String::as_str).collect();
@@ -222,7 +211,7 @@ pub fn execute(
 
         println!("Extracting {} files from {:?}", total, source);
 
-        let pb = create_progress_bar(total, "Extracting");
+        let pb = simple_bar(total, "Extracting");
         let count = AtomicUsize::new(0);
 
         PakOperations::extract_with_progress(source, destination, &|progress| {
@@ -268,7 +257,7 @@ fn execute_smart_extraction(
 
     if progress {
         let total = files.len();
-        let pb = create_progress_bar(total as u64, "Extracting");
+        let pb = simple_bar(total as u64, "Extracting");
         let count = AtomicUsize::new(0);
 
         let result = extract_files_smart(
