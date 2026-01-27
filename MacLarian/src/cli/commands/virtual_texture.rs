@@ -3,7 +3,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use anyhow::{Result, Context};
-use crate::virtual_texture::{self, ExtractOptions};
+use crate::virtual_texture;
+use crate::virtual_texture::builder::{
+    VirtualTextureBuilder, SourceTexture, TileCompressionPreference,
+};
 
 /// List textures in a GTS file
 pub fn list(gts_path: &Path) -> Result<()> {
@@ -30,57 +33,42 @@ pub fn list(gts_path: &Path) -> Result<()> {
 
 /// Extract textures from GTS/GTP files
 pub fn extract(
-    gts_path: &Path,
-    gtp_dir: Option<&Path>,
+    input_path: &Path,
     output_dir: &Path,
     _texture_name: Option<&str>,
     layers: Vec<usize>,
-    all_layers: bool,
+    _all_layers: bool,
 ) -> Result<()> {
-    // Create output directory
-    fs::create_dir_all(output_dir)
-        .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
+    let ext = input_path
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
 
-    // Build extraction options
-    let options = ExtractOptions {
-        layers: layers.clone(),
-        all_layers,
-    };
-
-    // If a specific GTP directory is provided, extract just GTPs from there
-    if let Some(gtp_path) = gtp_dir {
-        println!("Extracting from {} with GTS {}...", gtp_path.display(), gts_path.display());
-
-        virtual_texture::VirtualTextureExtractor::extract_with_options(
-            gtp_path,
-            gts_path,
-            output_dir,
-            &options,
-        ).with_context(|| "Failed to extract virtual texture")?;
-
-        println!("Extraction complete -> {}", output_dir.display());
-        return Ok(());
-    }
-
-    // Otherwise, extract all GTPs referenced by this GTS
-    let info = virtual_texture::list_gts(gts_path)
-        .with_context(|| format!("Failed to parse GTS file: {}", gts_path.display()))?;
-
-    println!("Layers: {} | Page files: {}", info.num_layers, info.page_files.len());
+    let is_gtp = ext == "gtp";
 
     if !layers.is_empty() {
         println!("Layer filter: {:?}", layers);
     }
 
-    let result = virtual_texture::extract_all(gts_path, output_dir)
-        .with_context(|| "Failed to extract virtual textures")?;
+    // Use extract_gts_file which handles both GTS and GTP inputs
+    let result = virtual_texture::extract_gts_file(
+        input_path,
+        Some(output_dir),
+        |current, total, desc| {
+            if is_gtp {
+                // Single GTP mode - simpler output
+                println!("{}", desc);
+            } else {
+                // GTS mode - show progress
+                println!("[{}/{}] {}", current, total, desc);
+            }
+        },
+    ).with_context(|| format!("Failed to extract {}", input_path.display()))?;
 
-    println!("Extracted {}/{} GTP files to {}", result.extracted, result.total, output_dir.display());
-
-    if !result.errors.is_empty() {
-        for err in &result.errors {
-            eprintln!("Warning: {}", err);
-        }
+    if is_gtp {
+        println!("Extracted {} textures to {}", result.texture_count, output_dir.display());
+    } else {
+        println!("Extracted {}/{} GTP files to {}", result.texture_count, result.gtp_count, output_dir.display());
     }
 
     Ok(())
@@ -197,6 +185,95 @@ pub fn gtp_info(gtp_path: &Path, gts_path: Option<&Path>) -> Result<()> {
     for (page, chunks) in info.chunks_per_page.iter().enumerate() {
         println!("  Page {}: {} chunks", page, chunks);
     }
+
+    Ok(())
+}
+
+/// Create a virtual texture set from DDS source textures
+pub fn create(
+    name: &str,
+    base_map: Option<&Path>,
+    normal_map: Option<&Path>,
+    physical_map: Option<&Path>,
+    output_dir: &Path,
+    compression: Option<&str>,
+    tile_size: Option<u32>,
+    no_embed_mip: bool,
+) -> Result<()> {
+    // Build source texture
+    let mut texture = SourceTexture::new(name);
+
+    if let Some(p) = base_map {
+        texture = texture.with_base_map(p);
+    }
+    if let Some(p) = normal_map {
+        texture = texture.with_normal_map(p);
+    }
+    if let Some(p) = physical_map {
+        texture = texture.with_physical_map(p);
+    }
+
+    if !texture.has_any_layer() {
+        anyhow::bail!("At least one layer (--base, --normal, or --physical) must be specified");
+    }
+
+    // Build the virtual texture
+    let mut builder = VirtualTextureBuilder::new()
+        .name(name)
+        .add_texture(texture);
+
+    // Set compression preference
+    if let Some(comp) = compression {
+        let pref = match comp.to_lowercase().as_str() {
+            "raw" => TileCompressionPreference::Raw,
+            "lz4" => TileCompressionPreference::Lz4,
+            "fastlz" => TileCompressionPreference::FastLZ,
+            "best" => TileCompressionPreference::Best,
+            _ => anyhow::bail!("Unknown compression: {}. Use: raw, lz4, fastlz, or best", comp),
+        };
+        builder = builder.compression(pref);
+    }
+
+    // Set tile size
+    if let Some(size) = tile_size {
+        builder = builder.tile_size(size, size);
+    }
+
+    // Disable mip embedding if requested
+    if no_embed_mip {
+        builder = builder.embed_mip(false);
+    }
+
+    println!("Creating virtual texture '{}'...", name);
+    println!("Output: {}", output_dir.display());
+
+    // Create output directory
+    fs::create_dir_all(output_dir)
+        .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
+
+    // Build with progress reporting
+    let result = builder.build_with_progress(output_dir, |progress| {
+        if progress.total > 0 {
+            println!(
+                "[{}/{}] {}{}",
+                progress.current,
+                progress.total,
+                progress.phase.description(),
+                progress.message.as_ref().map(|m| format!(": {}", m)).unwrap_or_default()
+            );
+        } else {
+            println!("{}", progress.phase.description());
+        }
+    }).with_context(|| "Failed to create virtual texture")?;
+
+    println!();
+    println!("Virtual texture created successfully!");
+    println!("  GTS: {}", result.gts_path.display());
+    for gtp in &result.gtp_paths {
+        println!("  GTP: {}", gtp.display());
+    }
+    println!("  Tiles: {} ({} unique after deduplication)", result.tile_count, result.unique_tile_count);
+    println!("  Total size: {} bytes", result.total_size_bytes);
 
     Ok(())
 }

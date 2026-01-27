@@ -338,16 +338,12 @@ pub enum VirtualTextureCommands {
 
     /// Extract textures from GTS/GTP files to DDS
     Extract {
-        /// Path to .gts file
-        gts: PathBuf,
+        /// Path to .gts or .gtp file
+        path: PathBuf,
 
         /// Output directory for DDS files
         #[arg(short, long)]
         output: PathBuf,
-
-        /// Directory containing GTP files (defaults to GTS directory)
-        #[arg(long)]
-        gtp_dir: Option<PathBuf>,
 
         /// Extract only this texture (by name)
         #[arg(short, long)]
@@ -361,6 +357,41 @@ pub enum VirtualTextureCommands {
         /// Extract all layers (creates _0, _1, _2 files per texture)
         #[arg(short, long)]
         all_layers: bool,
+    },
+
+    /// Create a virtual texture set from DDS source textures
+    Create {
+        /// Name for the virtual texture
+        #[arg(short, long)]
+        name: String,
+
+        /// Path to base map DDS (color/albedo)
+        #[arg(long)]
+        base: Option<PathBuf>,
+
+        /// Path to normal map DDS
+        #[arg(long)]
+        normal: Option<PathBuf>,
+
+        /// Path to physical map DDS (roughness/metallic)
+        #[arg(long)]
+        physical: Option<PathBuf>,
+
+        /// Output directory
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Compression method: raw, lz4, fastlz, best (default: best)
+        #[arg(short, long)]
+        compression: Option<String>,
+
+        /// Tile size in pixels (default: 128)
+        #[arg(long)]
+        tile_size: Option<u32>,
+
+        /// Disable embedding mip levels in tiles (use for DDS without mips)
+        #[arg(long)]
+        no_embed_mip: bool,
     },
 
     /// Batch extract multiple GTS files in parallel
@@ -725,14 +756,25 @@ impl VirtualTextureCommands {
             VirtualTextureCommands::List { path } => {
                 virtual_texture::list(path)
             }
-            VirtualTextureCommands::Extract { gts, output, gtp_dir, texture, layer, all_layers } => {
+            VirtualTextureCommands::Extract { path, output, texture, layer, all_layers } => {
                 virtual_texture::extract(
-                    gts,
-                    gtp_dir.as_deref(),
+                    path,
                     output,
                     texture.as_deref(),
                     layer.iter().map(|l| l.0).collect(),
                     *all_layers,
+                )
+            }
+            VirtualTextureCommands::Create { name, base, normal, physical, output, compression, tile_size, no_embed_mip } => {
+                virtual_texture::create(
+                    name,
+                    base.as_deref(),
+                    normal.as_deref(),
+                    physical.as_deref(),
+                    output,
+                    compression.as_deref(),
+                    *tile_size,
+                    *no_embed_mip,
                 )
             }
             VirtualTextureCommands::Batch { input, output, layer, recursive } => {
