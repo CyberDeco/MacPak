@@ -9,6 +9,7 @@ use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use super::PakOperations;
+use super::lspk::{PakProgress, PakPhase};
 
 /// Result of a batch PAK operation
 #[derive(Debug, Clone)]
@@ -98,7 +99,7 @@ fn contains_files_recursive(dir: &Path) -> bool {
 /// * `pak_files` - List of PAK files to extract
 /// * `source_base` - Base directory of the source (for calculating relative paths)
 /// * `dest_base` - Destination directory for extracted files
-/// * `progress` - Callback for progress updates (current, total, description)
+/// * `progress` - Callback for progress updates
 ///
 /// # Returns
 /// Summary of the batch extraction operation.
@@ -109,7 +110,7 @@ pub fn batch_extract<F>(
     progress: F,
 ) -> BatchPakResult
 where
-    F: Fn(usize, usize, &str) + Send + Sync,
+    F: Fn(&PakProgress) + Send + Sync,
 {
     let success_counter = AtomicUsize::new(0);
     let fail_counter = AtomicUsize::new(0);
@@ -128,7 +129,12 @@ where
 
             // Update progress (atomic)
             let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
-            progress(current, total, &display_path);
+            progress(&PakProgress::with_file(
+                PakPhase::DecompressingFiles,
+                current,
+                total,
+                display_path.to_string(),
+            ));
 
             // Preserve directory structure: create subfolder matching relative path
             let relative_parent = relative_path.parent().unwrap_or(Path::new(""));
@@ -180,7 +186,7 @@ where
 /// * `folders` - List of folders to pack
 /// * `source_base` - Base directory of the source (for calculating relative paths)
 /// * `dest_base` - Destination directory for PAK files
-/// * `progress` - Callback for progress updates (current, total, description)
+/// * `progress` - Callback for progress updates
 ///
 /// # Returns
 /// Summary of the batch creation operation.
@@ -191,7 +197,7 @@ pub fn batch_create<F>(
     progress: F,
 ) -> BatchPakResult
 where
-    F: Fn(usize, usize, &str) + Send + Sync,
+    F: Fn(&PakProgress) + Send + Sync,
 {
     let success_counter = AtomicUsize::new(0);
     let fail_counter = AtomicUsize::new(0);
@@ -215,7 +221,12 @@ where
 
             // Update progress (atomic)
             let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
-            progress(current, total, &display_path);
+            progress(&PakProgress::with_file(
+                PakPhase::CompressingFiles,
+                current,
+                total,
+                display_path.to_string(),
+            ));
 
             // Preserve directory structure: create PAK in matching relative path
             let relative_parent = relative_path.parent().unwrap_or(Path::new(""));

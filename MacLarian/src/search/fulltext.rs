@@ -10,6 +10,7 @@ use tantivy::schema::{Field, Schema, Value, STORED, STRING, TEXT};
 use tantivy::{doc, Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument};
 
 use crate::error::{Error, Result};
+use super::{SearchProgress, SearchPhase, SearchProgressCallback};
 
 /// Full-text search index using Tantivy with in-memory storage.
 ///
@@ -213,16 +214,14 @@ impl FullTextIndex {
     /// # Errors
     /// Returns an error if the search fails.
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<FullTextResult>> {
-        self.search_with_progress(query, limit, |_, _, _| {})
+        self.search_with_progress(query, limit, &|_| {})
     }
 
-    /// Search with progress callback: (current, total, filename)
+    /// Search with progress callback
     ///
     /// # Errors
     /// Returns an error if the query is invalid or the search fails.
-    pub fn search_with_progress<F>(&self, query: &str, limit: usize, progress: F) -> Result<Vec<FullTextResult>>
-    where
-        F: Fn(usize, usize, &str),
+    pub fn search_with_progress(&self, query: &str, limit: usize, progress: SearchProgressCallback) -> Result<Vec<FullTextResult>>
     {
         let searcher = self.reader.searcher();
 
@@ -230,18 +229,18 @@ impl FullTextIndex {
         let query_parser =
             QueryParser::for_index(&self.index, vec![self.name_field, self.content_field]);
 
-        progress(0, 1, "Parsing query...");
+        progress(&SearchProgress::with_file(SearchPhase::Searching, 0, 1, "Parsing query..."));
         let parsed_query = query_parser
             .parse_query(query)
             .map_err(|e| Error::SearchError(format!("Invalid query: {e}")))?;
 
-        progress(0, 1, "Searching index...");
+        progress(&SearchProgress::with_file(SearchPhase::Searching, 0, 1, "Searching index..."));
         let top_docs = searcher
             .search(&parsed_query, &TopDocs::with_limit(limit))
             .map_err(|e| Error::SearchError(format!("Search failed: {e}")))?;
 
         let total = top_docs.len();
-        progress(0, total, "Processing results...");
+        progress(&SearchProgress::with_file(SearchPhase::Searching, 0, total, "Processing results..."));
 
         // Extract search terms from the query for custom snippet generation
         let search_terms = extract_search_terms(query);
@@ -286,7 +285,7 @@ impl FullTextIndex {
 
             // Report progress every 50 docs
             if i % 50 == 0 {
-                progress(i, total, &name);
+                progress(&SearchProgress::with_file(SearchPhase::Searching, i, total, &name));
             }
 
             results.push(FullTextResult {
@@ -300,7 +299,7 @@ impl FullTextIndex {
             });
         }
 
-        progress(total, total, "Complete");
+        progress(&SearchProgress::new(SearchPhase::Complete, total, total));
         Ok(results)
     }
 

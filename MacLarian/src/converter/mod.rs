@@ -15,9 +15,84 @@ pub mod loca;
 pub mod gr2_gltf;
 mod dds_png;
 
-/// Progress callback type for conversion operations.
-/// The callback receives a message describing the current step.
-pub type ProgressCallback<'a> = &'a dyn Fn(&str);
+/// Progress callback type for conversion operations
+pub type ConvertProgressCallback<'a> = &'a (dyn Fn(&ConvertProgress) + Sync + Send);
+
+/// Progress information during conversion operations
+#[derive(Debug, Clone)]
+pub struct ConvertProgress {
+    /// Current operation phase
+    pub phase: ConvertPhase,
+    /// Current item number (1-indexed)
+    pub current: usize,
+    /// Total number of items
+    pub total: usize,
+    /// Current file or item being processed (if applicable)
+    pub current_file: Option<String>,
+}
+
+impl ConvertProgress {
+    /// Create a new progress update
+    #[must_use]
+    pub fn new(phase: ConvertPhase, current: usize, total: usize) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: None,
+        }
+    }
+
+    /// Create a progress update with a file/item name
+    #[must_use]
+    pub fn with_file(phase: ConvertPhase, current: usize, total: usize, file: impl Into<String>) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: Some(file.into()),
+        }
+    }
+
+    /// Get the progress percentage (0.0 - 1.0)
+    #[must_use]
+    pub fn percentage(&self) -> f32 {
+        if self.total == 0 {
+            1.0
+        } else {
+            self.current as f32 / self.total as f32
+        }
+    }
+}
+
+/// Phase of conversion operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConvertPhase {
+    /// Reading source file
+    ReadingSource,
+    /// Parsing source format
+    Parsing,
+    /// Converting data structures
+    Converting,
+    /// Writing output file
+    WritingOutput,
+    /// Operation complete
+    Complete,
+}
+
+impl ConvertPhase {
+    /// Get a human-readable description of this phase
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ReadingSource => "Reading source",
+            Self::Parsing => "Parsing",
+            Self::Converting => "Converting",
+            Self::WritingOutput => "Writing output",
+            Self::Complete => "Complete",
+        }
+    }
+}
 
 // Re-export LSF/LSX/LSJ conversions - primary API only
 pub use lsf_lsx_lsj::{

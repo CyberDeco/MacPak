@@ -88,6 +88,10 @@ optional = true
 version = "0.17"
 optional = true
 
+[dependencies.console]
+version = "0.15"
+optional = true
+
 [[bin]]
 name = "maclarian"
 path = "src/bin/maclarian.rs"

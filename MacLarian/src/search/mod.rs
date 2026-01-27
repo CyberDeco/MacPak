@@ -122,9 +122,90 @@ pub struct IndexedFile {
     pub size: u64,
 }
 
-/// Progress callback for content indexing
-/// Arguments: (current, total, description)
-pub type ProgressCallback<'a> = &'a (dyn Fn(usize, usize, &str) + Sync + Send);
+/// Progress callback type for search operations
+pub type SearchProgressCallback<'a> = &'a (dyn Fn(&SearchProgress) + Sync + Send);
+
+/// Progress information during search operations
+#[derive(Debug, Clone)]
+pub struct SearchProgress {
+    /// Current operation phase
+    pub phase: SearchPhase,
+    /// Current item number (1-indexed)
+    pub current: usize,
+    /// Total number of items
+    pub total: usize,
+    /// Current file or item being processed (if applicable)
+    pub current_file: Option<String>,
+}
+
+impl SearchProgress {
+    /// Create a new progress update
+    #[must_use]
+    pub fn new(phase: SearchPhase, current: usize, total: usize) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: None,
+        }
+    }
+
+    /// Create a progress update with a file/item name
+    #[must_use]
+    pub fn with_file(phase: SearchPhase, current: usize, total: usize, file: impl Into<String>) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: Some(file.into()),
+        }
+    }
+
+    /// Get the progress percentage (0.0 - 1.0)
+    #[must_use]
+    pub fn percentage(&self) -> f32 {
+        if self.total == 0 {
+            1.0
+        } else {
+            self.current as f32 / self.total as f32
+        }
+    }
+}
+
+/// Phase of search operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchPhase {
+    /// Scanning PAK files for file listings
+    ScanningPaks,
+    /// Building file metadata index
+    BuildingIndex,
+    /// Indexing file content for full-text search
+    IndexingContent,
+    /// Exporting index to disk
+    ExportingIndex,
+    /// Importing index from disk
+    ImportingIndex,
+    /// Searching the index
+    Searching,
+    /// Operation complete
+    Complete,
+}
+
+impl SearchPhase {
+    /// Get a human-readable description of this phase
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ScanningPaks => "Scanning PAKs",
+            Self::BuildingIndex => "Building index",
+            Self::IndexingContent => "Indexing content",
+            Self::ExportingIndex => "Exporting index",
+            Self::ImportingIndex => "Importing index",
+            Self::Searching => "Searching",
+            Self::Complete => "Complete",
+        }
+    }
+}
 
 /// Search index for PAK file contents
 ///
@@ -379,7 +460,7 @@ impl SearchIndex {
     ///
     /// # Errors
     /// Returns an error if file extraction or indexing fails.
-    pub fn build_fulltext_index(&mut self, progress: ProgressCallback) -> Result<usize> {
+    pub fn build_fulltext_index(&mut self, progress: SearchProgressCallback) -> Result<usize> {
         if !self.indexed {
             return Ok(0);
         }
@@ -396,7 +477,12 @@ impl SearchIndex {
             .collect();
 
         let total_files = searchable_files.len();
-        progress(0, total_files, "Starting content indexing...");
+        progress(&SearchProgress::with_file(
+            SearchPhase::IndexingContent,
+            0,
+            total_files,
+            "Starting content indexing...",
+        ));
 
         // Group files by PAK for efficient reading
         let mut by_pak: HashMap<PathBuf, Vec<&IndexedFile>> = HashMap::new();
@@ -416,7 +502,12 @@ impl SearchIndex {
             let pak_name = pak_path
                 .file_name().map_or_else(|| "Unknown".to_string(), |n| n.to_string_lossy().to_string());
 
-            progress(indexed_count, total_files, &pak_name);
+            progress(&SearchProgress::with_file(
+                SearchPhase::IndexingContent,
+                indexed_count,
+                total_files,
+                &pak_name,
+            ));
 
             // Collect all file paths for bulk reading
             let file_paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
@@ -450,7 +541,12 @@ impl SearchIndex {
 
                 indexed_count += 1;
                 if indexed_count % 1000 == 0 {
-                    progress(indexed_count, total_files, &pak_name);
+                    progress(&SearchProgress::with_file(
+                        SearchPhase::IndexingContent,
+                        indexed_count,
+                        total_files,
+                        &pak_name,
+                    ));
                 }
 
                 fulltext.add_document(
@@ -476,7 +572,7 @@ impl SearchIndex {
             fulltext.num_docs()
         );
 
-        progress(total_files, total_files, "Content indexing complete");
+        progress(&SearchProgress::new(SearchPhase::Complete, total_files, total_files));
 
         self.fulltext = Some(fulltext);
         Ok(indexed_count)
@@ -493,10 +589,8 @@ impl SearchIndex {
         self.fulltext.as_ref().and_then(|ft| ft.search(query, limit).ok())
     }
 
-    /// Search fulltext index with progress callback: (current, total, filename)
-    pub fn search_fulltext_with_progress<F>(&self, query: &str, limit: usize, progress: F) -> Option<Vec<FullTextResult>>
-    where
-        F: Fn(usize, usize, &str),
+    /// Search fulltext index with progress callback
+    pub fn search_fulltext_with_progress(&self, query: &str, limit: usize, progress: SearchProgressCallback) -> Option<Vec<FullTextResult>>
     {
         self.fulltext.as_ref().and_then(|ft| ft.search_with_progress(query, limit, progress).ok())
     }
@@ -515,21 +609,17 @@ impl SearchIndex {
     /// # Errors
     /// Returns an error if writing the index fails.
     pub fn export_index(&self, dir: &Path) -> Result<()> {
-        self.export_index_with_progress(dir, |_, _, _| {})
+        self.export_index_with_progress(dir, &|_| {})
     }
 
     /// Export the fulltext index with progress callback
-    ///
-    /// Progress callback receives (current, total, message).
     ///
     /// # Errors
     /// Returns an error if no fulltext index exists or writing fails.
     ///
     /// # Panics
     /// This function does not panic under normal conditions.
-    pub fn export_index_with_progress<F>(&self, dir: &Path, progress: F) -> Result<()>
-    where
-        F: Fn(usize, usize, &str) + Sync,
+    pub fn export_index_with_progress(&self, dir: &Path, progress: SearchProgressCallback) -> Result<()>
     {
         use tantivy::TantivyDocument;
 
@@ -540,20 +630,35 @@ impl SearchIndex {
             ));
         }
 
-        progress(0, 1, "Creating export directory...");
+        progress(&SearchProgress::with_file(
+            SearchPhase::ExportingIndex,
+            0,
+            1,
+            "Creating export directory...",
+        ));
 
         // Create the export directory
         std::fs::create_dir_all(dir)?;
 
         // Save file entries (needed for filename/path search)
-        progress(0, 1, "Saving file entries...");
+        progress(&SearchProgress::with_file(
+            SearchPhase::ExportingIndex,
+            0,
+            1,
+            "Saving file entries...",
+        ));
         let entries_path = dir.join("entries.json");
         let entries_json = serde_json::to_string(&self.entries)
             .map_err(|e| crate::error::Error::SearchError(format!("Failed to serialize entries: {e}")))?;
         std::fs::write(&entries_path, entries_json)?;
 
         // Save metadata
-        progress(0, 1, "Saving metadata...");
+        progress(&SearchProgress::with_file(
+            SearchPhase::ExportingIndex,
+            0,
+            1,
+            "Saving metadata...",
+        ));
         let metadata = IndexMetadata {
             file_count: self.file_count,
             pak_count: self.indexed_paks.len(),
@@ -572,7 +677,12 @@ impl SearchIndex {
 
         // Count total documents for progress
         let total_docs = ft.num_docs() as usize;
-        progress(0, total_docs, "Reading documents...");
+        progress(&SearchProgress::with_file(
+            SearchPhase::ExportingIndex,
+            0,
+            total_docs,
+            "Reading documents...",
+        ));
 
         // Read all documents from segments in parallel using rayon
         let searcher = ft.searcher();
@@ -591,23 +701,38 @@ impl SearchIndex {
             })
             .collect();
 
-        progress(all_docs.len(), total_docs, "Writing documents...");
+        progress(&SearchProgress::with_file(
+            SearchPhase::ExportingIndex,
+            all_docs.len(),
+            total_docs,
+            "Writing documents...",
+        ));
 
         // Sequential write (IndexWriter is not thread-safe for concurrent adds)
         for (i, doc) in all_docs.into_iter().enumerate() {
             writer.add_document(doc)
                 .map_err(|e| crate::error::Error::SearchError(format!("Failed to copy doc: {e}")))?;
             if i % 5000 == 0 {
-                progress(i, total_docs, "Writing documents...");
+                progress(&SearchProgress::with_file(
+                    SearchPhase::ExportingIndex,
+                    i,
+                    total_docs,
+                    "Writing documents...",
+                ));
             }
         }
 
-        progress(total_docs, total_docs, "Committing index...");
+        progress(&SearchProgress::with_file(
+            SearchPhase::ExportingIndex,
+            total_docs,
+            total_docs,
+            "Committing index...",
+        ));
         writer
             .commit()
             .map_err(|e| crate::error::Error::SearchError(format!("Export commit failed: {e}")))?;
 
-        progress(total_docs, total_docs, "Export complete");
+        progress(&SearchProgress::new(SearchPhase::Complete, total_docs, total_docs));
         tracing::info!("Exported index to {} ({} docs)", dir.display(), metadata.fulltext_doc_count);
         Ok(())
     }

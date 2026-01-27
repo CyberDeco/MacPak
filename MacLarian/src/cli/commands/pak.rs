@@ -122,9 +122,11 @@ pub fn batch_extract_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
             .progress_chars("##-"),
     );
 
-    let result = batch_extract(&paks, source, dest, |current, _total, name| {
-        pb.set_position(current as u64);
-        pb.set_message(name.to_string());
+    let result = batch_extract(&paks, source, dest, |progress| {
+        pb.set_position(progress.current as u64);
+        if let Some(ref name) = progress.current_file {
+            pb.set_message(name.clone());
+        }
     });
 
     pb.finish_and_clear();
@@ -164,9 +166,11 @@ pub fn batch_create_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
             .progress_chars("##-"),
     );
 
-    let result = batch_create(&folders, source, dest, |current, _total, name| {
-        pb.set_position(current as u64);
-        pb.set_message(name.to_string());
+    let result = batch_create(&folders, source, dest, |progress| {
+        pb.set_position(progress.current as u64);
+        if let Some(ref name) = progress.current_file {
+            pb.set_message(name.clone());
+        }
     });
 
     pb.finish_and_clear();

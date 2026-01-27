@@ -28,18 +28,19 @@ pub fn convert_lsj_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
 pub fn convert_lsj_to_lsx_with_progress<P: AsRef<Path>>(
     source: P,
     dest: P,
-    progress: crate::converter::ProgressCallback,
+    progress: crate::converter::ConvertProgressCallback,
 ) -> Result<()> {
+    use crate::converter::{ConvertProgress, ConvertPhase};
     tracing::info!("Converting LSJ→LSX: {:?} → {:?}", source.as_ref(), dest.as_ref());
 
-    progress("Reading LSJ file...");
+    progress(&ConvertProgress::with_file(ConvertPhase::ReadingSource, 1, 3, "Reading LSJ file..."));
     let lsj_doc = crate::formats::lsj::read_lsj(&source)?;
 
     let region_count = lsj_doc.save.regions.len();
-    progress(&format!("Converting {region_count} regions to XML..."));
+    progress(&ConvertProgress::with_file(ConvertPhase::Converting, 2, 3, format!("Converting {region_count} regions to XML...")));
     let lsx_doc = to_lsx(&lsj_doc)?;
 
-    progress("Writing LSX file...");
+    progress(&ConvertProgress::with_file(ConvertPhase::WritingOutput, 3, 3, "Writing LSX file..."));
     lsx::write_lsx(&lsx_doc, dest)?;
 
     tracing::info!("Conversion complete");

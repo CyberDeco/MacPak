@@ -25,8 +25,9 @@ pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow:
         pb.enable_steady_tick(std::time::Duration::from_millis(100));
 
         println!("Building full-text index (this may take a while)...");
-        let doc_count = index.build_fulltext_index(&|current, total, msg| {
-            pb.set_message(format!("{msg}: {current}/{total}"));
+        let doc_count = index.build_fulltext_index(&|progress| {
+            let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+            pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
         })?;
 
         pb.finish_and_clear();
@@ -42,8 +43,9 @@ pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow:
         );
         pb.enable_steady_tick(std::time::Duration::from_millis(100));
 
-        index.export_index_with_progress(out, |current, total, msg| {
-            pb.set_message(format!("{msg}: {current}/{total}"));
+        index.export_index_with_progress(out, &|progress| {
+            let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+            pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
         })?;
 
         pb.finish_and_clear();
@@ -180,8 +182,9 @@ pub fn search_content(pak: &Path, query: &str, limit: usize) -> anyhow::Result<(
     index.build_index(&[pak.to_path_buf()])?;
 
     pb.set_message("Building full-text index...");
-    index.build_fulltext_index(&|current, total, msg| {
-        pb.set_message(format!("{msg}: {current}/{total}"));
+    index.build_fulltext_index(&|progress| {
+        let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+        pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
     })?;
 
     pb.finish_and_clear();
