@@ -38,13 +38,15 @@ use crate::virtual_texture::writer::{
     gts_writer::{GtsWriter, LayerInfo, LevelInfo as GtsLevelInfo, PageFileInfo, create_bc_parameter_block},
     gtp_writer::{GtpWriter, Chunk},
 };
+use rayon::prelude::*;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use uuid::Uuid;
 
 use self::compression::{compress_tile, CompressedTile};
-use self::deduplication::deduplicate_tiles;
+use self::deduplication::build_dedup_map;
 use self::geometry::calculate_geometry;
 use self::tile_processor::{DdsTexture, extract_tiles_from_dds, ProcessedTile};
 
@@ -247,6 +249,28 @@ impl VirtualTextureBuilder {
         self.build_with_progress(output_dir, |_| {})
     }
 
+    /// Build with simple progress callback (matches reader/batch API)
+    ///
+    /// Progress callback receives (current, total, description) matching the
+    /// signature used by `extract_gts_file` and `extract_batch`.
+    ///
+    /// # Arguments
+    /// * `output_dir` - Directory to write the GTS and GTP files to
+    /// * `progress` - Callback function that receives (current, total, description)
+    ///
+    /// # Returns
+    /// Result containing build information on success
+    pub fn build_with_simple_progress<P, F>(self, output_dir: P, progress: F) -> Result<BuildResult>
+    where
+        P: AsRef<Path>,
+        F: Fn(usize, usize, &str) + Send + Sync,
+    {
+        self.build_with_progress(output_dir, |p| {
+            let desc = p.message.as_deref().unwrap_or(p.phase.description());
+            progress(p.current, p.total, desc);
+        })
+    }
+
     /// Build the virtual texture set with progress reporting
     ///
     /// # Arguments
@@ -300,7 +324,9 @@ impl VirtualTextureBuilder {
         // Phase: Extract Tiles
         progress(&BuildProgress::new(BuildPhase::ExtractingTiles, 0, 3));
 
-        let mut all_tiles: Vec<ProcessedTile> = Vec::new();
+        // Pre-allocate based on estimated total tiles across all layers
+        let estimated_tiles: usize = geometry.tiles_per_layer.iter().map(|t| t.len()).sum();
+        let mut all_tiles: Vec<ProcessedTile> = Vec::with_capacity(estimated_tiles);
         let layer_paths = texture.layer_paths();
 
         // Load DDS textures for each layer
@@ -336,33 +362,48 @@ impl VirtualTextureBuilder {
 
         let total_tile_count = all_tiles.len();
 
-        // Phase: Deduplicate
+        // Phase: Deduplicate (build map only - memory efficient)
         progress(&BuildProgress::new(BuildPhase::Deduplicating, 0, total_tile_count));
 
-        let (unique_tiles, _tile_mapping) = if self.config.deduplicate {
-            let result = deduplicate_tiles(all_tiles);
-            (result.unique_tiles, result.tile_mapping)
+        let (is_first, unique_idx) = if self.config.deduplicate {
+            build_dedup_map(&all_tiles)
         } else {
-            let mapping: Vec<usize> = (0..all_tiles.len()).collect();
-            (all_tiles, mapping)
+            // No dedup: all tiles are unique
+            let is_first: Vec<bool> = vec![true; all_tiles.len()];
+            let unique_idx: Vec<usize> = (0..all_tiles.len()).collect();
+            (is_first, unique_idx)
         };
 
-        let unique_tile_count = unique_tiles.len();
+        let unique_tile_count = is_first.iter().filter(|&&x| x).count();
 
-        // Phase: Compress
+        // Collect indices of unique tiles for parallel compression
+        let unique_indices: Vec<usize> = is_first
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &first)| if first { Some(i) } else { None })
+            .collect();
+
+        // Phase: Compress (parallelized with rayon, only unique tiles)
         progress(&BuildProgress::new(BuildPhase::Compressing, 0, unique_tile_count));
 
-        let mut compressed_tiles: Vec<CompressedTile> = Vec::with_capacity(unique_tile_count);
-        for (i, tile) in unique_tiles.iter().enumerate() {
-            if i % 100 == 0 {
-                progress(&BuildProgress::new(BuildPhase::Compressing, i, unique_tile_count));
-            }
-            let full_data = tile.full_data();
-            let compressed = compress_tile(&full_data, self.config.compression)?;
-            compressed_tiles.push(compressed);
-        }
+        let processed = AtomicUsize::new(0);
+        let compression = self.config.compression;
 
-        // Phase: Write GTP
+        let compressed_unique: Result<Vec<CompressedTile>> = unique_indices
+            .par_iter()
+            .map(|&idx| {
+                let current = processed.fetch_add(1, Ordering::Relaxed);
+                if current % 100 == 0 {
+                    progress(&BuildProgress::new(BuildPhase::Compressing, current, unique_tile_count));
+                }
+                compress_tile(&all_tiles[idx].full_data(), compression)
+            })
+            .collect();
+
+        let compressed_unique = compressed_unique?;
+        progress(&BuildProgress::new(BuildPhase::Compressing, unique_tile_count, unique_tile_count));
+
+        // Phase: Write GTP (streaming - write chunks and track locations)
         progress(&BuildProgress::new(BuildPhase::WritingGtp, 0, 1));
 
         // Generate hash from GUID for filename (extractor expects Name_HASH.gtp format)
@@ -372,25 +413,30 @@ impl VirtualTextureBuilder {
 
         let mut gtp_writer = GtpWriter::new(self.guid, self.config.page_size);
 
-        // Determine parameter block based on first tile's compression
-        let (compression1, compression2) = if !compressed_tiles.is_empty() {
-            compressed_tiles[0].method.compression_strings()
-        } else {
-            self.config.compression.compression_strings()
-        };
+        // Determine compression strings from config
+        let (compression1, compression2) = self.config.compression.compression_strings();
 
-        // Add tiles to GTP writer and track their locations
-        let mut flat_tile_infos: Vec<(GtsFlatTileInfo, usize, u32)> = Vec::new(); // (info, level, packed_id)
+        // Write unique chunks to GTP and track their locations
+        // chunk_locations[unique_idx] = (page_idx, chunk_idx)
+        let mut chunk_locations: Vec<(u16, u16)> = Vec::with_capacity(unique_tile_count);
 
-        for (tile, compressed) in unique_tiles.iter().zip(compressed_tiles.iter()) {
-            // All tiles use Bc codec - the parameter block specifies the secondary compression (LZ4/FastLZ)
+        for compressed in &compressed_unique {
             let chunk = Chunk {
                 codec: GtsCodec::Bc,
-                parameter_block_id: 0, // Single parameter block
+                parameter_block_id: 0,
                 data: compressed.data.clone(),
             };
-
             let (page_idx, chunk_idx) = gtp_writer.add_chunk(chunk);
+            chunk_locations.push((page_idx, chunk_idx));
+        }
+
+        // Build flat_tile_infos for ALL tiles (including duplicates)
+        // Each tile references the chunk location of its unique counterpart
+        let mut flat_tile_infos: Vec<(GtsFlatTileInfo, usize, u32)> = Vec::with_capacity(total_tile_count);
+
+        for (i, tile) in all_tiles.iter().enumerate() {
+            let u_idx = unique_idx[i];
+            let (page_idx, chunk_idx) = chunk_locations[u_idx];
 
             flat_tile_infos.push((
                 GtsFlatTileInfo {
