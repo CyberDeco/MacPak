@@ -385,10 +385,6 @@ pub enum VirtualTextureCommands {
         #[arg(short, long)]
         compression: Option<String>,
 
-        /// Tile size in pixels (default: 128)
-        #[arg(long)]
-        tile_size: Option<u32>,
-
         /// Disable embedding mip levels in tiles (use for DDS without mips)
         #[arg(long)]
         no_embed_mip: bool,
@@ -765,7 +761,7 @@ impl VirtualTextureCommands {
                     *all_layers,
                 )
             }
-            VirtualTextureCommands::Create { name, base, normal, physical, output, compression, tile_size, no_embed_mip } => {
+            VirtualTextureCommands::Create { name, base, normal, physical, output, compression, no_embed_mip } => {
                 virtual_texture::create(
                     name,
                     base.as_deref(),
@@ -773,7 +769,6 @@ impl VirtualTextureCommands {
                     physical.as_deref(),
                     output,
                     compression.as_deref(),
-                    *tile_size,
                     *no_embed_mip,
                 )
             }

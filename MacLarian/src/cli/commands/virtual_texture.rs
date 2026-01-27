@@ -197,7 +197,6 @@ pub fn create(
     physical_map: Option<&Path>,
     output_dir: &Path,
     compression: Option<&str>,
-    tile_size: Option<u32>,
     no_embed_mip: bool,
 ) -> Result<()> {
     // Build source texture
@@ -232,11 +231,6 @@ pub fn create(
             _ => anyhow::bail!("Unknown compression: {}. Use: raw, lz4, fastlz, or best", comp),
         };
         builder = builder.compression(pref);
-    }
-
-    // Set tile size
-    if let Some(size) = tile_size {
-        builder = builder.tile_size(size, size);
     }
 
     // Disable mip embedding if requested

@@ -12,7 +12,7 @@
 /// GTS codec types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
-pub(crate) enum GtsCodec {
+pub enum GtsCodec {
     Uniform = 0,
     Color420 = 1,
     Normal = 2,
@@ -43,6 +43,75 @@ impl GtsCodec {
             9 => Some(Self::Bc),
             10 => Some(Self::MultiChannel),
             11 => Some(Self::Astc),
+            _ => None,
+        }
+    }
+}
+
+/// GTS data types
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub(crate) enum GtsDataType {
+    R8G8B8Srgb = 0,
+    R8G8B8A8Srgb = 1,
+    X8Y8Z0Tangent = 2,
+    R8G8B8Linear = 3,
+    R8G8B8A8Linear = 4,
+    X8 = 5,
+    X8Y8 = 6,
+    X8Y8Z8 = 7,
+    X8Y8Z8W8 = 8,
+    X16 = 9,
+    X16Y16 = 10,
+    X16Y16Z16 = 11,
+    X16Y16Z16W16 = 12,
+    X32 = 13,
+    X32Float = 14,
+    X32Y32 = 15,
+    X32Y32Float = 16,
+    X32Y32Z32 = 17,
+    X32Y32Z32Float = 18,
+    R32G32B32 = 19,
+    R32G32B32Float = 20,
+    X32Y32Z32W32 = 21,
+    X32Y32Z32W32Float = 22,
+    R32G32B32A32 = 23,
+    R32G32B32A32Float = 24,
+    R16G16B16Float = 25,
+    R16G16B16A16Float = 26,
+}
+
+impl GtsDataType {
+    #[must_use]
+    pub fn from_u32(value: u32) -> Option<Self> {
+        match value {
+            0 => Some(Self::R8G8B8Srgb),
+            1 => Some(Self::R8G8B8A8Srgb),
+            2 => Some(Self::X8Y8Z0Tangent),
+            3 => Some(Self::R8G8B8Linear),
+            4 => Some(Self::R8G8B8A8Linear),
+            5 => Some(Self::X8),
+            6 => Some(Self::X8Y8),
+            7 => Some(Self::X8Y8Z8),
+            8 => Some(Self::X8Y8Z8W8),
+            9 => Some(Self::X16),
+            10 => Some(Self::X16Y16),
+            11 => Some(Self::X16Y16Z16),
+            12 => Some(Self::X16Y16Z16W16),
+            13 => Some(Self::X32),
+            14 => Some(Self::X32Float),
+            15 => Some(Self::X32Y32),
+            16 => Some(Self::X32Y32Float),
+            17 => Some(Self::X32Y32Z32),
+            18 => Some(Self::X32Y32Z32Float),
+            19 => Some(Self::R32G32B32),
+            20 => Some(Self::R32G32B32Float),
+            21 => Some(Self::X32Y32Z32W32),
+            22 => Some(Self::X32Y32Z32W32Float),
+            23 => Some(Self::R32G32B32A32),
+            24 => Some(Self::R32G32B32A32Float),
+            25 => Some(Self::R16G16B16Float),
+            26 => Some(Self::R16G16B16A16Float),
             _ => None,
         }
     }
@@ -156,11 +225,37 @@ impl GtsBCParameterBlock {
     }
 }
 
-/// Parameter block data (only BC codec is supported)
+/// Uniform codec parameter block (16 bytes)
+#[derive(Debug, Clone)]
+pub(crate) struct GtsUniformParameterBlock {
+    pub version: u16,
+    pub a_unused: u16,
+    pub width: u32,
+    pub height: u32,
+    pub data_type: GtsDataType,
+}
+
+/// Parameter block data
 #[derive(Debug, Clone)]
 pub(crate) enum GtsParameterBlock {
     BC(GtsBCParameterBlock),
+    Uniform(GtsUniformParameterBlock),
     Unknown,
+}
+
+/// Level info from GTS file
+#[derive(Debug, Clone)]
+pub struct GtsLevelInfo {
+    /// Width in tiles
+    pub width_tiles: u32,
+    /// Height in tiles
+    pub height_tiles: u32,
+    /// Offset to flat tile indices for this level
+    pub flat_tile_offset: u64,
+    /// Actual width in pixels (extended field, may be 0 for original BG3 files)
+    pub width_pixels: u32,
+    /// Actual height in pixels (extended field, may be 0 for original BG3 files)
+    pub height_pixels: u32,
 }
 
 /// Page file metadata
@@ -190,7 +285,7 @@ pub struct GtsPackedTileId {
 }
 
 impl GtsPackedTileId {
-    #[must_use] 
+    #[must_use]
     pub fn from_u32(value: u32) -> Self {
         Self {
             layer: (value & 0xF) as u8,
@@ -198,6 +293,15 @@ impl GtsPackedTileId {
             y: ((value >> 8) & 0xFFF) as u16,
             x: (value >> 20) as u16,
         }
+    }
+
+    /// Encode tile ID into a 32-bit packed value
+    #[must_use]
+    pub fn to_u32(&self) -> u32 {
+        ((self.x as u32) << 20)
+            | ((self.y as u32) << 8)
+            | ((self.level as u32) << 4)
+            | (self.layer as u32)
     }
 }
 
@@ -215,7 +319,7 @@ impl GtpHeader {
 
 /// GTP chunk header (12 bytes)
 #[derive(Debug, Clone)]
-pub(crate) struct GtpChunkHeader {
+pub struct GtpChunkHeader {
     pub codec: GtsCodec,
     pub parameter_block_id: u32,
     pub size: u32,

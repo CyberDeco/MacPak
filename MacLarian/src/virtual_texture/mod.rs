@@ -8,7 +8,7 @@
 //! - GTS (Game Texture Set) - metadata files describing texture layouts
 //! - GTP (Game Texture Page) - tile data files with compressed textures
 //!
-//! # Usage
+//! # Extraction Example
 //!
 //! ```no_run
 //! use maclarian::virtual_texture::VirtualTextureExtractor;
@@ -19,6 +19,22 @@
 //!     "output/directory",
 //! ).unwrap();
 //! ```
+//!
+//! # Creation Example
+//!
+//! ```no_run
+//! use maclarian::virtual_texture::builder::{VirtualTextureBuilder, SourceTexture};
+//!
+//! // Create a virtual texture from source DDS files
+//! let result = VirtualTextureBuilder::new()
+//!     .add_texture(
+//!         SourceTexture::new("MyTexture")
+//!             .with_base_map("base.dds")
+//!             .with_normal_map("normal.dds")
+//!     )
+//!     .build("output/")?;
+//! # Ok::<(), maclarian::error::Error>(())
+//! ```
 
 mod types;
 mod gts;
@@ -26,6 +42,8 @@ mod gtp;
 mod extractor;
 mod utils;
 mod batch;
+pub mod builder;
+pub mod writer;
 
 // Re-exports - public types
 pub use types::*;
