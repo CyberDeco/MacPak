@@ -42,6 +42,7 @@ mod gtp;
 mod extractor;
 mod utils;
 mod batch;
+mod mod_config;
 pub mod builder;
 pub mod writer;
 
