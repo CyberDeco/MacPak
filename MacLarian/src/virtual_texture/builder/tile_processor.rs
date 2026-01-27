@@ -1,7 +1,8 @@
 //! Tile extraction and processing
 //!
-//! SPDX-FileCopyrightText: 2025 CyberDeco
-//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
 
 use crate::error::{Error, Result};
 use super::config::TileSetConfiguration;

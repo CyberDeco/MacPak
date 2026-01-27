@@ -1,7 +1,8 @@
 //! Geometry calculation for virtual texture tiling
 //!
-//! SPDX-FileCopyrightText: 2025 CyberDeco
-//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//!
+//! SPDX-License-Identifier: MIT
 
 use super::config::TileSetConfiguration;
 
