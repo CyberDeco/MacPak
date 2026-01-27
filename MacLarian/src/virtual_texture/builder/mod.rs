@@ -32,7 +32,7 @@ pub use config::{
 };
 
 use crate::error::{Error, Result};
-use crate::virtual_texture::types::{GtsFlatTileInfo, GtsCodec};
+use crate::virtual_texture::types::{GtsFlatTileInfo, GtsCodec, VTexProgress, VTexPhase};
 use crate::virtual_texture::writer::{
     fourcc::build_metadata_tree,
     gts_writer::{GtsWriter, LayerInfo, LevelInfo as GtsLevelInfo, PageFileInfo, create_bc_parameter_block},
@@ -49,97 +49,6 @@ use self::compression::{compress_tile, CompressedTile};
 use self::deduplication::build_dedup_map;
 use self::geometry::calculate_geometry;
 use self::tile_processor::{DdsTexture, extract_tiles_from_dds, ProcessedTile};
-
-/// Build progress phase
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BuildPhase {
-    /// Validating configuration and inputs
-    Validating,
-    /// Calculating texture geometry and tile layout
-    CalculatingGeometry,
-    /// Extracting tiles from source textures
-    ExtractingTiles,
-    /// Generating tile borders
-    GeneratingBorders,
-    /// Embedding mip levels
-    EmbeddingMips,
-    /// Deduplicating identical tiles
-    Deduplicating,
-    /// Compressing tile data
-    Compressing,
-    /// Writing GTP page files
-    WritingGtp,
-    /// Writing GTS metadata file
-    WritingGts,
-    /// Build complete
-    Complete,
-}
-
-impl BuildPhase {
-    /// Get a human-readable description of this phase
-    #[must_use]
-    pub const fn description(&self) -> &'static str {
-        match self {
-            Self::Validating => "Validating configuration",
-            Self::CalculatingGeometry => "Calculating geometry",
-            Self::ExtractingTiles => "Extracting tiles",
-            Self::GeneratingBorders => "Generating borders",
-            Self::EmbeddingMips => "Embedding mip levels",
-            Self::Deduplicating => "Deduplicating tiles",
-            Self::Compressing => "Compressing tiles",
-            Self::WritingGtp => "Writing page files",
-            Self::WritingGts => "Writing metadata",
-            Self::Complete => "Complete",
-        }
-    }
-}
-
-/// Progress information during build
-#[derive(Debug, Clone)]
-pub struct BuildProgress {
-    /// Current phase
-    pub phase: BuildPhase,
-    /// Current item index (0-based)
-    pub current: usize,
-    /// Total items in this phase
-    pub total: usize,
-    /// Optional message with details
-    pub message: Option<String>,
-}
-
-impl BuildProgress {
-    /// Create a new progress update
-    #[must_use]
-    pub fn new(phase: BuildPhase, current: usize, total: usize) -> Self {
-        Self {
-            phase,
-            current,
-            total,
-            message: None,
-        }
-    }
-
-    /// Create a progress update with a message
-    #[must_use]
-    pub fn with_message(phase: BuildPhase, current: usize, total: usize, message: impl Into<String>) -> Self {
-        Self {
-            phase,
-            current,
-            total,
-            message: Some(message.into()),
-        }
-    }
-
-    /// Get the progress percentage (0.0 - 1.0)
-    #[must_use]
-    pub fn percentage(&self) -> f32 {
-        if self.total == 0 {
-            1.0
-        } else {
-            self.current as f32 / self.total as f32
-        }
-    }
-}
 
 /// Result of building a virtual texture set
 #[derive(Debug)]
@@ -249,28 +158,6 @@ impl VirtualTextureBuilder {
         self.build_with_progress(output_dir, |_| {})
     }
 
-    /// Build with simple progress callback (matches reader/batch API)
-    ///
-    /// Progress callback receives (current, total, description) matching the
-    /// signature used by `extract_gts_file` and `extract_batch`.
-    ///
-    /// # Arguments
-    /// * `output_dir` - Directory to write the GTS and GTP files to
-    /// * `progress` - Callback function that receives (current, total, description)
-    ///
-    /// # Returns
-    /// Result containing build information on success
-    pub fn build_with_simple_progress<P, F>(self, output_dir: P, progress: F) -> Result<BuildResult>
-    where
-        P: AsRef<Path>,
-        F: Fn(usize, usize, &str) + Send + Sync,
-    {
-        self.build_with_progress(output_dir, |p| {
-            let desc = p.message.as_deref().unwrap_or(p.phase.description());
-            progress(p.current, p.total, desc);
-        })
-    }
-
     /// Build the virtual texture set with progress reporting
     ///
     /// # Arguments
@@ -282,12 +169,12 @@ impl VirtualTextureBuilder {
     pub fn build_with_progress<P, F>(self, output_dir: P, progress: F) -> Result<BuildResult>
     where
         P: AsRef<Path>,
-        F: Fn(&BuildProgress) + Send + Sync,
+        F: Fn(&VTexProgress) + Send + Sync,
     {
         let output_dir = output_dir.as_ref();
 
         // Phase: Validate
-        progress(&BuildProgress::new(BuildPhase::Validating, 0, 1));
+        progress(&VTexProgress::new(VTexPhase::Validating, 1, 1));
         self.validate()?;
 
         // Determine output name
@@ -308,7 +195,7 @@ impl VirtualTextureBuilder {
         ];
 
         // Phase: Calculate Geometry
-        progress(&BuildProgress::new(BuildPhase::CalculatingGeometry, 0, 1));
+        progress(&VTexProgress::new(VTexPhase::CalculatingGeometry, 1, 1));
 
         // Load first available layer to get dimensions
         let (first_dds, _first_layer_idx) = self.load_first_layer(texture)?;
@@ -321,8 +208,8 @@ impl VirtualTextureBuilder {
         // Limit mip levels to what's actually in the DDS file
         let geometry = calculate_geometry(&[tex_info], layers_present, &self.config, Some(first_dds.mip_count));
 
-        // Phase: Extract Tiles
-        progress(&BuildProgress::new(BuildPhase::ExtractingTiles, 0, 3));
+        // Phase: Load Tiles
+        progress(&VTexProgress::new(VTexPhase::LoadingTiles, 0, 3));
 
         // Pre-allocate based on estimated total tiles across all layers
         let estimated_tiles: usize = geometry.tiles_per_layer.iter().map(|t| t.len()).sum();
@@ -333,9 +220,9 @@ impl VirtualTextureBuilder {
         let mut dds_textures: [Option<DdsTexture>; 3] = [None, None, None];
         for (i, path) in layer_paths.iter().enumerate() {
             if let Some(p) = path {
-                progress(&BuildProgress::with_message(
-                    BuildPhase::ExtractingTiles,
-                    i,
+                progress(&VTexProgress::with_file(
+                    VTexPhase::LoadingTiles,
+                    i + 1,
                     3,
                     format!("Loading layer {}", i),
                 ));
@@ -348,9 +235,9 @@ impl VirtualTextureBuilder {
             if let Some(dds) = dds_opt {
                 let coords = &geometry.tiles_per_layer[layer_idx];
                 if !coords.is_empty() {
-                    progress(&BuildProgress::with_message(
-                        BuildPhase::ExtractingTiles,
-                        layer_idx,
+                    progress(&VTexProgress::with_file(
+                        VTexPhase::LoadingTiles,
+                        layer_idx + 1,
                         3,
                         format!("Extracting {} tiles from layer {}", coords.len(), layer_idx),
                     ));
@@ -363,7 +250,7 @@ impl VirtualTextureBuilder {
         let total_tile_count = all_tiles.len();
 
         // Phase: Deduplicate (build map only - memory efficient)
-        progress(&BuildProgress::new(BuildPhase::Deduplicating, 0, total_tile_count));
+        progress(&VTexProgress::new(VTexPhase::Deduplicating, 1, total_tile_count));
 
         let (is_first, unique_idx) = if self.config.deduplicate {
             build_dedup_map(&all_tiles)
@@ -384,7 +271,7 @@ impl VirtualTextureBuilder {
             .collect();
 
         // Phase: Compress (parallelized with rayon, only unique tiles)
-        progress(&BuildProgress::new(BuildPhase::Compressing, 0, unique_tile_count));
+        progress(&VTexProgress::new(VTexPhase::Compressing, 0, unique_tile_count));
 
         let processed = AtomicUsize::new(0);
         let compression = self.config.compression;
@@ -392,19 +279,19 @@ impl VirtualTextureBuilder {
         let compressed_unique: Result<Vec<CompressedTile>> = unique_indices
             .par_iter()
             .map(|&idx| {
-                let current = processed.fetch_add(1, Ordering::Relaxed);
+                let current = processed.fetch_add(1, Ordering::Relaxed) + 1;
                 if current % 100 == 0 {
-                    progress(&BuildProgress::new(BuildPhase::Compressing, current, unique_tile_count));
+                    progress(&VTexProgress::new(VTexPhase::Compressing, current, unique_tile_count));
                 }
                 compress_tile(&all_tiles[idx].full_data(), compression)
             })
             .collect();
 
         let compressed_unique = compressed_unique?;
-        progress(&BuildProgress::new(BuildPhase::Compressing, unique_tile_count, unique_tile_count));
+        progress(&VTexProgress::new(VTexPhase::Compressing, unique_tile_count, unique_tile_count));
 
         // Phase: Write GTP (streaming - write chunks and track locations)
-        progress(&BuildProgress::new(BuildPhase::WritingGtp, 0, 1));
+        progress(&VTexProgress::new(VTexPhase::WritingGtp, 1, 1));
 
         // Generate hash from GUID for filename (extractor expects Name_HASH.gtp format)
         let gtp_hash: String = self.guid.iter().map(|b| format!("{b:02x}")).collect();
@@ -458,7 +345,7 @@ impl VirtualTextureBuilder {
         drop(gtp_buf);
 
         // Phase: Write GTS
-        progress(&BuildProgress::new(BuildPhase::WritingGts, 0, 1));
+        progress(&VTexProgress::new(VTexPhase::WritingGts, 1, 1));
 
         let gts_path = output_dir.join(format!("{name}.gts"));
 
@@ -554,7 +441,7 @@ impl VirtualTextureBuilder {
         let gtp_size = std::fs::metadata(&gtp_path)?.len();
         let total_size = gts_size + gtp_size;
 
-        progress(&BuildProgress::new(BuildPhase::Complete, 1, 1));
+        progress(&VTexProgress::new(VTexPhase::Complete, 1, 1));
 
         Ok(BuildResult {
             gts_path,

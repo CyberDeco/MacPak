@@ -9,6 +9,119 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::doc_markdown)]
 
+// ============================================================================
+// Progress Types (mirrors PAK progress pattern)
+// ============================================================================
+
+/// Progress callback type for virtual texture operations
+pub type VTexProgressCallback<'a> = &'a (dyn Fn(&VTexProgress) + Sync + Send);
+
+/// Progress information during virtual texture operations
+#[derive(Debug, Clone)]
+pub struct VTexProgress {
+    /// Current operation phase
+    pub phase: VTexPhase,
+    /// Current item number (1-indexed for consistency with PAK)
+    pub current: usize,
+    /// Total number of items
+    pub total: usize,
+    /// Current file or item being processed (if applicable)
+    pub current_file: Option<String>,
+}
+
+impl VTexProgress {
+    /// Create a new progress update
+    #[must_use]
+    pub fn new(phase: VTexPhase, current: usize, total: usize) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: None,
+        }
+    }
+
+    /// Create a progress update with a file/item name
+    #[must_use]
+    pub fn with_file(phase: VTexPhase, current: usize, total: usize, file: impl Into<String>) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: Some(file.into()),
+        }
+    }
+
+    /// Get the progress percentage (0.0 - 1.0)
+    #[must_use]
+    pub fn percentage(&self) -> f32 {
+        if self.total == 0 {
+            1.0
+        } else {
+            self.current as f32 / self.total as f32
+        }
+    }
+}
+
+/// Phase of virtual texture operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VTexPhase {
+    // === Extraction phases ===
+    /// Reading GTS metadata file
+    ReadingMetadata,
+    /// Extracting tiles from GTP files
+    ExtractingTiles,
+    /// Writing DDS output files
+    WritingFiles,
+
+    // === Build phases ===
+    /// Validating configuration and inputs
+    Validating,
+    /// Calculating texture geometry and tile layout
+    CalculatingGeometry,
+    /// Loading and extracting tiles from source DDS
+    LoadingTiles,
+    /// Deduplicating identical tiles
+    Deduplicating,
+    /// Compressing tile data
+    Compressing,
+    /// Writing GTP page files
+    WritingGtp,
+    /// Writing GTS metadata file
+    WritingGts,
+
+    // === Common ===
+    /// Operation complete
+    Complete,
+}
+
+impl VTexPhase {
+    /// Get a human-readable description of this phase
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            // Extraction
+            Self::ReadingMetadata => "Reading metadata",
+            Self::ExtractingTiles => "Extracting tiles",
+            Self::WritingFiles => "Writing files",
+            // Build
+            Self::Validating => "Validating configuration",
+            Self::CalculatingGeometry => "Calculating geometry",
+            Self::LoadingTiles => "Loading tiles",
+            Self::Deduplicating => "Deduplicating tiles",
+            Self::Compressing => "Compressing tiles",
+            Self::WritingGtp => "Writing page files",
+            Self::WritingGts => "Writing metadata",
+            // Common
+            Self::Complete => "Complete",
+        }
+    }
+}
+
+// ============================================================================
+// GTS/GTP File Types
+// ============================================================================
+
 /// GTS codec types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]

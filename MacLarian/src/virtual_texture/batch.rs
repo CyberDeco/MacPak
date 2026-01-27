@@ -12,6 +12,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rayon::prelude::*;
 
 use super::{GtsFile, VirtualTextureExtractor};
+use super::types::{VTexProgress, VTexPhase};
 use super::utils::find_gts_path;
 use crate::error::Error;
 
@@ -46,7 +47,7 @@ pub struct BatchExtractResult {
 /// # Arguments
 /// * `input_path` - Path to either a .gts or .gtp file
 /// * `output_dir` - Optional output directory. If None, uses the input file's parent directory
-/// * `progress` - Callback for progress updates (current, total, description)
+/// * `progress` - Callback for progress updates
 ///
 /// # Returns
 /// Information about the extraction, or an error.
@@ -60,7 +61,7 @@ pub fn extract_gts_file<P, F>(
 ) -> Result<GtsExtractResult, Error>
 where
     P: AsRef<Path>,
-    F: Fn(usize, usize, &str),
+    F: Fn(&VTexProgress),
 {
     let input_path = input_path.as_ref();
     let input_path_str = input_path.to_string_lossy();
@@ -72,6 +73,7 @@ where
     let is_single_gtp = input_ext == "gtp";
 
     // Find the GTS file (handles both .gts and .gtp inputs)
+    progress(&VTexProgress::new(VTexPhase::ReadingMetadata, 0, 1));
     let gts_path_str = find_gts_path(&input_path_str)?;
     let gts_path = PathBuf::from(&gts_path_str);
 
@@ -94,7 +96,7 @@ where
 
     if is_single_gtp {
         // Single GTP mode: extract just this GTP file
-        progress(0, 1, "Extracting GTP...");
+        progress(&VTexProgress::with_file(VTexPhase::ExtractingTiles, 1, 1, "Extracting GTP"));
 
         VirtualTextureExtractor::extract_with_gts(
             input_path,
@@ -102,7 +104,7 @@ where
             &texture_output_dir,
         )?;
 
-        progress(1, 1, "Complete");
+        progress(&VTexProgress::new(VTexPhase::Complete, 1, 1));
 
         // Count output files
         let count = std::fs::read_dir(&texture_output_dir)
@@ -130,8 +132,12 @@ where
         for (i, page_file) in gts.page_files.iter().enumerate() {
             let gtp_path = gts_dir.join(&page_file.filename);
 
-            let filename = &page_file.filename;
-            progress(i, total_page_files, &format!("Extracting {filename}..."));
+            progress(&VTexProgress::with_file(
+                VTexPhase::ExtractingTiles,
+                i + 1,
+                total_page_files,
+                &page_file.filename,
+            ));
 
             if gtp_path.exists() {
                 // Create a subdirectory for this GTP's output
@@ -158,6 +164,8 @@ where
             }
         }
 
+        progress(&VTexProgress::new(VTexPhase::Complete, total_page_files, total_page_files));
+
         if extracted_count == 0 && total_page_files > 0 {
             return Err(Error::InvalidFormat(format!(
                 "No GTP files could be extracted (0/{total_page_files} succeeded, {failed_count} failed)"
@@ -176,7 +184,7 @@ where
 /// # Arguments
 /// * `gts_files` - List of GTS file paths to extract
 /// * `output_dir` - Optional output directory. If None, uses each file's parent directory
-/// * `progress` - Callback for progress updates (current, total, description)
+/// * `progress` - Callback for progress updates
 ///
 /// # Returns
 /// Summary of the batch extraction.
@@ -186,7 +194,7 @@ pub fn extract_batch<F>(
     progress: F,
 ) -> BatchExtractResult
 where
-    F: Fn(usize, usize, &str) + Send + Sync,
+    F: Fn(&VTexProgress) + Send + Sync,
 {
     let total = gts_files.len();
     let success_counter = AtomicUsize::new(0);
@@ -203,10 +211,15 @@ where
 
             // Update progress (atomic)
             let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
-            progress(current, total, &gts_name);
+            progress(&VTexProgress::with_file(
+                VTexPhase::ExtractingTiles,
+                current,
+                total,
+                &gts_name,
+            ));
 
             // Create a no-op progress callback for individual extractions
-            let noop_progress = |_: usize, _: usize, _: &str| {};
+            let noop_progress = |_: &VTexProgress| {};
 
             match extract_gts_file(gts_path, output_dir, noop_progress) {
                 Ok(result) => {

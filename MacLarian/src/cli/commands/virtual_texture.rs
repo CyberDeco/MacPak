@@ -2,11 +2,31 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use anyhow::{Result, Context};
+use indicatif::{ProgressBar, ProgressStyle};
+
 use crate::virtual_texture;
+use crate::virtual_texture::{VTexProgress, VTexPhase};
 use crate::virtual_texture::builder::{
     VirtualTextureBuilder, SourceTexture, TileCompressionPreference,
 };
+
+/// Create a standard progress bar style
+fn progress_style() -> ProgressStyle {
+    ProgressStyle::default_bar()
+        .template("{msg} [{bar:40.cyan/blue}] {pos}/{len} ({percent}%)")
+        .expect("valid template")
+        .progress_chars("##-")
+}
+
+/// Create a spinner style for indeterminate progress
+fn spinner_style() -> ProgressStyle {
+    ProgressStyle::default_spinner()
+        .template("{spinner:.cyan} {msg}")
+        .expect("valid template")
+}
 
 /// List textures in a GTS file
 pub fn list(gts_path: &Path) -> Result<()> {
@@ -50,20 +70,34 @@ pub fn extract(
         println!("Layer filter: {:?}", layers);
     }
 
-    // Use extract_gts_file which handles both GTS and GTP inputs
+    // Create progress bar - use spinner for single GTP, bar for GTS with multiple GTPs
+    let pb = if is_gtp {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(spinner_style());
+        pb
+    } else {
+        let pb = ProgressBar::new(1); // Will be updated when we know the total
+        pb.set_style(progress_style());
+        pb
+    };
+
     let result = virtual_texture::extract_gts_file(
         input_path,
         Some(output_dir),
-        |current, total, desc| {
+        |progress: &VTexProgress| {
+            let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
             if is_gtp {
-                // Single GTP mode - simpler output
-                println!("{}", desc);
+                pb.set_message(desc.to_string());
+                pb.tick();
             } else {
-                // GTS mode - show progress
-                println!("[{}/{}] {}", current, total, desc);
+                pb.set_length(progress.total as u64);
+                pb.set_position(progress.current as u64);
+                pb.set_message(desc.to_string());
             }
         },
     ).with_context(|| format!("Failed to extract {}", input_path.display()))?;
+
+    pb.finish_and_clear();
 
     if is_gtp {
         println!("Extracted {} textures to {}", result.texture_count, output_dir.display());
@@ -100,14 +134,21 @@ pub fn batch(
         println!("Layer filter: {:?}", layers);
     }
 
-    // Use batch extraction
+    // Create progress bar
+    let pb = ProgressBar::new(gts_files.len() as u64);
+    pb.set_style(progress_style());
+
     let result = virtual_texture::extract_batch(
         &gts_files,
         Some(output_dir),
-        |current, total, desc| {
-            println!("[{}/{}] {}", current, total, desc);
+        |progress: &VTexProgress| {
+            let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+            pb.set_position(progress.current as u64);
+            pb.set_message(desc.to_string());
         },
     );
+
+    pb.finish_and_clear();
 
     println!();
     println!("Batch extraction complete:");
@@ -243,20 +284,39 @@ pub fn create(
     fs::create_dir_all(output_dir)
         .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
 
-    // Build with progress reporting
-    let result = builder.build_with_progress(output_dir, |progress| {
-        if progress.total > 0 {
-            println!(
-                "[{}/{}] {}{}",
-                progress.current,
-                progress.total,
-                progress.phase.description(),
-                progress.message.as_ref().map(|m| format!(": {}", m)).unwrap_or_default()
-            );
+    // Create progress bar - starts as spinner, switches to bar for compression
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(spinner_style());
+
+    // Track current phase to detect transitions
+    let last_phase = AtomicUsize::new(0);
+
+    let result = builder.build_with_progress(output_dir, |progress: &VTexProgress| {
+        let phase_num = progress.phase as usize;
+        let prev_phase = last_phase.swap(phase_num, Ordering::SeqCst);
+
+        // Switch to progress bar mode for compression phase
+        if progress.phase == VTexPhase::Compressing {
+            if prev_phase != phase_num {
+                // Phase just changed to compressing - switch to bar style
+                pb.set_style(progress_style());
+                pb.set_length(progress.total as u64);
+            }
+            pb.set_position(progress.current as u64);
+            pb.set_message(format!("Compressing tiles"));
         } else {
-            println!("{}", progress.phase.description());
+            // Other phases use spinner
+            if prev_phase == VTexPhase::Compressing as usize && phase_num != prev_phase {
+                // Just finished compression - switch back to spinner
+                pb.set_style(spinner_style());
+            }
+            let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+            pb.set_message(desc.to_string());
+            pb.tick();
         }
     }).with_context(|| "Failed to create virtual texture")?;
+
+    pb.finish_and_clear();
 
     println!();
     println!("Virtual texture created successfully!");
