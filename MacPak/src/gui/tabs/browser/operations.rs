@@ -748,32 +748,32 @@ fn convert_file_with_progress(
         }
         ("lsx", "lsj") => {
             // Use maclarian's progress-aware conversion
-            let progress_cb = |msg: &str| {
-                send_progress(msg.to_string());
+            let progress_cb = |progress: &maclarian::converter::ConvertProgress| {
+                send_progress(progress.phase.as_str().to_string());
                 std::thread::sleep(std::time::Duration::from_millis(50));
             };
             maclarian::converter::lsx_to_lsj_with_progress(source_path, dest_path, &progress_cb)
                 .map_err(|e| e.to_string())
         }
         ("lsj", "lsx") => {
-            let progress_cb = |msg: &str| {
-                send_progress(msg.to_string());
+            let progress_cb = |progress: &maclarian::converter::ConvertProgress| {
+                send_progress(progress.phase.as_str().to_string());
                 std::thread::sleep(std::time::Duration::from_millis(50));
             };
             maclarian::converter::lsj_to_lsx_with_progress(source_path, dest_path, &progress_cb)
                 .map_err(|e| e.to_string())
         }
         ("lsf", "lsj") => {
-            let progress_cb = |msg: &str| {
-                send_progress(msg.to_string());
+            let progress_cb = |progress: &maclarian::converter::ConvertProgress| {
+                send_progress(progress.phase.as_str().to_string());
                 std::thread::sleep(std::time::Duration::from_millis(50));
             };
             maclarian::converter::lsf_to_lsj_with_progress(source_path, dest_path, &progress_cb)
                 .map_err(|e| e.to_string())
         }
         ("lsj", "lsf") => {
-            let progress_cb = |msg: &str| {
-                send_progress(msg.to_string());
+            let progress_cb = |progress: &maclarian::converter::ConvertProgress| {
+                send_progress(progress.phase.as_str().to_string());
                 std::thread::sleep(std::time::Duration::from_millis(50));
             };
             maclarian::converter::lsj_to_lsf_with_progress(source_path, dest_path, &progress_cb)

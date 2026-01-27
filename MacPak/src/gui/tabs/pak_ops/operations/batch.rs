@@ -68,8 +68,9 @@ pub fn batch_extract_paks(state: PakOpsState) {
             &pak_files,
             &source_dir,
             &dest_dir,
-            |current, total, desc| {
-                shared_progress.update(current, total, desc);
+            |progress: &maclarian::pak::PakProgress| {
+                let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+                shared_progress.update(progress.current, progress.total, desc);
             },
         );
 
@@ -142,8 +143,9 @@ pub fn batch_create_paks(state: PakOpsState) {
             &folders,
             &source_dir,
             &dest_dir,
-            |current, total, desc| {
-                shared_progress.update(current, total, desc);
+            |progress: &maclarian::pak::PakProgress| {
+                let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+                shared_progress.update(progress.current, progress.total, desc);
             },
         );
 

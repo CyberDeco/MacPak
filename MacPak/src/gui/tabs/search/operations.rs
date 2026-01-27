@@ -240,8 +240,9 @@ pub fn build_index(state: SearchState) {
 
                         // Phase 2: Build fulltext index (slower, extracts content)
                         // Progress is reported via SEARCH_PROGRESS in the callback
-                        let progress_callback = |current: usize, total: usize, name: &str| {
-                            SEARCH_PROGRESS.set(current, total, name.to_string());
+                        let progress_callback = |progress: &maclarian::search::SearchProgress| {
+                            let name = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+                            SEARCH_PROGRESS.set(progress.current, progress.total, name.to_string());
                         };
 
                         match idx.build_fulltext_index(&progress_callback) {
@@ -322,10 +323,11 @@ pub fn perform_search(state: SearchState) {
 
         // 1. Get fulltext results (text files with content matches)
         let fulltext_results: Vec<SearchResult> = if idx.has_fulltext() {
-            let progress_callback = |current: usize, total: usize, name: &str| {
-                SEARCH_PROGRESS.set(current, total, name.to_string());
+            let progress_callback = |progress: &maclarian::search::SearchProgress| {
+                let name = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+                SEARCH_PROGRESS.set(progress.current, progress.total, name.to_string());
             };
-            let ft_results = idx.search_fulltext_with_progress(&query, MAX_RESULTS, progress_callback).unwrap_or_default();
+            let ft_results = idx.search_fulltext_with_progress(&query, MAX_RESULTS, &progress_callback).unwrap_or_default();
 
             ft_results
                 .into_iter()

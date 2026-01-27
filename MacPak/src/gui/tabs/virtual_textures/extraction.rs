@@ -42,7 +42,10 @@ pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
         let result = extract_gts_file(
             &gts_path,
             output_path,
-            |current, total, desc| progress.update(current, total, desc),
+            |p: &maclarian::virtual_texture::VTexProgress| {
+                let desc = p.current_file.as_deref().unwrap_or(p.phase.as_str());
+                progress.update(p.current, p.total, desc);
+            },
         );
 
         match result {
@@ -125,7 +128,10 @@ pub fn extract_batch(state: VirtualTexturesState, game_data_path: String) {
         let result = vt_extract_batch(
             &gts_files,
             output_path,
-            |current, total, desc| progress.update(current, total, desc),
+            |p: &maclarian::virtual_texture::VTexProgress| {
+                let desc = p.current_file.as_deref().unwrap_or(p.phase.as_str());
+                progress.update(p.current, p.total, desc);
+            },
         );
 
         // Convert to PNG if requested (scan output directory for DDS files)
