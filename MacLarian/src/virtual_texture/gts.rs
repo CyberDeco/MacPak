@@ -25,13 +25,14 @@ use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
 use crate::error::{Error, Result};
-use super::types::{GtsHeader, GtsParameterBlock, GtsPageFileInfo, GtsPackedTileId, GtsFlatTileInfo, GtsCodec, GtsBCParameterBlock, TileCompression, TileLocation};
+use super::types::{GtsHeader, GtsParameterBlock, GtsPageFileInfo, GtsPackedTileId, GtsFlatTileInfo, GtsCodec, GtsBCParameterBlock, GtsUniformParameterBlock, GtsDataType, TileCompression, TileLocation, GtsLevelInfo};
 
 /// GTS file reader and parser
 #[derive(Debug)]
 pub struct GtsFile {
     pub header: GtsHeader,
     pub(crate) parameter_blocks: HashMap<u32, GtsParameterBlock>,
+    pub levels: Vec<GtsLevelInfo>,
     pub page_files: Vec<GtsPageFileInfo>,
     pub packed_tiles: Vec<GtsPackedTileId>,
     pub flat_tile_infos: Vec<GtsFlatTileInfo>,
@@ -66,6 +67,9 @@ impl GtsFile {
         // Read parameter blocks
         let parameter_blocks = Self::read_parameter_blocks(reader, &header)?;
 
+        // Read levels
+        let levels = Self::read_levels(reader, &header)?;
+
         // Read page file metadata
         let page_files = Self::read_page_files(reader, &header)?;
 
@@ -78,6 +82,7 @@ impl GtsFile {
         Ok(Self {
             header,
             parameter_blocks,
+            levels,
             page_files,
             packed_tiles,
             flat_tile_infos,
@@ -264,9 +269,8 @@ impl GtsFile {
                     GtsParameterBlock::BC(bc_block)
                 }
                 GtsCodec::Uniform => {
-                    return Err(Error::InvalidFormat(
-                        "Uniform codec virtual textures are not supported".to_string(),
-                    ));
+                    let uniform_block = Self::read_uniform_parameter_block(reader)?;
+                    GtsParameterBlock::Uniform(uniform_block)
                 }
                 _ => GtsParameterBlock::Unknown,
             };
@@ -342,6 +346,75 @@ impl GtsFile {
             e4,
             f,
         })
+    }
+
+    fn read_uniform_parameter_block<R: Read>(reader: &mut R) -> Result<GtsUniformParameterBlock> {
+        let mut buf2 = [0u8; 2];
+        let mut buf4 = [0u8; 4];
+
+        reader.read_exact(&mut buf2)?;
+        let version = u16::from_le_bytes(buf2);
+        reader.read_exact(&mut buf2)?;
+        let a_unused = u16::from_le_bytes(buf2);
+        reader.read_exact(&mut buf4)?;
+        let width = u32::from_le_bytes(buf4);
+        reader.read_exact(&mut buf4)?;
+        let height = u32::from_le_bytes(buf4);
+        reader.read_exact(&mut buf4)?;
+        let data_type_val = u32::from_le_bytes(buf4);
+
+        let data_type = GtsDataType::from_u32(data_type_val).unwrap_or(GtsDataType::R8G8B8Srgb);
+
+        Ok(GtsUniformParameterBlock {
+            version,
+            a_unused,
+            width,
+            height,
+            data_type,
+        })
+    }
+
+    fn read_levels<R: Read + Seek>(
+        reader: &mut R,
+        header: &GtsHeader,
+    ) -> Result<Vec<GtsLevelInfo>> {
+        let mut levels = Vec::with_capacity(header.num_levels as usize);
+
+        reader.seek(SeekFrom::Start(header.levels_offset))?;
+
+        let mut buf4 = [0u8; 4];
+        let mut buf8 = [0u8; 8];
+
+        for _ in 0..header.num_levels {
+            reader.read_exact(&mut buf4)?;
+            let width_tiles = u32::from_le_bytes(buf4);
+            reader.read_exact(&mut buf4)?;
+            let height_tiles = u32::from_le_bytes(buf4);
+            reader.read_exact(&mut buf8)?;
+            let flat_tile_offset = u64::from_le_bytes(buf8);
+
+            // Try to read extended pixel dimensions (may fail for original BG3 files)
+            let (width_pixels, height_pixels) = match reader.read_exact(&mut buf4) {
+                Ok(()) => {
+                    let wp = u32::from_le_bytes(buf4);
+                    match reader.read_exact(&mut buf4) {
+                        Ok(()) => (wp, u32::from_le_bytes(buf4)),
+                        Err(_) => (0, 0),
+                    }
+                }
+                Err(_) => (0, 0),
+            };
+
+            levels.push(GtsLevelInfo {
+                width_tiles,
+                height_tiles,
+                flat_tile_offset,
+                width_pixels,
+                height_pixels,
+            });
+        }
+
+        Ok(levels)
     }
 
     fn read_page_files<R: Read + Seek>(

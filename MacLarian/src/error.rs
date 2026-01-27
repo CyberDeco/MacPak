@@ -75,6 +75,9 @@ pub enum Error {
 
     #[error("Search error: {0}")]
     SearchError(String),
+
+    #[error("Virtual texture error: {0}")]
+    VirtualTexture(String),
 }
 
 // Add conversion from quick_xml::events::attributes::AttrError
