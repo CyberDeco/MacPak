@@ -41,7 +41,7 @@ gui = [
     "dep:im",
     "dep:muda",
     "dep:dispatch",
-    # Audio playback (WEM decoding is in MacLarian)
+    # Audio playback
     "dep:rodio",
     "dep:byteorder",
     # Parallel processing for voice metadata loading
@@ -57,7 +57,7 @@ viewer = [
 full = ["gui", "viewer"]
 
 [dependencies]
-# Internal - always needed
+# Internal - always needed (no CLI feature needed for GUI)
 maclarian = { workspace = true }
 
 # Core dependencies - always needed
@@ -87,7 +87,6 @@ im = { version = "15.1", optional = true }
 muda = { version = "0.15", optional = true }
 dispatch = { version = "0.2", optional = true }
 # Audio playback dependencies (for dialogue voice playback)
-# WEM decoding is handled by MacLarian's audio feature
 rodio = { version = "0.19", default-features = false, features = ["vorbis"], optional = true }
 byteorder = { version = "1.5", optional = true }
 # Parallel processing

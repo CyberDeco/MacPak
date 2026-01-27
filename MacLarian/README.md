@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/maclarian.svg)](https://crates.io/crates/maclarian)
 [![Documentation](https://docs.rs/maclarian/badge.svg)](https://docs.rs/maclarian)
-[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](../LICENSE)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
 
 A Larian file format library and toolkit for Baldur's Gate 3 file handling and modding.
 
@@ -37,10 +37,7 @@ maclarian = "0.1"
 
 ## Requirements
 
-- **Rust 1.75+** (uses 2024 edition features)
-- **Optional:** For WEM audio decoding, install [vgmstream-cli](https://github.com/vgmstream/vgmstream):
-  - macOS: `brew install vgmstream`
-  - Windows/Linux: See [vgmstream releases](https://github.com/vgmstream/vgmstream/releases)
+- **Rust 1.85+** (uses 2024 edition features)
 
 ## Platform Support
 
@@ -49,7 +46,6 @@ maclarian = "0.1"
 | Core library (format parsing) | Full | Full | Full |
 | Game data auto-detection | Full | Limited | None |
 | CLI tools | Full | Full | Full |
-| Audio decoding | Full | Manual path | Manual path |
 
 **Note:** The core library for reading/writing PAK, LSF, LSX, GR2, and other formats works on all platforms. However, automatic BG3 game installation detection (`GameDataResolver::auto_detect()`) currently only works reliably on macOS. Windows and Linux users should use `--bg3-path <path>` to specify the BG3 install folder manually.
 
@@ -102,8 +98,6 @@ use maclarian::prelude::*;
 ## Features
 
 - `cli` - Enable the command-line interface binary
-- `audio` - Enable WEM audio file operations
-  - Requires vgmstream-cli for actual decoding, which can be installed via [Homebrew](https://brew.sh) with `brew install vgmstream`
 
 ## CLI Usage
 
@@ -132,7 +126,6 @@ cargo run --features cli -- <command>
 | `gr2` | GR2 model file operations |
 | `vt` | Virtual texture (GTS/GTP) operations |
 | `mod` | Mod utilities (validation, info.json) |
-| `wem` | WEM audio operations (requires `audio` feature) |
 | `search` | Search PAK file contents |
 | `index` | Build and manage search indexes |
 | `pak` | PAK batch operations and info |
@@ -444,35 +437,6 @@ maclarian mod info-json --pak <mod.pak> --extracted <mod_dir> [-o info.json]
 
 ---
 
-### `wem` - Audio Operations
-
-Requires the `audio` feature: `cargo build --features "cli,audio"`
-
-#### `wem inspect` - Inspect WEM Header
-
-Display WEM file header information.
-
-```bash
-maclarian wem inspect <file.wem>
-```
-
-#### `wem decode` - Decode to WAV
-
-Decode a WEM file to WAV format (requires vgmstream-cli).
-
-```bash
-maclarian wem decode <file.wem> [-o output.wav]
-```
-
-**Options:**
-
-| Flag | Description |
-|------|-------------|
-| `-o, --output <file>` | Output WAV file |
-| `--silent` | Use silent fallback if vgmstream unavailable |
-
----
-
 ### `search` - Search PAK Contents
 
 Search for files within PAK archives.
@@ -686,7 +650,7 @@ maclarian texture batch-convert -d ./textures -o ./png_out -t png
 
 ## License
 
-This project is licensed under the [PolyForm Noncommercial License 1.0.0](../LICENSE).
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
 
 Some files are dual-licensed under MIT/Apache-2.0 from upstream projects. See the LICENSE file for details.
 

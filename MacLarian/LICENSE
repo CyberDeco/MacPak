@@ -1,0 +1,97 @@
+
+Copyright (c) 2025 CyberDeco
+
+MacLarian is licensed under the PolyForm Noncommercial License 1.0.0
+https://polyformproject.org/licenses/noncommercial/1.0.0
+
+Permission is hereby granted to any person obtaining a copy of this software and associated documentation files ("MacPak", "MacLarian") to use, copy, modify, merge, publish, and distribute the Software for non-commercial purposes, subject to the terms of the license. The Software (and any derivative works) must be made available to the public free of charge; no payment, access fee, or other cost may be required to download, use, or access the software.
+
+**Attribution Requirement:**
+The above copyright notice and appropriate credit must be given to CyberDeco as the original author of MacPak, provide a link to the license, and indicate if changes were made. Attribution may be included in the source code, documentation, or other materials provided with the software.
+
+**Commercial Use:**
+Commercial use of this software, or redistribution for profit, is strictly prohibited. This includes all derivative works.
+
+MACPAK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+####################################################################################
+
+**Larian Studios' Fan Content Policy**
+MacPak is Fan Content permitted under the Larian Studios' and Baldur's Gate 3 Fan Content Policies. Fan Content is not commissioned by Larian Studios and it is unofficial content. MacPak is not commissioned or sponsored by Larian Studios and is not in any way endorsed by, affiliated with, or approved by Larian Studios.
+https://larian.com/fan-content-policy
+https://baldursgate3.game/bg3-fan-content-terms/
+
+**Wizards of the Coast's Fan Content Policy**
+MacPak is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.
+https://company.wizards.com/en/legal/fancontentpolicy
+
+####################################################################################
+
+**Per-File Licensing**
+
+The following files in MacLarian are licensed under MIT (LSLib) AND Apache-2.0 (xiba):
+- MacLarian/src/pak/lspk/* (all files)
+- MacLarian/src/formats/lsf/* (all files)
+
+The following file is licensed under MIT (Knit/pybg3):
+- MacLarian/src/formats/gr2/decompress.rs
+
+All other files in MacLarian/src/formats/*, MacLarian/src/converter/*, and
+MacLarian/src/virtual_texture/* are licensed under MIT (LSLib).
+
+See individual file headers for specific SPDX license identifiers.
+
+####################################################################################
+
+**LSLib**
+The Software includes code derived from LSLib by Norbyte, licensed under the MIT License:
+
+Copyright (c) 2015 Norbyte
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files ("LSLib"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom LSLib is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+LSLIB IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+https://github.com/Norbyte/lslib
+
+####################################################################################
+
+**xiba (larian-formats)**
+The Software includes code derived from xiba by saghm, licensed under the Apache License 2.0:
+
+Copyright (c) 2023 saghm
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+https://gitlab.com/saghm/xiba
+
+
+####################################################################################
+
+**Knit / pybg3**
+The Software includes BitKnit decompression code derived from Knit by Legiayayana
+and pybg3 by eiz, both licensed under the MIT License:
+
+Knit - Copyright (c) 2025 Legiayayana
+pybg3 - Copyright (c) 2024 eiz
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+https://github.com/neptuwunium/Knit
+https://github.com/eiz/pybg3

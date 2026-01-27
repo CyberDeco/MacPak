@@ -3,7 +3,6 @@
 //! Note: `virtual_texture` has been promoted to a top-level module.
 //! It is re-exported here for backwards compatibility.
 //!
-//! Note: `dialog`, `dyes`, `wem`, and `voice_meta` have been moved to `MacPak`
 //! as they are GUI-specific features.
 
 pub mod common;

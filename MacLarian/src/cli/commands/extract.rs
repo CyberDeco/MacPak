@@ -140,7 +140,7 @@ pub fn execute(
                 destination,
                 &[file_path],
                 extraction_opts,
-                &|_, _, _| {},
+                &|_progress| {},
             )?;
             print_smart_extraction_result(&result);
         } else {
@@ -276,14 +276,16 @@ fn execute_smart_extraction(
             destination,
             files,
             extraction_opts,
-            &|_current, _total, name| {
+            &|progress| {
                 let n = count.fetch_add(1, Ordering::SeqCst) + 1;
                 pb.set_position(n as u64);
-                let short_name = Path::new(name)
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or(name);
-                pb.set_message(short_name.to_string());
+                if let Some(ref name) = progress.current_file {
+                    let short_name = Path::new(name)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or(name);
+                    pb.set_message(short_name.to_string());
+                }
             },
         )?;
 
@@ -295,7 +297,7 @@ fn execute_smart_extraction(
             destination,
             files,
             extraction_opts,
-            &|_, _, _| {},
+            &|_progress| {},
         )?;
         print_smart_extraction_result(&result);
     }

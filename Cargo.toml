@@ -71,6 +71,7 @@ path = "./MacPak"
 [workspace.dependencies.maclarian]
 version = "0.1.0"
 path = "./MacLarian"
+default-features = false
 
 # Lints for the workspace
 [workspace.lints.clippy]

@@ -1,82 +1,78 @@
 [package]
 name = "maclarian"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-authors.workspace = true
-license-file.workspace = true
-repository.workspace = true
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["CyberDeco"]
+license-file = "LICENSE"
+repository = "https://github.com/CyberDeco/MacPak"
 readme = "README.md"
 description = "Larian file format library for Baldur's Gate 3 - PAK, LSF, LSX, GR2, DDS, and more"
 keywords = ["bg3", "baldurs-gate-3", "modding", "larian", "pak", "gr2", "granny2", "bitknit", "glTF"]
 categories = ["development-tools", "encoding", "game-development", "parser-implementations"]
 homepage = "https://github.com/CyberDeco/MacPak"
 documentation = "https://docs.rs/maclarian"
-exclude = ["data/", ".DS_Store", "tests/", "examples/"]
+exclude = [".ipynb_checkpoints/", ".DS_Store"]
 
 [dependencies]
 # Serialization
-serde = { workspace = true, features = ["derive"] }
-serde_json.workspace = true
-quick-xml = { workspace = true, features = ["serialize"] }
-indexmap = { workspace = true, features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+quick-xml = { version = "0.31", features = ["serialize"] }
+indexmap = { version = "2.0", features = ["serde"] }
 
 # Error handling
-anyhow.workspace = true
-thiserror.workspace = true
+anyhow = "1.0"
+thiserror = "1.0"
 
 # Compression
-flate2.workspace = true         # ZLIB/GZIP compression
-lz4_flex.workspace = true       # LZ4 compression (reading/writing LSF)
-# zstd.workspace = true           # Zstandard compression (newer PAK files)
-
-fastlz-rs.workspace = true      # FastLZ compression (virtual textures)
+flate2 = "1.0"              # ZLIB/GZIP compression
+lz4_flex = "0.11"           # LZ4 compression (reading/writing LSF)
+fastlz-rs = "0.0.3"         # FastLZ compression (virtual textures)
 
 # Binary I/O
-byteorder.workspace = true       # Reading/writing little-endian data
-
-# Audio decoding (WEM files use vgmstream-cli externally)
+byteorder = "1.5"           # Reading/writing little-endian data
 
 # 3D Math & Vertex Processing
-glam.workspace = true            # SIMD-optimized vectors, quaternions, matrices
-half.workspace = true            # IEEE 754 half-precision floats (f16)
-bytemuck.workspace = true        # Safe zero-copy type casting
-gltf.workspace = true            # glTF 2.0 export (includes gltf-json)
+glam = "0.27"               # SIMD-optimized vectors, quaternions, matrices
+half = { version = "2.6", features = ["bytemuck", "serde"] }  # IEEE 754 half-precision floats (f16)
+bytemuck = { version = "1.14", features = ["derive"] }        # Safe zero-copy type casting
+gltf = "1.4.1"              # glTF 2.0 export (includes gltf-json)
 
 # Encoding
-base64.workspace = true          # Base64 encoding for ScratchBuffer type
+base64 = "0.22"             # Base64 encoding for ScratchBuffer type
 
 # Hashing
-crc32fast.workspace = true       # CRC32 checksums for PAK files
-md5.workspace = true             # MD5 checksums for info.json
+crc32fast = "1.4"           # CRC32 checksums for PAK files
+md5 = "0.7"                 # MD5 checksums for info.json
 
 # Time
-chrono.workspace = true          # Timestamps for info.json
+chrono = "0.4"              # Timestamps for info.json
 
 # UUID generation
-uuid.workspace = true            # UUID generation for mod files
+uuid = { version = "1.0", features = ["v4"] }
 
 # File system
-walkdir.workspace = true         # Recursive directory traversal
-tempfile.workspace = true        # Temp directories for LSF→LSX conversion
+walkdir = "2.4"             # Recursive directory traversal
+tempfile = "3.14"           # Temp directories for LSF→LSX conversion
 
 # Parallelism
-rayon.workspace = true
+rayon = "1.10"
 
 # Full-text search
-tantivy.workspace = true
+tantivy = "0.22"
 
 # Logging
-tracing.workspace = true         # Structured logging
+tracing = "0.1"             # Structured logging
 
 # Image/Texture handling
-bcdec_rs.workspace = true        # BC7 texture decompression
-ddsfile.workspace = true         # DDS texture file format
-image.workspace = true           # PNG/image format support
+bcdec_rs = "0.2"            # BC7 texture decompression
+ddsfile = "0.5.2"           # DDS texture file format
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [features]
-default = []
-cli = ["dep:clap", "dep:tracing-subscriber", "dep:indicatif"]  # CLI binary
+default = ["cli"]
+cli = ["dep:clap", "dep:tracing-subscriber", "dep:indicatif"]
 
 # CLI dependencies (optional)
 [dependencies.clap]
@@ -98,8 +94,25 @@ path = "src/bin/maclarian.rs"
 required-features = ["cli"]
 
 [dev-dependencies]
-pretty_assertions.workspace = true
-tracing-subscriber.workspace = true
+pretty_assertions = "1.4"
+tracing-subscriber = "0.3"
 
-[lints]
-workspace = true
+[lints.clippy]
+all = "deny"
+complexity = "deny"
+pedantic = "deny"
+perf = "deny"
+style = "deny"
+suspicious = "deny"
+too-many-arguments = { level = "allow", priority = 1 }
+multiple-crate-versions = { level = "allow", priority = 1 }
+case-sensitive-file-extension-comparisons = { level = "allow", priority = 1 }
+unreadable-literal = { level = "allow", priority = 1 }
+similar-names = { level = "allow", priority = 1 }
+many-single-char-names = { level = "allow", priority = 1 }
+match-same-arms = { level = "allow", priority = 1 }
+unused-self = { level = "allow", priority = 1 }
+unnecessary-wraps = { level = "allow", priority = 1 }
+
+[lints.rust]
+unsafe_code = "forbid"
