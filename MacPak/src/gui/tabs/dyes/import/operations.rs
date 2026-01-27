@@ -260,7 +260,7 @@ pub fn import_from_mod_folder(
             }
         }
 
-        // Report what we found
+        // Returns findings
         let color_found = color_file.is_some() || !color_files.is_empty();
         let object_found = object_file.is_some();
 

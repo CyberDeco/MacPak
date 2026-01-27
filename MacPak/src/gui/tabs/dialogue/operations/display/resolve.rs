@@ -19,7 +19,7 @@ pub fn resolve_speaker_names(state: &DialogueState, nodes: &mut [DisplayNode]) {
     };
 
     for node in nodes.iter_mut() {
-        // Check for our special UUID marker
+        // Check for UUID
         if node.speaker_name.starts_with("__UUID__:") {
             let uuids_str = &node.speaker_name[9..]; // Skip "__UUID__:" prefix
 
@@ -73,7 +73,7 @@ pub fn resolve_localized_text(state: &DialogueState, nodes: &mut [DisplayNode]) 
             }
         }
 
-        // Resolve jump/alias/link target text if we have a handle
+        // Resolve jump/alias/link target text if there's a texthandle
         if let Some(ref handle) = node.jump_target_handle {
             let is_jump = node.constructor == NodeConstructor::Jump;
             let is_alias = node.constructor == NodeConstructor::Alias;

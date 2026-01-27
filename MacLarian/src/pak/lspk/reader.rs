@@ -71,7 +71,7 @@ impl<R: Read + Seek> LspkReader<R> {
             return Ok(&mut self.reader);
         }
 
-        // Check if we already have this part open
+        // Checks if this part is already open
         if !self.part_readers.contains_key(&part) {
             let part_path = self.get_part_path(part)
                 .ok_or_else(|| Error::ConversionError(

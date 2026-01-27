@@ -45,11 +45,11 @@ fn build_node_tree(
     visited: &mut HashSet<String>,
     alias_logicalnames: &HashMap<String, String>,
     sibling_map: &HashMap<String, HashSet<String>>,
-    ancestor_siblings: &HashSet<String>, // Siblings of ancestors - if we're in this set, we should be a link
+    ancestor_siblings: &HashSet<String>, // Siblings of ancestors - should be a link
 ) {
-    // Check if this node is a sibling of one of our ancestors
+    // Check if this node is a sibling of ancestors
     // This handles the case where a node appears as both a direct sibling AND a descendant of that sibling
-    // In that case, we show the full node at the sibling level and a link at the descendant level
+    // In that case, show the full node at the sibling level and a link at the descendant level
     if ancestor_siblings.contains(uuid) {
         // Only create a link if the node has text - otherwise linking to it is not useful
         if let Some(node) = dialog.get_node(uuid) {
@@ -179,7 +179,7 @@ fn build_node_tree(
                     build_link_node(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes);
                 } else {
                     // Child not visited yet - but if it's a pass-through Jump whose target
-                    // content is all visited, skip it. Otherwise we'd create links at the
+                    // content is all visited, skip it. Otherwise, it creates links at the
                     // wrong level (as siblings to the parent's other children).
                     if let Some(child_node) = dialog.get_node(child_uuid) {
                         // Check for actual flags (not just empty FlagGroups)
@@ -472,12 +472,12 @@ fn build_node_tree(
             // Try to get the target node's text and speaker
             if let Some(target_node) = dialog.get_node(target_uuid) {
                 // If jump_target_point is set, go to that child index, then keep following
-                // first children until we hit a Jump/Alias
+                // first children until there's a Jump/Alias
                 let effective_target = if let Some(point) = node.jump_target_point {
                     let child_index = point as usize;
                     if child_index < target_node.children.len() {
                         if let Some(entry_child) = dialog.get_node(&target_node.children[child_index]) {
-                            // Keep following first children until we hit a Jump/Alias
+                            // Keep following first children until there's a Jump/Alias
                             let mut entry_node = entry_child;
                             loop {
                                 if matches!(entry_node.constructor, NodeConstructor::Jump | NodeConstructor::Alias) {
@@ -618,7 +618,7 @@ fn build_node_tree(
     let children_visible = this_expanded && (depth == 0 || parent_expanded);
 
     // Build new ancestor_siblings for children: merge current node's siblings with existing
-    // This tracks siblings at all ancestor levels so we can detect when a node appears
+    // This tracks siblings at all ancestor levels to detect when a node appears
     // as both a sibling and a descendant of that sibling
     let mut child_ancestor_siblings = ancestor_siblings.clone();
     if let Some(my_siblings) = sibling_map.get(uuid) {
@@ -648,7 +648,7 @@ fn build_node_tree(
     if effective_children != base_children {
         // Already handled by effective_children processing above
     } else if base_children.len() == 1 {
-        // If we have a single child that might be pass-through, ensure its content is linked
+        // If there's a single child that might be pass-through, ensure its content is linked
         let child_uuid = &base_children[0];
         if let Some(child_node) = dialog.get_node(child_uuid) {
             let child_has_text = dialog.get_node_text(child_node).is_some();
@@ -755,7 +755,7 @@ fn get_content_nodes_for_link_depth(dialog: &Dialog, uuid: &str, depth: usize) -
     }
 
     // Node with no text and multiple children - just show the children (skip the parent)
-    // The parent has no content, so linking to it is redundant when we show all children
+    // The parent has no content, so linking to it is redundant when all children are shown
     // Only expand one level - don't recurse into children's children
     if !has_text && node.children.len() > 1 {
         // Return children directly without recursive expansion

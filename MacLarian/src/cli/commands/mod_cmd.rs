@@ -2,6 +2,8 @@
 
 use std::path::Path;
 
+use crate::cli::progress::simple_spinner;
+
 /// Validate mod structure (folder or PAK file)
 pub fn validate(source: &Path) -> anyhow::Result<()> {
     // Detect if source is a PAK file or folder
@@ -9,11 +11,17 @@ pub fn validate(source: &Path) -> anyhow::Result<()> {
         .extension()
         .is_some_and(|ext| ext.eq_ignore_ascii_case("pak"));
 
+    let pb = simple_spinner("Validating mod structure...");
     let result = if is_pak {
-        crate::mods::validate_pak_mod_structure(source)?
+        crate::mods::validate_pak_mod_structure_with_progress(source, &|p| {
+            pb.set_message(p.phase.as_str().to_string());
+        })?
     } else {
-        crate::mods::validate_mod_structure(source)
+        crate::mods::validate_mod_structure_with_progress(source, &|p| {
+            pb.set_message(p.phase.as_str().to_string());
+        })
     };
+    pb.finish_and_clear();
 
     // Print structure elements
     if !result.structure.is_empty() {
@@ -46,7 +54,15 @@ pub fn info_json(pak: &Path, extracted: &Path, output: Option<&Path>) -> anyhow:
     let pak_str = pak.to_string_lossy();
     let extracted_str = extracted.to_string_lossy();
 
-    let result = crate::mods::generate_info_json(&extracted_str, &pak_str);
+    let pb = simple_spinner("Generating info.json...");
+    let result = crate::mods::generate_info_json_with_progress(&extracted_str, &pak_str, &|p| {
+        if let Some(ref msg) = p.current_file {
+            pb.set_message(msg.clone());
+        } else {
+            pb.set_message(p.phase.as_str().to_string());
+        }
+    });
+    pb.finish_and_clear();
 
     if !result.success {
         eprintln!("Error: {}", result.message);

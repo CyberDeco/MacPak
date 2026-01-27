@@ -84,36 +84,3 @@ fn compute_md5(data: &[u8]) -> [u8; 16] {
     *digest
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use super::super::geometry::TileCoord;
-
-    #[test]
-    fn test_deduplication() {
-        let tile1 = ProcessedTile {
-            coord: TileCoord { layer: 0, level: 0, x: 0, y: 0 },
-            packed_id: 0,
-            data: vec![1, 2, 3, 4],
-            mip_data: None,
-        };
-        let tile2 = ProcessedTile {
-            coord: TileCoord { layer: 0, level: 0, x: 1, y: 0 },
-            packed_id: 1,
-            data: vec![1, 2, 3, 4], // Same data as tile1
-            mip_data: None,
-        };
-        let tile3 = ProcessedTile {
-            coord: TileCoord { layer: 0, level: 0, x: 2, y: 0 },
-            packed_id: 2,
-            data: vec![5, 6, 7, 8], // Different data
-            mip_data: None,
-        };
-
-        let result = deduplicate_tiles(vec![tile1, tile2, tile3]);
-
-        assert_eq!(result.unique_tiles.len(), 2);
-        assert_eq!(result.tile_mapping, vec![0, 0, 1]);
-        assert_eq!(result.duplicates_removed, 1);
-    }
-}

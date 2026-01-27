@@ -692,7 +692,7 @@ pub(super) fn scan_pak_for_dialogs(pak_path: &Path, entries: &mut Vec<DialogEntr
 
             let base_name = name.trim_end_matches(".lsf").trim_end_matches(".LSF");
 
-            // Skip if we already have the .lsj version
+            // Skip if .lsj already exists
             if seen_dialogs.contains(&base_name.to_lowercase()) {
                 continue;
             }

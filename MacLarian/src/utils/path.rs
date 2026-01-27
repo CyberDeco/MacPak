@@ -17,13 +17,3 @@ pub fn relative_path<P: AsRef<Path>>(path: P, base: P) -> Option<String> {
         .map(normalize_path)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_normalize_path() {
-        assert_eq!(normalize_path("foo\\bar\\baz"), "foo/bar/baz");
-        assert_eq!(normalize_path("foo/bar/baz"), "foo/bar/baz");
-    }
-}

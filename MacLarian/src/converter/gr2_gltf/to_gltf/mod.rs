@@ -277,7 +277,7 @@ pub fn convert_gr2_bytes_to_glb_with_textures(
         &mut warnings,
     );
 
-    // Add meshes with material if we have one
+    // Add meshes with material (if present)
     for mesh in &meshes {
         builder.add_mesh_with_material(mesh, skin_idx, material_idx);
     }
@@ -354,14 +354,14 @@ fn load_textures_for_gr2(
         albedo_texture_idx, normal_texture_idx, physical_texture_idx
     );
 
-    // Create material if we have at least one texture
+    // Create material if there's at least one texture
     if albedo_texture_idx.is_some() || normal_texture_idx.is_some() || physical_texture_idx.is_some() {
         let material_idx = builder.add_material(
             Some(gr2_filename.to_string()),
             albedo_texture_idx,
             normal_texture_idx,
             physical_texture_idx,
-            None, // occlusion - we don't have this separately
+            None, // occlusion - not separately accounted for
         );
         tracing::debug!("Created material with index {}", material_idx);
         Some(material_idx)
@@ -461,7 +461,7 @@ fn load_regular_textures(
         }
     }
 
-    // Only return if we got at least one PBR texture
+    // Only return if there's at least one PBR texture
     if albedo_texture_idx.is_some() || normal_texture_idx.is_some() || physical_texture_idx.is_some() {
         Some((albedo_texture_idx, normal_texture_idx, physical_texture_idx))
     } else {
@@ -576,7 +576,7 @@ fn load_virtual_textures(
     // Clean up temp directory
     let _ = std::fs::remove_dir_all(&temp_dir);
 
-    // Return if we got at least one texture
+    // Return if there's at least one texture
     if albedo_texture_idx.is_some() || normal_texture_idx.is_some() || physical_texture_idx.is_some() {
         Some((albedo_texture_idx, normal_texture_idx, physical_texture_idx))
     } else {
@@ -586,8 +586,8 @@ fn load_virtual_textures(
 
 /// Derive GTS path from GTP path
 fn derive_gts_path_from_gtp(gtp_path: &str) -> String {
-    // GTP: "Generated/Public/VirtualTextures/Albedo_Normal_Physical_0_abc123...def.gtp"
-    // GTS: "Generated/Public/VirtualTextures/Albedo_Normal_Physical_0.gts"
+    // GTP: "Generated/Public/VirtualTextures/Albedo_Normal_Physical_[0-9|a-f]_[GTex].gtp"
+    // GTS: "Generated/Public/VirtualTextures/Albedo_Normal_Physical_[0-9|a-f].gts"
     let without_ext = gtp_path.trim_end_matches(".gtp");
 
     if let Some(last_underscore) = without_ext.rfind('_') {

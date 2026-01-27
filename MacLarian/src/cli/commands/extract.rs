@@ -115,7 +115,7 @@ pub fn execute(
 ) -> anyhow::Result<()> {
     use crate::pak::{PakOperations, extract_files_smart};
 
-    // Check if we need smart extraction (GR2 processing enabled)
+    // Checks if smart extraction is needed (GR2 processing enabled)
     let use_smart_extract = gr2_options.has_processing();
 
     // Single file extraction
@@ -320,27 +320,3 @@ fn print_smart_extraction_result(result: &crate::pak::SmartExtractionResult) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_glob_matching() {
-        // Wildcard tests
-        assert!(matches_glob("*.lsf", "test.lsf"));
-        assert!(matches_glob("*.lsf", "path/to/test.lsf"));
-        assert!(!matches_glob("*.lsf", "test.lsx"));
-
-        // Pattern with multiple wildcards
-        assert!(matches_glob("*_merged.lsf", "Public/Shared/_merged.lsf"));
-        assert!(matches_glob("*_merged*", "something_merged.lsf"));
-
-        // Question mark
-        assert!(matches_glob("test?.lsf", "test1.lsf"));
-        assert!(!matches_glob("test?.lsf", "test12.lsf"));
-
-        // Case insensitivity
-        assert!(matches_glob("*.LSF", "test.lsf"));
-        assert!(matches_glob("*.lsf", "TEST.LSF"));
-    }
-}

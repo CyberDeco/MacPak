@@ -292,7 +292,7 @@ fn read_attributes<R: Read>(
     let attr_count = data.len() / attr_size;
     let mut attributes = Vec::with_capacity(attr_count);
 
-    // For V2, we need to calculate offsets as we go
+    // Need to calculate offsets progressively for V2
     let mut current_data_offset: usize = 0;
 
     for _ in 0..attr_count {
@@ -346,7 +346,7 @@ fn read_attributes<R: Read>(
         // First, collect attribute indices for each node
         let mut node_attrs: std::collections::HashMap<i32, Vec<usize>> = std::collections::HashMap::new();
         for (attr_idx, attr) in attributes.iter().enumerate() {
-            // Decode node_index from our temporary encoding
+            // Decode node_index from temporary encoding
             let node_index = -(attr.next_index + 1);
             node_attrs.entry(node_index).or_default().push(attr_idx);
         }

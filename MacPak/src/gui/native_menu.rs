@@ -32,8 +32,8 @@ static ACTIVE_TAB: std::sync::OnceLock<RwSignal<usize>> = std::sync::OnceLock::n
 
 /// Set up the native macOS menu bar
 ///
-/// This spawns a thread that waits for the app_ready signal, then dispatches
-/// to the main thread to replace floem's default menu with our custom menu.
+/// Spawns a thread that waits for the app_ready signal, then sends signal
+/// to the main thread to replace floem's default menu
 pub fn setup_native_menu(
     editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,

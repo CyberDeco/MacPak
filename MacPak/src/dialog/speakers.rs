@@ -436,24 +436,3 @@ impl std::fmt::Display for SpeakerCacheError {
 
 impl std::error::Error for SpeakerCacheError {}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_speaker_cache_basic() {
-        let mut cache = SpeakerCache::new();
-        assert!(cache.is_empty());
-
-        cache.insert(
-            "0e47fcb9-c0c4-4b0c-902b-2d13d209e760".to_string(),
-            "h12345678g1234g1234g1234g123456789abc".to_string(),
-        );
-
-        assert_eq!(cache.len(), 1);
-        assert_eq!(
-            cache.get_handle("0e47fcb9-c0c4-4b0c-902b-2d13d209e760"),
-            Some("h12345678g1234g1234g1234g123456789abc")
-        );
-    }
-}

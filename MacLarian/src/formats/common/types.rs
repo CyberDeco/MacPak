@@ -324,7 +324,7 @@ pub fn serialize_translated_string(
         buffer.push(0); // null terminator
     }
     
-    // BG3 doesn't typically use the value field, so we leave it empty
+    // Leave value empty (not used in BG3)
     
     Ok(buffer.len() - start)
 }

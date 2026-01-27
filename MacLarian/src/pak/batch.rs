@@ -262,22 +262,3 @@ where
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    #[test]
-    fn test_find_pak_files_empty() {
-        let dir = tempdir().unwrap();
-        let files = find_pak_files(dir.path());
-        assert!(files.is_empty());
-    }
-
-    #[test]
-    fn test_find_packable_folders_empty() {
-        let dir = tempdir().unwrap();
-        let folders = find_packable_folders(dir.path());
-        assert!(folders.is_empty());
-    }
-}

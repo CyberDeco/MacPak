@@ -5,7 +5,7 @@
 //! SPDX-License-Identifier: MIT
 
 // ============================================================================
-// Progress Types (mirrors VTex/PAK progress pattern)
+// Progress Types
 // ============================================================================
 
 /// Progress callback type for GR2/glTF conversion operations

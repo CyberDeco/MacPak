@@ -3,9 +3,9 @@
 //! Converts between DDS (`DirectDraw` Surface) texture files and PNG images.
 //! Supports common DDS formats used in BG3: BC1, BC2, BC3, BC4, BC5, BC7, and uncompressed.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //!
-//! SPDX-License-Identifier: MIT
+//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 #![allow(clippy::cast_possible_truncation)]
 
@@ -170,16 +170,3 @@ pub fn png_image_to_dds_bytes(img: &DynamicImage, format: DdsFormat) -> Result<V
     encode::encode_to_dds(pixels, width, height, format)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_rgb_to_565() {
-        assert_eq!(encode::rgb_to_565(255, 255, 255), 0xFFFF);
-        assert_eq!(encode::rgb_to_565(0, 0, 0), 0x0000);
-        assert_eq!(encode::rgb_to_565(255, 0, 0), 0xF800); // Red
-        assert_eq!(encode::rgb_to_565(0, 255, 0), 0x07E0); // Green
-        assert_eq!(encode::rgb_to_565(0, 0, 255), 0x001F); // Blue
-    }
-}

@@ -62,7 +62,7 @@ pub fn extract(
         pb.set_style(spinner_style());
         pb
     } else {
-        let pb = ProgressBar::new(1); // Will be updated when we know the total
+        let pb = ProgressBar::new(1);
         pb.set_style(bar_style());
         pb
     };

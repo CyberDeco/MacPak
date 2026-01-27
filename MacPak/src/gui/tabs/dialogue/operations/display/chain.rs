@@ -10,7 +10,7 @@ pub struct ChainResult {
     pub value: Option<String>,
     /// Fallback display (node ID or type) if no text found
     pub fallback: String,
-    /// Whether we hit a VisualState node
+    /// Whether it's a VisualState node
     pub is_visual: bool,
 }
 
@@ -76,12 +76,12 @@ pub fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth
             if let Some(ref target_uuid) = current.jump_target {
                 if let Some(target) = dialog.get_node(target_uuid) {
                     // If jump_target_point is set, go to that child index, then keep following
-                    // first children until we hit a Jump/Alias
+                    // first children until first Jump/Alias
                     if let Some(point) = current.jump_target_point {
                         let child_index = point as usize;
                         if child_index < target.children.len() {
                             if let Some(entry_child) = dialog.get_node(&target.children[child_index]) {
-                                // Keep following first children until we hit a Jump/Alias
+                                // Keep following first children until first Jump/Alias
                                 let mut entry_node = entry_child;
                                 loop {
                                     if matches!(entry_node.constructor, NodeConstructor::Jump | NodeConstructor::Alias) {
@@ -136,7 +136,7 @@ pub fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth
         break;
     }
 
-    // No text found - return fallback based on where we ended up
+    // No text found - return fallback based on place in tree
     let fallback = current.editor_data.get("ID")
         .cloned()
         .unwrap_or_else(|| current.constructor.display_name().to_string());
@@ -150,7 +150,7 @@ pub fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth
 }
 
 /// Get effective children for a Jump node's target, handling VisualState pass-through
-/// For display purposes, we show ALL content children (ignore jump_target_point for tree display)
+/// For display purposes, show ALL content children (ignore jump_target_point for tree display)
 /// The jump_target_point is only used for text resolution, not for determining children to display
 pub fn get_jump_effective_children(dialog: &Dialog, target_node: &DialogNode, _jump_target_point: Option<i32>) -> Vec<String> {
     // If target is a VisualState, its children are the content nodes

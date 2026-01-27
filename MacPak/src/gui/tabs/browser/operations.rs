@@ -598,7 +598,7 @@ fn convert_file_with_progress(
     send_progress(format!("Reading {}...", filename));
     std::thread::sleep(std::time::Duration::from_millis(50));
 
-    // For LSF conversions, we can provide more granular progress
+    // For LSF conversion progress
     let result = match (source_ext, target_format) {
         ("lsf", "lsx") => {
             // Read LSF file

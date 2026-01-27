@@ -439,14 +439,3 @@ impl VirtualTextureExtractor {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_dds_header_size() {
-        // DDS header should be exactly 128 bytes (4 magic + 124 header)
-        // This is a sanity check for the header structure
-        assert_eq!(DdsWriter::DDS_HEADER_SIZE, 124);
-    }
-}

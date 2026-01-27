@@ -4,11 +4,16 @@
 //!
 //! SPDX-License-Identifier: MIT
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
+use crate::converter::{ConvertPhase, ConvertProgress, ConvertProgressCallback};
 use crate::error::Result;
+use crate::formats::common::{extract_translated_string, extract_value, get_type_name};
 use crate::formats::lsf::{self, LsfDocument, LsfMetadataFormat};
-use crate::formats::common::{get_type_name, extract_value, extract_translated_string};
 
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
@@ -20,10 +25,48 @@ use std::path::Path;
 /// # Errors
 /// Returns an error if reading or conversion fails.
 pub fn convert_lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
-    tracing::info!("Converting LSF→LSX: {:?} → {:?}", source.as_ref(), dest.as_ref());
+    convert_lsf_to_lsx_with_progress(source, dest, &|_| {})
+}
+
+/// Convert LSF file to LSX format with progress callback
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
+pub fn convert_lsf_to_lsx_with_progress<P: AsRef<Path>>(
+    source: P,
+    dest: P,
+    progress: ConvertProgressCallback,
+) -> Result<()> {
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::ReadingSource,
+        0,
+        3,
+        "Reading LSF file",
+    ));
+    tracing::info!(
+        "Converting LSF→LSX: {:?} → {:?}",
+        source.as_ref(),
+        dest.as_ref()
+    );
     let lsf_doc = lsf::read_lsf(&source)?;
+
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::Converting,
+        1,
+        3,
+        "Converting to LSX",
+    ));
     let lsx_xml = to_lsx(&lsf_doc)?;
+
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::WritingOutput,
+        2,
+        3,
+        "Writing LSX file",
+    ));
     std::fs::write(dest, lsx_xml)?;
+
+    progress(&ConvertProgress::new(ConvertPhase::Complete, 3, 3));
     tracing::info!("Conversion complete");
     Ok(())
 }
@@ -99,7 +142,7 @@ fn write_version<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument) -
     version.push_attribute(("revision", revision.to_string().as_str()));
     version.push_attribute(("build", build.to_string().as_str()));
     
-    // Build metadata based on what we detected
+    // Build metadata (nod to LSLib)
     let mut meta = vec!["v1"];
     if major >= 4 {
         meta.push("bswap_guids");

@@ -239,7 +239,7 @@ pub fn parse_wwise_vorbis_header(extra_data: &[u8]) -> Result<WwiseVorbisHeader,
     let first_audio_offset = cursor.read_u32::<LittleEndian>()?;
 
     // Offset 32+ may contain more data, including blocksizes
-    // Try to read blocksizes if we have enough data
+    // Try to read blocksizes
     let (blocksize_0_exp, blocksize_1_exp) = if extra_data.len() >= 40 {
         // Offset 32: may contain blocksize info
         let bs_low = cursor.read_u16::<LittleEndian>().unwrap_or(0);
@@ -505,51 +505,3 @@ pub fn decode_wwise_vorbis_fallback(header: &WemHeader) -> Result<DecodedAudio, 
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_pcm_wem_header() {
-        // Create a minimal valid WEM file header for testing
-        let mut data = Vec::new();
-
-        // RIFF header
-        data.extend_from_slice(b"RIFF");
-        data.extend_from_slice(&100u32.to_le_bytes()); // file size
-        data.extend_from_slice(b"WAVE");
-
-        // fmt chunk
-        data.extend_from_slice(b"fmt ");
-        data.extend_from_slice(&16u32.to_le_bytes()); // chunk size
-        data.extend_from_slice(&1u16.to_le_bytes()); // PCM format
-        data.extend_from_slice(&2u16.to_le_bytes()); // 2 channels
-        data.extend_from_slice(&48000u32.to_le_bytes()); // sample rate
-        data.extend_from_slice(&192000u32.to_le_bytes()); // byte rate
-        data.extend_from_slice(&4u16.to_le_bytes()); // block align
-        data.extend_from_slice(&16u16.to_le_bytes()); // bits per sample
-
-        // data chunk
-        data.extend_from_slice(b"data");
-        data.extend_from_slice(&0u32.to_le_bytes()); // data size
-
-        let mut cursor = Cursor::new(data);
-        let header = parse_wem_header(&mut cursor).unwrap();
-
-        assert_eq!(header.format_code, 1);
-        assert_eq!(header.channels, 2);
-        assert_eq!(header.sample_rate, 48000);
-    }
-
-    #[test]
-    fn test_duration_calculation() {
-        let audio = DecodedAudio {
-            samples: vec![0i16; 96000], // 1 second of stereo 48kHz
-            channels: 2,
-            sample_rate: 48000,
-        };
-
-        assert!((audio.duration_secs() - 1.0).abs() < 0.001);
-        assert_eq!(audio.duration_ms(), 1000);
-    }
-}

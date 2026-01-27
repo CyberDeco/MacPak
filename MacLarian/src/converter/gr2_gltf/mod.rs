@@ -5,8 +5,8 @@
 //! GR2 and glTF 3D model format conversions
 //!
 //! Handles conversions between Granny2 (GR2) and glTF formats:
-//! - GR2 → glTF/GLB: Export game models for use in 3D editors
-//! - glTF → GR2: Import custom models into the game
+//! - GR2 → glTF/GLB: Export game models for use in Blender
+//! - glTF → GR2: Import back into the game
 
 pub mod shared;
 pub mod to_gltf;

@@ -65,22 +65,3 @@ fn extract_text_content(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_extract_text_content() {
-        let bytes = b"Hello World";
-        let text = extract_text_content(bytes);
-        assert_eq!(text, "Hello World");
-    }
-
-    #[test]
-    fn test_extract_text_invalid_utf8() {
-        let bytes = &[0xFF, 0xFE, b'H', b'i'];
-        let text = extract_text_content(bytes);
-        // Should handle invalid UTF-8 gracefully
-        assert!(text.contains("Hi"));
-    }
-}

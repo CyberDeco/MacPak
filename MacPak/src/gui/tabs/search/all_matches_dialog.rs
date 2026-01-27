@@ -49,7 +49,7 @@ pub fn all_matches_dialog(state: SearchState) -> impl IntoView {
         let current_query = query_for_effect.get();
 
         if !visible {
-            // Dialog closed - reset loaded path so we reload on next open
+            // Dialog closed - reset loaded path so it's reload on next open
             loaded_path.set(None);
             return;
         }
@@ -58,7 +58,7 @@ pub fn all_matches_dialog(state: SearchState) -> impl IntoView {
             let file_path = file.path.clone();
             let already_loaded = loaded_path.get().as_ref() == Some(&file_path);
 
-            // Only load if we haven't loaded this file yet and not currently loading
+            // Only load if not already loaded
             if !already_loaded && !is_loading.get_untracked() {
                 loaded_path.set(Some(file_path));
                 is_loading.set(true);

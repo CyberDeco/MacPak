@@ -11,11 +11,12 @@
     clippy::wrong_self_convention
 )]
 
+use crate::converter::{ConvertPhase, ConvertProgress, ConvertProgressCallback};
 use crate::error::{Error, Result};
-use crate::formats::lsf::{self, LsfDocument, LsfNode, LsfAttribute, LsfMetadataFormat};
 use crate::formats::common::{
-    type_name_to_id, serialize_value, serialize_translated_string, hash_string_lslib
+    hash_string_lslib, serialize_translated_string, serialize_value, type_name_to_id,
 };
+use crate::formats::lsf::{self, LsfAttribute, LsfDocument, LsfMetadataFormat, LsfNode};
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -27,14 +28,50 @@ use std::path::Path;
 /// # Errors
 /// Returns an error if reading, parsing, or writing fails.
 pub fn convert_lsx_to_lsf<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
-    tracing::info!("Converting LSX→LSF: {:?} → {:?}", source.as_ref(), dest.as_ref());
-    
+    convert_lsx_to_lsf_with_progress(source, dest, &|_| {})
+}
+
+/// Convert LSX file to LSF format with progress callback
+///
+/// # Errors
+/// Returns an error if reading, parsing, or writing fails.
+pub fn convert_lsx_to_lsf_with_progress<P: AsRef<Path>>(
+    source: P,
+    dest: P,
+    progress: ConvertProgressCallback,
+) -> Result<()> {
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::ReadingSource,
+        0,
+        3,
+        "Reading LSX file",
+    ));
+    tracing::info!(
+        "Converting LSX→LSF: {:?} → {:?}",
+        source.as_ref(),
+        dest.as_ref()
+    );
+
     let content = std::fs::read_to_string(&source)?;
+
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::Parsing,
+        1,
+        3,
+        "Parsing XML",
+    ));
     let lsf_doc = from_lsx(&content)?;
-    
+
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::WritingOutput,
+        2,
+        3,
+        "Writing LSF file",
+    ));
     // Write LSF binary
     lsf::write_lsf(&lsf_doc, dest)?;
-    
+
+    progress(&ConvertProgress::new(ConvertPhase::Complete, 3, 3));
     tracing::info!("Conversion complete");
     Ok(())
 }

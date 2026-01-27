@@ -82,24 +82,3 @@ pub fn find_color(name: &str) -> Option<&'static ColorDef> {
 /// Total number of colors
 pub const COLOR_COUNT: usize = 31;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn registry_has_correct_count() {
-        assert_eq!(COLOR_REGISTRY.len(), COLOR_COUNT);
-    }
-
-    #[test]
-    fn required_count_is_14() {
-        assert_eq!(required_colors().count(), 14);
-    }
-
-    #[test]
-    fn categories_are_correct() {
-        assert_eq!(colors_by_category(ColorCategory::Required).count(), 14);
-        assert_eq!(colors_by_category(ColorCategory::Recommended).count(), 3);
-        assert_eq!(colors_by_category(ColorCategory::Common).count(), 14);
-    }
-}

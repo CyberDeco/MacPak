@@ -369,7 +369,7 @@ impl GltfBuilder {
     /// Add an embedded image (PNG bytes) to the GLB.
     /// Returns the image index.
     pub fn add_embedded_image(&mut self, png_data: &[u8], name: Option<String>) -> usize {
-        // Images don't need specific alignment, but we align to 4 for consistency
+        // Align to 4 for consistency (not necessary but it's whatev)
         self.align(4);
         let byte_offset = self.buffer.len();
         self.buffer.extend_from_slice(png_data);
@@ -494,7 +494,7 @@ impl GltfBuilder {
     /// Convenience method to add an image, create a texture for it, and return the texture index.
     /// Also creates a default sampler if none exists.
     pub fn add_image_as_texture(&mut self, png_data: &[u8], name: Option<String>) -> usize {
-        // Ensure we have at least one sampler
+        // Ensure there's at least one sampler
         let sampler_idx = if self.samplers.is_empty() {
             Some(self.add_sampler())
         } else {

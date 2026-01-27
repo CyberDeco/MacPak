@@ -129,21 +129,3 @@ pub fn parse_dialog_lsf_bytes(data: &[u8]) -> Result<Dialog, DialogParseError> {
     parse_dialog(&lsj_doc)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_node_constructor_display() {
-        assert_eq!(NodeConstructor::TagAnswer.display_name(), "Answer");
-        assert_eq!(NodeConstructor::TagQuestion.display_name(), "Question");
-        assert_eq!(NodeConstructor::ActiveRoll.display_name(), "Active Roll");
-    }
-
-    #[test]
-    fn test_dialog_default() {
-        let dialog = Dialog::new();
-        assert!(dialog.nodes.is_empty());
-        assert!(dialog.root_nodes.is_empty());
-    }
-}

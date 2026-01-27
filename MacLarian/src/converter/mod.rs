@@ -97,19 +97,19 @@ impl ConvertPhase {
 // Re-export LSF/LSX/LSJ conversions - primary API only
 pub use lsf_lsx_lsj::{
     // Primary conversion functions
-    convert_lsf_to_lsx, convert_lsx_to_lsf,
-    convert_lsx_to_lsj, convert_lsj_to_lsx,
-    convert_lsf_to_lsj, convert_lsj_to_lsf,
+    convert_lsf_to_lsj, convert_lsf_to_lsx, convert_lsj_to_lsf, convert_lsj_to_lsx,
+    convert_lsx_to_lsf, convert_lsx_to_lsj,
     // With-progress variants
-    convert_lsx_to_lsj_with_progress, convert_lsj_to_lsx_with_progress,
-    convert_lsf_to_lsj_with_progress, convert_lsj_to_lsf_with_progress,
+    convert_lsf_to_lsj_with_progress, convert_lsf_to_lsx_with_progress,
+    convert_lsj_to_lsf_with_progress, convert_lsj_to_lsx_with_progress,
+    convert_lsx_to_lsf_with_progress, convert_lsx_to_lsj_with_progress,
     // Convenience aliases (shorter names)
-    lsf_to_lsx, lsx_to_lsf, lsx_to_lsj, lsj_to_lsx, lsf_to_lsj, lsj_to_lsf,
+    lsf_to_lsj, lsf_to_lsx, lsj_to_lsf, lsj_to_lsx, lsx_to_lsf, lsx_to_lsj,
     // Convenience aliases with progress
-    lsx_to_lsj_with_progress, lsj_to_lsx_with_progress,
-    lsf_to_lsj_with_progress, lsj_to_lsf_with_progress,
+    lsf_to_lsj_with_progress, lsf_to_lsx_with_progress, lsj_to_lsf_with_progress,
+    lsj_to_lsx_with_progress, lsx_to_lsf_with_progress, lsx_to_lsj_with_progress,
     // In-memory conversion functions
-    to_lsx, from_lsx, to_lsj,
+    from_lsx, to_lsj, to_lsx,
 };
 
 // GR2/glTF conversion exports

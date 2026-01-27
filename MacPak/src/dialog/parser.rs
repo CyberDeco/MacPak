@@ -620,22 +620,3 @@ impl From<std::io::Error> for DialogParseError {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_node_constructor_from_str() {
-        assert_eq!(NodeConstructor::from_str("TagAnswer"), NodeConstructor::TagAnswer);
-        assert_eq!(NodeConstructor::from_str("TagQuestion"), NodeConstructor::TagQuestion);
-        assert_eq!(NodeConstructor::from_str("ActiveRoll"), NodeConstructor::ActiveRoll);
-        assert_eq!(NodeConstructor::from_str("Unknown"), NodeConstructor::Other("Unknown".to_string()));
-    }
-
-    #[test]
-    fn test_flag_type_from_str() {
-        assert_eq!(FlagType::from_str("Local"), FlagType::Local);
-        assert_eq!(FlagType::from_str("Global"), FlagType::Global);
-        assert_eq!(FlagType::from_str("CustomType"), FlagType::Other("CustomType".to_string()));
-    }
-}

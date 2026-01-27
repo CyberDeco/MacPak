@@ -68,7 +68,7 @@ fn browser_content(
 ) -> impl IntoView {
     let file_list_width = state.file_list_width;
 
-    // Drag state - tracked at parent level so we get events even when pointer leaves divider
+    // Drag state - tracked at parent level so events are captured even when pointer leaves divider
     let is_dragging = RwSignal::new(false);
     // Offset from mouse position to divider edge (where within the divider you clicked)
     let drag_offset = RwSignal::new(0.0);

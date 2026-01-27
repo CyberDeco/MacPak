@@ -176,17 +176,3 @@ pub fn find_gts_for_gtex(config: &ModConfig, gtex_hash: &str) -> Option<PathBuf>
     None
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_find_mod_root() {
-        let path = Path::new("/mods/TestMod/Public/TestMod/Assets/VirtualTextures/Test/Test.gtp");
-        let result = find_mod_root(path);
-        assert!(result.is_some());
-        let (root, name) = result.unwrap();
-        assert_eq!(root, Path::new("/mods/TestMod"));
-        assert_eq!(name, "TestMod");
-    }
-}

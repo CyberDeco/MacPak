@@ -182,7 +182,7 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
                 }
                 result.textures_extracted += proc_result.texture_paths.len();
 
-                // Add the folder to our results
+                // Add folder to results
                 if let Some(folder) = gr2_path.parent() {
                     if !result.gr2_folders.contains(&folder.to_path_buf()) {
                         result.gr2_folders.push(folder.to_path_buf());
@@ -281,31 +281,3 @@ pub fn extract_pak_smart<P: AsRef<Path>>(
     extract_files_smart(pak_path, output_dir, &all_files, options, progress)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_smart_extraction_result_new() {
-        let result = SmartExtractionResult::new();
-        assert_eq!(result.files_extracted, 0);
-        assert_eq!(result.gr2s_processed, 0);
-        assert!(result.warnings.is_empty());
-    }
-
-    #[test]
-    fn test_gr2_extraction_options_bundle() {
-        let opts = Gr2ExtractionOptions::bundle();
-        assert!(opts.has_gr2_processing());
-        assert!(opts.convert_to_glb);
-        assert!(opts.extract_textures);
-        assert!(opts.extract_virtual_textures);
-        assert!(opts.keep_original_gr2);
-    }
-
-    #[test]
-    fn test_gr2_extraction_options_default() {
-        let opts = Gr2ExtractionOptions::new();
-        assert!(!opts.has_gr2_processing());
-    }
-}

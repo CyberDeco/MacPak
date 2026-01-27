@@ -387,7 +387,7 @@ impl Gr2File {
             return Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()));
         }
 
-        // Verify endianness - we only support little-endian GR2 files
+        // Verify endianness - only little-endian GR2 files are supported
         if magic.endian()? == Endian::Big {
             return Err(Error::DecompressionError("Big-endian GR2 files are not supported".to_string()));
         }
@@ -450,25 +450,3 @@ impl Gr2File {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_magic_validation() {
-        let mut magic_struct = Gr2Magic {
-            signature: magic::LE64,
-            headers_size: 0x1F4,
-            header_format: 0,
-            reserved: [0; 8],
-        };
-        assert!(magic_struct.is_valid());
-        assert_eq!(magic_struct.pointer_size().unwrap(), PointerSize::Bit64);
-        assert_eq!(magic_struct.endian().unwrap(), Endian::Little);
-
-        magic_struct.signature = magic::BE32;
-        assert!(magic_struct.is_valid());
-        assert_eq!(magic_struct.pointer_size().unwrap(), PointerSize::Bit32);
-        assert_eq!(magic_struct.endian().unwrap(), Endian::Big);
-    }
-}

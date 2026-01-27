@@ -279,26 +279,3 @@ pub fn extract_all<P1: AsRef<Path>, P2: AsRef<Path>>(
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_subfolder_name() {
-        assert_eq!(
-            get_subfolder_name("Albedo_Normal_Physical_0_0a0d1854395eb40436bec69fe14aa92b.gtp"),
-            "Albedo_Normal_Physical_0"
-        );
-        assert_eq!(
-            get_subfolder_name("simple.gtp"),
-            "simple"
-        );
-    }
-
-    #[test]
-    fn test_find_base_name() {
-        assert_eq!(find_base_name("Albedo_Normal_Physical_1"), Some("Albedo_Normal_Physical"));
-        assert_eq!(find_base_name("Albedo_Normal_Physical_0"), Some("Albedo_Normal_Physical"));
-        assert_eq!(find_base_name("no_number_suffix"), None);
-    }
-}

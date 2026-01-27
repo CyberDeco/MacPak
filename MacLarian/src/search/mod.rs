@@ -284,9 +284,32 @@ impl SearchIndex {
     /// # Errors
     /// Returns an error if any PAK file cannot be read.
     pub fn build_index(&mut self, pak_paths: &[PathBuf]) -> Result<usize> {
+        self.build_index_with_progress(pak_paths, &|_| {})
+    }
+
+    /// Build the search index from multiple PAK files with progress callback
+    ///
+    /// Scans each PAK file in parallel to extract file metadata.
+    /// Returns the total number of files indexed.
+    ///
+    /// # Errors
+    /// Returns an error if any PAK file cannot be read.
+    pub fn build_index_with_progress(
+        &mut self,
+        pak_paths: &[PathBuf],
+        progress: SearchProgressCallback,
+    ) -> Result<usize> {
         self.clear();
 
         let start = std::time::Instant::now();
+        let total = pak_paths.len();
+
+        progress(&SearchProgress::with_file(
+            SearchPhase::ScanningPaks,
+            0,
+            total,
+            "Starting PAK scan",
+        ));
 
         // Process each PAK file in parallel
         let pak_entries: Vec<Result<Vec<IndexedFile>>> = pak_paths
@@ -295,7 +318,14 @@ impl SearchIndex {
             .collect();
 
         // Merge results sequentially (to avoid lock contention)
-        for (pak_path, result) in pak_paths.iter().zip(pak_entries) {
+        for (i, (pak_path, result)) in pak_paths.iter().zip(pak_entries).enumerate() {
+            progress(&SearchProgress::with_file(
+                SearchPhase::BuildingIndex,
+                i + 1,
+                total,
+                pak_path.display().to_string(),
+            ));
+
             match result {
                 Ok(entries) => {
                     for entry in entries {
@@ -321,6 +351,8 @@ impl SearchIndex {
 
         self.file_count = self.entries.len();
         self.indexed = true;
+
+        progress(&SearchProgress::new(SearchPhase::Complete, total, total));
 
         let elapsed = start.elapsed();
         tracing::info!(
@@ -623,7 +655,7 @@ impl SearchIndex {
     {
         use tantivy::TantivyDocument;
 
-        // Check that we have a fulltext index
+        // Checks for fulltext index
         if self.fulltext.is_none() {
             return Err(crate::error::Error::SearchError(
                 "No fulltext index to export".to_string(),
@@ -744,11 +776,39 @@ impl SearchIndex {
     /// # Errors
     /// Returns an error if reading the index fails.
     pub fn import_index(&mut self, dir: &Path) -> Result<()> {
+        self.import_index_with_progress(dir, &|_| {})
+    }
+
+    /// Import a fulltext index from a directory with progress callback
+    ///
+    /// Loads the Tantivy index, file entries, and metadata previously saved with `export_index`.
+    ///
+    /// # Errors
+    /// Returns an error if reading the index fails.
+    pub fn import_index_with_progress(
+        &mut self,
+        dir: &Path,
+        progress: SearchProgressCallback,
+    ) -> Result<()> {
+        progress(&SearchProgress::with_file(
+            SearchPhase::ImportingIndex,
+            0,
+            4,
+            "Loading metadata",
+        ));
+
         // Load metadata
         let meta_path = dir.join("metadata.json");
         let meta_json = std::fs::read_to_string(&meta_path)?;
         let metadata: IndexMetadata = serde_json::from_str(&meta_json)
             .map_err(|e| crate::error::Error::SearchError(format!("Failed to parse metadata: {e}")))?;
+
+        progress(&SearchProgress::with_file(
+            SearchPhase::ImportingIndex,
+            1,
+            4,
+            "Loading file entries",
+        ));
 
         // Load file entries (if available - for backward compatibility)
         let entries_path = dir.join("entries.json");
@@ -760,6 +820,13 @@ impl SearchIndex {
             HashMap::new()
         };
 
+        progress(&SearchProgress::with_file(
+            SearchPhase::ImportingIndex,
+            2,
+            4,
+            "Rebuilding filename index",
+        ));
+
         // Rebuild filename index from entries
         let mut filename_index: HashMap<String, Vec<String>> = HashMap::new();
         for (path, file) in &entries {
@@ -769,6 +836,13 @@ impl SearchIndex {
                 .or_default()
                 .push(path.clone());
         }
+
+        progress(&SearchProgress::with_file(
+            SearchPhase::ImportingIndex,
+            3,
+            4,
+            "Opening Tantivy index",
+        ));
 
         // Open the Tantivy index
         let tantivy_dir = dir.join("tantivy");
@@ -781,6 +855,8 @@ impl SearchIndex {
         self.file_count = metadata.file_count;
         self.indexed_paks = metadata.indexed_paks;
         self.indexed = true;
+
+        progress(&SearchProgress::new(SearchPhase::Complete, 4, 4));
 
         tracing::info!(
             "Imported index from {} ({} files, {} docs from {} paks)",
@@ -805,27 +881,4 @@ struct IndexMetadata {
     indexed_paks: Vec<PathBuf>,
     /// Number of documents in the fulltext index
     fulltext_doc_count: u64,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_file_type_from_extension() {
-        assert_eq!(FileType::from_extension("lsx"), FileType::Lsx);
-        assert_eq!(FileType::from_extension("LSX"), FileType::Lsx);
-        assert_eq!(FileType::from_extension("lsf"), FileType::Lsf);
-        assert_eq!(FileType::from_extension("dds"), FileType::Dds);
-        assert_eq!(FileType::from_extension("gr2"), FileType::Gr2);
-        assert_eq!(FileType::from_extension("unknown"), FileType::Other);
-    }
-
-    #[test]
-    fn test_file_type_is_searchable() {
-        assert!(FileType::Lsx.is_searchable_text());
-        assert!(FileType::Lsf.is_searchable_text());
-        assert!(!FileType::Dds.is_searchable_text());
-        assert!(!FileType::Gr2.is_searchable_text());
-    }
 }

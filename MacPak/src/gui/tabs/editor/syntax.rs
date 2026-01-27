@@ -86,7 +86,7 @@ pub fn tokenize_xml(text: &str) -> Vec<TokenSpan> {
     let bytes = text.as_bytes();
     let len = bytes.len();
 
-    // Helper to check if we can safely compare a string slice
+    // Helper to check for safely comparing a string slice
     fn safe_starts_with(text: &str, pos: usize, pattern: &str) -> bool {
         text.get(pos..)
             .map(|s| s.starts_with(pattern))
@@ -202,7 +202,7 @@ pub fn tokenize_xml(text: &str) -> Vec<TokenSpan> {
                 });
             }
 
-            // Parse attributes until we hit > or />
+            // Parse attributes until > or />
             while pos < len && bytes[pos] != b'>' {
                 // Skip whitespace
                 while pos < len
@@ -305,7 +305,7 @@ pub fn tokenize_json(text: &str) -> Vec<TokenSpan> {
     let bytes = text.as_bytes();
     let len = bytes.len();
 
-    // Helper to check if we can safely compare a string slice
+    // Helper to check for safely comparing a string slice
     fn safe_starts_with(text: &str, pos: usize, pattern: &str) -> bool {
         text.get(pos..)
             .map(|s| s.starts_with(pattern))
@@ -545,7 +545,7 @@ impl Styling for SyntaxStyling {
             .unwrap_or(usize::MAX);
 
         for span in &self.tokens {
-            // Check if this span overlaps with our line
+            // Check if span overlaps with line
             if span.end <= line_start || span.start >= line_end {
                 continue;
             }

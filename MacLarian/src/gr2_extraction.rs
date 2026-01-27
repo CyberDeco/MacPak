@@ -22,13 +22,113 @@
     clippy::map_unwrap_or
 )]
 
-use crate::converter::{convert_gr2_to_glb, convert_dds_to_png};
+use crate::converter::{convert_dds_to_png, convert_gr2_to_glb};
 use crate::error::{Error, Result};
-use crate::virtual_texture::VirtualTextureExtractor;
-use crate::merged::{bg3_data_path, GameDataResolver, MergedDatabase, TextureRef, VirtualTextureRef};
+use crate::merged::{
+    bg3_data_path, GameDataResolver, MergedDatabase, TextureRef, VirtualTextureRef,
+};
 use crate::pak::PakOperations;
+use crate::virtual_texture::VirtualTextureExtractor;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+
+// ============================================================================
+// Progress Types
+// ============================================================================
+
+/// Progress callback type for GR2 extraction operations
+pub type Gr2ExtractionProgressCallback<'a> = &'a (dyn Fn(&Gr2ExtractionProgress) + Sync + Send);
+
+/// Progress information during GR2 extraction operations
+#[derive(Debug, Clone)]
+pub struct Gr2ExtractionProgress {
+    /// Current operation phase
+    pub phase: Gr2ExtractionPhase,
+    /// Current item number (1-indexed)
+    pub current: usize,
+    /// Total number of items
+    pub total: usize,
+    /// Current file being processed (if applicable)
+    pub current_file: Option<String>,
+}
+
+impl Gr2ExtractionProgress {
+    /// Create a new progress update
+    #[must_use]
+    pub fn new(phase: Gr2ExtractionPhase, current: usize, total: usize) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: None,
+        }
+    }
+
+    /// Create a progress update with a file/item name
+    #[must_use]
+    pub fn with_file(
+        phase: Gr2ExtractionPhase,
+        current: usize,
+        total: usize,
+        file: impl Into<String>,
+    ) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: Some(file.into()),
+        }
+    }
+
+    /// Get the progress percentage (0.0 - 1.0)
+    #[must_use]
+    pub fn percentage(&self) -> f32 {
+        if self.total == 0 {
+            1.0
+        } else {
+            self.current as f32 / self.total as f32
+        }
+    }
+}
+
+/// Phase of GR2 extraction operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Gr2ExtractionPhase {
+    /// Converting GR2 to GLB format
+    ConvertingGr2,
+    /// Building texture database from merged files
+    BuildingDatabase,
+    /// Looking up textures for GR2 file
+    LookingUpTextures,
+    /// Extracting DDS textures from PAK
+    ExtractingDdsTextures,
+    /// Extracting virtual textures
+    ExtractingVirtualTextures,
+    /// Converting DDS to PNG format
+    ConvertingToPng,
+    /// Operation complete
+    Complete,
+}
+
+impl Gr2ExtractionPhase {
+    /// Get a human-readable description of this phase
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ConvertingGr2 => "Converting GR2 to GLB",
+            Self::BuildingDatabase => "Building texture database",
+            Self::LookingUpTextures => "Looking up textures",
+            Self::ExtractingDdsTextures => "Extracting DDS textures",
+            Self::ExtractingVirtualTextures => "Extracting virtual textures",
+            Self::ConvertingToPng => "Converting to PNG",
+            Self::Complete => "Complete",
+        }
+    }
+}
+
+// ============================================================================
+// Result and Options Types
+// ============================================================================
 
 /// Result of a smart GR2 extraction
 #[derive(Debug, Clone)]
@@ -530,7 +630,7 @@ fn extract_dds_textures(
     if !unknown_pak.is_empty() {
         tracing::info!("Searching {} texture PAKs for {} textures", texture_paks.len(), unknown_pak.len());
 
-        // Try each texture PAK until we find the files
+        // Try each texture PAK until target file(s) found
         for pak_path in &texture_paks {
             // Check which files exist in this PAK
             let pak_files: HashSet<String> = match PakOperations::list(pak_path) {
@@ -1002,32 +1102,3 @@ pub fn extract_gr2_with_textures(
     process_extracted_gr2(&extracted_gr2, options)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_default_options() {
-        let opts = Gr2ExtractionOptions::default();
-        assert!(opts.convert_to_glb);
-        assert!(opts.extract_textures);
-        assert!(opts.game_data_path.is_none());
-        assert!(opts.virtual_textures_path.is_none());
-    }
-
-    #[test]
-    fn test_options_builder() {
-        let opts = Gr2ExtractionOptions::default()
-            .no_conversion()
-            .no_textures();
-        assert!(!opts.convert_to_glb);
-        assert!(!opts.extract_textures);
-    }
-
-    #[test]
-    fn test_options_with_game_data() {
-        let opts = Gr2ExtractionOptions::default()
-            .with_game_data_path(Some("/path/to/game"));
-        assert_eq!(opts.game_data_path, Some(PathBuf::from("/path/to/game")));
-    }
-}

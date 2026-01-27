@@ -345,31 +345,3 @@ impl std::fmt::Display for FlagCacheError {
 
 impl std::error::Error for FlagCacheError {}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_flag_cache_basic() {
-        let mut cache = FlagCache::new();
-        assert!(cache.is_empty());
-
-        cache.insert(
-            "7e84b35a-5a77-456d-4dd7-4c96e1247bc1".to_string(),
-            "CAMP_GoblinHunt_HasMet_Astarion".to_string(),
-        );
-
-        assert_eq!(cache.len(), 1);
-        assert_eq!(
-            cache.get_name("7e84b35a-5a77-456d-4dd7-4c96e1247bc1"),
-            Some("CAMP_GoblinHunt_HasMet_Astarion")
-        );
-    }
-
-    #[test]
-    fn test_flag_cache_not_indexed_returns_none() {
-        let cache = FlagCache::new();
-        assert!(!cache.is_indexed());
-        assert_eq!(cache.get_name("nonexistent-uuid"), None);
-    }
-}

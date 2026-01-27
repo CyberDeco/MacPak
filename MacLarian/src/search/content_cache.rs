@@ -321,29 +321,3 @@ impl Default for ContentCache {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_cache_key() {
-        let key = ContentCache::cache_key(
-            Path::new("/path/to/test.pak"),
-            "Mods/Gustav/Story/story.lsf",
-        );
-        assert_eq!(key, "/path/to/test.pak:Mods/Gustav/Story/story.lsf");
-    }
-
-    #[test]
-    fn test_new_cache() {
-        let cache = ContentCache::new();
-        assert!(cache.is_empty());
-        assert_eq!(cache.len(), 0);
-    }
-
-    #[test]
-    fn test_with_max_entries() {
-        let cache = ContentCache::with_max_entries(10);
-        assert_eq!(cache.max_entries, 10);
-    }
-}

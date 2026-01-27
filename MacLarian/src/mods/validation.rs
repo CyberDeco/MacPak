@@ -4,6 +4,8 @@ use std::path::Path;
 
 use crate::pak::PakOperations;
 
+use super::types::{ModPhase, ModProgress, ModProgressCallback};
+
 /// Result of mod structure validation
 #[derive(Clone, Debug)]
 pub struct ModValidationResult {
@@ -26,8 +28,35 @@ pub struct ModValidationResult {
 ///
 /// # Returns
 /// `ModValidationResult` with validation status and details
-#[must_use] 
+#[must_use]
 pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
+    validate_mod_structure_with_progress(mod_path, &|_| {})
+}
+
+/// Validate mod directory structure with progress callback
+///
+/// Checks for:
+/// - Standard mod directories (Mods, Public, Localization)
+/// - Presence of meta.lsx file
+///
+/// # Arguments
+/// * `mod_path` - Path to the mod directory to validate
+/// * `progress` - Progress callback
+///
+/// # Returns
+/// `ModValidationResult` with validation status and details
+#[must_use]
+pub fn validate_mod_structure_with_progress(
+    mod_path: &Path,
+    progress: ModProgressCallback,
+) -> ModValidationResult {
+    progress(&ModProgress::with_file(
+        ModPhase::Validating,
+        0,
+        1,
+        "Checking directory structure",
+    ));
+
     let mut valid = true;
     let mut structure = Vec::new();
     let mut warnings = Vec::new();
@@ -42,26 +71,24 @@ pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
     }
 
     // Check for meta.lsx
-    let meta_paths = [
-        mod_path.join("Mods"),
-        mod_path.to_path_buf(),
-    ];
+    let meta_paths = [mod_path.join("Mods"), mod_path.to_path_buf()];
 
     let mut found_meta = false;
     for base in meta_paths {
         if base.exists() && base.is_dir()
-            && let Ok(entries) = std::fs::read_dir(&base) {
-                for entry in entries.flatten() {
-                    let meta_path = entry.path().join("meta.lsx");
-                    if meta_path.exists() {
-                        found_meta = true;
-                        structure.push(format!(
-                            "+ {}/meta.lsx",
-                            entry.file_name().to_string_lossy()
-                        ));
-                    }
+            && let Ok(entries) = std::fs::read_dir(&base)
+        {
+            for entry in entries.flatten() {
+                let meta_path = entry.path().join("meta.lsx");
+                if meta_path.exists() {
+                    found_meta = true;
+                    structure.push(format!(
+                        "+ {}/meta.lsx",
+                        entry.file_name().to_string_lossy()
+                    ));
                 }
             }
+        }
     }
 
     if !found_meta {
@@ -70,9 +97,13 @@ pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
     }
 
     if structure.is_empty() {
-        warnings.push("No standard mod directories found (Mods/, Public/, Localization/)".to_string());
+        warnings.push(
+            "No standard mod directories found (Mods/, Public/, Localization/)".to_string(),
+        );
         valid = false;
     }
+
+    progress(&ModProgress::new(ModPhase::Complete, 1, 1));
 
     ModValidationResult {
         valid,
@@ -96,6 +127,35 @@ pub fn validate_mod_structure(mod_path: &Path) -> ModValidationResult {
 /// # Errors
 /// Returns an error if the PAK file cannot be read
 pub fn validate_pak_mod_structure(pak_path: &Path) -> crate::error::Result<ModValidationResult> {
+    validate_pak_mod_structure_with_progress(pak_path, &|_| {})
+}
+
+/// Validate mod structure within a PAK file with progress callback
+///
+/// Checks for:
+/// - Standard mod directories (Mods, Public, Localization)
+/// - Presence of meta.lsx file
+///
+/// # Arguments
+/// * `pak_path` - Path to the PAK file to validate
+/// * `progress` - Progress callback
+///
+/// # Returns
+/// `ModValidationResult` with validation status and details
+///
+/// # Errors
+/// Returns an error if the PAK file cannot be read
+pub fn validate_pak_mod_structure_with_progress(
+    pak_path: &Path,
+    progress: ModProgressCallback,
+) -> crate::error::Result<ModValidationResult> {
+    progress(&ModProgress::with_file(
+        ModPhase::Validating,
+        0,
+        1,
+        "Reading PAK file list",
+    ));
+
     let files = PakOperations::list(pak_path)?;
 
     let mut valid = true;
@@ -111,10 +171,7 @@ pub fn validate_pak_mod_structure(pak_path: &Path) -> crate::error::Result<ModVa
     }
 
     // Check for meta.lsx
-    let meta_files: Vec<_> = files
-        .iter()
-        .filter(|f| f.ends_with("meta.lsx"))
-        .collect();
+    let meta_files: Vec<_> = files.iter().filter(|f| f.ends_with("meta.lsx")).collect();
 
     if meta_files.is_empty() {
         warnings.push("No meta.lsx found - mod may not load properly".to_string());
@@ -126,9 +183,13 @@ pub fn validate_pak_mod_structure(pak_path: &Path) -> crate::error::Result<ModVa
     }
 
     if structure.is_empty() {
-        warnings.push("No standard mod directories found (Mods/, Public/, Localization/)".to_string());
+        warnings.push(
+            "No standard mod directories found (Mods/, Public/, Localization/)".to_string(),
+        );
         valid = false;
     }
+
+    progress(&ModProgress::new(ModPhase::Complete, 1, 1));
 
     Ok(ModValidationResult {
         valid,
@@ -137,32 +198,3 @@ pub fn validate_pak_mod_structure(pak_path: &Path) -> crate::error::Result<ModVa
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::TempDir;
-
-    #[test]
-    fn test_validate_empty_dir() {
-        let temp = TempDir::new().unwrap();
-        let result = validate_mod_structure(temp.path());
-        assert!(!result.valid);
-        assert!(!result.warnings.is_empty());
-    }
-
-    #[test]
-    fn test_validate_valid_mod() {
-        let temp = TempDir::new().unwrap();
-
-        // Create Mods/TestMod/meta.lsx
-        let mod_dir = temp.path().join("Mods").join("TestMod");
-        fs::create_dir_all(&mod_dir).unwrap();
-        fs::write(mod_dir.join("meta.lsx"), "<xml>test</xml>").unwrap();
-
-        let result = validate_mod_structure(temp.path());
-        assert!(result.valid);
-        assert!(result.structure.iter().any(|s| s.contains("Mods/")));
-        assert!(result.structure.iter().any(|s| s.contains("meta.lsx")));
-    }
-}

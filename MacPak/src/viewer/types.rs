@@ -28,7 +28,7 @@ impl Default for ViewSettings {
 #[derive(Resource)]
 pub struct ModelPath(pub String);
 
-/// Marks that we need to fit the camera to the model once it loads
+/// Camera needs to fit to the model once it loads
 #[derive(Resource, Default)]
 pub struct CameraFitPending(pub bool);
 

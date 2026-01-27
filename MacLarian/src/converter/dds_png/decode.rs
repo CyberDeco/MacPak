@@ -1,8 +1,8 @@
 //! DDS decoding - Block Compression (BC) decompression using `bcdec_rs`
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //!
-//! SPDX-License-Identifier: MIT
+//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 #![allow(clippy::cast_possible_truncation, clippy::doc_markdown)]
 
@@ -291,7 +291,3 @@ fn tone_map_hdr(value: f32) -> u8 {
     (gamma_corrected * 255.0).clamp(0.0, 255.0) as u8
 }
 
-#[cfg(test)]
-mod tests {
-    // Tests removed - using bcdec_rs which is already well-tested
-}

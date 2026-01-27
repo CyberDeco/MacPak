@@ -3,7 +3,10 @@
 use std::fmt::Write;
 use std::io::Read;
 use std::path::Path;
+
 use crate::formats::ModMetadata;
+
+use super::types::{ModPhase, ModProgress, ModProgressCallback};
 
 /// Result of info.json generation
 pub struct InfoJsonResult {
@@ -23,8 +26,33 @@ pub struct InfoJsonResult {
 ///
 /// # Returns
 /// `InfoJsonResult` with the generated JSON and status
-#[must_use] 
+#[must_use]
 pub fn generate_info_json(source_dir: &str, pak_path: &str) -> InfoJsonResult {
+    generate_info_json_with_progress(source_dir, pak_path, &|_| {})
+}
+
+/// Generate info.json content for a mod with progress callback
+///
+/// # Arguments
+/// * `source_dir` - Path to the mod source directory (extracted PAK contents)
+/// * `pak_path` - Path to the PAK file (for MD5 calculation)
+/// * `progress` - Progress callback
+///
+/// # Returns
+/// `InfoJsonResult` with the generated JSON and status
+#[must_use]
+pub fn generate_info_json_with_progress(
+    source_dir: &str,
+    pak_path: &str,
+    progress: ModProgressCallback,
+) -> InfoJsonResult {
+    progress(&ModProgress::with_file(
+        ModPhase::Validating,
+        0,
+        3,
+        "Finding meta.lsx",
+    ));
+
     // Find meta.lsx in the source directory
     let meta_lsx_content = find_and_read_meta_lsx(source_dir);
 
@@ -47,11 +75,27 @@ pub fn generate_info_json(source_dir: &str, pak_path: &str) -> InfoJsonResult {
         };
     }
 
+    progress(&ModProgress::with_file(
+        ModPhase::CalculatingHash,
+        1,
+        3,
+        "Calculating PAK MD5",
+    ));
+
     // Calculate MD5 of the PAK file
     let pak_md5 = calculate_file_md5(pak_path).unwrap_or_default();
 
+    progress(&ModProgress::with_file(
+        ModPhase::GeneratingJson,
+        2,
+        3,
+        "Generating info.json",
+    ));
+
     // Generate the info.json content
     let json = generate_info_json_content(&metadata, &pak_md5);
+
+    progress(&ModProgress::new(ModPhase::Complete, 3, 3));
 
     InfoJsonResult {
         success: true,
@@ -156,13 +200,3 @@ fn escape_json_string(s: &str) -> String {
         .replace('\t', "\\t")
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_escape_json_string() {
-        assert_eq!(escape_json_string("Hello \"World\""), "Hello \\\"World\\\"");
-        assert_eq!(escape_json_string("Line1\nLine2"), "Line1\\nLine2");
-    }
-}

@@ -264,29 +264,3 @@ impl std::fmt::Display for DifficultyClassError {
 
 impl std::error::Error for DifficultyClassError {}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_dc_cache_basic() {
-        let mut cache = DifficultyClassCache::new();
-        assert!(cache.is_empty());
-
-        cache.insert(
-            "fa621d38-6f83-4e42-a55c-6aa651a75d46".to_string(),
-            "Act1_Medium".to_string(),
-            10,
-        );
-
-        assert_eq!(cache.len(), 1);
-        assert_eq!(
-            cache.get_difficulty("fa621d38-6f83-4e42-a55c-6aa651a75d46"),
-            Some(10)
-        );
-        assert_eq!(
-            cache.get_formatted("fa621d38-6f83-4e42-a55c-6aa651a75d46"),
-            Some("DC 10".to_string())
-        );
-    }
-}

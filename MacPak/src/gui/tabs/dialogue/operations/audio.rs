@@ -48,7 +48,7 @@ impl AudioPlayer {
         let source = DecodedAudioSource::new(audio);
         sink.append(source);
 
-        // Store sink so we can stop it later
+        // Store sink to stop it later
         if let Ok(mut current) = self.current_sink.lock() {
             *current = Some(sink);
         }

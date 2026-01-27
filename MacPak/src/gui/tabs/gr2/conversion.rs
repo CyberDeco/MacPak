@@ -142,7 +142,7 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
 
         shared.update(2, 2, "Complete");
 
-        // Show the subdirectory in output name if we created one
+        // Show the subdirectory in output name
         let display_output = if use_subdir {
             format!("{}/{}{}", stem, output_name, texture_info)
         } else {
@@ -252,7 +252,7 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                     maclarian::converter::convert_gltf_to_gr2(input, &output_path)
                 };
 
-                // Show relative path in results if we have a base dir
+                // Show relative path in results
                 let display_path = if let Some(ref in_base) = input_base_dir {
                     input
                         .strip_prefix(in_base)
@@ -304,7 +304,7 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                             }
                         }
 
-                        // Show subdirectory in output if we created one
+                        // Show subdirectory in output
                         let display_output = if output_dir.is_some() {
                             format!("{}/{}{}", stem, output_name, texture_info)
                         } else {

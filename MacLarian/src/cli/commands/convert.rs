@@ -1,11 +1,13 @@
 //! CLI interface for format conversion
 use std::path::Path;
 
+use crate::cli::progress::simple_spinner;
+
 pub fn execute(
     source: &Path,
     destination: &Path,
     input_format: Option<&str>,
-    output_format: Option<&str>
+    output_format: Option<&str>,
 ) -> anyhow::Result<()> {
     println!("Converting {:?} to {:?}", source, destination);
 
@@ -13,19 +15,25 @@ pub fn execute(
     let input = if let Some(fmt) = input_format {
         fmt.to_lowercase()
     } else {
-        source.extension()
+        source
+            .extension()
             .and_then(|s| s.to_str())
             .map(|s| s.to_lowercase())
-            .ok_or_else(|| anyhow::anyhow!("Cannot detect input format from source file extension"))?
+            .ok_or_else(|| {
+                anyhow::anyhow!("Cannot detect input format from source file extension")
+            })?
     };
 
     let output = if let Some(fmt) = output_format {
         fmt.to_lowercase()
     } else {
-        destination.extension()
+        destination
+            .extension()
             .and_then(|s| s.to_str())
             .map(|s| s.to_lowercase())
-            .ok_or_else(|| anyhow::anyhow!("Cannot detect output format from destination file extension"))?
+            .ok_or_else(|| {
+                anyhow::anyhow!("Cannot detect output format from destination file extension")
+            })?
     };
 
     // Check for unsupported LSB format
@@ -45,67 +53,132 @@ pub fn execute(
     match (input.as_str(), output.as_str()) {
         // LSF conversions
         ("lsf" | "lsbc" | "lsbs" | "lsfx", "lsx") => {
-            println!("Converting LSF -> LSX");
-            crate::converter::lsf_to_lsx(source, destination)?;
+            let pb = simple_spinner("Converting LSF -> LSX...");
+            crate::converter::lsf_to_lsx_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
         ("lsf" | "lsbc" | "lsbs" | "lsfx", "lsj") => {
-            println!("Converting LSF -> LSJ");
-            crate::converter::lsf_to_lsj(source, destination)?;
+            let pb = simple_spinner("Converting LSF -> LSJ...");
+            crate::converter::lsf_to_lsj_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
 
         // LSX conversions
-        ("lsx", "lsf" | "lsbc" | "lsbs" | "lsfx", ) => {
-            println!("Converting LSX -> LSF");
-            crate::converter::lsx_to_lsf(source, destination)?;
+        ("lsx", "lsf" | "lsbc" | "lsbs" | "lsfx") => {
+            let pb = simple_spinner("Converting LSX -> LSF...");
+            crate::converter::lsx_to_lsf_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
         ("lsx", "lsj") => {
-            println!("Converting LSX -> LSJ");
-            crate::converter::lsx_to_lsj(source, destination)?;
+            let pb = simple_spinner("Converting LSX -> LSJ...");
+            crate::converter::lsx_to_lsj_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
 
         // LSJ conversions
         ("lsj", "lsx") => {
-            println!("Converting LSJ -> LSX");
-            crate::converter::lsj_to_lsx(source, destination)?;
+            let pb = simple_spinner("Converting LSJ -> LSX...");
+            crate::converter::lsj_to_lsx_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
         ("lsj", "lsf" | "lsbc" | "lsbs" | "lsfx") => {
-            println!("Converting LSJ -> LSF");
-            crate::converter::lsj_to_lsf(source, destination)?;
+            let pb = simple_spinner("Converting LSJ -> LSF...");
+            crate::converter::lsj_to_lsf_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
 
         // GR2/glTF conversions
         ("gr2", "glb") => {
-            println!("Converting GR2 -> GLB");
-            crate::converter::convert_gr2_to_glb(source, destination)?;
+            let pb = simple_spinner("Converting GR2 -> GLB...");
+            crate::converter::convert_gr2_to_glb_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
         ("gr2", "gltf") => {
-            println!("Converting GR2 -> glTF");
-            crate::converter::convert_gr2_to_gltf(source, destination)?;
+            let pb = simple_spinner("Converting GR2 -> glTF...");
+            crate::converter::convert_gr2_to_gltf_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
         ("glb" | "gltf", "gr2") => {
-            println!("Converting glTF -> GR2");
             println!("Note: Output will be uncompressed (compression not yet implemented)");
-            crate::converter::convert_gltf_to_gr2(source, destination)?;
+            let pb = simple_spinner("Converting glTF -> GR2...");
+            crate::converter::convert_gltf_to_gr2_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
 
         // LOCA conversions
         ("loca", "xml") => {
-            println!("Converting LOCA -> XML");
-            crate::converter::convert_loca_to_xml(source, destination)?;
+            let pb = simple_spinner("Converting LOCA -> XML...");
+            crate::converter::convert_loca_to_xml_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
         ("xml", "loca") => {
-            println!("Converting XML -> LOCA");
-            crate::converter::convert_xml_to_loca(source, destination)?;
+            let pb = simple_spinner("Converting XML -> LOCA...");
+            crate::converter::convert_xml_to_loca_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
 
         // DDS/PNG conversions
         ("dds", "png") => {
-            println!("Converting DDS -> PNG");
-            crate::converter::convert_dds_to_png(source, destination)?;
+            let pb = simple_spinner("Converting DDS -> PNG...");
+            crate::converter::convert_dds_to_png_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
         ("png", "dds") => {
-            println!("Converting PNG -> DDS (BC3 compression)");
-            crate::converter::convert_png_to_dds(source, destination)?;
+            let pb = simple_spinner("Converting PNG -> DDS (BC3)...");
+            crate::converter::convert_png_to_dds_with_progress(source, destination, &|p| {
+                if let Some(ref msg) = p.current_file {
+                    pb.set_message(msg.clone());
+                }
+            })?;
+            pb.finish_and_clear();
         }
 
         // Same format (copy)

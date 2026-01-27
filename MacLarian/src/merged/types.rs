@@ -6,6 +6,101 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+// ============================================================================
+// Progress Types
+// ============================================================================
+
+/// Progress callback type for merged database operations
+pub type MergedProgressCallback<'a> = &'a (dyn Fn(&MergedProgress) + Sync + Send);
+
+/// Progress information during merged database operations
+#[derive(Debug, Clone)]
+pub struct MergedProgress {
+    /// Current operation phase
+    pub phase: MergedPhase,
+    /// Current item number (1-indexed)
+    pub current: usize,
+    /// Total number of items
+    pub total: usize,
+    /// Current file being processed (if applicable)
+    pub current_file: Option<String>,
+}
+
+impl MergedProgress {
+    /// Create a new progress update
+    #[must_use]
+    pub fn new(phase: MergedPhase, current: usize, total: usize) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: None,
+        }
+    }
+
+    /// Create a progress update with a file/item name
+    #[must_use]
+    pub fn with_file(
+        phase: MergedPhase,
+        current: usize,
+        total: usize,
+        file: impl Into<String>,
+    ) -> Self {
+        Self {
+            phase,
+            current,
+            total,
+            current_file: Some(file.into()),
+        }
+    }
+
+    /// Get the progress percentage (0.0 - 1.0)
+    #[must_use]
+    pub fn percentage(&self) -> f32 {
+        if self.total == 0 {
+            1.0
+        } else {
+            self.current as f32 / self.total as f32
+        }
+    }
+}
+
+/// Phase of merged database operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MergedPhase {
+    /// Scanning for _merged.lsf files
+    ScanningFiles,
+    /// Extracting files from PAK
+    ExtractingFiles,
+    /// Converting LSF to LSX and parsing
+    ParsingLsf,
+    /// Merging multiple databases
+    MergingData,
+    /// Resolving texture/material references
+    ResolvingReferences,
+    /// Operation complete
+    Complete,
+}
+
+impl MergedPhase {
+    /// Get a human-readable description of this phase
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ScanningFiles => "Scanning files",
+            Self::ExtractingFiles => "Extracting files",
+            Self::ParsingLsf => "Parsing LSF files",
+            Self::MergingData => "Merging data",
+            Self::ResolvingReferences => "Resolving references",
+            Self::Complete => "Complete",
+        }
+    }
+}
+
+// ============================================================================
+// Asset Types
+// ============================================================================
+
 /// A visual asset (mesh) with its associated textures
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisualAsset {

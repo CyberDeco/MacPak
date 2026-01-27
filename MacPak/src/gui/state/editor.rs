@@ -122,8 +122,6 @@ impl EditorTabsState {
         self.show_line_numbers.set(persisted.show_line_numbers);
 
         // Note: File reopening should happen asynchronously after UI is ready
-        // For now, we just store the preference. A future enhancement could
-        // reopen the files listed in persisted.open_files
     }
 
     /// Get the currently active tab

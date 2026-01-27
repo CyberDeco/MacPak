@@ -18,7 +18,7 @@ pub fn config_dialog(config_state: ConfigState) -> impl IntoView {
     let path_warning = config_state.path_warning;
     let config_for_save = config_state.clone();
 
-    // Local edit signal (so we can cancel without saving)
+    // Local edit signal (allows cancelling without saving)
     let edit_path = RwSignal::new(bg3_path.get());
 
     // Sync when dialog opens

@@ -650,7 +650,7 @@ pub fn editor_content(tab: EditorTab, tabs_state: EditorTabsState, show_line_num
                     // TODO: Content sync disabled due to effect leak in dyn_container
                     // The floem create_effect doesn't get cleaned up when the view is destroyed,
                     // causing multiple effects to accumulate and cascade.
-                    // For now, we skip auto-sync. The editor maintains its own state.
+                    // For now, skip auto-sync. The editor maintains its own state.
                     // Content is synced on-demand (e.g., when saving).
                     let _ = (content, state_change); // Suppress unused warnings
                 })

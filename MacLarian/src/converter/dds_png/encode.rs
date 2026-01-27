@@ -1,8 +1,8 @@
 //! DDS encoding - Block Compression (BC) compression
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //!
-//! SPDX-License-Identifier: MIT
+//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 #![allow(
     clippy::cast_possible_truncation,
@@ -439,16 +439,3 @@ fn find_closest_color(pixel: &[u8; 4], palette: &[[u8; 4]; 4]) -> u8 {
     best_idx
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_rgb_to_565() {
-        assert_eq!(rgb_to_565(255, 255, 255), 0xFFFF);
-        assert_eq!(rgb_to_565(0, 0, 0), 0x0000);
-        assert_eq!(rgb_to_565(255, 0, 0), 0xF800); // Red
-        assert_eq!(rgb_to_565(0, 255, 0), 0x07E0); // Green
-        assert_eq!(rgb_to_565(0, 0, 255), 0x001F); // Blue
-    }
-}

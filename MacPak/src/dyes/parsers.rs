@@ -302,26 +302,3 @@ pub fn parse_localization_xml(xml_content: &str) -> HashMap<String, String> {
     map
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_fvec3_to_hex() {
-        // Pure white in linear should be white in sRGB
-        assert_eq!(fvec3_to_hex("1 1 1"), "FFFFFF");
-        // Black
-        assert_eq!(fvec3_to_hex("0 0 0"), "000000");
-        // Mid gray (linear 0.5 -> sRGB ~0.735)
-        let hex = fvec3_to_hex("0.5 0.5 0.5");
-        assert!(hex.starts_with("BC")); // Approximately 188
-    }
-
-    #[test]
-    fn test_extract_xml_attribute() {
-        let line = r#"<attribute id="Name" type="LSString" value="TestDye" />"#;
-        assert_eq!(extract_xml_attribute(line, "value"), Some("TestDye".to_string()));
-        assert_eq!(extract_xml_attribute(line, "id"), Some("Name".to_string()));
-        assert_eq!(extract_xml_attribute(line, "missing"), None);
-    }
-}

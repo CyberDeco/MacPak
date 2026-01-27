@@ -821,7 +821,7 @@ pub fn save_file_as_dialog(tab: EditorTab) {
                 let path_str = path.to_string_lossy().to_string();
                 tab.file_path.set(Some(path_str));
                 tab.modified.set(false);
-                // Mark as converted from binary if we saved to a binary format
+                // Mark as converted from binary even if saved to a binary format
                 tab.converted_from_lsf.set(matches!(target_ext.as_str(), "LSF" | "LOCA"));
                 tab.file_format.set(target_ext);
             }

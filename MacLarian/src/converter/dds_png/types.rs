@@ -2,10 +2,10 @@
 //!
 //! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //!
-//! SPDX-License-Identifier: MIT
+//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 // ============================================================================
-// Progress Types (mirrors VTex/PAK/Gr2 progress pattern)
+// Progress Types
 // ============================================================================
 
 /// Progress callback type for image conversion operations

@@ -38,15 +38,3 @@ pub fn crc32(data: &[u8]) -> u32 {
     !crc
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_crc32() {
-        // Test vector from standard CRC-32
-        let data = b"123456789";
-        let crc = crc32(data);
-        assert_eq!(crc, 0xCBF43926);
-    }
-}

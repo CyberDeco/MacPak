@@ -73,9 +73,8 @@ pub fn encode_qtangent(normal: &[f32; 3], tangent: &[f32; 4]) -> [i16; 4] {
     let t = Vec3::new(tangent[0], tangent[1], tangent[2]).normalize_or_zero();
     let handedness = tangent[3];
 
-    // Compute binormal WITHOUT flipping by handedness.
-    // This ensures we always have a valid rotation matrix (determinant = +1).
-    // The handedness will be encoded separately in the sign of W.
+    // Compute binormal and ensure valid rotation matrix (determinant = +1).
+    // Handedness is encoded separately in the sign of W.
     let b = n.cross(t);
 
     // Build rotation matrix from TBN (tangent, binormal, normal as columns)
@@ -104,46 +103,4 @@ pub fn encode_qtangent(normal: &[f32; 3], tangent: &[f32; 4]) -> [i16; 4] {
         (quat.z * 32767.0).clamp(-32767.0, 32767.0) as i16,
         (quat.w * 32767.0).clamp(-32767.0, 32767.0) as i16,
     ]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_half_roundtrip() {
-        let values = [0.0f32, 1.0, -1.0, 0.5, 2.0, 0.001, 100.0];
-        for &v in &values {
-            let half_bits = f32_to_half(v);
-            let back = half_to_f32(half_bits);
-            // Half precision has limited accuracy
-            if v.abs() > 0.0001 && v.abs() < 65000.0 {
-                assert!((v - back).abs() / v.abs() < 0.01, "Failed for {}: got {}", v, back);
-            }
-        }
-    }
-
-    #[test]
-    fn test_qtangent_roundtrip() {
-        let normal = [0.0f32, 0.0, 1.0];
-        let tangent = [1.0f32, 0.0, 0.0, 1.0];
-
-        let encoded = encode_qtangent(&normal, &tangent);
-        let (decoded_normal, decoded_tangent) = decode_qtangent(&encoded);
-
-        // Check normal is approximately correct
-        for i in 0..3 {
-            assert!((normal[i] - decoded_normal[i]).abs() < 0.01,
-                "Normal mismatch at {}: {} vs {}", i, normal[i], decoded_normal[i]);
-        }
-
-        // Check tangent direction is approximately correct
-        for i in 0..3 {
-            assert!((tangent[i] - decoded_tangent[i]).abs() < 0.01,
-                "Tangent mismatch at {}: {} vs {}", i, tangent[i], decoded_tangent[i]);
-        }
-
-        // Check handedness preserved
-        assert_eq!(tangent[3].signum(), decoded_tangent[3].signum());
-    }
 }

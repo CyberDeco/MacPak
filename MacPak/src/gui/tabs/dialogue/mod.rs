@@ -98,7 +98,7 @@ pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigSt
 fn dialogue_content(state: DialogueState, state_for_content: DialogueState) -> impl IntoView {
     let browser_panel_width = state.browser_panel_width;
 
-    // Drag state - tracked at parent level so we get events even when pointer leaves divider
+    // Drag state - tracked at parent level gets events even when pointer leaves divider
     let is_dragging = RwSignal::new(false);
     // Offset from mouse position to divider edge (where within the divider you clicked)
     let drag_offset = RwSignal::new(0.0);

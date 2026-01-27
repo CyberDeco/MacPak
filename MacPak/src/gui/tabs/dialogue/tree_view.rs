@@ -232,7 +232,7 @@ fn node_tree(state: DialogueState) -> impl IntoView {
                     let all_nodes = display_nodes.get();
                     let total_count = all_nodes.len();
 
-                    // Check if we need to recompute
+                    // Check if results need to recompute
                     let mut cache_ref = cache.borrow_mut();
                     let (cached_version, cached_total, cached_im) = &mut *cache_ref;
 
@@ -286,7 +286,7 @@ fn update_descendant_visibility(
     display_nodes: RwSignal<Vec<DisplayNode>>,
 ) {
     // Use with_untracked to avoid creating reactive subscriptions
-    // This prevents other panels from re-rendering when we expand/collapse nodes
+    // This prevents other panels from re-rendering when nodes are expanded/collapsed
     display_nodes.with_untracked(|nodes| {
         // When expanding: direct children become visible
         // When collapsing: all descendants become invisible

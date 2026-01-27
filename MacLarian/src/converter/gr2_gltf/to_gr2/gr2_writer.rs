@@ -290,7 +290,7 @@ impl Gr2Writer {
         // Section 6: Index data
         let mut sections: Vec<Section> = (0..7).map(|_| Section::new()).collect();
 
-        // Collect all strings we need
+        // Collect all necessary strings
         let mut all_strings: Vec<&str> = Vec::new();
         all_strings.push("ArtToolInfo");
         all_strings.push("ExporterInfo");
@@ -445,7 +445,7 @@ impl Gr2Writer {
         ];
         write_type_def(&mut sections[4], &root_members, &string_offsets);
 
-        // Track offsets for data we write
+        // Track offsets
         let mut mesh_offsets: Vec<u32> = Vec::new();
         let mut vertex_data_offsets: Vec<u32> = Vec::new();
         let mut topology_offsets: Vec<u32> = Vec::new();
@@ -501,7 +501,7 @@ impl Gr2Writer {
             index_offsets.push(index_offset);
         }
 
-        // Write bones to section 2 if we have a skeleton
+        // Write bones to section 2 if there's a skeleton
         let mut bone_array_offset = 0u32;
         if let Some(ref skel) = self.skeleton {
             sections[2].align(8);

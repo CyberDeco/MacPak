@@ -39,7 +39,7 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
 
     // Callback for meta dialog - export the dye mod
     let on_meta_create = move |_content: String| {
-        // The meta.lsx content is generated, but we use export_dye_mod which generates all files
+        // meta.lsx is generated as part of export_dye_mod
         let name = state_for_export.mod_name.get();
         if name.is_empty() {
             state_for_export.status_message.set("Error: Mod name is required".to_string());

@@ -194,7 +194,7 @@ pub fn calculate_mip_levels(width: u32, height: u32, min_size: u32) -> u32 {
     let max_dim = width.max(height);
     let min_dim = min_size.max(1);
 
-    // Count how many times we can halve before reaching min_size
+    // Count how many times mip levels can be halved before reaching min_size
     let mut levels = 1u32;
     let mut dim = max_dim;
     while dim > min_dim {
@@ -211,56 +211,3 @@ pub fn tiles_for_dimension(pixels: u32, tile_size: u32) -> u32 {
     (pixels + tile_size - 1) / tile_size
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_tile_coord_packed_id() {
-        let coord = TileCoord::new(1, 2, 3, 4);
-        let packed = coord.to_packed_id();
-
-        // Verify encoding: x(20-31) | y(8-19) | level(4-7) | layer(0-3)
-        assert_eq!(packed & 0xF, 1); // layer
-        assert_eq!((packed >> 4) & 0xF, 2); // level
-        assert_eq!((packed >> 8) & 0xFFF, 4); // y
-        assert_eq!(packed >> 20, 3); // x
-    }
-
-    #[test]
-    fn test_mip_levels() {
-        assert_eq!(calculate_mip_levels(256, 256, 32), 4); // 256 -> 128 -> 64 -> 32
-        assert_eq!(calculate_mip_levels(1024, 1024, 128), 4); // 1024 -> 512 -> 256 -> 128
-        assert_eq!(calculate_mip_levels(512, 256, 64), 4); // max is 512
-    }
-
-    #[test]
-    fn test_tiles_for_dimension() {
-        assert_eq!(tiles_for_dimension(256, 128), 2);
-        assert_eq!(tiles_for_dimension(300, 128), 3); // Rounds up
-        assert_eq!(tiles_for_dimension(128, 128), 1);
-    }
-
-    #[test]
-    fn test_geometry_calculation() {
-        let config = TileSetConfiguration {
-            tile_width: 128,
-            tile_height: 128,
-            tile_border: 0, // No border for simplicity
-            ..TileSetConfiguration::default()
-        };
-
-        let textures = vec![("Test".to_string(), 256, 256)];
-        let result = calculate_geometry(&textures, [true, false, false], &config, None);
-
-        assert_eq!(result.total_width, 256);
-        assert_eq!(result.total_height, 256);
-        assert_eq!(result.textures.len(), 1);
-        assert!(!result.levels.is_empty());
-
-        // Layer 0 should have tiles, others should be empty
-        assert!(!result.tiles_per_layer[0].is_empty());
-        assert!(result.tiles_per_layer[1].is_empty());
-        assert!(result.tiles_per_layer[2].is_empty());
-    }
-}

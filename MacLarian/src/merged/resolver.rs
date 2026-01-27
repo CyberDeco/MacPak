@@ -9,7 +9,10 @@ use super::parser::{
     parse_visual_bank, resolve_references,
 };
 use super::paths::{path_with_tilde, virtual_textures_pak_path};
-use super::types::{MergedDatabase, VisualAsset, DatabaseStats, GtpMatch};
+use super::types::{
+    DatabaseStats, GtpMatch, MergedDatabase, MergedPhase, MergedProgress, MergedProgressCallback,
+    VisualAsset,
+};
 
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
@@ -31,11 +34,29 @@ impl MergedResolver {
     /// # Errors
     /// Returns an error if no merged files are found or if parsing fails.
     pub fn from_folder<P: AsRef<Path>>(folder: P) -> Result<Self> {
+        Self::from_folder_with_progress(folder, &|_| {})
+    }
+
+    /// Create a resolver from an extracted folder with progress callback
+    ///
+    /// # Errors
+    /// Returns an error if no merged files are found or if parsing fails.
+    pub fn from_folder_with_progress<P: AsRef<Path>>(
+        folder: P,
+        progress: MergedProgressCallback,
+    ) -> Result<Self> {
         let folder = folder.as_ref();
         tracing::info!(
             "Building merged database from folder: {}",
             folder.display()
         );
+
+        progress(&MergedProgress::with_file(
+            MergedPhase::ScanningFiles,
+            0,
+            1,
+            "Scanning for _merged.lsf files",
+        ));
 
         let merged_files = find_merged_files(folder)?;
         if merged_files.is_empty() {
@@ -44,17 +65,27 @@ impl MergedResolver {
             ));
         }
 
-        tracing::info!("Found {} _merged.lsf files", merged_files.len());
+        let total = merged_files.len();
+        tracing::info!("Found {} _merged.lsf files", total);
 
         let temp_dir = TempDir::new()?;
         let mut combined_db = MergedDatabase::new(folder.to_string_lossy());
 
-        for lsf_path in &merged_files {
-            let lsx_filename = lsf_path
+        for (i, lsf_path) in merged_files.iter().enumerate() {
+            let filename = lsf_path
                 .file_name()
                 .unwrap_or_default()
                 .to_string_lossy()
-                .replace(".lsf", ".lsx");
+                .to_string();
+
+            progress(&MergedProgress::with_file(
+                MergedPhase::ParsingLsf,
+                i + 1,
+                total,
+                &filename,
+            ));
+
+            let lsx_filename = filename.replace(".lsf", ".lsx");
             let lsx_path = temp_dir.path().join(&lsx_filename);
 
             tracing::debug!(
@@ -68,8 +99,17 @@ impl MergedResolver {
             merge_databases(&mut combined_db, db);
         }
 
+        progress(&MergedProgress::with_file(
+            MergedPhase::ResolvingReferences,
+            total,
+            total,
+            "Resolving texture references",
+        ));
+
         resolve_references(&mut combined_db);
         log_stats(&combined_db);
+
+        progress(&MergedProgress::new(MergedPhase::Complete, total, total));
 
         Ok(Self {
             database: combined_db,
@@ -112,8 +152,26 @@ impl MergedResolver {
     /// # Errors
     /// Returns an error if no merged files are found or if parsing fails.
     pub fn from_pak<P: AsRef<Path>>(pak_path: P) -> Result<Self> {
+        Self::from_pak_with_progress(pak_path, &|_| {})
+    }
+
+    /// Create a resolver from a .pak file with progress callback
+    ///
+    /// # Errors
+    /// Returns an error if no merged files are found or if parsing fails.
+    pub fn from_pak_with_progress<P: AsRef<Path>>(
+        pak_path: P,
+        progress: MergedProgressCallback,
+    ) -> Result<Self> {
         let pak_path = pak_path.as_ref();
         tracing::info!("Building merged database from pak: {}", pak_path.display());
+
+        progress(&MergedProgress::with_file(
+            MergedPhase::ScanningFiles,
+            0,
+            1,
+            "Listing PAK contents",
+        ));
 
         let all_files = PakOperations::list(pak_path)?;
         let merged_paths: Vec<_> = all_files
@@ -127,7 +185,15 @@ impl MergedResolver {
             ));
         }
 
-        tracing::info!("Found {} _merged.lsf files in pak", merged_paths.len());
+        let total = merged_paths.len();
+        tracing::info!("Found {} _merged.lsf files in pak", total);
+
+        progress(&MergedProgress::with_file(
+            MergedPhase::ExtractingFiles,
+            0,
+            total,
+            "Extracting files from PAK",
+        ));
 
         let temp_dir = TempDir::new()?;
         let merged_strs: Vec<&str> = merged_paths.iter().map(|s| s.as_str()).collect();
@@ -135,7 +201,20 @@ impl MergedResolver {
 
         let mut combined_db = MergedDatabase::new(pak_path.to_string_lossy());
 
-        for merged_rel_path in &merged_paths {
+        for (i, merged_rel_path) in merged_paths.iter().enumerate() {
+            let filename = std::path::Path::new(merged_rel_path)
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+
+            progress(&MergedProgress::with_file(
+                MergedPhase::ParsingLsf,
+                i + 1,
+                total,
+                &filename,
+            ));
+
             let lsf_path = temp_dir.path().join(merged_rel_path);
             if !lsf_path.exists() {
                 tracing::warn!("Extracted file not found: {}", lsf_path.display());
@@ -154,8 +233,17 @@ impl MergedResolver {
             merge_databases(&mut combined_db, db);
         }
 
+        progress(&MergedProgress::with_file(
+            MergedPhase::ResolvingReferences,
+            total,
+            total,
+            "Resolving texture references",
+        ));
+
         resolve_references(&mut combined_db);
         log_stats(&combined_db);
+
+        progress(&MergedProgress::new(MergedPhase::Complete, total, total));
 
         Ok(Self {
             database: combined_db,

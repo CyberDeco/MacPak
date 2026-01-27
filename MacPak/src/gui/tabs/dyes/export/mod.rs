@@ -256,7 +256,7 @@ fn selected_dye_display(
         idx
     });
 
-    // Track only whether we have a selection (boolean), not the full entry
+    // Track only if boolean, not the full entry
     dyn_container(
         move || selected_index.get().is_some() && !generated_dyes.get().is_empty(),
         move |has_selection| {

@@ -469,7 +469,7 @@ impl VirtualTextureBuilder {
         // Validate configuration
         self.config.validate().map_err(|e| Error::VirtualTexture(e))?;
 
-        // Check we have at least one texture
+        // Check if there's at least one texture
         if self.textures.is_empty() {
             return Err(Error::VirtualTexture("No textures added to builder".to_string()));
         }

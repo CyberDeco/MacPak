@@ -89,7 +89,7 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
                 let dialogs = available.get();
                 let search = search_filter.get();
 
-                // Check if we need to recompute
+                // Check for need to recompute
                 let mut cache_ref = cache.borrow_mut();
                 let (cached_dialogs, cached_search, cached_im) = &mut *cache_ref;
 
