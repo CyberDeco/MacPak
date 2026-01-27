@@ -38,6 +38,8 @@ impl SharedProgress {
     }
 
     /// Update progress from background thread
+    ///
+    /// All values should be 1-indexed for display (first item = 1, not 0).
     pub fn update(&self, current: usize, total: usize, description: &str) {
         let pct = if total > 0 {
             ((current as f64 / total as f64) * 100.0) as u32
@@ -45,7 +47,7 @@ impl SharedProgress {
             0
         };
         self.progress_pct.store(pct, Ordering::SeqCst);
-        self.current.store((current + 1) as u32, Ordering::SeqCst); // 1-based for display
+        self.current.store(current as u32, Ordering::SeqCst);
         self.total.store(total as u32, Ordering::SeqCst);
         if let Ok(mut msg) = self.message.lock() {
             *msg = description.to_string();

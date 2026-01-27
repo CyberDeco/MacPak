@@ -63,7 +63,7 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
 
     thread::spawn(move || {
         let shared = get_shared_progress();
-        shared.update(0, 1, &input_name);
+        shared.update(1, 1, &input_name);
 
         // Create output directory if needed
         if use_subdir {

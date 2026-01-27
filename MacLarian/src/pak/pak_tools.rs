@@ -83,7 +83,7 @@ impl PakOperations {
 
         progress(&PakProgress {
             phase: PakPhase::ReadingTable,
-            current: 0,
+            current: 1,
             total: 1,
             current_file: None,
         });
@@ -111,6 +111,8 @@ impl PakOperations {
 
         // Phase 1: Read all compressed data sequentially from each part file
         let mut compressed_files: Vec<CompressedFile> = Vec::new();
+        let total_entries: usize = entries_by_part.values().map(|v| v.len()).sum();
+        let mut read_count = 0usize;
 
         for (part, part_entries) in &entries_by_part {
             let part_path = get_part_path(pak_path, *part)
@@ -126,6 +128,18 @@ impl PakOperations {
             let mut part_file = File::open(&part_path)?;
 
             for entry in part_entries {
+                read_count += 1;
+                let file_name = entry.path.file_name()
+                    .map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+
+                // Update progress during sequential read phase
+                progress(&PakProgress {
+                    phase: PakPhase::ReadingTable,
+                    current: read_count,
+                    total: total_entries,
+                    current_file: Some(file_name),
+                });
+
                 // Seek and read compressed data from the correct part file
                 if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
                     tracing::warn!("Failed to seek to {} in {}", entry.path.display(), part_path.display());
@@ -298,7 +312,7 @@ impl PakOperations {
 
         progress(&PakProgress {
             phase: PakPhase::ReadingHeader,
-            current: 0,
+            current: 1,
             total: 1,
             current_file: None,
         });
@@ -395,12 +409,6 @@ impl PakOperations {
         std::fs::create_dir_all(&output_dir)?;
 
         let total_to_extract = entries_to_extract.len();
-        progress(&PakProgress {
-            phase: PakPhase::ReadingTable,
-            current: 0,
-            total: total_to_extract,
-            current_file: None,
-        });
 
         // Group entries by archive part for multi-part PAK support
         let mut entries_by_part: HashMap<u8, Vec<FileTableEntry>> = HashMap::new();
@@ -410,6 +418,7 @@ impl PakOperations {
 
         // Phase 1: Read all compressed data sequentially from each part file
         let mut compressed_files: Vec<CompressedFile> = Vec::new();
+        let mut read_count = 0usize;
 
         for (part, part_entries) in &entries_by_part {
             let part_path = get_part_path(pak_path, *part)
@@ -425,6 +434,18 @@ impl PakOperations {
             let mut part_file = File::open(&part_path)?;
 
             for entry in part_entries {
+                read_count += 1;
+                let file_name = entry.path.file_name()
+                    .map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+
+                // Update progress during sequential read phase
+                progress(&PakProgress {
+                    phase: PakPhase::ReadingTable,
+                    current: read_count,
+                    total: total_to_extract,
+                    current_file: Some(file_name),
+                });
+
                 // Seek and read compressed data from the correct part file
                 if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
                     tracing::warn!("Failed to seek to {} in {}", entry.path.display(), part_path.display());

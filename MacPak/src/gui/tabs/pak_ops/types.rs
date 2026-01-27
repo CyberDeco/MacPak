@@ -87,6 +87,8 @@ impl SharedProgress {
     }
 
     /// Update progress from background thread (lock-free for percentage)
+    ///
+    /// All values should be 1-indexed for display (first item = 1, not 0).
     pub fn update(&self, current: usize, total: usize, description: &str) {
         let pct = if total > 0 {
             ((current as f64 / total as f64) * 100.0) as u32

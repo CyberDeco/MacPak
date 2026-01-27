@@ -35,7 +35,7 @@ pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "unknown".to_string());
 
-        progress.update(0, 1, &gts_name);
+        progress.update(1, 1, &gts_name);
 
         // Use maclarian's extraction function
         let output_path = output_dir.as_ref().map(|s| Path::new(s.as_str()));
