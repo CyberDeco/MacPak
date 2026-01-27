@@ -527,10 +527,23 @@ impl GtsFile {
     }
 
     /// Find the page file index by filename hash
-    #[must_use] 
+    #[must_use]
     pub fn find_page_file_index(&self, hash: &str) -> Option<u16> {
         for (i, pf) in self.page_files.iter().enumerate() {
             if pf.filename.contains(hash) {
+                return Some(i as u16);
+            }
+        }
+        None
+    }
+
+    /// Find the page file index by exact filename match
+    ///
+    /// Used for mod GTP files that don't have a hash in their filename.
+    #[must_use]
+    pub fn find_page_file_index_by_name(&self, gtp_filename: &str) -> Option<u16> {
+        for (i, pf) in self.page_files.iter().enumerate() {
+            if pf.filename == gtp_filename {
                 return Some(i as u16);
             }
         }

@@ -121,6 +121,7 @@ impl GtsDataType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TileCompression {
     Raw,
+    /// LZ4 compression (legacy, read-only support)
     Lz4,
     FastLZ,
 }
@@ -212,14 +213,11 @@ impl GtsBCParameterBlock {
         let name1 = self.compression_name1();
         let name2 = self.compression_name2();
 
-        if name1 == "lz77" && name2 == "fastlz0.1.0" {
+        if (name1 == "fastlz" || name1 == "lz77") && name2 == "fastlz0.1.0" {
             TileCompression::FastLZ
         } else if name1 == "lz4" && name2 == "lz40.1.0" {
             TileCompression::Lz4
-        } else if name1 == "raw" {
-            TileCompression::Raw
         } else {
-            // Default to raw if unknown
             TileCompression::Raw
         }
     }
