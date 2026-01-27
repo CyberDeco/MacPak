@@ -34,6 +34,7 @@ pub struct VTexMapping {
 #[serde(rename = "TileSet")]
 pub struct VTexConfigXml {
     #[serde(rename = "@Version")]
+    #[allow(dead_code)]
     pub version: Option<String>,
     #[serde(rename = "@Name")]
     pub name: String,

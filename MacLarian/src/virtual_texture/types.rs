@@ -338,6 +338,7 @@ impl GtsBCParameterBlock {
 
 /// Uniform codec parameter block (16 bytes)
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub(crate) struct GtsUniformParameterBlock {
     pub version: u16,
     pub a_unused: u16,
@@ -350,6 +351,7 @@ pub(crate) struct GtsUniformParameterBlock {
 #[derive(Debug, Clone)]
 pub(crate) enum GtsParameterBlock {
     BC(GtsBCParameterBlock),
+    #[allow(dead_code)]
     Uniform(GtsUniformParameterBlock),
     Unknown,
 }

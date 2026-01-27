@@ -147,9 +147,6 @@ impl PakContents {
     }
 }
 
-/// Progress callback type for PAK operations
-pub type PakProgressCallback<'a> = &'a (dyn Fn(&PakProgress) + Sync + Send);
-
 /// Progress information during PAK operations
 #[derive(Debug, Clone)]
 pub struct PakProgress {
