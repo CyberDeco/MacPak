@@ -112,6 +112,10 @@ pub fn decompress(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
 
 /// Convert GR2 to GLB format.
 pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
+    use crate::cli::progress::{print_step, print_done, CUBE, LOOKING_GLASS, GEAR, DISK};
+    use crate::converter::{Gr2Phase, convert_gr2_to_glb_with_progress};
+    use std::time::Instant;
+
     let output_path = if let Some(out) = output {
         out.to_path_buf()
     } else {
@@ -121,12 +125,23 @@ pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     println!("Converting GR2 to GLB...");
     println!("  Source:      {}", path.display());
     println!("  Destination: {}", output_path.display());
+    println!();
 
-    crate::converter::convert_gr2_to_glb(path, &output_path)?;
+    let start = Instant::now();
+    convert_gr2_to_glb_with_progress(path, &output_path, &|progress| {
+        let emoji = match progress.phase {
+            Gr2Phase::ReadingFile => LOOKING_GLASS,
+            Gr2Phase::ParsingSkeleton | Gr2Phase::ParsingMeshes => CUBE,
+            Gr2Phase::BuildingDocument => GEAR,
+            Gr2Phase::WritingOutput => DISK,
+            _ => GEAR,
+        };
+        print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+    })?;
 
     let output_size = std::fs::metadata(&output_path)?.len();
     println!();
-    println!("Conversion complete!");
+    print_done(start.elapsed());
     println!("  Output size: {} bytes", output_size);
 
     Ok(())
@@ -134,6 +149,10 @@ pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
 
 /// Convert GLB/glTF to GR2 format.
 pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
+    use crate::cli::progress::{print_step, print_done, CUBE, LOOKING_GLASS, GEAR, DISK};
+    use crate::converter::{Gr2Phase, convert_gltf_to_gr2_with_progress};
+    use std::time::Instant;
+
     let output_path = if let Some(out) = output {
         out.to_path_buf()
     } else {
@@ -145,12 +164,23 @@ pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     println!("  Destination: {}", output_path.display());
     println!();
     println!("Note: Output will be uncompressed (compression not yet implemented)");
+    println!();
 
-    crate::converter::convert_gltf_to_gr2(path, &output_path)?;
+    let start = Instant::now();
+    convert_gltf_to_gr2_with_progress(path, &output_path, &|progress| {
+        let emoji = match progress.phase {
+            Gr2Phase::LoadingFile => LOOKING_GLASS,
+            Gr2Phase::ParsingModel => CUBE,
+            Gr2Phase::BuildingGr2 => GEAR,
+            Gr2Phase::WritingFile => DISK,
+            _ => GEAR,
+        };
+        print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+    })?;
 
     let output_size = std::fs::metadata(&output_path)?.len();
     println!();
-    println!("Conversion complete!");
+    print_done(start.elapsed());
     println!("  Output size: {} bytes", output_size);
 
     Ok(())
@@ -292,9 +322,25 @@ pub fn bundle(
     // Handle conversion based on format
     let glb_path = if !no_glb {
         if use_gltf {
+            use crate::cli::progress::{print_step, CUBE, LOOKING_GLASS, GEAR, DISK};
+            use crate::converter::{Gr2Phase, convert_gr2_to_gltf_with_progress};
+
             // Convert to glTF
             let gltf_path = output_dir.join(format!("{}.gltf", stem));
-            crate::converter::convert_gr2_to_gltf(path, &gltf_path)?;
+            println!("Converting to glTF...");
+            convert_gr2_to_gltf_with_progress(path, &gltf_path, &|progress| {
+                if progress.phase != Gr2Phase::Complete {
+                    let emoji = match progress.phase {
+                        Gr2Phase::ReadingFile => LOOKING_GLASS,
+                        Gr2Phase::ParsingSkeleton | Gr2Phase::ParsingMeshes => CUBE,
+                        Gr2Phase::BuildingDocument => GEAR,
+                        Gr2Phase::WritingOutput => DISK,
+                        _ => GEAR,
+                    };
+                    print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+                }
+            })?;
+            println!();
             // Don't run the normal GLB conversion in process_extracted_gr2
             options = options.no_conversion();
             Some(gltf_path)

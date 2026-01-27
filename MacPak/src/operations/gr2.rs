@@ -13,9 +13,22 @@ pub use maclarian::formats::gr2::{
     Gr2Info, SectionInfo, Gr2MeshInfo, Gr2SkeletonInfo, Gr2BoneInfo, Gr2ModelInfo,
 };
 
+// Re-export progress types
+pub use maclarian::converter::{Gr2Progress, Gr2Phase, Gr2ProgressCallback};
+
 /// Convert a GR2 file to GLB (binary glTF) format.
 pub fn gr2_to_glb(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
     maclarian::converter::convert_gr2_to_glb(source.as_ref(), dest.as_ref())
+        .map_err(|e| e.into())
+}
+
+/// Convert a GR2 file to GLB with progress callback.
+pub fn gr2_to_glb_with_progress(
+    source: impl AsRef<Path>,
+    dest: impl AsRef<Path>,
+    progress: Gr2ProgressCallback,
+) -> Result<()> {
+    maclarian::converter::convert_gr2_to_glb_with_progress(source.as_ref(), dest.as_ref(), progress)
         .map_err(|e| e.into())
 }
 
@@ -24,6 +37,16 @@ pub fn gr2_to_glb(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()
 /// Note: Currently outputs uncompressed GR2 files.
 pub fn gltf_to_gr2(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
     maclarian::converter::convert_gltf_to_gr2(source.as_ref(), dest.as_ref())
+        .map_err(|e| e.into())
+}
+
+/// Convert a glTF/GLB file to GR2 with progress callback.
+pub fn gltf_to_gr2_with_progress(
+    source: impl AsRef<Path>,
+    dest: impl AsRef<Path>,
+    progress: Gr2ProgressCallback,
+) -> Result<()> {
+    maclarian::converter::convert_gltf_to_gr2_with_progress(source.as_ref(), dest.as_ref(), progress)
         .map_err(|e| e.into())
 }
 

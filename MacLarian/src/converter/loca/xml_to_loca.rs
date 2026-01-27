@@ -17,12 +17,32 @@ use std::path::Path;
 /// # Errors
 /// Returns an error if reading or conversion fails.
 pub fn convert_xml_to_loca<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
+    convert_xml_to_loca_with_progress(source, dest, &|_| {})
+}
+
+/// Convert XML file to .loca format with progress callback
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
+pub fn convert_xml_to_loca_with_progress<P: AsRef<Path>>(
+    source: P,
+    dest: P,
+    progress: crate::converter::ConvertProgressCallback,
+) -> Result<()> {
+    use crate::converter::{ConvertProgress, ConvertPhase};
+
     tracing::info!("Converting XML→LOCA: {:?} → {:?}", source.as_ref(), dest.as_ref());
 
+    progress(&ConvertProgress::with_file(ConvertPhase::ReadingSource, 1, 3, "Reading XML file..."));
     let content = fs::read_to_string(&source)?;
+
+    progress(&ConvertProgress::with_file(ConvertPhase::Parsing, 2, 3, "Parsing XML content..."));
     let resource = from_xml(&content)?;
+
+    progress(&ConvertProgress::with_file(ConvertPhase::WritingOutput, 3, 3, format!("Writing {} entries to LOCA...", resource.entries.len())));
     loca::write_loca(dest, &resource)?;
 
+    progress(&ConvertProgress::new(ConvertPhase::Complete, 3, 3));
     tracing::info!("Conversion complete");
     Ok(())
 }

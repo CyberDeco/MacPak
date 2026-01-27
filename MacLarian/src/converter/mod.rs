@@ -125,10 +125,17 @@ pub use gr2_gltf::{
 pub use gr2_gltf::{Gr2Progress, Gr2Phase, Gr2ProgressCallback};
 
 // LOCA conversion exports
-pub use loca::{convert_loca_to_xml, loca_to_xml_string, convert_xml_to_loca, loca_from_xml};
+pub use loca::{
+    convert_loca_to_xml, convert_loca_to_xml_with_progress,
+    convert_xml_to_loca, convert_xml_to_loca_with_progress,
+    loca_to_xml_string, loca_from_xml,
+};
 
 // DDS/PNG conversion exports
 pub use dds_png::{
-    convert_dds_to_png, convert_png_to_dds, convert_png_to_dds_with_format,
+    convert_dds_to_png, convert_dds_to_png_with_progress,
+    convert_png_to_dds, convert_png_to_dds_with_progress,
+    convert_png_to_dds_with_format, convert_png_to_dds_with_format_and_progress,
     dds_bytes_to_png_bytes, png_image_to_dds_bytes, DdsFormat,
+    ImageProgress, ImagePhase, ImageProgressCallback,
 };

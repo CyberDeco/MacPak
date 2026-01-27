@@ -72,12 +72,30 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
 
         let result = if is_gr2_input {
             if to_glb {
-                maclarian::converter::convert_gr2_to_glb(Path::new(&input_str), Path::new(&output_str))
+                maclarian::converter::convert_gr2_to_glb_with_progress(
+                    Path::new(&input_str),
+                    Path::new(&output_str),
+                    &|progress| {
+                        shared.update(progress.current, progress.total + 1, progress.phase.as_str());
+                    },
+                )
             } else {
-                maclarian::converter::convert_gr2_to_gltf(Path::new(&input_str), Path::new(&output_str))
+                maclarian::converter::convert_gr2_to_gltf_with_progress(
+                    Path::new(&input_str),
+                    Path::new(&output_str),
+                    &|progress| {
+                        shared.update(progress.current, progress.total + 1, progress.phase.as_str());
+                    },
+                )
             }
         } else {
-            maclarian::converter::convert_gltf_to_gr2(Path::new(&input_str), Path::new(&output_str))
+            maclarian::converter::convert_gltf_to_gr2_with_progress(
+                Path::new(&input_str),
+                Path::new(&output_str),
+                &|progress| {
+                    shared.update(progress.current, progress.total, progress.phase.as_str());
+                },
+            )
         };
 
         // Handle texture extraction for GR2→GLB/glTF conversions
@@ -223,7 +241,7 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                     let _ = std::fs::create_dir_all(dir);
                 }
 
-                // Perform conversion
+                // Perform conversion (no per-file progress for batch - just count files)
                 let result = if is_gr2_input {
                     if to_glb {
                         maclarian::converter::convert_gr2_to_glb(input, &output_path)

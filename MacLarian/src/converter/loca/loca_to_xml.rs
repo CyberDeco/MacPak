@@ -27,12 +27,32 @@ fn escape_text_minimal(s: &str) -> Cow<'_, str> {
 /// # Errors
 /// Returns an error if reading or conversion fails.
 pub fn convert_loca_to_xml<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
+    convert_loca_to_xml_with_progress(source, dest, &|_| {})
+}
+
+/// Convert .loca file to XML format with progress callback
+///
+/// # Errors
+/// Returns an error if reading or conversion fails.
+pub fn convert_loca_to_xml_with_progress<P: AsRef<Path>>(
+    source: P,
+    dest: P,
+    progress: crate::converter::ConvertProgressCallback,
+) -> Result<()> {
+    use crate::converter::{ConvertProgress, ConvertPhase};
+
     tracing::info!("Converting LOCA→XML: {:?} → {:?}", source.as_ref(), dest.as_ref());
 
+    progress(&ConvertProgress::with_file(ConvertPhase::ReadingSource, 1, 3, "Reading LOCA file..."));
     let resource = loca::read_loca(&source)?;
+
+    progress(&ConvertProgress::with_file(ConvertPhase::Converting, 2, 3, format!("Converting {} entries to XML...", resource.entries.len())));
     let xml = to_xml(&resource)?;
+
+    progress(&ConvertProgress::with_file(ConvertPhase::WritingOutput, 3, 3, "Writing XML file..."));
     std::fs::write(dest, xml)?;
 
+    progress(&ConvertProgress::new(ConvertPhase::Complete, 3, 3));
     tracing::info!("Conversion complete");
     Ok(())
 }
