@@ -1,7 +1,7 @@
 # MacPak - A BG3 Modding Toolkit for macOS
 
 <p align="center">
-    <a href="#">
+    <a href="https://github.com/CyberDeco/MacPak/releases/latest">
         <img src="MacPak/src/gui/assets/icons/icon.iconset/icon_512x512.png" alt="MacPak Icon" width="128">
     </a>
 </p>
