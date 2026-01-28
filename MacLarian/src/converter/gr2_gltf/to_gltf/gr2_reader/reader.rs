@@ -1,8 +1,4 @@
-//! GR2 format structures and parser.
-//!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
-//!
-//! SPDX-License-Identifier: MIT
+//! GR2 reader implementation.
 
 #![allow(clippy::trivially_copy_pass_by_ref, clippy::needless_range_loop)]
 
@@ -10,155 +6,12 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::error::{Error, Result};
 use crate::formats::gr2::bitknit_decompress as decompress_bitknit;
-use super::utils::half_to_f32;
+use super::super::utils::half_to_f32;
+use super::vertex_types::{SectionHeader, MemberType, MemberDef, VertexType};
+use super::types::{Vertex, MeshData, Transform, Bone, Skeleton, Gr2ContentInfo};
+use super::{MAGIC_LE64, MAGIC_LE32};
 
-// ============================================================================
-// Constants
-// ============================================================================
-
-pub const MAGIC_LE64: [u8; 16] = [
-    0xE5, 0x9B, 0x49, 0x5E, 0x6F, 0x63, 0x1F, 0x14,
-    0x1E, 0x13, 0xEB, 0xA9, 0x90, 0xBE, 0xED, 0xC4,
-];
-
-pub const MAGIC_LE32: [u8; 16] = [
-    0x29, 0xDE, 0x6C, 0xC0, 0xBA, 0xA4, 0x53, 0x2B,
-    0x25, 0xF5, 0xB7, 0xA5, 0xF6, 0x66, 0xE2, 0xEE,
-];
-
-// ============================================================================
-// Section Header
-// ============================================================================
-
-#[derive(Debug, Clone, Copy)]
-struct SectionHeader {
-    compression: u32,
-    offset_in_file: u32,
-    compressed_size: u32,
-    uncompressed_size: u32,
-    relocations_offset: u32,
-    num_relocations: u32,
-}
-
-// ============================================================================
-// Vertex Types
-// ============================================================================
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[repr(u32)]
-pub enum MemberType {
-    None = 0,
-    Real32 = 10,
-    UInt8 = 12,
-    NormalUInt8 = 14,
-    BinormalInt16 = 17,
-    Real16 = 21,
-    Unknown(u32),
-}
-
-impl MemberType {
-    fn from_u32(v: u32) -> Self {
-        match v {
-            0 => Self::None,
-            10 => Self::Real32,
-            12 => Self::UInt8,
-            14 => Self::NormalUInt8,
-            17 => Self::BinormalInt16,
-            21 => Self::Real16,
-            _ => Self::Unknown(v),
-        }
-    }
-
-    fn element_size(&self) -> usize {
-        match self {
-            Self::Real32 => 4,
-            Self::Real16 | Self::BinormalInt16 => 2,
-            Self::UInt8 | Self::NormalUInt8 => 1,
-            _ => 4,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct MemberDef {
-    name: String,
-    member_type: MemberType,
-    array_size: u32,
-}
-
-impl MemberDef {
-    fn total_size(&self) -> usize {
-        self.member_type.element_size() * self.array_size.max(1) as usize
-    }
-}
-
-#[derive(Debug, Clone)]
-struct VertexType {
-    members: Vec<MemberDef>,
-}
-
-impl VertexType {
-    fn stride(&self) -> usize {
-        self.members.iter().map(MemberDef::total_size).sum()
-    }
-}
-
-// ============================================================================
-// Parsed Data Structures
-// ============================================================================
-
-#[derive(Debug, Clone, Default)]
-pub struct Vertex {
-    pub position: [f32; 3],
-    pub bone_weights: [u8; 4],
-    pub bone_indices: [u8; 4],
-    pub qtangent: [i16; 4],
-    pub color: [u8; 4],
-    pub uv: [f32; 2],
-}
-
-pub struct MeshData {
-    pub name: String,
-    pub vertices: Vec<Vertex>,
-    pub indices: Vec<u32>,
-    pub is_32bit_indices: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct Transform {
-    pub translation: [f32; 3],
-    pub rotation: [f32; 4],
-    pub scale_shear: [f32; 9],
-}
-
-impl Default for Transform {
-    fn default() -> Self {
-        Self {
-            translation: [0.0, 0.0, 0.0],
-            rotation: [0.0, 0.0, 0.0, 1.0],
-            scale_shear: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Bone {
-    pub name: String,
-    pub parent_index: i32,
-    pub transform: Transform,
-    pub inverse_world_transform: [f32; 16],
-}
-
-#[derive(Debug, Clone)]
-pub struct Skeleton {
-    pub name: String,
-    pub bones: Vec<Bone>,
-}
-
-// ============================================================================
-// GR2 Reader
-// ============================================================================
-
+/// GR2 file reader and parser.
 pub struct Gr2Reader {
     pub data: Vec<u8>,
     pub is_64bit: bool,
@@ -630,7 +483,7 @@ impl Gr2Reader {
         Ok(Some(Skeleton { name, bones }))
     }
 
-    /// Get a description of what data the GR2 file contains
+    /// Get a description of what data the GR2 file contains.
     ///
     /// # Errors
     /// Returns an error if the content info cannot be read.
@@ -670,42 +523,5 @@ impl Gr2Reader {
             mesh_count,
             model_count,
         })
-    }
-}
-
-/// Information about what data a GR2 file contains
-#[derive(Debug, Clone)]
-pub struct Gr2ContentInfo {
-    pub texture_count: usize,
-    pub material_count: usize,
-    pub skeleton_count: usize,
-    pub vertex_data_count: usize,
-    pub topology_count: usize,
-    pub mesh_count: usize,
-    pub model_count: usize,
-}
-
-impl Gr2ContentInfo {
-    /// Returns a human-readable description of the file contents
-    #[must_use] 
-    pub fn describe(&self) -> String {
-        let mut parts = Vec::new();
-        if self.skeleton_count > 0 {
-            parts.push(format!("{} skeleton(s)", self.skeleton_count));
-        }
-        if self.mesh_count > 0 {
-            parts.push(format!("{} mesh(es)", self.mesh_count));
-        }
-        if self.model_count > 0 {
-            parts.push(format!("{} model(s)", self.model_count));
-        }
-        if self.material_count > 0 {
-            parts.push(format!("{} material(s)", self.material_count));
-        }
-        if parts.is_empty() {
-            "empty".to_string()
-        } else {
-            parts.join(", ")
-        }
     }
 }
