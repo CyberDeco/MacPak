@@ -66,7 +66,7 @@ impl PakReaderCache {
 
     /// Read a single file's bytes using the cached file table.
     ///
-    /// This is faster than [`PakOperations::read_file_bytes`] when reading multiple
+    /// This is faster than [`crate::pak::PakOperations::read_file_bytes`] when reading multiple
     /// files from the same PAK, as it caches the decompressed file table in memory.
     /// The first call loads and caches the table; subsequent calls reuse it.
     ///

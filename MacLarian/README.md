@@ -4,27 +4,23 @@
 [![Documentation](https://docs.rs/maclarian/badge.svg)](https://docs.rs/maclarian)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
 
-A Larian file format library and toolkit for Baldur's Gate 3 file handling and modding.
+A pure-Rust implementation of a ***[M]ac***OS-focused ***Larian*** file format library and toolkit for Baldur's Gate 3 file handling and modding.
 
 > **Note:** This crate is in active development (0.x). The API may change between releases.
-
-MacLarian provides pure Rust implementations for reading and writing Larian Studios'
-proprietary file formats, with no external binary dependencies (including no reliance
-on granny2.dll for GR2 mesh decompression).
 
 ## Supported Formats
 
 | Format | Read | Write | Description |
-|--------|------|-------|-------------|
-| **PAK** (LSPK) | Yes | Yes | Game archive format |
-| **LSF** | Yes | Yes | Binary data format |
-| **LSX** | Yes | Yes | XML data format |
-| **LSJ** | Yes | Yes | JSON data format |
-| **LOCA** | Yes | Yes | Localization format |
-| **GR2** (Granny2) | Yes | Yes | 3D model format (decompression only) |
-| **glTF/GLB** | Yes | Yes | 3D model import/export |
-| **DDS** | Yes | Yes | Texture format |
-| **GTS/GTP** | Yes | No | Virtual textures |
+|--------|:----:|:-----:|-----------|
+| **PAK** | Yes | Yes | Extract, create, and list game asset packages |
+| **LSF/LSX/LSJ** | Yes | Yes | Binary, XML, and JSON document formats |
+| **LOCA** | Yes | Yes | Localization (language) files |
+| **GR2** | Yes | Yes | Granny2 mesh files for BG3 |
+| **glTF/GLB** | Yes | Yes | 3D model import/export for Blender |
+| **DDS/PNG** | Yes | Yes | Texture conversion |
+| **GTS/GTP** | Yes | Yes | GTS/GTP streaming virtual texture extraction/creation |
+
+*Note: creating custom virtual textures (.gts/.gtp files) is not recommended for macOS because they need to be injected into the game using the [BG3 Script Extender](https://github.com/Norbyte/bg3se/blob/main/Docs/VirtualTextures.md), which is Windows-only. [BG3SE-macOS](https://github.com/tdimino/bg3se-macos) is a macOS port of the original Windows version, but it's in active development and custom virtual textures may not be fully supported yet.*
 
 ## Installation
 
@@ -51,30 +47,32 @@ maclarian = "0.1"
 
 ## Quick Start
 
-### Reading a PAK Archive
+### Working with PAK Archives
 
 ```rust
 use maclarian::pak::PakOperations;
 
 // List contents of a PAK file
-let contents = PakOperations::list("path/to/file.pak")?;
+let contents = PakOperations::list("Shared.pak")?;
+println!("Found {} files", files.len());
 for entry in contents.files {
     println!("{}: {} bytes", entry.name, entry.size);
 }
 
-// Extract a specific file
-let bytes = PakOperations::read_file_bytes("file.pak", "path/inside/pak.lsf")?;
+// Extract an entire PAK file
+PakOperations::extract("Shared.pak", "output/")?;
+
+// Extract a specific file from a PAK file
+let data = PakOperations::read_file_bytes("Shared.pak", "Public/Shared/meta.lsx")?;
 ```
 
 ### Converting LSF to LSX
 
 ```rust
-use maclarian::formats::lsf::parse_lsf_bytes;
-use maclarian::converter::lsf_lsx::to_lsx_string;
+use maclarian::converter::convert_lsf_to_lsx;
 
-let data = std::fs::read("file.lsf")?;
-let doc = parse_lsf_bytes(&data)?;
-let xml = to_lsx_string(&doc)?;
+// Convert LSF (binary) to LSX (XML) file
+convert_lsf_to_lsx("meta.lsf", "meta.lsx")?;
 ```
 
 ### Converting GR2 to GLB/glTF
@@ -87,17 +85,23 @@ let glb_data = convert_gr2_bytes_to_glb(&gr2_data)?;
 std::fs::write("model.glb", glb_data)?;
 ```
 
-## Prelude
+### Using the Prelude
 
-For convenience, commonly used types are re-exported in the prelude:
+The prelude provides convenient access to commonly used types:
 
 ```rust
 use maclarian::prelude::*;
+
+// Now you have access to:
+// - PakOperations, SearchIndex, FileType
+// - LsfDocument, LsxDocument, LsjDocument
+// - VirtualTextureExtractor, GtsFile, GtpFile
+// - Error, Result, and more
 ```
 
 ## Features
 
-- `cli` - Enable the command-line interface binary
+- `cli` - Enables the `maclarian` command-line binary
 
 ## CLI Usage
 
@@ -328,7 +332,7 @@ maclarian gr2 bundle <file.gr2> [options]
 | Flag | Description |
 |------|-------------|
 | `-o, --output <dir>` | Output directory (defaults to GR2 location) |
-| `--bg3-path <path>` | Path to BG3 install folder (for texture lookup) |
+| `--bg3-path <path>` | Path to BG3 install folder (optional for macOS, required for Windows/Linux) |
 | `--virtual-textures <path>` | Path to pre-extracted virtual textures |
 | `--no-glb` | Skip GLB/glTF conversion (only extract textures) |
 | `--no-textures` | Skip texture extraction (only convert model) |
@@ -340,16 +344,16 @@ maclarian gr2 bundle <file.gr2> [options]
 
 ```bash
 # Basic bundle (GLB + DDS textures)
-maclarian gr2 bundle model.gr2 --bg3-path ~/BG3/Data
+maclarian gr2 bundle model.gr2
 
 # Bundle as glTF with PNG textures
-maclarian gr2 bundle model.gr2 --bg3-path ~/BG3/Data --gltf --png
+maclarian gr2 bundle model.gr2 --gltf --png
 
 # Bundle keeping both DDS and PNG
-maclarian gr2 bundle model.gr2 --bg3-path ~/BG3/Data --png --keep-dds
+maclarian gr2 bundle model.gr2 --png --keep-dds
 
 # Only extract textures, no model conversion
-maclarian gr2 bundle model.gr2 --bg3-path ~/BG3/Data --no-glb
+maclarian gr2 bundle model.gr2 --no-glb
 ```
 
 #### `gr2 extract` - Extract to JSON
@@ -429,7 +433,7 @@ maclarian mod validate -s <mod_directory>
 
 #### `mod info-json` - Generate info.json
 
-Generate an `info.json` file for BaldursModManager.
+Generate an `info.json` file for [Baldur's Gate 3 Mod Manager](https://github.com/mkinfrared/baldurs-gate3-mod-manager).
 
 ```bash
 maclarian mod info-json --pak <mod.pak> --extracted <mod_dir> [-o info.json]
@@ -656,7 +660,7 @@ Some files are dual-licensed under MIT/Apache-2.0 from upstream projects. See th
 
 ## Credits
 
-Derived from:
+Most of the functionality in MacLarian is derived from:
 - [LSLib](https://github.com/Norbyte/lslib) by Norbyte (MIT)
 - [xiba](https://gitlab.com/saghm/xiba/) by saghm (Apache-2.0)
 - [Knit](https://github.com/Legiayayana/Knit) by Legiayayana (MIT)

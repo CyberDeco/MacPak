@@ -20,8 +20,8 @@ pub struct DeduplicationResult {
 /// Build deduplication map by hashing tiles (memory-efficient)
 ///
 /// Returns a tuple of:
-/// - `is_first`: Vec<bool> where `is_first[i]` is true if tile `i` is the first occurrence of its hash
-/// - `unique_idx`: Vec<usize> where `unique_idx[i]` is the unique tile index for tile `i`
+/// - `is_first`: `Vec<bool>` where `is_first[i]` is true if tile `i` is the first occurrence of its hash
+/// - `unique_idx`: `Vec<usize>` where `unique_idx[i]` is the unique tile index for tile `i`
 ///
 /// This allows streaming compression: only compress tiles where `is_first[i]` is true,
 /// and reference the existing chunk for duplicates.

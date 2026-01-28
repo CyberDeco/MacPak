@@ -2,7 +2,7 @@
 //!
 //! When extracting GR2 files from a PAK, this module can automatically:
 //! 1. Convert the GR2 to GLB format
-//! 2. Look up associated textures via [`GameDataResolver`](crate::merged::GameDataResolver)
+//! 2. Look up associated textures via [`GameDataResolver`]
 //! 3. Extract those textures from their source PAKs to the same output folder
 //! 4. Extract and convert virtual textures (GTP/GTS) to DDS
 //!
