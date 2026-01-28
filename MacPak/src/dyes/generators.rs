@@ -70,6 +70,7 @@ fn generate_color_nodes_impl(colors: &HashMap<String, String>, include_defaults:
 /// Generate `Vector3Parameters` XML nodes, skipping default colors
 /// Use for new mod exports where unchanged colors shouldn't be included
 #[must_use]
+#[allow(clippy::implicit_hasher)]
 pub fn generate_color_nodes(colors: &HashMap<String, String>) -> String {
     generate_color_nodes_impl(colors, false)
 }
@@ -77,6 +78,7 @@ pub fn generate_color_nodes(colors: &HashMap<String, String>) -> String {
 /// Generate `Vector3Parameters` XML nodes, including ALL colors
 /// Use for re-exporting imported mods where all colors should be preserved
 #[must_use]
+#[allow(clippy::implicit_hasher)]
 pub fn generate_all_color_nodes(colors: &HashMap<String, String>) -> String {
     generate_color_nodes_impl(colors, true)
 }

@@ -65,7 +65,7 @@ pub fn copy_to_clipboard(text: &str) {
 pub fn pick_color_from_screen() -> Option<(u8, u8, u8)> {
     #[cfg(target_os = "macos")]
     {
-        let script = r#"choose color"#;
+        let script = r"choose color";
         let output = Command::new("osascript")
             .args(["-e", script])
             .output()

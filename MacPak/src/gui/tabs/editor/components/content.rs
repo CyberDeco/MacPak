@@ -65,16 +65,16 @@ pub fn editor_content(
                         // Non-modifier keys that edit content
                         matches!(
                             &keypress.key,
-                            KeyInput::Keyboard(Key::Character(_), _)
-                                | KeyInput::Keyboard(
-                                    Key::Named(
+                            KeyInput::Keyboard(
+                                Key::Character(_)
+                                    | Key::Named(
                                         NamedKey::Backspace
                                             | NamedKey::Delete
                                             | NamedKey::Enter
                                             | NamedKey::Tab
                                     ),
-                                    _
-                                )
+                                _
+                            )
                         )
                     };
 

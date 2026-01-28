@@ -28,12 +28,9 @@ pub fn convert_file_quick(source_path: &str, target_format: &str, state: Browser
     // Check if conversion is supported before spawning
     if !matches!(
         (source_ext.as_str(), target_format),
-        ("lsf", "lsx")
-            | ("lsx", "lsf")
-            | ("lsx", "lsj")
-            | ("lsj", "lsx")
-            | ("lsf", "lsj")
-            | ("lsj", "lsf")
+        ("lsf" | "lsj", "lsx")
+            | ("lsx" | "lsj", "lsf")
+            | ("lsx" | "lsf", "lsj")
             | ("loca", "xml")
             | ("xml", "loca")
     ) {

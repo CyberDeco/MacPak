@@ -2,7 +2,7 @@
 //!
 //! Operations for working with GR2 3D model files used in BG3/DOS2.
 //! Core functionality is in maclarian; this module provides re-exports and
-//! any MacPak-specific wrappers.
+//! any `MacPak`-specific wrappers.
 
 use crate::error::Result;
 use std::path::Path;
@@ -17,28 +17,44 @@ pub use maclarian::formats::gr2::{
 pub use maclarian::converter::{Gr2Phase, Gr2Progress, Gr2ProgressCallback};
 
 /// Convert a GR2 file to GLB (binary glTF) format.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn gr2_to_glb(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
-    maclarian::converter::convert_gr2_to_glb(source.as_ref(), dest.as_ref()).map_err(|e| e.into())
+    maclarian::converter::convert_gr2_to_glb(source.as_ref(), dest.as_ref()).map_err(Into::into)
 }
 
 /// Convert a GR2 file to GLB with progress callback.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn gr2_to_glb_with_progress(
     source: impl AsRef<Path>,
     dest: impl AsRef<Path>,
     progress: Gr2ProgressCallback,
 ) -> Result<()> {
     maclarian::converter::convert_gr2_to_glb_with_progress(source.as_ref(), dest.as_ref(), progress)
-        .map_err(|e| e.into())
+        .map_err(Into::into)
 }
 
 /// Convert a glTF/GLB file to GR2 format.
 ///
 /// Note: Currently outputs uncompressed GR2 files.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn gltf_to_gr2(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
-    maclarian::converter::convert_gltf_to_gr2(source.as_ref(), dest.as_ref()).map_err(|e| e.into())
+    maclarian::converter::convert_gltf_to_gr2(source.as_ref(), dest.as_ref()).map_err(Into::into)
 }
 
 /// Convert a glTF/GLB file to GR2 with progress callback.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read or conversion fails.
 pub fn gltf_to_gr2_with_progress(
     source: impl AsRef<Path>,
     dest: impl AsRef<Path>,
@@ -49,10 +65,14 @@ pub fn gltf_to_gr2_with_progress(
         dest.as_ref(),
         progress,
     )
-    .map_err(|e| e.into())
+    .map_err(Into::into)
 }
 
-/// Decompress all BitKnit-compressed sections in a GR2 file.
+/// Decompress all `BitKnit`-compressed sections in a GR2 file.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read or decompression fails.
 pub fn decompress_gr2(source: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<()> {
     let data = std::fs::read(source.as_ref())?;
     let decompressed = maclarian::formats::gr2::decompress_gr2(&data)?;

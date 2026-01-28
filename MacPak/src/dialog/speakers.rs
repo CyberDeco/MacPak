@@ -172,6 +172,7 @@ impl SpeakerCache {
 
     /// Extract UUID and `DisplayName` (handle) pairs from LSF bytes
     /// Looks for both `MapKey` (`RootTemplates`) and `GlobalTemplate` (Origins) as UUID sources
+    #[allow(clippy::cast_sign_loss)]
     fn extract_speakers_from_lsf(data: &[u8]) -> Vec<(String, String)> {
         let mut results = Vec::new();
 
@@ -260,8 +261,9 @@ impl SpeakerCache {
         results
     }
 
-    /// Extract speaker group UUID → Name mappings from SpeakerGroups.lsf
-    /// Returns UUID → formatted display name pairs (e.g., "`GROUP_ORI_DU`" → "Dark Urge")
+    /// Extract speaker group UUID → Name mappings from `SpeakerGroups.lsf`
+    /// Returns UUID → formatted display name pairs (e.g., `GROUP_ORI_DU` → "Dark Urge")
+    #[allow(clippy::cast_sign_loss)]
     fn extract_speaker_groups_from_lsf(data: &[u8]) -> Vec<(String, String)> {
         let mut results = Vec::new();
 

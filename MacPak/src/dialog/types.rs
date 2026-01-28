@@ -1,7 +1,7 @@
 //! Dialog data types for BG3 dialog files
 //!
 //! These types represent the parsed dialog structure from BG3's .lsf/.lsj dialog files.
-//! Ported from bg3-dialog-reader's Json.cs
+//! Ported from `bg3-dialog-reader`'s `Json.cs`
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -50,6 +50,7 @@ pub struct DialogEditorData {
 
 /// A single dialog node
 #[derive(Debug, Clone, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct DialogNode {
     /// Unique identifier
     pub uuid: String,
@@ -161,7 +162,7 @@ pub enum NodeConstructor {
 
 impl NodeConstructor {
     #[must_use]
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s {
             "TagAnswer" => NodeConstructor::TagAnswer,
             "TagQuestion" => NodeConstructor::TagQuestion,
@@ -297,7 +298,7 @@ pub enum FlagType {
 
 impl FlagType {
     #[must_use]
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s {
             "Local" => FlagType::Local,
             "Tag" => FlagType::Tag,

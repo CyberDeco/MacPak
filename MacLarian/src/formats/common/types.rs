@@ -204,7 +204,7 @@ pub fn serialize_value(buffer: &mut Vec<u8>, type_id: TypeId, value_str: &str) -
         TYPE_UINT32 => buffer.write_u32::<LittleEndian>(value_str.parse().unwrap_or(0))?,
         TYPE_UINT64 => buffer.write_u64::<LittleEndian>(value_str.parse().unwrap_or(0))?,
         TYPE_OLD_INT64 | TYPE_INT64 => {
-            buffer.write_i64::<LittleEndian>(value_str.parse().unwrap_or(0))?
+            buffer.write_i64::<LittleEndian>(value_str.parse().unwrap_or(0))?;
         }
         // Float types
         TYPE_FLOAT => buffer.write_f32::<LittleEndian>(value_str.parse().unwrap_or(0.0))?,

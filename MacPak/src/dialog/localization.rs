@@ -195,9 +195,9 @@ impl LocalizationCache {
 
             // Also insert with 'h' prefix if not present, or without if present
             // to handle different handle formats
-            if key.starts_with('h') {
+            if let Some(stripped) = key.strip_prefix('h') {
                 self.strings.insert(
-                    key[1..].to_string(),
+                    stripped.to_string(),
                     LocalizedEntry {
                         text: entry.text.clone(),
                         version: entry.version,
@@ -223,8 +223,8 @@ impl LocalizationCache {
     pub fn get(&self, handle: &str) -> Option<&LocalizedEntry> {
         self.strings.get(handle).or_else(|| {
             // Try with/without 'h' prefix
-            if handle.starts_with('h') {
-                self.strings.get(&handle[1..])
+            if let Some(stripped) = handle.strip_prefix('h') {
+                self.strings.get(stripped)
             } else {
                 self.strings.get(&format!("h{handle}"))
             }

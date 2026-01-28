@@ -79,7 +79,7 @@ pub fn parse_lsx(content: &str) -> Result<LsxDocument> {
                         match attr.key.as_ref() {
                             b"id" => node_id = String::from_utf8_lossy(&attr.value).into_owned(),
                             b"key" => {
-                                node_key = Some(String::from_utf8_lossy(&attr.value).into_owned())
+                                node_key = Some(String::from_utf8_lossy(&attr.value).into_owned());
                             }
                             _ => {}
                         }
@@ -119,16 +119,16 @@ pub fn parse_lsx(content: &str) -> Result<LsxDocument> {
                             let attr = attr?;
                             match attr.key.as_ref() {
                                 b"id" => {
-                                    attr_id = String::from_utf8_lossy(&attr.value).into_owned()
+                                    attr_id = String::from_utf8_lossy(&attr.value).into_owned();
                                 }
                                 b"type" => {
-                                    attr_type = String::from_utf8_lossy(&attr.value).into_owned()
+                                    attr_type = String::from_utf8_lossy(&attr.value).into_owned();
                                 }
                                 b"value" => {
-                                    attr_value = String::from_utf8_lossy(&attr.value).into_owned()
+                                    attr_value = String::from_utf8_lossy(&attr.value).into_owned();
                                 }
                                 b"handle" => {
-                                    handle = Some(String::from_utf8_lossy(&attr.value).into_owned())
+                                    handle = Some(String::from_utf8_lossy(&attr.value).into_owned());
                                 }
                                 b"version" => {
                                     version = attr
@@ -138,7 +138,7 @@ pub fn parse_lsx(content: &str) -> Result<LsxDocument> {
                                         .map(|&b| b as char)
                                         .collect::<String>()
                                         .parse()
-                                        .ok()
+                                        .ok();
                                 }
                                 _ => {}
                             }
@@ -162,11 +162,11 @@ pub fn parse_lsx(content: &str) -> Result<LsxDocument> {
                             let attr = attr?;
                             match attr.key.as_ref() {
                                 b"id" => {
-                                    node_id = String::from_utf8_lossy(&attr.value).into_owned()
+                                    node_id = String::from_utf8_lossy(&attr.value).into_owned();
                                 }
                                 b"key" => {
                                     node_key =
-                                        Some(String::from_utf8_lossy(&attr.value).into_owned())
+                                        Some(String::from_utf8_lossy(&attr.value).into_owned());
                                 }
                                 _ => {}
                             }

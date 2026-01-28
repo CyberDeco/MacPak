@@ -165,6 +165,7 @@ impl FlagCache {
     }
 
     /// Extract just UUID and Name from flag LSF bytes (static version for parallel use)
+    #[allow(clippy::cast_sign_loss)]
     fn extract_flag_name_from_lsf_static(data: &[u8]) -> Option<(String, String)> {
         let doc = parse_lsf_bytes(data).ok()?;
 

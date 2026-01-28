@@ -140,13 +140,14 @@ fn parse_speaker(node: &LsjNode) -> Option<SpeakerInfo> {
 }
 
 /// Parse a dialog node from LSJ
+#[allow(clippy::too_many_lines)]
 fn parse_node(node: &LsjNode) -> Option<DialogNode> {
     let uuid = node.attributes.get("UUID").map(get_string_value)?;
 
     let constructor = node
         .attributes
         .get("constructor")
-        .map(|a| NodeConstructor::from_str(&get_string_value(a)))
+        .map(|a| NodeConstructor::parse(&get_string_value(a)))
         .unwrap_or_default();
 
     let mut dialog_node = DialogNode::new(uuid, constructor);
@@ -369,7 +370,7 @@ fn parse_flag_group(node: &LsjNode) -> Option<FlagGroup> {
     let flag_type = node
         .attributes
         .get("type")
-        .map(|a| FlagType::from_str(&get_string_value(a)))
+        .map(|a| FlagType::parse(&get_string_value(a)))
         .unwrap_or_default();
 
     let mut flags = Vec::new();
@@ -616,6 +617,7 @@ fn get_string_value(attr: &LsjAttribute) -> String {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn get_int_value(attr: &LsjAttribute) -> i32 {
     match attr {
         LsjAttribute::Simple { value, .. } => value
@@ -627,6 +629,7 @@ fn get_int_value(attr: &LsjAttribute) -> i32 {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn get_float_value(attr: &LsjAttribute) -> f32 {
     match attr {
         LsjAttribute::Simple { value, .. } => value

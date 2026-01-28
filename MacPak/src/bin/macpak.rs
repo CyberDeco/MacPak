@@ -1,4 +1,4 @@
-//! MacPak GUI binary entry point
+//! `MacPak` GUI binary entry point
 
 fn main() {
     macpak::gui::run_app();
