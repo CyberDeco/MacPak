@@ -128,7 +128,8 @@ pub fn parse_lsx(content: &str) -> Result<LsxDocument> {
                                     attr_value = String::from_utf8_lossy(&attr.value).into_owned();
                                 }
                                 b"handle" => {
-                                    handle = Some(String::from_utf8_lossy(&attr.value).into_owned());
+                                    handle =
+                                        Some(String::from_utf8_lossy(&attr.value).into_owned());
                                 }
                                 b"version" => {
                                     version = attr
