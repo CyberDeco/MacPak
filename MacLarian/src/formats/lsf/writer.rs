@@ -16,7 +16,11 @@
 //! SPDX-License-Identifier: MIT AND Apache-2.0
 
 // Binary format writing requires many intentional casts between integer types
-#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
 use super::document::LsfDocument;
 use crate::error::Result;
@@ -144,8 +148,8 @@ pub fn serialize_lsf_with_format(doc: &LsfDocument, format: LsfFormat) -> Result
     // - 1 (KeysAndAdjacency) = V3 format (16-byte nodes/attrs with sibling/offset)
     // - 2 (None2) = V2 format (same as 0, different lslib_meta string)
     let metadata_format = match format {
-        LsfFormat::V3 => 1u32,  // KeysAndAdjacency
-        LsfFormat::V2 => 0u32,  // None
+        LsfFormat::V3 => 1u32, // KeysAndAdjacency
+        LsfFormat::V2 => 0u32, // None
     };
     output.write_u32::<LittleEndian>(metadata_format)?;
 
@@ -187,12 +191,13 @@ fn write_keys(doc: &LsfDocument) -> Result<Vec<u8>> {
 
     for (node_idx, key_opt) in doc.node_keys.iter().enumerate() {
         if let Some(key) = key_opt
-            && let Some((outer, inner)) = doc.find_name_indices(key) {
-                buffer.write_u32::<LittleEndian>(node_idx as u32)?;
-                // Pack as single u32: outer in high 16 bits, inner in low 16 bits
-                let packed_name = ((outer as u32) << 16) | (inner as u32);
-                buffer.write_u32::<LittleEndian>(packed_name)?;
-            }
+            && let Some((outer, inner)) = doc.find_name_indices(key)
+        {
+            buffer.write_u32::<LittleEndian>(node_idx as u32)?;
+            // Pack as single u32: outer in high 16 bits, inner in low 16 bits
+            let packed_name = ((outer as u32) << 16) | (inner as u32);
+            buffer.write_u32::<LittleEndian>(packed_name)?;
+        }
     }
 
     Ok(buffer)

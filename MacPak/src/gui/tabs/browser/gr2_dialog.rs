@@ -31,9 +31,7 @@ pub fn gr2_conversion_dialog(state: BrowserState, config_state: ConfigState) -> 
     };
 
     // Show warning when texture extraction enabled but path not configured
-    let needs_warning = move || {
-        extract_textures.get() && game_data_path.get().is_empty()
-    };
+    let needs_warning = move || extract_textures.get() && game_data_path.get().is_empty();
 
     dyn_container(
         move || show.get(),
@@ -47,27 +45,30 @@ pub fn gr2_conversion_dialog(state: BrowserState, config_state: ConfigState) -> 
             let state_cancel = state_cancel.clone();
             let config_for_convert = config_state.clone();
 
-            let file_name = gr2_path.get()
-                .map(|p| std::path::Path::new(&p)
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| "GR2 file".to_string()))
+            let file_name = gr2_path
+                .get()
+                .map(|p| {
+                    std::path::Path::new(&p)
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "GR2 file".to_string())
+                })
                 .unwrap_or_else(|| "GR2 file".to_string());
 
             container(
                 v_stack((
                     // Header
-                    label(|| "Convert GR2")
-                        .style(|s| {
-                            s.font_size(16.0)
-                                .font_weight(Weight::BOLD)
-                                .margin_bottom(8.0)
-                        }),
-
+                    label(|| "Convert GR2").style(|s| {
+                        s.font_size(16.0)
+                            .font_weight(Weight::BOLD)
+                            .margin_bottom(8.0)
+                    }),
                     // File name
-                    label(move || file_name.clone())
-                        .style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100)).margin_bottom(16.0)),
-
+                    label(move || file_name.clone()).style(|s| {
+                        s.font_size(12.0)
+                            .color(Color::rgb8(100, 100, 100))
+                            .margin_bottom(16.0)
+                    }),
                     // GR2 options panel
                     v_stack((
                         label(|| "Conversion Options").style(|s| {
@@ -75,7 +76,6 @@ pub fn gr2_conversion_dialog(state: BrowserState, config_state: ConfigState) -> 
                                 .font_weight(Weight::BOLD)
                                 .margin_bottom(8.0)
                         }),
-
                         // Full Bundle checkbox
                         h_stack((
                             checkbox(is_bundle)
@@ -93,17 +93,14 @@ pub fn gr2_conversion_dialog(state: BrowserState, config_state: ConfigState) -> 
                                 .style(|s| s.font_size(11.0).color(Color::rgb8(100, 100, 100))),
                         ))
                         .style(|s| s.items_center().margin_bottom(10.0)),
-
                         // Keep original GR2
                         h_stack((
                             checkbox(move || extract_gr2.get())
                                 .on_update(move |checked| extract_gr2.set(checked))
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Keep original GR2")
-                                .style(|s| s.font_size(12.0)),
+                            label(|| "Keep original GR2").style(|s| s.font_size(12.0)),
                         ))
                         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
                         // Convert to GLB
                         h_stack((
                             checkbox(move || convert_to_glb.get())
@@ -114,15 +111,16 @@ pub fn gr2_conversion_dialog(state: BrowserState, config_state: ConfigState) -> 
                                     }
                                 })
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Convert to GLB")
-                                .style(move |s| {
-                                    let disabled = convert_to_gltf.get();
-                                    s.font_size(12.0)
-                                        .color(if disabled { Color::rgb8(160, 160, 160) } else { Color::BLACK })
-                                }),
+                            label(|| "Convert to GLB").style(move |s| {
+                                let disabled = convert_to_gltf.get();
+                                s.font_size(12.0).color(if disabled {
+                                    Color::rgb8(160, 160, 160)
+                                } else {
+                                    Color::BLACK
+                                })
+                            }),
                         ))
                         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
                         // Convert to glTF
                         h_stack((
                             checkbox(move || convert_to_gltf.get())
@@ -133,53 +131,47 @@ pub fn gr2_conversion_dialog(state: BrowserState, config_state: ConfigState) -> 
                                     }
                                 })
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Convert to glTF")
-                                .style(move |s| {
-                                    let disabled = convert_to_glb.get();
-                                    s.font_size(12.0)
-                                        .color(if disabled { Color::rgb8(160, 160, 160) } else { Color::BLACK })
-                                }),
+                            label(|| "Convert to glTF").style(move |s| {
+                                let disabled = convert_to_glb.get();
+                                s.font_size(12.0).color(if disabled {
+                                    Color::rgb8(160, 160, 160)
+                                } else {
+                                    Color::BLACK
+                                })
+                            }),
                         ))
                         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
                         // Extract textures DDS
                         h_stack((
                             checkbox(move || extract_textures.get())
                                 .on_update(move |checked| extract_textures.set(checked))
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Extract textures DDS")
-                                .style(|s| s.font_size(12.0)),
+                            label(|| "Extract textures DDS").style(|s| s.font_size(12.0)),
                         ))
                         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
                         // Convert textures DDS to PNG
                         h_stack((
                             checkbox(move || convert_to_png.get())
                                 .on_update(move |checked| convert_to_png.set(checked))
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Convert textures DDS to PNG")
-                                .style(|s| s.font_size(12.0)),
+                            label(|| "Convert textures DDS to PNG").style(|s| s.font_size(12.0)),
                         ))
                         .style(|s| s.items_center().margin_left(20.0)),
-
                         // Warning when textures enabled but path not configured
-                        dyn_container(
-                            needs_warning,
-                            move |show_warning| {
-                                if show_warning {
-                                    label(|| "Warning: BG3 game data path not set in Settings")
-                                        .style(|s| {
-                                            s.font_size(11.0)
-                                                .color(Color::rgb8(180, 80, 30))
-                                                .margin_top(8.0)
-                                                .margin_left(20.0)
-                                        })
-                                        .into_any()
-                                } else {
-                                    empty().into_any()
-                                }
-                            },
-                        ),
+                        dyn_container(needs_warning, move |show_warning| {
+                            if show_warning {
+                                label(|| "Warning: BG3 game data path not set in Settings")
+                                    .style(|s| {
+                                        s.font_size(11.0)
+                                            .color(Color::rgb8(180, 80, 30))
+                                            .margin_top(8.0)
+                                            .margin_left(20.0)
+                                    })
+                                    .into_any()
+                            } else {
+                                empty().into_any()
+                            }
+                        }),
                     ))
                     .style(|s| {
                         s.width_full()
@@ -190,7 +182,6 @@ pub fn gr2_conversion_dialog(state: BrowserState, config_state: ConfigState) -> 
                             .border_color(Color::rgb8(220, 220, 220))
                             .border_radius(4.0)
                     }),
-
                     // Action buttons
                     h_stack((
                         empty().style(|s| s.flex_grow(1.0)),

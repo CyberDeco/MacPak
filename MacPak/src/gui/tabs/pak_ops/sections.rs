@@ -4,17 +4,16 @@ use floem::event::{Event, EventListener};
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::operations::{
     batch_create_paks, batch_extract_paks, create_pak_file, extract_individual_files,
     extract_pak_file, list_pak_contents, rebuild_pak_file,
 };
 use super::results::is_error_message;
+use crate::gui::state::{ActiveDialog, PakOpsState};
 
 pub fn header_section(state: PakOpsState) -> impl IntoView {
     h_stack((
-        label(|| "PAK Operations")
-            .style(|s| s.font_size(18.0).font_weight(Weight::BOLD)),
+        label(|| "PAK Operations").style(|s| s.font_size(18.0).font_weight(Weight::BOLD)),
         empty().style(|s| s.flex_grow(1.0)),
         // Status message
         dyn_container(
@@ -166,7 +165,9 @@ fn drop_zone(state: PakOpsState) -> impl IntoView {
             if drop_event.path.is_dir() {
                 state_for_drop.dropped_folder.set(Some(path.clone()));
                 state_for_drop.add_result(&format!("Dropped folder: {}", display_name));
-                state_for_drop.active_dialog.set(ActiveDialog::FolderDropAction);
+                state_for_drop
+                    .active_dialog
+                    .set(ActiveDialog::FolderDropAction);
             } else if path.to_lowercase().ends_with(".pak") {
                 state_for_drop.dropped_file.set(Some(path.clone()));
                 state_for_drop.add_result(&format!("Dropped: {}", display_name));
@@ -189,7 +190,11 @@ fn drop_zone(state: PakOpsState) -> impl IntoView {
     })
 }
 
-fn operation_button(text: &'static str, state: PakOpsState, on_click: impl Fn() + 'static) -> impl IntoView {
+fn operation_button(
+    text: &'static str,
+    state: PakOpsState,
+    on_click: impl Fn() + 'static,
+) -> impl IntoView {
     let state_for_action = state.clone();
     let state_for_disabled = state.clone();
     let state_for_style = state.clone();

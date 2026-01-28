@@ -4,9 +4,9 @@
 //!
 //! SPDX-License-Identifier: MIT
 
-use crate::error::{Error, Result};
 use super::config::TileSetConfiguration;
 use super::geometry::TileCoord;
+use crate::error::{Error, Result};
 use std::path::Path;
 
 /// A processed tile ready for compression
@@ -106,7 +106,10 @@ impl DdsTexture {
             width,
             height,
             block_size,
-            data: dds.get_data(0).map_err(|e| Error::DdsError(format!("{e}")))?.to_vec(),
+            data: dds
+                .get_data(0)
+                .map_err(|e| Error::DdsError(format!("{e}")))?
+                .to_vec(),
             mip_count,
             mip_offsets,
         })
@@ -329,10 +332,9 @@ pub fn extract_tiles_from_dds(
         let level = coord.level as u32;
 
         // Get mip level data
-        let (mip_data, mip_width, mip_height) = dds.get_mip_data(level)
-            .ok_or_else(|| Error::VirtualTexture(
-                format!("Mip level {level} not available in texture")
-            ))?;
+        let (mip_data, mip_width, mip_height) = dds.get_mip_data(level).ok_or_else(|| {
+            Error::VirtualTexture(format!("Mip level {level} not available in texture"))
+        })?;
 
         // Calculate tile content position in the source texture
         let content_pixel_x = (coord.x as u32) * raw_tile_width;
@@ -394,4 +396,3 @@ pub fn extract_tiles_from_dds(
 
     Ok(tiles)
 }
-

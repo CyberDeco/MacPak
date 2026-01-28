@@ -10,12 +10,12 @@ pub mod shared;
 use floem::prelude::*;
 
 use crate::gui::state::{AppState, DyesState};
-use crate::gui::utils::meta_dialog::{meta_dialog_with_signals_and_extra, MetaDialogSignals};
+use crate::gui::utils::meta_dialog::{MetaDialogSignals, meta_dialog_with_signals_and_extra};
 use crate::gui::utils::vendor_selection_section;
 use export::export_section;
 use generate::generate_dye_section;
-use import::import_section;
 pub use import::import_from_mod_folder;
+use import::import_section;
 use sections::{common_section, header_section, recommended_section, required_section};
 use shared::constants::*;
 
@@ -42,7 +42,9 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
         // meta.lsx is generated as part of export_dye_mod
         let name = state_for_export.mod_name.get();
         if name.is_empty() {
-            state_for_export.status_message.set("Error: Mod name is required".to_string());
+            state_for_export
+                .status_message
+                .set("Error: Mod name is required".to_string());
             return;
         }
 
@@ -57,14 +59,11 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
     };
 
     // Vendor selection extra content for export dialog
-    let vendor_selection_content = move || {
-        vendor_selection_section(selected_vendors)
-    };
+    let vendor_selection_content = move || vendor_selection_section(selected_vendors);
 
     v_stack((
         // Header - matches PAK Ops style
         header_section(status),
-
         // Color sections (scrollable to handle overflow)
         scroll(
             h_stack((
@@ -77,20 +76,11 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
                 ))
                 .style(|s| s.flex_grow(1.0).flex_basis(0.0).gap(GAP_LG)),
             ))
-            .style(|s| {
-                s.width_full()
-                    .items_start()
-                    .padding(20.0)
-                    .gap(GAP_LG)
-            }),
+            .style(|s| s.width_full().items_start().padding(20.0).gap(GAP_LG)),
         )
         .style(|s| s.width_full()),
         // Import and Export sections side by side
-        h_stack((
-            import_section(state.clone()),
-            export_section(state.clone()),
-        ))
-        .style(|s| {
+        h_stack((import_section(state.clone()), export_section(state.clone()))).style(|s| {
             s.width_full()
                 .padding_horiz(24.0)
                 .padding_bottom(24.0)

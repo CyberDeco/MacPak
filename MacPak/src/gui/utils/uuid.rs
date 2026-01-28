@@ -3,9 +3,9 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[allow(dead_code)]
 pub enum UuidFormat {
-    Standard,    // 8-4-4-4-12
-    Compact,     // No dashes
-    Larian,      // Larian's format (h prefix + specific format)
+    Standard, // 8-4-4-4-12
+    Compact,  // No dashes
+    Larian,   // Larian's format (h prefix + specific format)
 }
 
 /// Generate a new UUID v4 in the specified format

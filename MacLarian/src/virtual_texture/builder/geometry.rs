@@ -120,7 +120,11 @@ pub fn calculate_geometry(
     let total_height = *tex_height;
 
     // Calculate number of mip levels
-    let calculated_mips = calculate_mip_levels(total_width, total_height, raw_tile_width.min(raw_tile_height));
+    let calculated_mips = calculate_mip_levels(
+        total_width,
+        total_height,
+        raw_tile_width.min(raw_tile_height),
+    );
     let mip_levels = max_mip_levels.map_or(calculated_mips, |max| max.min(calculated_mips));
 
     // Create texture layout
@@ -210,4 +214,3 @@ pub fn calculate_mip_levels(width: u32, height: u32, min_size: u32) -> u32 {
 pub fn tiles_for_dimension(pixels: u32, tile_size: u32) -> u32 {
     pixels.div_ceil(tile_size)
 }
-

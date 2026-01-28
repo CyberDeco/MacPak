@@ -4,15 +4,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use indicatif::ProgressBar;
 
 use crate::cli::progress::{bar_style, spinner_style};
 use crate::virtual_texture;
-use crate::virtual_texture::{VTexProgress, VTexPhase};
 use crate::virtual_texture::builder::{
-    VirtualTextureBuilder, SourceTexture, TileCompressionPreference,
+    SourceTexture, TileCompressionPreference, VirtualTextureBuilder,
 };
+use crate::virtual_texture::{VTexPhase, VTexProgress};
 
 /// List textures in a GTS file
 pub fn list(gts_path: &Path) -> Result<()> {
@@ -22,8 +22,10 @@ pub fn list(gts_path: &Path) -> Result<()> {
     println!("Virtual Texture Set: {}", gts_path.display());
     println!("GUID: {:02x?}", info.guid);
     println!("Version: {}", info.version);
-    println!("Tile size: {}x{} (border: {})",
-        info.tile_width, info.tile_height, info.tile_border);
+    println!(
+        "Tile size: {}x{} (border: {})",
+        info.tile_width, info.tile_height, info.tile_border
+    );
     println!("Layers: {}", info.num_layers);
     println!("Levels: {}", info.num_levels);
     println!("Page files: {}", info.page_files.len());
@@ -71,7 +73,10 @@ pub fn extract(
         input_path,
         Some(output_dir),
         |progress: &VTexProgress| {
-            let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+            let desc = progress
+                .current_file
+                .as_deref()
+                .unwrap_or(progress.phase.as_str());
             if is_gtp {
                 pb.set_message(desc.to_string());
                 pb.tick();
@@ -81,26 +86,31 @@ pub fn extract(
                 pb.set_message(desc.to_string());
             }
         },
-    ).with_context(|| format!("Failed to extract {}", input_path.display()))?;
+    )
+    .with_context(|| format!("Failed to extract {}", input_path.display()))?;
 
     pb.finish_and_clear();
 
     if is_gtp {
-        println!("Extracted {} textures to {}", result.texture_count, output_dir.display());
+        println!(
+            "Extracted {} textures to {}",
+            result.texture_count,
+            output_dir.display()
+        );
     } else {
-        println!("Extracted {}/{} GTP files to {}", result.texture_count, result.gtp_count, output_dir.display());
+        println!(
+            "Extracted {}/{} GTP files to {}",
+            result.texture_count,
+            result.gtp_count,
+            output_dir.display()
+        );
     }
 
     Ok(())
 }
 
 /// Batch extract multiple GTS files in parallel
-pub fn batch(
-    input_dir: &Path,
-    output_dir: &Path,
-    layers: &[usize],
-    recursive: bool,
-) -> Result<()> {
+pub fn batch(input_dir: &Path, output_dir: &Path, layers: &[usize], recursive: bool) -> Result<()> {
     // Find all GTS files
     let mut gts_files = Vec::new();
     find_gts_files(input_dir, &mut gts_files, recursive)?;
@@ -113,8 +123,12 @@ pub fn batch(
     println!("Found {} GTS files", gts_files.len());
 
     // Create output directory
-    fs::create_dir_all(output_dir)
-        .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
+    fs::create_dir_all(output_dir).with_context(|| {
+        format!(
+            "Failed to create output directory: {}",
+            output_dir.display()
+        )
+    })?;
 
     if !layers.is_empty() {
         println!("Layer filter: {layers:?}");
@@ -124,15 +138,15 @@ pub fn batch(
     let pb = ProgressBar::new(gts_files.len() as u64);
     pb.set_style(bar_style());
 
-    let result = virtual_texture::extract_batch(
-        &gts_files,
-        Some(output_dir),
-        |progress: &VTexProgress| {
-            let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+    let result =
+        virtual_texture::extract_batch(&gts_files, Some(output_dir), |progress: &VTexProgress| {
+            let desc = progress
+                .current_file
+                .as_deref()
+                .unwrap_or(progress.phase.as_str());
             pb.set_position(progress.current as u64);
             pb.set_message(desc.to_string());
-        },
-    );
+        });
 
     pb.finish_and_clear();
 
@@ -182,7 +196,9 @@ fn find_gts_files(dir: &Path, files: &mut Vec<PathBuf>, recursive: bool) -> Resu
 /// Info about a GTP file
 pub fn gtp_info(gtp_path: &Path, gts_path: Option<&Path>) -> Result<()> {
     // We need a GTS file to properly parse the GTP
-    let gts_path = if let Some(p) = gts_path { p.to_path_buf() } else {
+    let gts_path = if let Some(p) = gts_path {
+        p.to_path_buf()
+    } else {
         // Try to find GTS in same directory
         let gtp_dir = gtp_path.parent().unwrap_or(Path::new("."));
         let mut found = None;
@@ -241,9 +257,7 @@ pub fn create(
     }
 
     // Build the virtual texture
-    let mut builder = VirtualTextureBuilder::new()
-        .name(name)
-        .add_texture(texture);
+    let mut builder = VirtualTextureBuilder::new().name(name).add_texture(texture);
 
     // Set compression preference
     if let Some(comp) = compression {
@@ -264,8 +278,12 @@ pub fn create(
     println!("Output: {}", output_dir.display());
 
     // Create output directory
-    fs::create_dir_all(output_dir)
-        .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
+    fs::create_dir_all(output_dir).with_context(|| {
+        format!(
+            "Failed to create output directory: {}",
+            output_dir.display()
+        )
+    })?;
 
     // Create progress bar - starts as spinner, switches to bar for compression
     let pb = ProgressBar::new_spinner();
@@ -274,30 +292,35 @@ pub fn create(
     // Track current phase to detect transitions
     let last_phase = AtomicUsize::new(0);
 
-    let result = builder.build_with_progress(output_dir, |progress: &VTexProgress| {
-        let phase_num = progress.phase as usize;
-        let prev_phase = last_phase.swap(phase_num, Ordering::SeqCst);
+    let result = builder
+        .build_with_progress(output_dir, |progress: &VTexProgress| {
+            let phase_num = progress.phase as usize;
+            let prev_phase = last_phase.swap(phase_num, Ordering::SeqCst);
 
-        // Switch to progress bar mode for compression phase
-        if progress.phase == VTexPhase::Compressing {
-            if prev_phase != phase_num {
-                // Phase just changed to compressing - switch to bar style
-                pb.set_style(bar_style());
-                pb.set_length(progress.total as u64);
+            // Switch to progress bar mode for compression phase
+            if progress.phase == VTexPhase::Compressing {
+                if prev_phase != phase_num {
+                    // Phase just changed to compressing - switch to bar style
+                    pb.set_style(bar_style());
+                    pb.set_length(progress.total as u64);
+                }
+                pb.set_position(progress.current as u64);
+                pb.set_message("Compressing tiles".to_string());
+            } else {
+                // Other phases use spinner
+                if prev_phase == VTexPhase::Compressing as usize && phase_num != prev_phase {
+                    // Just finished compression - switch back to spinner
+                    pb.set_style(spinner_style());
+                }
+                let desc = progress
+                    .current_file
+                    .as_deref()
+                    .unwrap_or(progress.phase.as_str());
+                pb.set_message(desc.to_string());
+                pb.tick();
             }
-            pb.set_position(progress.current as u64);
-            pb.set_message("Compressing tiles".to_string());
-        } else {
-            // Other phases use spinner
-            if prev_phase == VTexPhase::Compressing as usize && phase_num != prev_phase {
-                // Just finished compression - switch back to spinner
-                pb.set_style(spinner_style());
-            }
-            let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
-            pb.set_message(desc.to_string());
-            pb.tick();
-        }
-    }).with_context(|| "Failed to create virtual texture")?;
+        })
+        .with_context(|| "Failed to create virtual texture")?;
 
     pb.finish_and_clear();
 
@@ -307,7 +330,10 @@ pub fn create(
     for gtp in &result.gtp_paths {
         println!("  GTP: {}", gtp.display());
     }
-    println!("  Tiles: {} ({} unique after deduplication)", result.tile_count, result.unique_tile_count);
+    println!(
+        "  Tiles: {} ({} unique after deduplication)",
+        result.tile_count, result.unique_tile_count
+    );
     println!("  Total size: {} bytes", result.total_size_bytes);
 
     Ok(())

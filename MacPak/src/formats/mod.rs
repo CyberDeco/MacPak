@@ -10,16 +10,14 @@ pub mod wem;
 
 // Re-export voice meta types
 pub use voice_meta::{
-    VoiceMetaEntry, VoiceMetaCache,
-    load_voice_meta_from_pak, load_voice_meta_from_folder,
-    find_voice_files_path, find_voice_meta_path,
+    VoiceMetaCache, VoiceMetaEntry, find_voice_files_path, find_voice_meta_path,
+    load_voice_meta_from_folder, load_voice_meta_from_pak,
 };
 
 // Re-export WEM/audio types
 #[cfg(feature = "gui")]
 pub use wem::{
-    WemError, WemHeader, DecodedAudio, WwiseVorbisHeader,
-    parse_wem_header, parse_wwise_vorbis_header, decode_wwise_vorbis_fallback,
-    AudioCache, AudioCacheError, CachedAudio, CacheStats,
-    load_wem_file_vgmstream,
+    AudioCache, AudioCacheError, CacheStats, CachedAudio, DecodedAudio, WemError, WemHeader,
+    WwiseVorbisHeader, decode_wwise_vorbis_fallback, load_wem_file_vgmstream, parse_wem_header,
+    parse_wwise_vorbis_header,
 };

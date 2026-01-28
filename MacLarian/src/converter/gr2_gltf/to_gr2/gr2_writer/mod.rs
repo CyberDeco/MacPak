@@ -21,8 +21,8 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-use crate::error::Result;
 use super::gltf_loader::{MeshData, Skeleton};
+use crate::error::Result;
 
 // Section is used internally by build_sections and file_bytes
 

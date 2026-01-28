@@ -2,13 +2,16 @@
 
 use crate::error::Result;
 
-use super::constants::{MAGIC_LE64, NUM_SECTIONS, TAG_BG3, VERSION};
-use super::section::Section;
 use super::super::utils::crc32;
 use super::Gr2Writer;
+use super::constants::{MAGIC_LE64, NUM_SECTIONS, TAG_BG3, VERSION};
+use super::section::Section;
 
 impl Gr2Writer {
-    pub(super) fn build_file_bytes(&self, sections_data: &(Vec<Section>, u32, u32)) -> Result<Vec<u8>> {
+    pub(super) fn build_file_bytes(
+        &self,
+        sections_data: &(Vec<Section>, u32, u32),
+    ) -> Result<Vec<u8>> {
         let (sections, root_offset, root_type_offset) = sections_data;
 
         // Calculate offsets - NO COMPRESSION, write uncompressed

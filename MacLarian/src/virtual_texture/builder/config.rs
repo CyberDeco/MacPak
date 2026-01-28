@@ -25,10 +25,7 @@ impl TileCompressionPreference {
                 b"raw\0\0\0\0\0\0\0\0\0\0\0\0\0",
                 b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
             ),
-            Self::FastLZ => (
-                b"fastlz\0\0\0\0\0\0\0\0\0\0",
-                b"fastlz0.1.0\0\0\0\0\0",
-            ),
+            Self::FastLZ => (b"fastlz\0\0\0\0\0\0\0\0\0\0", b"fastlz0.1.0\0\0\0\0\0"),
         }
     }
 }
@@ -114,23 +111,38 @@ impl TileSetConfiguration {
     pub fn validate(&self) -> Result<(), String> {
         // Tile dimensions must be divisible by 4 (BC block alignment)
         if self.tile_width % 4 != 0 {
-            return Err(format!("tile_width must be divisible by 4, got {}", self.tile_width));
+            return Err(format!(
+                "tile_width must be divisible by 4, got {}",
+                self.tile_width
+            ));
         }
         if self.tile_height % 4 != 0 {
-            return Err(format!("tile_height must be divisible by 4, got {}", self.tile_height));
+            return Err(format!(
+                "tile_height must be divisible by 4, got {}",
+                self.tile_height
+            ));
         }
 
         // Check reasonable ranges
         if self.tile_width < 16 || self.tile_width > 1024 {
-            return Err(format!("tile_width must be 16-1024, got {}", self.tile_width));
+            return Err(format!(
+                "tile_width must be 16-1024, got {}",
+                self.tile_width
+            ));
         }
         if self.tile_height < 16 || self.tile_height > 1024 {
-            return Err(format!("tile_height must be 16-1024, got {}", self.tile_height));
+            return Err(format!(
+                "tile_height must be 16-1024, got {}",
+                self.tile_height
+            ));
         }
 
         // Border must be divisible by 4 (BC block size)
         if self.tile_border % 4 != 0 {
-            return Err(format!("tile_border must be divisible by 4, got {}", self.tile_border));
+            return Err(format!(
+                "tile_border must be divisible by 4, got {}",
+                self.tile_border
+            ));
         }
 
         // Border must be less than half the tile size

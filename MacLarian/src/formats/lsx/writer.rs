@@ -8,8 +8,8 @@
 
 use super::document::{LsxDocument, LsxNode};
 use crate::error::Result;
-use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use std::fs;
 use std::path::Path;
 
@@ -29,18 +29,18 @@ pub fn write_lsx<P: AsRef<Path>>(doc: &LsxDocument, path: P) -> Result<()> {
 /// Returns an error if XML serialization fails.
 pub fn serialize_lsx(doc: &LsxDocument) -> Result<String> {
     let mut output = Vec::new();
-    
+
     // Write UTF-8 BOM
     output.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
-    
+
     let mut writer = Writer::new_with_indent(&mut output, b'\t', 1);
-    
+
     // XML declaration
     writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
-    
+
     // <save>
     writer.write_event(Event::Start(BytesStart::new("save")))?;
-    
+
     // <version>
     let mut version = BytesStart::new("version");
     version.push_attribute(("major", doc.major.to_string().as_str()));
@@ -55,25 +55,25 @@ pub fn serialize_lsx(doc: &LsxDocument) -> Result<String> {
         // Older games (DOS1) don't byte-swap
         version.push_attribute(("lslib_meta", "v1"));
     }
-    
+
     writer.write_event(Event::Empty(version))?;
-    
+
     // <region>s
     for region in &doc.regions {
         let mut region_tag = BytesStart::new("region");
         region_tag.push_attribute(("id", region.id.as_str()));
         writer.write_event(Event::Start(region_tag.borrow()))?;
-        
+
         // Write root nodes
         for node in &region.nodes {
             write_node(&mut writer, node)?;
         }
-        
+
         writer.write_event(Event::End(BytesEnd::new("region")))?;
     }
-    
+
     writer.write_event(Event::End(BytesEnd::new("save")))?;
-    
+
     let xml = String::from_utf8(output)?;
     // Convert to Windows line endings (CRLF) to match LSLib output
     let xml = xml.replace('\n', "\r\n");
@@ -85,21 +85,21 @@ pub fn serialize_lsx(doc: &LsxDocument) -> Result<String> {
 fn write_node<W: std::io::Write>(writer: &mut Writer<W>, node: &LsxNode) -> Result<()> {
     let has_attributes = !node.attributes.is_empty();
     let has_children = !node.children.is_empty();
-    
+
     let mut node_start = BytesStart::new("node");
     node_start.push_attribute(("id", node.id.as_str()));
-    
+
     if let Some(ref key) = node.key {
         node_start.push_attribute(("key", key.as_str()));
     }
-    
+
     if !has_attributes && !has_children {
         writer.write_event(Event::Empty(node_start))?;
         return Ok(());
     }
-    
+
     writer.write_event(Event::Start(node_start.borrow()))?;
-    
+
     // Write attributes
     if has_attributes {
         for attr in &node.attributes {
@@ -107,15 +107,15 @@ fn write_node<W: std::io::Write>(writer: &mut Writer<W>, node: &LsxNode) -> Resu
             attr_tag.push_attribute(("id", attr.id.as_str()));
             attr_tag.push_attribute(("type", attr.type_name.as_str()));
             //attr_tag.push_attribute(("value", attr.value.as_str()));
-            
+
             if let Some(ref handle) = attr.handle {
                 // TranslatedString or TranslatedFSString
                 attr_tag.push_attribute(("handle", handle.as_str()));
-                
+
                 if !attr.value.is_empty() {
                     attr_tag.push_attribute(("value", attr.value.as_str()));
                 }
-                
+
                 if let Some(version) = attr.version {
                     attr_tag.push_attribute(("version", version.to_string().as_str()));
                 }
@@ -125,7 +125,7 @@ fn write_node<W: std::io::Write>(writer: &mut Writer<W>, node: &LsxNode) -> Resu
             writer.write_event(Event::Empty(attr_tag))?;
         }
     }
-    
+
     // Write children
     if has_children {
         writer.write_event(Event::Start(BytesStart::new("children")))?;
@@ -134,7 +134,7 @@ fn write_node<W: std::io::Write>(writer: &mut Writer<W>, node: &LsxNode) -> Resu
         }
         writer.write_event(Event::End(BytesEnd::new("children")))?;
     }
-    
+
     writer.write_event(Event::End(BytesEnd::new("node")))?;
     Ok(())
 }

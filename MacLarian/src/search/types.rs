@@ -1,7 +1,7 @@
 //! Types for the search index module
 
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// File type classification for filtering
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -45,7 +45,10 @@ impl FileType {
     /// Check if this is a text-based format that can be content-searched
     #[must_use]
     pub fn is_searchable_text(&self) -> bool {
-        matches!(self, FileType::Lsx | FileType::Lsf | FileType::Lsj | FileType::Xml | FileType::Json)
+        matches!(
+            self,
+            FileType::Lsx | FileType::Lsf | FileType::Lsj | FileType::Xml | FileType::Json
+        )
     }
 
     /// Get display name for UI
@@ -114,7 +117,12 @@ impl SearchProgress {
 
     /// Create a progress update with a file/item name
     #[must_use]
-    pub fn with_file(phase: SearchPhase, current: usize, total: usize, file: impl Into<String>) -> Self {
+    pub fn with_file(
+        phase: SearchPhase,
+        current: usize,
+        total: usize,
+        file: impl Into<String>,
+    ) -> Self {
         Self {
             phase,
             current,

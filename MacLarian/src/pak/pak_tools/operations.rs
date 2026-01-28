@@ -1,10 +1,12 @@
 //! Core PAK archive operations
 
-use crate::error::{Error, Result};
-use super::super::lspk::{CompressionMethod, FileTableEntry, LspkReader, LspkWriter, PakPhase, PakProgress};
+use super::super::lspk::{
+    CompressionMethod, FileTableEntry, LspkReader, LspkWriter, PakPhase, PakProgress,
+};
+use super::ProgressCallback;
 use super::decompression::decompress_data;
 use super::helpers::{get_part_path, get_virtual_texture_subfolder, is_virtual_texture_file};
-use super::ProgressCallback;
+use crate::error::{Error, Result};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
@@ -62,9 +64,7 @@ impl PakOperations {
         // Filter entries (skip .DS_Store files)
         let filtered_entries: Vec<_> = entries
             .into_iter()
-            .filter(|entry| {
-                entry.path.file_name() != Some(std::ffi::OsStr::new(".DS_Store"))
-            })
+            .filter(|entry| entry.path.file_name() != Some(std::ffi::OsStr::new(".DS_Store")))
             .collect();
 
         let total_files = filtered_entries.len();
@@ -75,8 +75,10 @@ impl PakOperations {
         let errors: Vec<(PathBuf, String)> = filtered_entries
             .par_iter()
             .filter_map(|entry| {
-                let file_name = entry.path.file_name()
-                    .map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+                let file_name = entry.path.file_name().map_or_else(
+                    || entry.path.to_string_lossy().to_string(),
+                    |n| n.to_string_lossy().to_string(),
+                );
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
@@ -88,9 +90,17 @@ impl PakOperations {
                 });
 
                 // Get the correct part file path for this entry
-                let part_path = if let Some(p) = get_part_path(pak_path, entry.archive_part) { p } else {
+                let part_path = if let Some(p) = get_part_path(pak_path, entry.archive_part) {
+                    p
+                } else {
                     error_count.fetch_add(1, Ordering::SeqCst);
-                    return Some((entry.path.clone(), format!("Cannot determine path for archive part {}", entry.archive_part)));
+                    return Some((
+                        entry.path.clone(),
+                        format!(
+                            "Cannot determine path for archive part {}",
+                            entry.archive_part
+                        ),
+                    ));
                 };
 
                 // Open file handle for this thread, seek, and read
@@ -98,7 +108,10 @@ impl PakOperations {
                     Ok(f) => f,
                     Err(e) => {
                         error_count.fetch_add(1, Ordering::SeqCst);
-                        return Some((entry.path.clone(), format!("Failed to open {}: {e}", part_path.display())));
+                        return Some((
+                            entry.path.clone(),
+                            format!("Failed to open {}: {e}", part_path.display()),
+                        ));
                     }
                 };
 
@@ -114,7 +127,11 @@ impl PakOperations {
                 }
 
                 // Decompress
-                let data = match decompress_data(&compressed_data, entry.compression, entry.size_decompressed) {
+                let data = match decompress_data(
+                    &compressed_data,
+                    entry.compression,
+                    entry.size_decompressed,
+                ) {
                     Ok(data) => data,
                     Err(e) => {
                         error_count.fetch_add(1, Ordering::SeqCst);
@@ -140,10 +157,11 @@ impl PakOperations {
 
                 // Create parent directories (idempotent)
                 if let Some(parent) = output_path.parent()
-                    && let Err(e) = std::fs::create_dir_all(parent) {
-                        error_count.fetch_add(1, Ordering::SeqCst);
-                        return Some((entry.path.clone(), format!("Failed to create dir: {e}")));
-                    }
+                    && let Err(e) = std::fs::create_dir_all(parent)
+                {
+                    error_count.fetch_add(1, Ordering::SeqCst);
+                    return Some((entry.path.clone(), format!("Failed to create dir: {e}")));
+                }
 
                 // Write file
                 if let Err(e) = std::fs::write(&output_path, &data) {
@@ -212,8 +230,7 @@ impl PakOperations {
         compression: CompressionMethod,
         progress: ProgressCallback,
     ) -> Result<()> {
-        let writer = LspkWriter::new(source_dir.as_ref())?
-            .with_compression(compression);
+        let writer = LspkWriter::new(source_dir.as_ref())?.with_compression(compression);
         writer.write_with_progress(output_pak.as_ref(), progress)?;
         Ok(())
     }
@@ -310,10 +327,8 @@ impl PakOperations {
         let mut reader = LspkReader::with_path(File::open(pak_path)?, pak_path);
 
         // Build a set of requested paths for fast lookup
-        let requested: std::collections::HashSet<&str> = file_paths
-            .iter()
-            .map(std::convert::AsRef::as_ref)
-            .collect();
+        let requested: std::collections::HashSet<&str> =
+            file_paths.iter().map(std::convert::AsRef::as_ref).collect();
 
         // Get file list and filter to only requested files
         let all_entries = reader.list_files()?;
@@ -330,7 +345,7 @@ impl PakOperations {
 
         if entries_to_extract.is_empty() {
             return Err(Error::ConversionError(
-                "None of the requested files were found in the PAK".to_string()
+                "None of the requested files were found in the PAK".to_string(),
             ));
         }
 
@@ -344,8 +359,10 @@ impl PakOperations {
         let errors: Vec<(PathBuf, String)> = entries_to_extract
             .par_iter()
             .filter_map(|entry| {
-                let file_name = entry.path.file_name()
-                    .map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+                let file_name = entry.path.file_name().map_or_else(
+                    || entry.path.to_string_lossy().to_string(),
+                    |n| n.to_string_lossy().to_string(),
+                );
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
@@ -360,7 +377,13 @@ impl PakOperations {
                 let part_path = match get_part_path(pak_path, entry.archive_part) {
                     Some(p) => p,
                     None => {
-                        return Some((entry.path.clone(), format!("Cannot determine path for archive part {}", entry.archive_part)));
+                        return Some((
+                            entry.path.clone(),
+                            format!(
+                                "Cannot determine path for archive part {}",
+                                entry.archive_part
+                            ),
+                        ));
                     }
                 };
 
@@ -368,7 +391,10 @@ impl PakOperations {
                 let mut file = match File::open(&part_path) {
                     Ok(f) => f,
                     Err(e) => {
-                        return Some((entry.path.clone(), format!("Failed to open {}: {e}", part_path.display())));
+                        return Some((
+                            entry.path.clone(),
+                            format!("Failed to open {}: {e}", part_path.display()),
+                        ));
                     }
                 };
 
@@ -382,7 +408,11 @@ impl PakOperations {
                 }
 
                 // Decompress
-                let data = match decompress_data(&compressed_data, entry.compression, entry.size_decompressed) {
+                let data = match decompress_data(
+                    &compressed_data,
+                    entry.compression,
+                    entry.size_decompressed,
+                ) {
                     Ok(data) => data,
                     Err(e) => {
                         tracing::warn!("Failed to decompress {}: {}", entry.path.display(), e);
@@ -407,9 +437,10 @@ impl PakOperations {
 
                 // Create parent directories (idempotent)
                 if let Some(parent) = output_path.parent()
-                    && let Err(e) = std::fs::create_dir_all(parent) {
-                        return Some((entry.path.clone(), format!("Failed to create dir: {e}")));
-                    }
+                    && let Err(e) = std::fs::create_dir_all(parent)
+                {
+                    return Some((entry.path.clone(), format!("Failed to create dir: {e}")));
+                }
 
                 // Write file
                 if let Err(e) = std::fs::write(&output_path, &data) {
@@ -477,10 +508,8 @@ impl PakOperations {
         let mut reader = LspkReader::with_path(File::open(pak_path)?, pak_path);
 
         // Build a set of requested paths
-        let requested: std::collections::HashSet<&str> = file_paths
-            .iter()
-            .map(std::convert::AsRef::as_ref)
-            .collect();
+        let requested: std::collections::HashSet<&str> =
+            file_paths.iter().map(std::convert::AsRef::as_ref).collect();
 
         // Get file list and filter
         let all_entries = reader.list_files()?;
@@ -492,17 +521,19 @@ impl PakOperations {
         // Group entries by archive part for multi-part PAK support
         let mut entries_by_part: HashMap<u8, Vec<FileTableEntry>> = HashMap::new();
         for entry in entries_to_read {
-            entries_by_part.entry(entry.archive_part).or_default().push(entry);
+            entries_by_part
+                .entry(entry.archive_part)
+                .or_default()
+                .push(entry);
         }
 
         // Phase 1: Read all compressed data sequentially from each part file
         let mut compressed_files: Vec<(String, CompressedFile)> = Vec::new();
 
         for (part, part_entries) in &entries_by_part {
-            let part_path = get_part_path(pak_path, *part)
-                .ok_or_else(|| Error::ConversionError(
-                    format!("Cannot determine path for archive part {part}")
-                ))?;
+            let part_path = get_part_path(pak_path, *part).ok_or_else(|| {
+                Error::ConversionError(format!("Cannot determine path for archive part {part}"))
+            })?;
 
             if !part_path.exists() {
                 tracing::warn!("Archive part file not found: {}", part_path.display());
@@ -514,13 +545,21 @@ impl PakOperations {
             for entry in part_entries {
                 // Seek and read compressed data from the correct part file
                 if part_file.seek(SeekFrom::Start(entry.offset)).is_err() {
-                    tracing::warn!("Failed to seek to {} in {}", entry.path.display(), part_path.display());
+                    tracing::warn!(
+                        "Failed to seek to {} in {}",
+                        entry.path.display(),
+                        part_path.display()
+                    );
                     continue;
                 }
 
                 let mut compressed_data = vec![0u8; entry.size_compressed as usize];
                 if part_file.read_exact(&mut compressed_data).is_err() {
-                    tracing::warn!("Failed to read {} from {}", entry.path.display(), part_path.display());
+                    tracing::warn!(
+                        "Failed to read {} from {}",
+                        entry.path.display(),
+                        part_path.display()
+                    );
                     continue;
                 }
 
@@ -567,7 +606,9 @@ impl PakOperations {
         let contents = reader.read_all(None)?;
 
         // Find meta.lsx
-        let meta_file = contents.files.iter()
+        let meta_file = contents
+            .files
+            .iter()
             .find(|f| {
                 let path = &f.path;
                 let mut components = path.components();
@@ -575,10 +616,11 @@ impl PakOperations {
                 // Look for Mods/*/meta.lsx pattern
                 if let Some(first) = components.next()
                     && first.as_os_str() == "Mods"
-                        && components.next().is_some()
-                            && let Some(third) = components.next() {
-                                return third.as_os_str() == "meta.lsx";
-                            }
+                    && components.next().is_some()
+                    && let Some(third) = components.next()
+                {
+                    return third.as_os_str() == "meta.lsx";
+                }
                 false
             })
             .ok_or_else(|| Error::FileNotFoundInPak("meta.lsx".to_string()))?;

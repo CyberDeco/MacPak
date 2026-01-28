@@ -10,7 +10,7 @@
 mod reader;
 mod writer;
 
-pub use reader::{read_loca, parse_loca_bytes};
+pub use reader::{parse_loca_bytes, read_loca};
 pub use writer::write_loca;
 
 /// "LOCA" magic signature (little-endian)
@@ -40,8 +40,10 @@ pub struct LocaResource {
 }
 
 impl LocaResource {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
-        Self { entries: Vec::new() }
+        Self {
+            entries: Vec::new(),
+        }
     }
 }

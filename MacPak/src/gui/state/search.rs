@@ -215,7 +215,8 @@ impl SearchResult {
         Self {
             name: file.name.clone(),
             path: file.path.clone(),
-            pak_file: file.pak_file
+            pak_file: file
+                .pak_file
                 .file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_else(|| "unknown".to_string()),
@@ -227,11 +228,7 @@ impl SearchResult {
     }
 
     /// Create from a content match
-    pub fn from_content_match(
-        file: &IndexedFile,
-        context: String,
-        match_count: usize,
-    ) -> Self {
+    pub fn from_content_match(file: &IndexedFile, context: String, match_count: usize) -> Self {
         let mut result = Self::from_indexed_file(file);
         result.context = Some(context);
         result.match_count = Some(match_count);

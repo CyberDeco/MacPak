@@ -3,9 +3,9 @@
 //! Uses pre-indexing - all flag names are loaded once when PAK sources are
 //! configured, then lookups are O(1) `HashMap` access.
 
+use maclarian::formats::common::extract_value;
 use maclarian::formats::lsf::parse_lsf_bytes;
 use maclarian::formats::lsx::parse_lsx;
-use maclarian::formats::common::extract_value;
 use maclarian::pak::PakOperations;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ pub struct FlagCache {
 
 impl FlagCache {
     /// Create a new empty cache
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             names: HashMap::new(),
@@ -37,25 +37,25 @@ impl FlagCache {
     }
 
     /// Get the number of cached flags
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.names.len()
     }
 
     /// Check if cache is empty
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.names.is_empty() && self.pak_paths.is_empty()
     }
 
     /// Check if PAK sources are configured
-    #[must_use] 
+    #[must_use]
     pub fn has_sources(&self) -> bool {
         !self.pak_paths.is_empty()
     }
 
     /// Check if the index has been built
-    #[must_use] 
+    #[must_use]
     pub fn is_indexed(&self) -> bool {
         self.indexed
     }
@@ -76,7 +76,7 @@ impl FlagCache {
     }
 
     /// Look up a flag name by UUID (O(1) after indexing)
-    #[must_use] 
+    #[must_use]
     pub fn get_name(&self, uuid: &str) -> Option<&str> {
         self.names.get(uuid).map(std::string::String::as_str)
     }
@@ -123,7 +123,11 @@ impl FlagCache {
                 continue;
             }
 
-            tracing::debug!("Found {} flag files in {}", flag_files.len(), pak_path.display());
+            tracing::debug!(
+                "Found {} flag files in {}",
+                flag_files.len(),
+                pak_path.display()
+            );
 
             // Batch read all flag files
             let file_data = PakOperations::read_files_bytes(&pak_path, &flag_files)
@@ -195,16 +199,18 @@ impl FlagCache {
                         "Name" => {
                             if let Ok(val) =
                                 extract_value(&doc.values, attr.offset, value_length, type_id)
-                                && !val.is_empty() {
-                                    flag_name = Some(val);
-                                }
+                                && !val.is_empty()
+                            {
+                                flag_name = Some(val);
+                            }
                         }
                         "UUID" => {
                             if let Ok(val) =
                                 extract_value(&doc.values, attr.offset, value_length, type_id)
-                                && !val.is_empty() {
-                                    flag_uuid = Some(val);
-                                }
+                                && !val.is_empty()
+                            {
+                                flag_uuid = Some(val);
+                            }
                         }
                         _ => {}
                     }
@@ -227,7 +233,10 @@ impl FlagCache {
     /// Extract UUID and name pairs from `ScriptFlags` LSX (XML) bytes
     fn extract_flags_from_lsx(data: &[u8]) -> Vec<(String, String)> {
         // Recursively process all nodes in all regions
-        fn process_node(node: &maclarian::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
+        fn process_node(
+            node: &maclarian::formats::lsx::LsxNode,
+            results: &mut Vec<(String, String)>,
+        ) {
             // ScriptFlags.lsx uses "ScriptFlag" nodes with "name" and "UUID" attributes
             if node.id == "ScriptFlag" {
                 let mut flag_name: Option<String> = None;
@@ -268,7 +277,9 @@ impl FlagCache {
                         }
                         "DialogFlagGUID" => {
                             // Skip empty/null GUIDs
-                            if !attr.value.is_empty() && attr.value != "00000000-0000-0000-0000-000000000000" {
+                            if !attr.value.is_empty()
+                                && attr.value != "00000000-0000-0000-0000-000000000000"
+                            {
                                 flag_uuid = Some(attr.value.clone());
                             }
                         }
@@ -344,4 +355,3 @@ impl std::fmt::Display for FlagCacheError {
 }
 
 impl std::error::Error for FlagCacheError {}
-

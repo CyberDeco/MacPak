@@ -20,9 +20,7 @@ fn compression_button(compression: RwSignal<PakCompression>, opt: PakCompression
                 .border_radius(4.0);
 
             if is_selected() {
-                s = s
-                    .background(Color::rgb8(33, 150, 243))
-                    .color(Color::WHITE);
+                s = s.background(Color::rgb8(33, 150, 243)).color(Color::WHITE);
             } else {
                 s = s
                     .background(Color::rgb8(240, 240, 240))

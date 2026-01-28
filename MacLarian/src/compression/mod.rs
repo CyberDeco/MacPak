@@ -3,8 +3,8 @@
 use crate::error::{Error, Result};
 
 // Internal compression backends (not public API)
-pub(crate) mod lz4;
 pub(crate) mod fastlz;
+pub(crate) mod lz4;
 // pub(crate) mod zstd;
 
 /// Compress data using LZ4
@@ -48,4 +48,3 @@ pub fn decompress_with_size(data: &[u8]) -> Result<Vec<u8>> {
 
 //       Ok(result)
 //   }
-

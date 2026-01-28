@@ -3,13 +3,13 @@
 //! This module provides functions for batch PAK extraction and creation,
 //! including parallel processing and file discovery.
 
+use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use super::PakOperations;
-use super::lspk::{PakProgress, PakPhase};
+use super::lspk::{PakPhase, PakProgress};
 
 /// Result of a batch PAK operation
 #[derive(Debug, Clone)]
@@ -144,9 +144,7 @@ where
                 .to_string_lossy()
                 .to_string();
 
-            let pak_dest = dest_base
-                .join(relative_parent)
-                .join(&pak_stem);
+            let pak_dest = dest_base.join(relative_parent).join(&pak_stem);
 
             if let Err(e) = std::fs::create_dir_all(&pak_dest) {
                 fail_counter.fetch_add(1, Ordering::SeqCst);
@@ -261,4 +259,3 @@ where
         results,
     }
 }
-

@@ -32,7 +32,19 @@ fn is_editable_file(path: &Path) -> bool {
         .map(|ext| {
             matches!(
                 ext.to_lowercase().as_str(),
-                "lsx" | "lsf" | "lsj" | "xml" | "json" | "txt" | "lua" | "md" | "cfg" | "ini" | "yaml" | "yml" | "toml"
+                "lsx"
+                    | "lsf"
+                    | "lsj"
+                    | "xml"
+                    | "json"
+                    | "txt"
+                    | "lua"
+                    | "md"
+                    | "cfg"
+                    | "ini"
+                    | "yaml"
+                    | "yml"
+                    | "toml"
             )
         })
         .unwrap_or(false)
@@ -72,15 +84,20 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
                         search_panel(tab.clone()),
                         editor_content(tab.clone(), tabs_state_content.clone(), show_line_numbers),
                     ))
-                    .style(|s| s.width_full().min_width(0.0).flex_grow(1.0).flex_basis(0.0).min_height(0.0))
+                    .style(|s| {
+                        s.width_full()
+                            .min_width(0.0)
+                            .flex_grow(1.0)
+                            .flex_basis(0.0)
+                            .min_height(0.0)
+                    })
                     .into_any()
                 } else {
                     // Empty state with drop hint
                     v_stack((
                         label(|| "📄").style(|s| s.font_size(48.0)),
-                        label(|| "Drop files here to open").style(|s| {
-                            s.font_size(14.0).color(Color::rgb8(150, 150, 150))
-                        }),
+                        label(|| "Drop files here to open")
+                            .style(|s| s.font_size(14.0).color(Color::rgb8(150, 150, 150))),
                     ))
                     .style(|s| {
                         s.flex_grow(1.0)
@@ -94,23 +111,27 @@ pub fn editor_tab(_app_state: AppState, tabs_state: EditorTabsState) -> impl Int
                 }
             },
         )
-        .style(|s| s.width_full().min_width(0.0).flex_grow(1.0).flex_basis(0.0).min_height(0.0)),
+        .style(|s| {
+            s.width_full()
+                .min_width(0.0)
+                .flex_grow(1.0)
+                .flex_basis(0.0)
+                .min_height(0.0)
+        }),
         editor_status_bar(tabs_state_status),
         // Dialog overlay - uses shared meta_dialog from utils
-        meta_dialog(tabs_state.show_meta_dialog, None, on_meta_create, Some(tabs_state.status_message)),
+        meta_dialog(
+            tabs_state.show_meta_dialog,
+            None,
+            on_meta_create,
+            Some(tabs_state.status_message),
+        ),
     ))
-    .style(|s| {
-        s.width_full()
-            .height_full()
-    });
+    .style(|s| s.width_full().height_full());
 
     // Stack main content with loading overlay
     (main_content, loading_overlay(tabs_state_overlay))
-        .style(|s| {
-            s.width_full()
-                .height_full()
-                .position(Position::Relative)
-        })
+        .style(|s| s.width_full().height_full().position(Position::Relative))
         .on_event_cont(EventListener::DroppedFile, move |e| {
             if let Event::DroppedFile(drop_event) = e {
                 let path = &drop_event.path;
@@ -128,7 +149,9 @@ fn loading_overlay(tabs_state: EditorTabsState) -> impl IntoView {
 
     dyn_container(
         move || {
-            tabs_state.active_tab().map(|tab| (tab.is_loading.get(), tab.loading_message.get()))
+            tabs_state
+                .active_tab()
+                .map(|tab| (tab.is_loading.get(), tab.loading_message.get()))
         },
         move |state| {
             if let Some((true, message)) = state {
@@ -138,15 +161,12 @@ fn loading_overlay(tabs_state: EditorTabsState) -> impl IntoView {
                         label(move || message.clone())
                             .style(|s| s.font_size(14.0).margin_bottom(16.0)),
                         // Indeterminate progress indicator (animated bar)
-                        container(
-                            container(empty())
-                                .style(|s| {
-                                    s.height_full()
-                                        .width_pct(30.0)
-                                        .background(Color::rgb8(76, 175, 80))
-                                        .border_radius(4.0)
-                                })
-                        )
+                        container(container(empty()).style(|s| {
+                            s.height_full()
+                                .width_pct(30.0)
+                                .background(Color::rgb8(76, 175, 80))
+                                .border_radius(4.0)
+                        }))
                         .style(|s| {
                             s.width_full()
                                 .height(8.0)
@@ -273,7 +293,11 @@ fn file_tab_button(
             let is_active = active_index.get() == index;
             let s = s.font_size(12.0).max_width(150.0).text_ellipsis();
             if modified.get() {
-                s.color(if is_active { Color::rgb8(255, 220, 150) } else { Color::rgb8(255, 152, 0) })
+                s.color(if is_active {
+                    Color::rgb8(255, 220, 150)
+                } else {
+                    Color::rgb8(255, 152, 0)
+                })
             } else if is_active {
                 s.color(Color::WHITE)
             } else {
@@ -288,10 +312,22 @@ fn file_tab_button(
                     .margin_left(6.0)
                     .padding(2.0)
                     .border_radius(3.0)
-                    .color(if is_active { Color::rgba8(255, 255, 255, 180) } else { Color::rgb8(150, 150, 150) })
+                    .color(if is_active {
+                        Color::rgba8(255, 255, 255, 180)
+                    } else {
+                        Color::rgb8(150, 150, 150)
+                    })
                     .hover(|s| {
-                        s.background(if is_active { Color::rgba8(255, 255, 255, 50) } else { Color::rgb8(200, 200, 200) })
-                            .color(if is_active { Color::WHITE } else { Color::rgb8(80, 80, 80) })
+                        s.background(if is_active {
+                            Color::rgba8(255, 255, 255, 50)
+                        } else {
+                            Color::rgb8(200, 200, 200)
+                        })
+                        .color(if is_active {
+                            Color::WHITE
+                        } else {
+                            Color::rgb8(80, 80, 80)
+                        })
                     })
                     .cursor(floem::style::CursorStyle::Pointer)
             })
@@ -346,78 +382,63 @@ fn show_tab_context_menu(
     if let Some(current_path) = file_path.get() {
         let path_for_rename = current_path.clone();
         let file_path_signal = file_path;
-        menu = menu.entry(
-            MenuItem::new("Rename...")
-                .action(move || {
-                    let old_path = Path::new(&path_for_rename);
-                    if let Some(old_name) = old_path.file_name().and_then(|n| n.to_str()) {
-                        // Use a save dialog to get the new name
-                        let dialog = rfd::FileDialog::new()
-                            .set_title("Rename File")
-                            .set_file_name(old_name);
+        menu = menu.entry(MenuItem::new("Rename...").action(move || {
+            let old_path = Path::new(&path_for_rename);
+            if let Some(old_name) = old_path.file_name().and_then(|n| n.to_str()) {
+                // Use a save dialog to get the new name
+                let dialog = rfd::FileDialog::new()
+                    .set_title("Rename File")
+                    .set_file_name(old_name);
 
-                        // Set the directory to the file's parent
-                        let dialog = if let Some(parent) = old_path.parent() {
-                            dialog.set_directory(parent)
-                        } else {
-                            dialog
-                        };
+                // Set the directory to the file's parent
+                let dialog = if let Some(parent) = old_path.parent() {
+                    dialog.set_directory(parent)
+                } else {
+                    dialog
+                };
 
-                        if let Some(new_path) = dialog.save_file() {
-                            let new_path_str = new_path.to_string_lossy().to_string();
-                            // Rename the file on disk
-                            if std::fs::rename(&path_for_rename, &new_path).is_ok() {
-                                // Update the tab's file path
-                                file_path_signal.set(Some(new_path_str));
-                            }
-                        }
+                if let Some(new_path) = dialog.save_file() {
+                    let new_path_str = new_path.to_string_lossy().to_string();
+                    // Rename the file on disk
+                    if std::fs::rename(&path_for_rename, &new_path).is_ok() {
+                        // Update the tab's file path
+                        file_path_signal.set(Some(new_path_str));
                     }
-                })
-        );
+                }
+            }
+        }));
 
         // Copy path
         let path_for_copy = current_path.clone();
-        menu = menu.entry(
-            MenuItem::new("Copy Path")
-                .action(move || {
-                    use std::io::Write;
-                    use std::process::Command;
-                    if let Ok(mut child) = Command::new("pbcopy")
-                        .stdin(std::process::Stdio::piped())
-                        .spawn()
-                    {
-                        if let Some(stdin) = child.stdin.as_mut() {
-                            let _ = stdin.write_all(path_for_copy.as_bytes());
-                        }
-                    }
-                })
-        );
+        menu = menu.entry(MenuItem::new("Copy Path").action(move || {
+            use std::io::Write;
+            use std::process::Command;
+            if let Ok(mut child) = Command::new("pbcopy")
+                .stdin(std::process::Stdio::piped())
+                .spawn()
+            {
+                if let Some(stdin) = child.stdin.as_mut() {
+                    let _ = stdin.write_all(path_for_copy.as_bytes());
+                }
+            }
+        }));
         menu = menu.separator();
     }
 
     // Close this tab
-    menu = menu.entry(
-        MenuItem::new("Close Tab")
-            .action(move || {
-                tabs_state_close.try_close_tab(index);
-            })
-    );
+    menu = menu.entry(MenuItem::new("Close Tab").action(move || {
+        tabs_state_close.try_close_tab(index);
+    }));
 
     // Close other tabs
-    menu = menu.entry(
-        MenuItem::new("Close Other Tabs")
-            .action(move || {
-                tabs_state_close_others.close_others(index);
-            })
-    );
+    menu = menu.entry(MenuItem::new("Close Other Tabs").action(move || {
+        tabs_state_close_others.close_others(index);
+    }));
 
     // Close all tabs
-    menu = menu.entry(
-        MenuItem::new("Close All Tabs")
-            .action(move || {
-                tabs_state_close_all.close_all();
-            })
-    );
+    menu = menu.entry(MenuItem::new("Close All Tabs").action(move || {
+        tabs_state_close_all.close_all();
+    }));
 
     show_context_menu(menu, None);
 }

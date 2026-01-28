@@ -4,9 +4,9 @@ use std::path::{Path, PathBuf};
 
 use floem_reactive::{SignalGet, SignalUpdate};
 
-use crate::gui::state::VirtualTexturesState;
-use maclarian::virtual_texture::{extract_gts_file, extract_batch as vt_extract_batch};
 use super::types::{VtResult, create_result_sender, get_shared_progress};
+use crate::gui::state::VirtualTexturesState;
+use maclarian::virtual_texture::{extract_batch as vt_extract_batch, extract_gts_file};
 
 /// Extract textures from a single GTS file
 pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
@@ -19,7 +19,11 @@ pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
     let output_dir = state.batch_output_dir.get();
     let _from_pak = state.from_pak.get_untracked();
     let convert_to_png = state.convert_to_png.get_untracked();
-    let _game_data = if game_data_path.is_empty() { None } else { Some(PathBuf::from(&game_data_path)) };
+    let _game_data = if game_data_path.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(&game_data_path))
+    };
 
     state.is_extracting.set(true);
     state.status_message.set("Extracting...".to_string());
@@ -53,9 +57,12 @@ pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
                 // Convert to PNG if requested (scan output directory for DDS files)
                 let mut png_converted = 0;
                 if convert_to_png {
-                    let search_dir = output_path
-                        .map(|p| p.to_path_buf())
-                        .unwrap_or_else(|| Path::new(&gts_path).parent().unwrap_or(Path::new(".")).to_path_buf());
+                    let search_dir = output_path.map(|p| p.to_path_buf()).unwrap_or_else(|| {
+                        Path::new(&gts_path)
+                            .parent()
+                            .unwrap_or(Path::new("."))
+                            .to_path_buf()
+                    });
 
                     if let Ok(entries) = std::fs::read_dir(&search_dir) {
                         for entry in entries.filter_map(|e| e.ok()) {
@@ -63,7 +70,9 @@ pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
                             if let Some(ext) = path.extension() {
                                 if ext.to_string_lossy().to_lowercase() == "dds" {
                                     let png_path = path.with_extension("png");
-                                    if maclarian::converter::convert_dds_to_png(&path, &png_path).is_ok() {
+                                    if maclarian::converter::convert_dds_to_png(&path, &png_path)
+                                        .is_ok()
+                                    {
                                         png_converted += 1;
                                     }
                                 }
@@ -74,7 +83,10 @@ pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
 
                 progress.update(1, 1, "Complete");
                 let texture_info = if png_converted > 0 {
-                    format!("{} (converted {} to PNG)", extract_result.texture_count, png_converted)
+                    format!(
+                        "{} (converted {} to PNG)",
+                        extract_result.texture_count, png_converted
+                    )
                 } else {
                     format!("{}", extract_result.texture_count)
                 };
@@ -108,7 +120,11 @@ pub fn extract_batch(state: VirtualTexturesState, game_data_path: String) {
     let output_dir = state.batch_output_dir.get();
     let _from_pak = state.from_pak.get_untracked();
     let convert_to_png = state.convert_to_png.get_untracked();
-    let _game_data = if game_data_path.is_empty() { None } else { Some(PathBuf::from(&game_data_path)) };
+    let _game_data = if game_data_path.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(&game_data_path))
+    };
 
     state.is_extracting.set(true);
     state.status_message.set("Extracting...".to_string());
@@ -144,7 +160,9 @@ pub fn extract_batch(state: VirtualTexturesState, game_data_path: String) {
                         if let Some(ext) = path.extension() {
                             if ext.to_string_lossy().to_lowercase() == "dds" {
                                 let png_path = path.with_extension("png");
-                                if maclarian::converter::convert_dds_to_png(&path, &png_path).is_ok() {
+                                if maclarian::converter::convert_dds_to_png(&path, &png_path)
+                                    .is_ok()
+                                {
                                     png_converted += 1;
                                 }
                             }

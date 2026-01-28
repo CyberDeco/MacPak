@@ -4,8 +4,8 @@ use floem::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Maximum number of recent files to track
 const MAX_RECENT_FILES: usize = 10;
@@ -263,7 +263,10 @@ impl ConfigState {
         let path_valid = path_exists(&expanded_path);
 
         let warning = if !expanded_path.is_empty() && !path_valid {
-            Some("BG3 installation not found at default path. Please configure manually.".to_string())
+            Some(
+                "BG3 installation not found at default path. Please configure manually."
+                    .to_string(),
+            )
         } else {
             None
         };
@@ -339,9 +342,11 @@ impl ConfigState {
     pub fn validate_path(&self) {
         let path = self.bg3_data_path.get();
         if path.is_empty() {
-            self.path_warning.set(Some("No BG3 path configured.".to_string()));
+            self.path_warning
+                .set(Some("No BG3 path configured.".to_string()));
         } else if !path_exists(&path) {
-            self.path_warning.set(Some("Path does not exist.".to_string()));
+            self.path_warning
+                .set(Some("Path does not exist.".to_string()));
         } else {
             self.path_warning.set(None);
         }

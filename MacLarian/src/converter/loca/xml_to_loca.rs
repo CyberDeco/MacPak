@@ -5,10 +5,10 @@
 //! XML to LOCA conversion
 
 use crate::error::{Error, Result};
-use crate::formats::loca::{self, LocalizedText, LocaResource};
+use crate::formats::loca::{self, LocaResource, LocalizedText};
 
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 use std::fs;
 use std::path::Path;
 
@@ -29,17 +29,36 @@ pub fn convert_xml_to_loca_with_progress<P: AsRef<Path>>(
     dest: P,
     progress: crate::converter::ConvertProgressCallback,
 ) -> Result<()> {
-    use crate::converter::{ConvertProgress, ConvertPhase};
+    use crate::converter::{ConvertPhase, ConvertProgress};
 
-    tracing::info!("Converting XML→LOCA: {:?} → {:?}", source.as_ref(), dest.as_ref());
+    tracing::info!(
+        "Converting XML→LOCA: {:?} → {:?}",
+        source.as_ref(),
+        dest.as_ref()
+    );
 
-    progress(&ConvertProgress::with_file(ConvertPhase::ReadingSource, 1, 3, "Reading XML file..."));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::ReadingSource,
+        1,
+        3,
+        "Reading XML file...",
+    ));
     let content = fs::read_to_string(&source)?;
 
-    progress(&ConvertProgress::with_file(ConvertPhase::Parsing, 2, 3, "Parsing XML content..."));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::Parsing,
+        2,
+        3,
+        "Parsing XML content...",
+    ));
     let resource = from_xml(&content)?;
 
-    progress(&ConvertProgress::with_file(ConvertPhase::WritingOutput, 3, 3, format!("Writing {} entries to LOCA...", resource.entries.len())));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::WritingOutput,
+        3,
+        3,
+        format!("Writing {} entries to LOCA...", resource.entries.len()),
+    ));
     loca::write_loca(dest, &resource)?;
 
     progress(&ConvertProgress::new(ConvertPhase::Complete, 3, 3));
@@ -72,12 +91,12 @@ pub fn from_xml(content: &str) -> Result<LocaResource> {
                         let attr = attr?;
                         match attr.key.as_ref() {
                             b"contentuid" => {
-                                current_key = Some(String::from_utf8_lossy(&attr.value).into_owned());
+                                current_key =
+                                    Some(String::from_utf8_lossy(&attr.value).into_owned());
                             }
                             b"version" => {
-                                current_version = String::from_utf8_lossy(&attr.value)
-                                    .parse()
-                                    .unwrap_or(1);
+                                current_version =
+                                    String::from_utf8_lossy(&attr.value).parse().unwrap_or(1);
                             }
                             _ => {}
                         }
@@ -109,9 +128,7 @@ pub fn from_xml(content: &str) -> Result<LocaResource> {
                                 key = String::from_utf8_lossy(&attr.value).into_owned();
                             }
                             b"version" => {
-                                version = String::from_utf8_lossy(&attr.value)
-                                    .parse()
-                                    .unwrap_or(1);
+                                version = String::from_utf8_lossy(&attr.value).parse().unwrap_or(1);
                             }
                             _ => {}
                         }
@@ -127,14 +144,15 @@ pub fn from_xml(content: &str) -> Result<LocaResource> {
             Ok(Event::End(e)) => {
                 // Handle </content> with no text content
                 if e.name().as_ref() == b"content"
-                    && let Some(key) = current_key.take() {
-                        entries.push(LocalizedText {
-                            key,
-                            version: current_version,
-                            text: String::new(),
-                        });
-                        current_version = 1;
-                    }
+                    && let Some(key) = current_key.take()
+                {
+                    entries.push(LocalizedText {
+                        key,
+                        version: current_version,
+                        text: String::new(),
+                    });
+                    current_version = 1;
+                }
             }
             Ok(Event::Eof) => break,
             Err(e) => return Err(Error::XmlError(e)),

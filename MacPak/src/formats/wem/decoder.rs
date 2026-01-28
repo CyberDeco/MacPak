@@ -2,8 +2,8 @@
 //!
 //! Decodes WEM (Wwise Encoded Media) files to PCM audio.
 
-use std::io::{Read, Seek, SeekFrom, Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use thiserror::Error;
 
 /// Errors that can occur during WEM decoding
@@ -245,8 +245,16 @@ pub fn parse_wwise_vorbis_header(extra_data: &[u8]) -> Result<WwiseVorbisHeader,
         let bs_low = cursor.read_u16::<LittleEndian>().unwrap_or(0);
         let bs_high = cursor.read_u16::<LittleEndian>().unwrap_or(0);
         // Extract blocksize exponents (typically 8-13)
-        let bs0 = if bs_low > 0 { (bs_low as f32).log2() as u8 } else { 8 };
-        let bs1 = if bs_high > 0 { (bs_high as f32).log2() as u8 } else { 11 };
+        let bs0 = if bs_low > 0 {
+            (bs_low as f32).log2() as u8
+        } else {
+            8
+        };
+        let bs1 = if bs_high > 0 {
+            (bs_high as f32).log2() as u8
+        } else {
+            11
+        };
         (bs0.max(6).min(13), bs1.max(6).min(13))
     } else {
         // Default blocksizes for voice (mono, lower bitrate)
@@ -288,8 +296,8 @@ fn find_vgmstream_cli() -> Option<std::path::PathBuf> {
 
     // 2. Check common Homebrew locations
     let homebrew_paths = [
-        "/opt/homebrew/bin/vgmstream-cli",  // Apple Silicon
-        "/usr/local/bin/vgmstream-cli",      // Intel Mac
+        "/opt/homebrew/bin/vgmstream-cli", // Apple Silicon
+        "/usr/local/bin/vgmstream-cli",    // Intel Mac
     ];
 
     for path in homebrew_paths {
@@ -320,7 +328,9 @@ fn find_vgmstream_cli() -> Option<std::path::PathBuf> {
 /// vgmstream is a mature library that handles all Wwise format variations.
 /// We shell out to vgmstream-cli to convert WEM to WAV, then read the result.
 #[cfg(feature = "gui")]
-fn decode_wwise_vorbis_with_vgmstream(wem_path: &std::path::Path) -> Result<DecodedAudio, WemError> {
+fn decode_wwise_vorbis_with_vgmstream(
+    wem_path: &std::path::Path,
+) -> Result<DecodedAudio, WemError> {
     use std::process::Command;
 
     // Find vgmstream-cli
@@ -329,7 +339,8 @@ fn decode_wwise_vorbis_with_vgmstream(wem_path: &std::path::Path) -> Result<Deco
             "vgmstream-cli not found. Install it for audio playback:\n  \
              macOS: brew install vgmstream\n  \
              Linux: See https://github.com/vgmstream/vgmstream\n  \
-             Windows: Download from https://vgmstream.org".to_string()
+             Windows: Download from https://vgmstream.org"
+                .to_string(),
         )
     })?;
 
@@ -348,7 +359,8 @@ fn decode_wwise_vorbis_with_vgmstream(wem_path: &std::path::Path) -> Result<Deco
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(WemError::VorbisDecode(format!(
-            "vgmstream-cli failed: {}", stderr.trim()
+            "vgmstream-cli failed: {}",
+            stderr.trim()
         )));
     }
 
@@ -366,8 +378,8 @@ fn decode_wwise_vorbis_with_vgmstream(wem_path: &std::path::Path) -> Result<Deco
 /// Parse a WAV file into DecodedAudio
 #[cfg(feature = "gui")]
 fn parse_wav_to_audio(wav_data: &[u8]) -> Result<DecodedAudio, WemError> {
-    use std::io::{Cursor, Read};
     use byteorder::{LittleEndian, ReadBytesExt};
+    use std::io::{Cursor, Read};
 
     let mut cursor = Cursor::new(wav_data);
 
@@ -375,7 +387,9 @@ fn parse_wav_to_audio(wav_data: &[u8]) -> Result<DecodedAudio, WemError> {
     let mut riff = [0u8; 4];
     cursor.read_exact(&mut riff)?;
     if &riff != b"RIFF" {
-        return Err(WemError::VorbisDecode("Invalid WAV: missing RIFF".to_string()));
+        return Err(WemError::VorbisDecode(
+            "Invalid WAV: missing RIFF".to_string(),
+        ));
     }
 
     let _file_size = cursor.read_u32::<LittleEndian>()?;
@@ -383,7 +397,9 @@ fn parse_wav_to_audio(wav_data: &[u8]) -> Result<DecodedAudio, WemError> {
     let mut wave = [0u8; 4];
     cursor.read_exact(&mut wave)?;
     if &wave != b"WAVE" {
-        return Err(WemError::VorbisDecode("Invalid WAV: missing WAVE".to_string()));
+        return Err(WemError::VorbisDecode(
+            "Invalid WAV: missing WAVE".to_string(),
+        ));
     }
 
     // Find fmt and data chunks
@@ -446,7 +462,8 @@ fn parse_wav_to_audio(wav_data: &[u8]) -> Result<DecodedAudio, WemError> {
                     }
                     _ => {
                         return Err(WemError::VorbisDecode(format!(
-                            "Unsupported bits per sample: {}", bits_per_sample
+                            "Unsupported bits per sample: {}",
+                            bits_per_sample
                         )));
                     }
                 }
@@ -460,7 +477,9 @@ fn parse_wav_to_audio(wav_data: &[u8]) -> Result<DecodedAudio, WemError> {
     }
 
     if samples.is_empty() {
-        return Err(WemError::VorbisDecode("WAV file has no audio data".to_string()));
+        return Err(WemError::VorbisDecode(
+            "WAV file has no audio data".to_string(),
+        ));
     }
 
     Ok(DecodedAudio {
@@ -504,4 +523,3 @@ pub fn decode_wwise_vorbis_fallback(header: &WemHeader) -> Result<DecodedAudio, 
         sample_rate: header.sample_rate,
     })
 }
-

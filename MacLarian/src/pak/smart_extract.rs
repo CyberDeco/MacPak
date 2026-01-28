@@ -29,14 +29,10 @@
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 
-use crate::error::Result;
-use crate::gr2_extraction::{
-    Gr2ExtractionOptions,
-    Gr2ExtractionResult,
-    process_extracted_gr2,
-};
 use super::lspk::{PakPhase, PakProgress};
 use super::pak_tools::{PakOperations, ProgressCallback};
+use crate::error::Result;
+use crate::gr2_extraction::{Gr2ExtractionOptions, Gr2ExtractionResult, process_extracted_gr2};
 
 /// Result of a smart extraction operation
 #[derive(Debug, Clone)]
@@ -163,11 +159,7 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
         gr2_paths
             .par_iter()
             .map(|gr2_path| {
-                let folder_result = process_single_gr2(
-                    gr2_path,
-                    output_dir,
-                    &options,
-                );
+                let folder_result = process_single_gr2(gr2_path, output_dir, &options);
                 (gr2_path.clone(), folder_result)
             })
             .collect();
@@ -194,7 +186,9 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
             }
             Err(e) => {
                 let path_display = gr2_path.display();
-                result.warnings.push(format!("Failed to process {path_display}: {e}"));
+                result
+                    .warnings
+                    .push(format!("Failed to process {path_display}: {e}"));
             }
         }
     }
@@ -214,26 +208,25 @@ fn process_single_gr2(
         .and_then(|n| n.to_str())
         .ok_or_else(|| "Invalid GR2 filename".to_string())?;
 
-    let folder_name = gr2_filename.trim_end_matches(".GR2").trim_end_matches(".gr2");
+    let folder_name = gr2_filename
+        .trim_end_matches(".GR2")
+        .trim_end_matches(".gr2");
 
     // Create a dedicated subfolder for this GR2
     let gr2_folder = output_base.join(folder_name);
-    std::fs::create_dir_all(&gr2_folder)
-        .map_err(|e| format!("Failed to create folder: {e}"))?;
+    std::fs::create_dir_all(&gr2_folder).map_err(|e| format!("Failed to create folder: {e}"))?;
 
     // Move the GR2 file into its subfolder
     let new_gr2_path = gr2_folder.join(gr2_filename);
     if gr2_path != new_gr2_path {
-        std::fs::rename(gr2_path, &new_gr2_path)
-            .map_err(|e| format!("Failed to move GR2: {e}"))?;
+        std::fs::rename(gr2_path, &new_gr2_path).map_err(|e| format!("Failed to move GR2: {e}"))?;
 
         // Clean up empty parent directories
         cleanup_empty_parent_dirs(gr2_path, output_base);
     }
 
     // Process the GR2 file
-    let result = process_extracted_gr2(&new_gr2_path, options)
-        .map_err(|e| e.to_string())?;
+    let result = process_extracted_gr2(&new_gr2_path, options).map_err(|e| e.to_string())?;
 
     // Optionally delete the original GR2 after conversion
     if !options.keep_original_gr2 && result.glb_path.is_some() {
@@ -280,4 +273,3 @@ pub fn extract_pak_smart<P: AsRef<Path>>(
     // Extract with smart processing
     extract_files_smart(pak_path, output_dir, &all_files, options, progress)
 }
-

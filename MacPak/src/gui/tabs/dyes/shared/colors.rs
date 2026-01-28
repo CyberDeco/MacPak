@@ -2,10 +2,10 @@
 //!
 //! Provides shared functions for collecting and resetting color picker values.
 
-use std::collections::HashMap;
-use floem::prelude::*;
-use crate::gui::state::DyesState;
 use super::{COLOR_REGISTRY, DEFAULT_HEX};
+use crate::gui::state::DyesState;
+use floem::prelude::*;
+use std::collections::HashMap;
 
 /// Collect all color values from state into a HashMap.
 /// Always includes all colors regardless of their value.

@@ -24,7 +24,7 @@ pub struct MergedResolver {
 
 impl MergedResolver {
     /// Create a resolver from an already-parsed database
-    #[must_use] 
+    #[must_use]
     pub fn from_database(database: MergedDatabase) -> Self {
         Self { database }
     }
@@ -46,10 +46,7 @@ impl MergedResolver {
         progress: MergedProgressCallback,
     ) -> Result<Self> {
         let folder = folder.as_ref();
-        tracing::info!(
-            "Building merged database from folder: {}",
-            folder.display()
-        );
+        tracing::info!("Building merged database from folder: {}", folder.display());
 
         progress(&MergedProgress::with_file(
             MergedPhase::ScanningFiles,
@@ -256,10 +253,7 @@ impl MergedResolver {
     /// Returns an error if the file cannot be read or parsed.
     pub fn from_lsx<P: AsRef<Path>>(lsx_path: P) -> Result<Self> {
         let lsx_path = lsx_path.as_ref();
-        tracing::info!(
-            "Building merged database from LSX: {}",
-            lsx_path.display()
-        );
+        tracing::info!("Building merged database from LSX: {}", lsx_path.display());
 
         let mut database = Self::parse_lsx_file(lsx_path)?;
         resolve_references(&mut database);
@@ -292,13 +286,13 @@ impl MergedResolver {
     // -------------------------------------------------------------------------
 
     /// Get a visual asset by its exact name
-    #[must_use] 
+    #[must_use]
     pub fn get_by_visual_name(&self, visual_name: &str) -> Option<&VisualAsset> {
         self.database.get_by_visual_name(visual_name)
     }
 
     /// Get all visuals that use a specific GR2 file
-    #[must_use] 
+    #[must_use]
     pub fn get_visuals_for_gr2(&self, gr2_name: &str) -> Vec<&VisualAsset> {
         self.database.get_visuals_for_gr2(gr2_name)
     }
@@ -314,19 +308,19 @@ impl MergedResolver {
     }
 
     /// Get database statistics
-    #[must_use] 
+    #[must_use]
     pub fn stats(&self) -> DatabaseStats {
         self.database.stats()
     }
 
     /// Get a reference to the underlying database
-    #[must_use] 
+    #[must_use]
     pub fn database(&self) -> &MergedDatabase {
         &self.database
     }
 
     /// Consume and return the database
-    #[must_use] 
+    #[must_use]
     pub fn into_database(self) -> MergedDatabase {
         self.database
     }
@@ -379,9 +373,9 @@ impl MergedResolver {
         visual_name: &str,
         pak_path: P,
     ) -> Result<Vec<GtpMatch>> {
-        let asset = self.get_by_visual_name(visual_name).ok_or_else(|| {
-            Error::FileNotFoundInPak(format!("Visual not found: {visual_name}"))
-        })?;
+        let asset = self
+            .get_by_visual_name(visual_name)
+            .ok_or_else(|| Error::FileNotFoundInPak(format!("Visual not found: {visual_name}")))?;
 
         if asset.virtual_textures.is_empty() {
             return Ok(Vec::new());
@@ -486,9 +480,10 @@ fn find_merged_files_recursive(folder: &Path, results: &mut Vec<PathBuf>) -> Res
         if path.is_dir() {
             find_merged_files_recursive(&path, results)?;
         } else if let Some(name) = path.file_name().and_then(|n| n.to_str())
-            && name == "_merged.lsf" {
-                results.push(path);
-            }
+            && name == "_merged.lsf"
+        {
+            results.push(path);
+        }
     }
 
     Ok(())

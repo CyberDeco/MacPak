@@ -41,7 +41,10 @@ pub fn handle_vt_result(state: VirtualTexturesState, result: VtResult) {
             error,
         } => {
             if success {
-                state.add_result(&format!("Extracted {} textures from {}", texture_count, gts_name));
+                state.add_result(&format!(
+                    "Extracted {} textures from {}",
+                    texture_count, gts_name
+                ));
                 state.status_message.set("Extraction complete!".to_string());
             } else {
                 state.add_result(&format!("Error: {}", error.unwrap_or_default()));
@@ -59,9 +62,15 @@ pub fn handle_vt_result(state: VirtualTexturesState, result: VtResult) {
             state.add_results_batch(results);
 
             let status = if error_count == 0 {
-                format!("Extracted {} textures from {} GTS files!", texture_count, success_count)
+                format!(
+                    "Extracted {} textures from {} GTS files!",
+                    texture_count, success_count
+                )
             } else {
-                format!("Completed: {} succeeded, {} failed ({} textures)", success_count, error_count, texture_count)
+                format!(
+                    "Completed: {} succeeded, {} failed ({} textures)",
+                    success_count, error_count, texture_count
+                )
             };
             state.status_message.set(status);
             state.is_extracting.set(false);

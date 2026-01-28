@@ -3,9 +3,9 @@
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::operations::execute_create_pak;
 use super::super::widgets::{compression_selector, priority_input};
+use crate::gui::state::{ActiveDialog, PakOpsState};
 
 pub fn create_options_content(state: PakOpsState) -> impl IntoView {
     let compression = state.compression;

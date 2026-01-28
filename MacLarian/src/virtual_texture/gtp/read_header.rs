@@ -1,8 +1,8 @@
 //! GTP header and chunk offset reading.
 
-use std::io::{Read, Seek, SeekFrom};
-use crate::error::Result;
 use super::super::types::GtpHeader;
+use crate::error::Result;
+use std::io::{Read, Seek, SeekFrom};
 
 /// Read GTP header from a reader.
 pub(super) fn read_header<R: Read>(reader: &mut R) -> Result<GtpHeader> {

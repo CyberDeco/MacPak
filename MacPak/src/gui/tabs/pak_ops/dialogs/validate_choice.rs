@@ -3,8 +3,8 @@
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::operations::{validate_mod_structure, validate_pak_mod_structure};
+use crate::gui::state::{ActiveDialog, PakOpsState};
 
 pub fn validate_choice_content(state: PakOpsState) -> impl IntoView {
     let state_folder = state.clone();
@@ -17,8 +17,7 @@ pub fn validate_choice_content(state: PakOpsState) -> impl IntoView {
                 .font_weight(Weight::BOLD)
                 .margin_bottom(16.0)
         }),
-        label(|| "What would you like to validate?".to_string())
-            .style(|s| s.margin_bottom(12.0)),
+        label(|| "What would you like to validate?".to_string()).style(|s| s.margin_bottom(12.0)),
         button("📁 Select Folder")
             .action(move || {
                 state_folder.active_dialog.set(ActiveDialog::None);

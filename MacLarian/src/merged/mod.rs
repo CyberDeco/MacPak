@@ -38,10 +38,9 @@ pub use types::*;
 pub use resolver::MergedResolver;
 
 // Re-export game data resolver (primary API)
-pub use game_data::{GameDataResolver, BG3_DATA_PATH_WINDOWS};
+pub use game_data::{BG3_DATA_PATH_WINDOWS, GameDataResolver};
 
 // Re-export path helpers
 pub use paths::{
-    bg3_data_path, expand_tilde, path_with_tilde, virtual_textures_pak_path, BG3_DATA_PATH_MACOS,
+    BG3_DATA_PATH_MACOS, bg3_data_path, expand_tilde, path_with_tilde, virtual_textures_pak_path,
 };
-

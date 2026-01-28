@@ -4,12 +4,12 @@
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
+use super::super::utils::half_to_f32;
+use super::types::{Bone, Gr2ContentInfo, MeshData, Skeleton, Transform, Vertex};
+use super::vertex_types::{MemberDef, MemberType, SectionHeader, VertexType};
+use super::{MAGIC_LE32, MAGIC_LE64};
 use crate::error::{Error, Result};
 use crate::formats::gr2::bitknit_decompress as decompress_bitknit;
-use super::super::utils::half_to_f32;
-use super::vertex_types::{SectionHeader, MemberType, MemberDef, VertexType};
-use super::types::{Vertex, MeshData, Transform, Bone, Skeleton, Gr2ContentInfo};
-use super::{MAGIC_LE64, MAGIC_LE32};
 
 /// GR2 file reader and parser.
 pub struct Gr2Reader {
@@ -37,13 +37,17 @@ impl Gr2Reader {
         } else if magic == MAGIC_LE32 {
             false
         } else {
-            return Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()));
+            return Err(Error::DecompressionError(
+                "Invalid GR2 magic signature".to_string(),
+            ));
         };
 
         let mut cursor = std::io::Cursor::new(&file_data[0x20..]);
         let version = cursor.read_u32::<LittleEndian>()?;
         if version != 6 && version != 7 {
-            return Err(Error::DecompressionError(format!("Unsupported GR2 version: {version}")));
+            return Err(Error::DecompressionError(format!(
+                "Unsupported GR2 version: {version}"
+            )));
         }
 
         cursor.set_position(12);
@@ -95,7 +99,11 @@ impl Gr2Reader {
             let decompressed = match section.compression {
                 0 => compressed.to_vec(),
                 4 => decompress_bitknit(compressed, section.uncompressed_size as usize)?,
-                c => return Err(Error::DecompressionError(format!("Unsupported compression: {c}"))),
+                c => {
+                    return Err(Error::DecompressionError(format!(
+                        "Unsupported compression: {c}"
+                    )));
+                }
             };
 
             let dest_end = current_offset + decompressed.len();
@@ -118,7 +126,8 @@ impl Gr2Reader {
                     file_data[rel_offset + 3],
                 ]) as usize;
 
-                let rel_compressed = &file_data[rel_offset + 4..rel_offset + 4 + rel_compressed_size];
+                let rel_compressed =
+                    &file_data[rel_offset + 4..rel_offset + 4 + rel_compressed_size];
                 decompress_bitknit(rel_compressed, section.num_relocations as usize * 12)?
             } else {
                 let rel_offset = section.relocations_offset as usize;
@@ -128,18 +137,24 @@ impl Gr2Reader {
 
             for i in 0..section.num_relocations as usize {
                 let offset_in_section = u32::from_le_bytes([
-                    rel_data[i * 12], rel_data[i * 12 + 1],
-                    rel_data[i * 12 + 2], rel_data[i * 12 + 3],
+                    rel_data[i * 12],
+                    rel_data[i * 12 + 1],
+                    rel_data[i * 12 + 2],
+                    rel_data[i * 12 + 3],
                 ]) as usize;
 
                 let target_section = u32::from_le_bytes([
-                    rel_data[i * 12 + 4], rel_data[i * 12 + 5],
-                    rel_data[i * 12 + 6], rel_data[i * 12 + 7],
+                    rel_data[i * 12 + 4],
+                    rel_data[i * 12 + 5],
+                    rel_data[i * 12 + 6],
+                    rel_data[i * 12 + 7],
                 ]) as usize;
 
                 let target_offset = u32::from_le_bytes([
-                    rel_data[i * 12 + 8], rel_data[i * 12 + 9],
-                    rel_data[i * 12 + 10], rel_data[i * 12 + 11],
+                    rel_data[i * 12 + 8],
+                    rel_data[i * 12 + 9],
+                    rel_data[i * 12 + 10],
+                    rel_data[i * 12 + 11],
                 ]) as usize;
 
                 let src_addr = section_offsets[section_idx] + offset_in_section;
@@ -272,19 +287,17 @@ impl Gr2Reader {
                         vertex.color[i] = self.data[pos + i];
                     }
                 }
-                "TextureCoordinates0" => {
-                    match member.member_type {
-                        MemberType::Real16 => {
-                            vertex.uv[0] = self.read_f16(pos);
-                            vertex.uv[1] = self.read_f16(pos + 2);
-                        }
-                        MemberType::Real32 => {
-                            vertex.uv[0] = self.read_f32(pos);
-                            vertex.uv[1] = self.read_f32(pos + 4);
-                        }
-                        _ => {}
+                "TextureCoordinates0" => match member.member_type {
+                    MemberType::Real16 => {
+                        vertex.uv[0] = self.read_f16(pos);
+                        vertex.uv[1] = self.read_f16(pos + 2);
                     }
-                }
+                    MemberType::Real32 => {
+                        vertex.uv[0] = self.read_f32(pos);
+                        vertex.uv[1] = self.read_f32(pos + 4);
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
             pos += member.total_size();

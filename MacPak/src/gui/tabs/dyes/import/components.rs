@@ -2,13 +2,13 @@
 
 use floem::prelude::*;
 
-use crate::gui::state::DyesState;
-use super::super::shared::{
-    secondary_button_style,
-    nav_row, selector_container_green, selector_container_gray, selector_label_style,
-};
 use super::super::shared::constants::*;
-use super::operations::{load_selected_entry, load_lsf_entry};
+use super::super::shared::{
+    nav_row, secondary_button_style, selector_container_gray, selector_container_green,
+    selector_label_style,
+};
+use super::operations::{load_lsf_entry, load_selected_entry};
+use crate::gui::state::DyesState;
 
 /// Display imported fields with editable name
 pub fn imported_fields_display(
@@ -32,20 +32,28 @@ pub fn imported_fields_display(
         move |show| {
             if !show {
                 label(|| "No data imported")
-                    .style(|s| s.font_size(FONT_BODY).color(TEXT_MUTED).padding(PADDING_STD))
+                    .style(|s| {
+                        s.font_size(FONT_BODY)
+                            .color(TEXT_MUTED)
+                            .padding(PADDING_STD)
+                    })
                     .into_any()
             } else {
                 v_stack((
                     // Dye Name row
                     h_stack((
-                        label(|| "Dye Name")
-                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        label(|| "Dye Name").style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         label(move || {
                             let new_name = dye_name.get();
-                            if new_name.is_empty() { "(not found)".to_string() } else { new_name }
+                            if new_name.is_empty() {
+                                "(not found)".to_string()
+                            } else {
+                                new_name
+                            }
                         })
                         .style(move |s| {
-                            let s = s.flex_grow(1.0)
+                            let s = s
+                                .flex_grow(1.0)
                                 .padding(PADDING_BTN_V)
                                 .font_size(FONT_BODY)
                                 .font_family("monospace".to_string())
@@ -61,17 +69,21 @@ pub fn imported_fields_display(
                         }),
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
                     // Display Name row
                     h_stack((
                         label(|| "Display Name")
                             .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         label(move || {
                             let name = display_name.get();
-                            if name.is_empty() { "(not found)".to_string() } else { name }
+                            if name.is_empty() {
+                                "(not found)".to_string()
+                            } else {
+                                name
+                            }
                         })
                         .style(move |s| {
-                            let s = s.flex_grow(1.0)
+                            let s = s
+                                .flex_grow(1.0)
                                 .padding(PADDING_BTN_V)
                                 .font_size(FONT_BODY)
                                 .background(BG_INPUT_READONLY)
@@ -86,17 +98,20 @@ pub fn imported_fields_display(
                         }),
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
                     // Mod Name row
                     h_stack((
-                        label(|| "Mod Name")
-                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        label(|| "Mod Name").style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         label(move || {
                             let name = mod_name.get();
-                            if name.is_empty() { "(not found)".to_string() } else { name }
+                            if name.is_empty() {
+                                "(not found)".to_string()
+                            } else {
+                                name
+                            }
                         })
                         .style(move |s| {
-                            let s = s.flex_grow(1.0)
+                            let s = s
+                                .flex_grow(1.0)
                                 .padding(PADDING_BTN_V)
                                 .font_size(FONT_BODY)
                                 .background(BG_INPUT_READONLY)
@@ -111,17 +126,20 @@ pub fn imported_fields_display(
                         }),
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
                     // Mod Author row
                     h_stack((
-                        label(|| "Mod Author")
-                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        label(|| "Mod Author").style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         label(move || {
                             let author = mod_author.get();
-                            if author.is_empty() { "(not found)".to_string() } else { author }
+                            if author.is_empty() {
+                                "(not found)".to_string()
+                            } else {
+                                author
+                            }
                         })
                         .style(move |s| {
-                            let s = s.flex_grow(1.0)
+                            let s = s
+                                .flex_grow(1.0)
                                 .padding(PADDING_BTN_V)
                                 .font_size(FONT_BODY)
                                 .background(BG_INPUT_READONLY)
@@ -184,11 +202,23 @@ pub fn txt_import_selector(
                         },
                         {
                             let state = state_on_nav.clone();
-                            move || load_selected_entry(state.clone(), imported_dye_name, imported_display_name)
+                            move || {
+                                load_selected_entry(
+                                    state.clone(),
+                                    imported_dye_name,
+                                    imported_display_name,
+                                )
+                            }
                         },
                         {
                             let state = state_on_nav.clone();
-                            move || load_selected_entry(state.clone(), imported_dye_name, imported_display_name)
+                            move || {
+                                load_selected_entry(
+                                    state.clone(),
+                                    imported_dye_name,
+                                    imported_display_name,
+                                )
+                            }
                         },
                     ),
                     // Clear button
@@ -270,11 +300,23 @@ pub fn lsf_import_selector(
                         },
                         {
                             let state = state_on_nav.clone();
-                            move || load_lsf_entry(state.clone(), imported_dye_name, imported_display_name)
+                            move || {
+                                load_lsf_entry(
+                                    state.clone(),
+                                    imported_dye_name,
+                                    imported_display_name,
+                                )
+                            }
                         },
                         {
                             let state = state_on_nav.clone();
-                            move || load_lsf_entry(state.clone(), imported_dye_name, imported_display_name)
+                            move || {
+                                load_lsf_entry(
+                                    state.clone(),
+                                    imported_dye_name,
+                                    imported_display_name,
+                                )
+                            }
                         },
                     ),
                     // Clear button

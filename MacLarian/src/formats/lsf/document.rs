@@ -4,7 +4,11 @@
 //!
 //! SPDX-License-Identifier: MIT AND Apache-2.0
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
 use crate::error::{Error, Result};
 
@@ -14,7 +18,7 @@ pub enum LsfMetadataFormat {
     #[default]
     None = 0,
     KeysAndAdjacency = 1,
-    None2 = 2,  // Uses lsf_adjacency instead of lsf_keys_adjacency
+    None2 = 2, // Uses lsf_adjacency instead of lsf_keys_adjacency
 }
 
 impl From<u32> for LsfMetadataFormat {
@@ -57,7 +61,7 @@ pub struct LsfAttribute {
 }
 
 impl LsfDocument {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         LsfDocument {
             engine_version: 0,
@@ -70,7 +74,7 @@ impl LsfDocument {
             metadata_format: LsfMetadataFormat::None,
         }
     }
-    
+
     /// Get a name from the names table by indices.
     ///
     /// # Errors
@@ -92,9 +96,9 @@ impl LsfDocument {
                 ))
             })
     }
-    
+
     /// Find name indices in the names table
-    #[must_use] 
+    #[must_use]
     pub fn find_name_indices(&self, name: &str) -> Option<(usize, usize)> {
         for (outer, name_list) in self.names.iter().enumerate() {
             for (inner, list_name) in name_list.iter().enumerate() {
@@ -116,14 +120,15 @@ impl Default for LsfDocument {
 // Query helpers for direct LSF access (avoids XML conversion overhead)
 impl LsfDocument {
     /// Get the name of a node
-    #[must_use] 
+    #[must_use]
     pub fn node_name(&self, node_idx: usize) -> Option<&str> {
         let node = self.nodes.get(node_idx)?;
-        self.get_name(node.name_index_outer, node.name_index_inner).ok()
+        self.get_name(node.name_index_outer, node.name_index_inner)
+            .ok()
     }
 
     /// Get indices of all children of a node
-    #[must_use] 
+    #[must_use]
     pub fn children_of(&self, parent_idx: usize) -> Vec<usize> {
         self.nodes
             .iter()
@@ -134,7 +139,7 @@ impl LsfDocument {
     }
 
     /// Get indices of root nodes (`parent_index` == -1)
-    #[must_use] 
+    #[must_use]
     pub fn root_nodes(&self) -> Vec<usize> {
         self.nodes
             .iter()
@@ -145,7 +150,7 @@ impl LsfDocument {
     }
 
     /// Iterate over attributes of a node, yielding (name, `type_id`, `value_offset`, `value_length`)
-    #[must_use] 
+    #[must_use]
     pub fn attributes_of(&self, node_idx: usize) -> Vec<(usize, &str, u32, usize, usize)> {
         let Some(node) = self.nodes.get(node_idx) else {
             return Vec::new();
@@ -163,7 +168,8 @@ impl LsfDocument {
                 break;
             };
 
-            let name = self.get_name(attr.name_index_outer, attr.name_index_inner)
+            let name = self
+                .get_name(attr.name_index_outer, attr.name_index_inner)
                 .unwrap_or("");
             let type_id = attr.type_info & 0x3F;
             let value_length = (attr.type_info >> 6) as usize;
@@ -180,7 +186,7 @@ impl LsfDocument {
     }
 
     /// Get a `FixedString` attribute value directly (`type_id` 22)
-    #[must_use] 
+    #[must_use]
     pub fn get_fixed_string_attr(&self, node_idx: usize, attr_name: &str) -> Option<String> {
         for (_, name, type_id, offset, length) in self.attributes_of(node_idx) {
             if name == attr_name && type_id == 22 {
@@ -198,7 +204,7 @@ impl LsfDocument {
     }
 
     /// Get a float attribute value directly (`type_id` 6)
-    #[must_use] 
+    #[must_use]
     pub fn get_float_attr(&self, node_idx: usize, attr_name: &str) -> Option<f32> {
         for (_, name, type_id, offset, _length) in self.attributes_of(node_idx) {
             if name == attr_name && type_id == 6 {
@@ -218,7 +224,7 @@ impl LsfDocument {
     }
 
     /// Find child nodes with a specific name
-    #[must_use] 
+    #[must_use]
     pub fn find_children_by_name(&self, parent_idx: usize, name: &str) -> Vec<usize> {
         self.children_of(parent_idx)
             .into_iter()

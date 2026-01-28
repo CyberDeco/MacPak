@@ -39,7 +39,7 @@ use fulltext::FullTextIndex;
 pub use content_cache::ContentCache;
 pub use fulltext::FullTextResult;
 pub use types::{
-    FileType, IndexedFile, IndexMetadata, SearchPhase, SearchProgress, SearchProgressCallback,
+    FileType, IndexMetadata, IndexedFile, SearchPhase, SearchProgress, SearchProgressCallback,
 };
 
 /// Search index for PAK file contents

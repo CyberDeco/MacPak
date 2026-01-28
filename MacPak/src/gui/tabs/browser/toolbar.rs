@@ -4,8 +4,8 @@ use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::views::PlaceholderTextClass;
 
-use crate::gui::state::BrowserState;
 use super::operations::{apply_filters, go_up, load_directory, open_folder_dialog, refresh};
+use crate::gui::state::BrowserState;
 
 pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
     let state_open = state.clone();
@@ -24,7 +24,7 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
     let state_lsj = state.clone();
     let state_lsf = state.clone();
     let state_lsfx = state.clone();
-    
+
     // Image files
     let state_dds = state.clone();
 
@@ -45,7 +45,7 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
     // "SHD" | "BSHD" | "METAL" => "✏️",
     // "DAT" | "DATA" | "PATCH" | "CLC" | "CLM" | "CLN" => "🖥️",
     // "ANC" | "ANM" | "ANN" => "🪄"
-    
+
     v_stack((
         // Row 1: Navigation + file path
         h_stack((
@@ -64,7 +64,9 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
                         .border(1.0)
                         .border_color(Color::rgb8(200, 200, 200))
                         .border_radius(4.0)
-                        .class(PlaceholderTextClass, |s| s.color(Color::rgb8(120, 120, 120)))
+                        .class(PlaceholderTextClass, |s| {
+                            s.color(Color::rgb8(120, 120, 120))
+                        })
                 })
                 .on_key_down(
                     Key::Named(NamedKey::Enter),
@@ -83,10 +85,8 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
             button("🔄 Refresh").action(move || {
                 refresh(state_refresh.clone());
             }),
-            
         ))
         .style(|s| s.width_full().gap(8.0).items_center()),
-
         // Row 2: Search + quick filters
         h_stack((
             text_input(state_search.search_query)
@@ -97,7 +97,9 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
                         .border(1.0)
                         .border_color(Color::rgb8(200, 200, 200))
                         .border_radius(4.0)
-                        .class(PlaceholderTextClass, |s| s.color(Color::rgb8(120, 120, 120)))
+                        .class(PlaceholderTextClass, |s| {
+                            s.color(Color::rgb8(120, 120, 120))
+                        })
                 })
                 .on_key_down(
                     Key::Named(NamedKey::Enter),
@@ -121,7 +123,8 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
                 filter_button("LSJ", state_lsj),
                 filter_button("LSF", state_lsf),
                 filter_button("LSFX", state_lsfx),
-            )).style(|s| s.gap(8.0)),
+            ))
+            .style(|s| s.gap(8.0)),
             separator(),
             filter_button("DDS", state_dds),
             separator(),
@@ -130,7 +133,8 @@ pub fn browser_toolbar(state: BrowserState) -> impl IntoView {
                 filter_button("GR2", state_gr2),
                 filter_button("DAE", state_dae),
                 filter_button("glTF", state_gltf),
-            )).style(|s| s.gap(8.0)),
+            ))
+            .style(|s| s.gap(8.0)),
             empty().style(|s| s.flex_grow(1.0)),
         ))
         .style(|s| s.width_full().gap(8.0).items_center()),

@@ -2,11 +2,11 @@
 
 use floem::prelude::*;
 use floem::text::Weight;
-use floem::views::{virtual_list, VirtualDirection, VirtualItemSize};
+use floem::views::{VirtualDirection, VirtualItemSize, virtual_list};
 use im::Vector as ImVector;
 
-use super::styles::card_style;
 use super::BatchOperationState;
+use super::styles::card_style;
 
 /// Generic results log section that works with any BatchOperationState.
 ///
@@ -105,16 +105,14 @@ pub fn results_section<S: BatchOperationState>(state: S) -> impl IntoView {
                 |msg: &String| msg.clone(),
                 |msg| {
                     let is_error = msg.starts_with("Error") || msg.starts_with("Failed");
-                    container(
-                        label(move || msg.clone()).style(move |s| {
-                            let s = s.font_size(11.0).font_family("monospace".to_string());
-                            if is_error {
-                                s.color(Color::rgb8(180, 30, 30))
-                            } else {
-                                s.color(Color::rgb8(46, 125, 50))
-                            }
-                        }),
-                    )
+                    container(label(move || msg.clone()).style(move |s| {
+                        let s = s.font_size(11.0).font_family("monospace".to_string());
+                        if is_error {
+                            s.color(Color::rgb8(180, 30, 30))
+                        } else {
+                            s.color(Color::rgb8(46, 125, 50))
+                        }
+                    }))
                     .style(move |s| {
                         let s = s
                             .width_full()

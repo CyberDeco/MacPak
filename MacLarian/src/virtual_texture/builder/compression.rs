@@ -3,9 +3,9 @@
 //! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
+use super::config::TileCompressionPreference;
 use crate::compression::fastlz;
 use crate::error::Result;
-use super::config::TileCompressionPreference;
 
 /// A compressed tile
 #[derive(Debug, Clone)]
@@ -19,12 +19,10 @@ pub struct CompressedTile {
 /// Compress tile data using the specified method
 pub fn compress_tile(data: &[u8], preference: TileCompressionPreference) -> Result<CompressedTile> {
     match preference {
-        TileCompressionPreference::Raw => {
-            Ok(CompressedTile {
-                method: TileCompressionPreference::Raw,
-                data: data.to_vec(),
-            })
-        }
+        TileCompressionPreference::Raw => Ok(CompressedTile {
+            method: TileCompressionPreference::Raw,
+            data: data.to_vec(),
+        }),
         TileCompressionPreference::FastLZ => {
             let compressed = compress_fastlz(data)?;
             Ok(CompressedTile {

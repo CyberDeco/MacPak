@@ -1,7 +1,7 @@
 //! Decompression utilities for PAK file data
 
-use crate::error::{Error, Result};
 use super::super::lspk::CompressionMethod;
+use crate::error::{Error, Result};
 use std::io::Read;
 
 /// Standalone LZ4 decompression (for parallel use)
@@ -63,6 +63,8 @@ pub fn decompress_data(
     match compression {
         CompressionMethod::None => Ok(compressed.to_vec()),
         CompressionMethod::Lz4 => decompress_lz4_standalone(compressed, size_decompressed as usize),
-        CompressionMethod::Zlib => decompress_zlib_standalone(compressed, size_decompressed as usize),
+        CompressionMethod::Zlib => {
+            decompress_zlib_standalone(compressed, size_decompressed as usize)
+        }
     }
 }

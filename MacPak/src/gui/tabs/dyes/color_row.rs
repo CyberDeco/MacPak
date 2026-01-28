@@ -2,9 +2,11 @@
 
 use floem::prelude::*;
 
-use crate::gui::state::DyeColorEntry;
-use super::shared::{copy_to_clipboard, normalize_hex, parse_hex_color, parse_hex_to_color, pick_color_from_screen};
 use super::shared::constants::*;
+use super::shared::{
+    copy_to_clipboard, normalize_hex, parse_hex_color, parse_hex_to_color, pick_color_from_screen,
+};
+use crate::gui::state::DyeColorEntry;
 
 /// Creates a single color row with label, color swatch (clickable for eyedropper), hex input, and sRGB
 pub fn color_row(entry: DyeColorEntry, status: RwSignal<String>) -> impl IntoView {
@@ -13,13 +15,11 @@ pub fn color_row(entry: DyeColorEntry, status: RwSignal<String>) -> impl IntoVie
 
     h_stack((
         // Category name (first column)
-        label(move || name)
-            .style(|s| {
-                s.width(140.0)
-                    .font_size(FONT_BODY)
-                    .font_family("monospace".to_string())
-            }),
-
+        label(move || name).style(|s| {
+            s.width(140.0)
+                .font_size(FONT_BODY)
+                .font_family("monospace".to_string())
+        }),
         // Color picker section (second column)
         h_stack((
             // Color swatch - click to open eyedropper
@@ -42,11 +42,12 @@ pub fn color_row(entry: DyeColorEntry, status: RwSignal<String>) -> impl IntoVie
                         }
                     })
             },
-
             // Hash symbol
-            label(|| "#")
-                .style(|s| s.font_size(FONT_SMALL).font_family("monospace".to_string()).margin_left(4.0)),
-
+            label(|| "#").style(|s| {
+                s.font_size(FONT_SMALL)
+                    .font_family("monospace".to_string())
+                    .margin_left(4.0)
+            }),
             // Hex input
             text_input(hex)
                 .style(|s| {
@@ -67,7 +68,6 @@ pub fn color_row(entry: DyeColorEntry, status: RwSignal<String>) -> impl IntoVie
                         hex.set(normalized);
                     }
                 }),
-
             // sRGB preview (space-separated floats for BG3)
             {
                 let hex_copy = hex;
@@ -103,9 +103,5 @@ pub fn color_row(entry: DyeColorEntry, status: RwSignal<String>) -> impl IntoVie
         ))
         .style(|s| s.items_center().gap(2.0)),
     ))
-    .style(|s| {
-        s.padding_vert(2.0)
-            .padding_horiz(4.0)
-            .items_center()
-    })
+    .style(|s| s.padding_vert(2.0).padding_horiz(4.0).items_center())
 }

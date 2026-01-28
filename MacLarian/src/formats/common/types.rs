@@ -130,9 +130,19 @@ pub fn type_name_to_id(type_name: &str) -> TypeId {
 /// Check if a type is numeric
 #[must_use]
 pub fn is_numeric(type_id: TypeId) -> bool {
-    matches!(type_id,
-        TYPE_UINT8 | TYPE_INT16 | TYPE_UINT16 | TYPE_INT32 | TYPE_UINT32 |
-        TYPE_FLOAT | TYPE_DOUBLE | TYPE_UINT64 | TYPE_OLD_INT64 | TYPE_INT8 | TYPE_INT64
+    matches!(
+        type_id,
+        TYPE_UINT8
+            | TYPE_INT16
+            | TYPE_UINT16
+            | TYPE_INT32
+            | TYPE_UINT32
+            | TYPE_FLOAT
+            | TYPE_DOUBLE
+            | TYPE_UINT64
+            | TYPE_OLD_INT64
+            | TYPE_INT8
+            | TYPE_INT64
     )
 }
 
@@ -172,7 +182,8 @@ pub fn serialize_value(buffer: &mut Vec<u8>, type_id: TypeId, value_str: &str) -
 
     match type_id {
         // String types (null-terminated)
-        TYPE_STRING | TYPE_PATH | TYPE_FIXEDSTRING | TYPE_LSSTRING | TYPE_WSTRING | TYPE_LSWSTRING => {
+        TYPE_STRING | TYPE_PATH | TYPE_FIXEDSTRING | TYPE_LSSTRING | TYPE_WSTRING
+        | TYPE_LSWSTRING => {
             buffer.extend_from_slice(value_str.as_bytes());
             buffer.push(0); // null terminator
         }
@@ -192,7 +203,9 @@ pub fn serialize_value(buffer: &mut Vec<u8>, type_id: TypeId, value_str: &str) -
         TYPE_INT32 => buffer.write_i32::<LittleEndian>(value_str.parse().unwrap_or(0))?,
         TYPE_UINT32 => buffer.write_u32::<LittleEndian>(value_str.parse().unwrap_or(0))?,
         TYPE_UINT64 => buffer.write_u64::<LittleEndian>(value_str.parse().unwrap_or(0))?,
-        TYPE_OLD_INT64 | TYPE_INT64 => buffer.write_i64::<LittleEndian>(value_str.parse().unwrap_or(0))?,
+        TYPE_OLD_INT64 | TYPE_INT64 => {
+            buffer.write_i64::<LittleEndian>(value_str.parse().unwrap_or(0))?
+        }
         // Float types
         TYPE_FLOAT => buffer.write_f32::<LittleEndian>(value_str.parse().unwrap_or(0.0))?,
         TYPE_DOUBLE => buffer.write_f64::<LittleEndian>(value_str.parse().unwrap_or(0.0))?,
@@ -226,11 +239,11 @@ fn serialize_ivec(buffer: &mut Vec<u8>, value_str: &str, count: usize) -> Result
         .take(count)
         .filter_map(|s| s.parse().ok())
         .collect();
-    
+
     for val in values {
         buffer.write_i32::<LittleEndian>(val)?;
     }
-    
+
     Ok(())
 }
 
@@ -240,11 +253,11 @@ fn serialize_fvec(buffer: &mut Vec<u8>, value_str: &str, count: usize) -> Result
         .take(count)
         .filter_map(|s| s.parse().ok())
         .collect();
-    
+
     for val in values {
         buffer.write_f32::<LittleEndian>(val)?;
     }
-    
+
     Ok(())
 }
 
@@ -253,11 +266,11 @@ fn serialize_matrix(buffer: &mut Vec<u8>, value_str: &str) -> Result<()> {
         .split_whitespace()
         .filter_map(|s| s.parse().ok())
         .collect();
-    
+
     for val in values {
         buffer.write_f32::<LittleEndian>(val)?;
     }
-    
+
     Ok(())
 }
 
@@ -269,14 +282,14 @@ fn serialize_uuid(buffer: &mut Vec<u8>, value_str: &str) -> Result<()> {
         buffer.extend_from_slice(&[0u8; 16]);
         return Ok(());
     }
-    
+
     let mut bytes = [0u8; 16];
     for i in 0..16 {
-        if let Ok(byte) = u8::from_str_radix(&clean[i*2..i*2+2], 16) {
+        if let Ok(byte) = u8::from_str_radix(&clean[i * 2..i * 2 + 2], 16) {
             bytes[i] = byte;
         }
     }
-    
+
     // Apply byte swapping (reverse of format_uuid)
     buffer.push(bytes[3]);
     buffer.push(bytes[2]);
@@ -294,7 +307,7 @@ fn serialize_uuid(buffer: &mut Vec<u8>, value_str: &str) -> Result<()> {
     buffer.push(bytes[12]);
     buffer.push(bytes[15]);
     buffer.push(bytes[14]);
-    
+
     Ok(())
 }
 
@@ -309,23 +322,27 @@ pub fn serialize_translated_string(
     _value: &str,
 ) -> Result<usize> {
     let start = buffer.len();
-    
+
     // Write version
     buffer.write_u16::<LittleEndian>(version)?;
-    
+
     // Write handle length (including null terminator)
-    let handle_len = if handle.is_empty() { 0 } else { handle.len() + 1 };
+    let handle_len = if handle.is_empty() {
+        0
+    } else {
+        handle.len() + 1
+    };
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     buffer.write_i32::<LittleEndian>(handle_len as i32)?;
-    
+
     // Write handle string
     if !handle.is_empty() {
         buffer.extend_from_slice(handle.as_bytes());
         buffer.push(0); // null terminator
     }
-    
+
     // Leave value empty (not used in BG3)
-    
+
     Ok(buffer.len() - start)
 }
 
@@ -337,7 +354,12 @@ pub fn serialize_translated_string(
 ///
 /// # Errors
 /// Returns an error if deserialization fails for the given type.
-pub fn extract_value(values: &[u8], offset: usize, length: usize, type_id: TypeId) -> Result<String> {
+pub fn extract_value(
+    values: &[u8],
+    offset: usize,
+    length: usize,
+    type_id: TypeId,
+) -> Result<String> {
     if offset + length > values.len() {
         return Ok(String::new());
     }
@@ -346,21 +368,32 @@ pub fn extract_value(values: &[u8], offset: usize, length: usize, type_id: TypeI
 
     Ok(match type_id {
         // String types (null-terminated)
-        TYPE_STRING | TYPE_PATH | TYPE_FIXEDSTRING | TYPE_LSSTRING | TYPE_WSTRING | TYPE_LSWSTRING => {
+        TYPE_STRING | TYPE_PATH | TYPE_FIXEDSTRING | TYPE_LSSTRING | TYPE_WSTRING
+        | TYPE_LSWSTRING => {
             let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
             String::from_utf8_lossy(&bytes[..end]).into_owned()
         }
         // Bool
-        TYPE_BOOL => if bytes.first() == Some(&1) { "True" } else { "False" }.to_string(),
+        TYPE_BOOL => if bytes.first() == Some(&1) {
+            "True"
+        } else {
+            "False"
+        }
+        .to_string(),
         // Integer types
         TYPE_NONE => String::new(),
-        TYPE_UINT8 | TYPE_INT8 => bytes.first().map(std::string::ToString::to_string).unwrap_or_default(),
+        TYPE_UINT8 | TYPE_INT8 => bytes
+            .first()
+            .map(std::string::ToString::to_string)
+            .unwrap_or_default(),
         TYPE_INT16 => i16::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         TYPE_UINT16 => u16::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         TYPE_INT32 => i32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         TYPE_UINT32 => u32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         TYPE_UINT64 => u64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
-        TYPE_OLD_INT64 | TYPE_INT64 => i64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
+        TYPE_OLD_INT64 | TYPE_INT64 => {
+            i64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string()
+        }
         // Float types
         TYPE_FLOAT => f32::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
         TYPE_DOUBLE => f64::from_le_bytes(bytes.try_into().unwrap_or_default()).to_string(),
@@ -379,20 +412,21 @@ pub fn extract_value(values: &[u8], offset: usize, length: usize, type_id: TypeI
         TYPE_SCRATCHBUFFER => BASE64.encode(bytes),
         // Unknown
         _ => {
-            let byte_list: Vec<String> = bytes.iter().map(std::string::ToString::to_string).collect();
+            let byte_list: Vec<String> =
+                bytes.iter().map(std::string::ToString::to_string).collect();
             format!("[{}]", byte_list.join(", "))
         }
     })
 }
 
 /// Format integer vector (space-separated)
-#[must_use] 
+#[must_use]
 pub fn format_ivec(bytes: &[u8], count: usize) -> String {
     let values: Vec<String> = (0..count)
         .filter_map(|i| {
             let offset = i * 4;
             if offset + 4 <= bytes.len() {
-                Some(i32::from_le_bytes(bytes[offset..offset+4].try_into().ok()?).to_string())
+                Some(i32::from_le_bytes(bytes[offset..offset + 4].try_into().ok()?).to_string())
             } else {
                 None
             }
@@ -402,13 +436,13 @@ pub fn format_ivec(bytes: &[u8], count: usize) -> String {
 }
 
 /// Format float vector (space-separated)
-#[must_use] 
+#[must_use]
 pub fn format_fvec(bytes: &[u8], count: usize) -> String {
     let values: Vec<String> = (0..count)
         .filter_map(|i| {
             let offset = i * 4;
             if offset + 4 <= bytes.len() {
-                Some(f32::from_le_bytes(bytes[offset..offset+4].try_into().ok()?).to_string())
+                Some(f32::from_le_bytes(bytes[offset..offset + 4].try_into().ok()?).to_string())
             } else {
                 None
             }
@@ -418,14 +452,14 @@ pub fn format_fvec(bytes: &[u8], count: usize) -> String {
 }
 
 /// Format matrix (space-separated floats)
-#[must_use] 
+#[must_use]
 pub fn format_matrix(bytes: &[u8]) -> String {
     let count = bytes.len() / 4;
     let values: Vec<String> = (0..count)
         .filter_map(|i| {
             let offset = i * 4;
             if offset + 4 <= bytes.len() {
-                Some(f32::from_le_bytes(bytes[offset..offset+4].try_into().ok()?).to_string())
+                Some(f32::from_le_bytes(bytes[offset..offset + 4].try_into().ok()?).to_string())
             } else {
                 None
             }
@@ -435,18 +469,27 @@ pub fn format_matrix(bytes: &[u8]) -> String {
 }
 
 /// Format UUID with byte swapping (Windows GUID format)
-#[must_use] 
+#[must_use]
 pub fn format_uuid(bytes: &[u8]) -> String {
     if bytes.len() >= 16 {
         format!(
             "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-            bytes[3], bytes[2], bytes[1], bytes[0],
-            bytes[5], bytes[4],
-            bytes[7], bytes[6],
-            bytes[9], bytes[8],
-            bytes[11], bytes[10],
-            bytes[13], bytes[12],
-            bytes[15], bytes[14]
+            bytes[3],
+            bytes[2],
+            bytes[1],
+            bytes[0],
+            bytes[5],
+            bytes[4],
+            bytes[7],
+            bytes[6],
+            bytes[9],
+            bytes[8],
+            bytes[11],
+            bytes[10],
+            bytes[13],
+            bytes[12],
+            bytes[15],
+            bytes[14]
         )
     } else {
         String::new()
@@ -457,27 +500,31 @@ pub fn format_uuid(bytes: &[u8]) -> String {
 ///
 /// # Errors
 /// Returns an error if the bytes cannot be read as a translated string.
-pub fn extract_translated_string(values: &[u8], offset: usize, length: usize) -> Result<(String, u16, Option<String>)> {
+pub fn extract_translated_string(
+    values: &[u8],
+    offset: usize,
+    length: usize,
+) -> Result<(String, u16, Option<String>)> {
     if offset + length > values.len() {
         return Ok((String::new(), 0, None));
     }
-    
+
     let bytes = &values[offset..offset + length];
     let mut cursor = Cursor::new(bytes);
-    
+
     let version = cursor.read_u16::<LittleEndian>()?;
     #[allow(clippy::cast_sign_loss)]
     let handle_length = cursor.read_i32::<LittleEndian>()?.max(0) as usize;
-    
+
     if handle_length == 0 {
         return Ok((String::new(), version, None));
     }
-    
+
     let mut handle_bytes = vec![0u8; handle_length.saturating_sub(1)];
     cursor.read_exact(&mut handle_bytes)?;
     let _ = cursor.read_u8()?; // null terminator
-    
+
     let handle = String::from_utf8_lossy(&handle_bytes).into_owned();
-    
+
     Ok((handle, version, None))
 }

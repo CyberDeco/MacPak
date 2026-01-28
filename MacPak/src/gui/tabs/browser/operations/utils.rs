@@ -17,7 +17,21 @@ pub fn format_size(bytes: u64) -> String {
 pub fn is_text_file(ext: &str) -> bool {
     matches!(
         ext.to_lowercase().as_str(),
-        "lsf" | "lsx" | "lsj" | "loca" | "khn" | "txt" | "xml" | "json" | "lua" | "md" | "cfg" | "ini" | "yaml" | "yml" | "toml"
+        "lsf"
+            | "lsx"
+            | "lsj"
+            | "loca"
+            | "khn"
+            | "txt"
+            | "xml"
+            | "json"
+            | "lua"
+            | "md"
+            | "cfg"
+            | "ini"
+            | "yaml"
+            | "yml"
+            | "toml"
     )
 }
 

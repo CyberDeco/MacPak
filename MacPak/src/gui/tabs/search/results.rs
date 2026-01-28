@@ -66,10 +66,15 @@ pub fn search_results(
                 .border_bottom(1.0)
                 .border_color(Color::rgb8(220, 220, 220))
         }),
-
         // Status overlay for empty/loading states
         dyn_container(
-            move || (is_searching.get(), index_status.get(), results.get().is_empty()),
+            move || {
+                (
+                    is_searching.get(),
+                    index_status.get(),
+                    results.get().is_empty(),
+                )
+            },
             move |(searching, status, no_results)| {
                 if searching {
                     label(|| "Searching...")
@@ -82,40 +87,37 @@ pub fn search_results(
                         .into_any()
                 } else if !matches!(status, IndexStatus::Ready { .. }) {
                     v_stack((
-                        label(|| "No Index Built")
-                            .style(|s| s.font_size(18.0).font_weight(Weight::SEMIBOLD).color(Color::rgb8(80, 80, 80))),
-                        label(|| "Click 'Build Index' to index PAK files from your BG3 installation.")
-                            .style(|s| s.color(Color::rgb8(120, 120, 120)).margin_top(8.0)),
+                        label(|| "No Index Built").style(|s| {
+                            s.font_size(18.0)
+                                .font_weight(Weight::SEMIBOLD)
+                                .color(Color::rgb8(80, 80, 80))
+                        }),
+                        label(
+                            || "Click 'Build Index' to index PAK files from your BG3 installation.",
+                        )
+                        .style(|s| s.color(Color::rgb8(120, 120, 120)).margin_top(8.0)),
                     ))
-                    .style(|s| {
-                        s.width_full()
-                            .padding(40.0)
-                            .items_center()
-                            .justify_center()
-                    })
+                    .style(|s| s.width_full().padding(40.0).items_center().justify_center())
                     .into_any()
                 } else if no_results {
                     v_stack((
-                        label(|| "Ready to Search")
-                            .style(|s| s.font_size(18.0).font_weight(Weight::SEMIBOLD).color(Color::rgb8(80, 80, 80))),
+                        label(|| "Ready to Search").style(|s| {
+                            s.font_size(18.0)
+                                .font_weight(Weight::SEMIBOLD)
+                                .color(Color::rgb8(80, 80, 80))
+                        }),
                         label(|| "Search by filename, UUID, or enable Deep Search for content.")
                             .style(|s| s.color(Color::rgb8(120, 120, 120)).margin_top(8.0)),
                         label(|| "Use filters to narrow results by file type.")
                             .style(|s| s.color(Color::rgb8(140, 140, 140)).margin_top(4.0)),
                     ))
-                    .style(|s| {
-                        s.width_full()
-                            .padding(40.0)
-                            .items_center()
-                            .justify_center()
-                    })
+                    .style(|s| s.width_full().padding(40.0).items_center().justify_center())
                     .into_any()
                 } else {
                     empty().into_any()
                 }
             },
         ),
-
         // Results list
         scroll(
             virtual_list(
@@ -127,7 +129,15 @@ pub fn search_results(
                     let state = state_for_rows.clone();
                     let editor_tabs = editor_tabs_state.clone();
                     let dialogue = dialogue_state_for_rows.clone();
-                    move |result| search_result_row(result, state.clone(), editor_tabs.clone(), dialogue.clone(), active_tab)
+                    move |result| {
+                        search_result_row(
+                            result,
+                            state.clone(),
+                            editor_tabs.clone(),
+                            dialogue.clone(),
+                            active_tab,
+                        )
+                    }
                 },
             )
             .style(|s| s.width_full().flex_col()),
@@ -186,41 +196,31 @@ fn search_result_row(
                 })
                 .style(|s| s.margin_right(8.0)),
             // Icon - fixed width
-            label(move || icon.to_string())
-                .style(|s| s.width(30.0).flex_shrink(0.0)),
-
+            label(move || icon.to_string()).style(|s| s.width(30.0).flex_shrink(0.0)),
             // File info - flexible, can shrink with text ellipsis
             v_stack((
                 label(move || name.clone())
-                    .style(|s| {
-                        s.font_weight(Weight::MEDIUM)
-                            .text_ellipsis()
-                            .min_width(0.0)
-                    }),
-                label(move || path_display.clone())
-                    .style(|s| {
-                        s.font_size(12.0)
-                            .color(Color::rgb8(128, 128, 128))
-                            .text_ellipsis()
-                            .min_width(0.0)
-                    }),
+                    .style(|s| s.font_weight(Weight::MEDIUM).text_ellipsis().min_width(0.0)),
+                label(move || path_display.clone()).style(|s| {
+                    s.font_size(12.0)
+                        .color(Color::rgb8(128, 128, 128))
+                        .text_ellipsis()
+                        .min_width(0.0)
+                }),
             ))
             .style(|s| s.flex_grow(1.0).min_width(0.0)),
-
             // PAK file badge - fixed width
-            label(move || pak_file.clone())
-                .style(|s| {
-                    s.font_size(12.0)
-                        .color(Color::rgb8(100, 100, 100))
-                        .padding_horiz(8.0)
-                        .padding_vert(4.0)
-                        .background(Color::rgb8(240, 240, 240))
-                        .border_radius(4.0)
-                        .flex_shrink(0.0)
-                }),
+            label(move || pak_file.clone()).style(|s| {
+                s.font_size(12.0)
+                    .color(Color::rgb8(100, 100, 100))
+                    .padding_horiz(8.0)
+                    .padding_vert(4.0)
+                    .background(Color::rgb8(240, 240, 240))
+                    .border_radius(4.0)
+                    .flex_shrink(0.0)
+            }),
         ))
         .style(|s| s.width_full().gap(8.0).items_center().min_width(0.0)),
-
         // Context snippet with match count badge, or filename-only indicator
         dyn_container(
             move || (has_context, match_count),
@@ -251,19 +251,23 @@ fn search_result_row(
                             },
                         ),
                         // Snippet text
-                        label(move || ctx.clone())
-                            .style(|s| {
-                                s.font_size(11.0)
-                                    .color(Color::rgb8(80, 80, 80))
-                                    .padding(4.0)
-                                    .background(Color::rgb8(255, 255, 230))
-                                    .border_radius(2.0)
-                                    .text_ellipsis()
-                                    .min_width(0.0)
-                                    .flex_grow(1.0)
-                            }),
+                        label(move || ctx.clone()).style(|s| {
+                            s.font_size(11.0)
+                                .color(Color::rgb8(80, 80, 80))
+                                .padding(4.0)
+                                .background(Color::rgb8(255, 255, 230))
+                                .border_radius(2.0)
+                                .text_ellipsis()
+                                .min_width(0.0)
+                                .flex_grow(1.0)
+                        }),
                     ))
-                    .style(|s| s.margin_left(30.0).margin_top(4.0).min_width(0.0).items_center())
+                    .style(|s| {
+                        s.margin_left(30.0)
+                            .margin_top(4.0)
+                            .min_width(0.0)
+                            .items_center()
+                    })
                     .into_any()
                 } else {
                     // Filename-only match indicator (same style as match count badge)
@@ -317,12 +321,23 @@ pub fn search_status_bar(state: SearchState) -> impl IntoView {
             move || index_status.get(),
             move |status| {
                 let (text, color) = match status {
-                    IndexStatus::NotBuilt => ("Click 'Build Index' to index PAK files".to_string(), Color::rgb8(150, 150, 150)),
-                    IndexStatus::Building { progress } => (format!("Building: {}", progress), Color::rgb8(255, 152, 0)),
-                    IndexStatus::Ready { file_count, pak_count } => {
-                        (format!("Ready: {} files from {} PAKs", file_count, pak_count), Color::rgb8(76, 175, 80))
+                    IndexStatus::NotBuilt => (
+                        "Click 'Build Index' to index PAK files".to_string(),
+                        Color::rgb8(150, 150, 150),
+                    ),
+                    IndexStatus::Building { progress } => {
+                        (format!("Building: {}", progress), Color::rgb8(255, 152, 0))
                     }
-                    IndexStatus::Error(msg) => (format!("Error: {}", msg), Color::rgb8(244, 67, 54)),
+                    IndexStatus::Ready {
+                        file_count,
+                        pak_count,
+                    } => (
+                        format!("Ready: {} files from {} PAKs", file_count, pak_count),
+                        Color::rgb8(76, 175, 80),
+                    ),
+                    IndexStatus::Error(msg) => {
+                        (format!("Error: {}", msg), Color::rgb8(244, 67, 54))
+                    }
                 };
 
                 label(move || text.clone())
@@ -330,9 +345,7 @@ pub fn search_status_bar(state: SearchState) -> impl IntoView {
                     .into_any()
             },
         ),
-
         empty().style(|s| s.flex_grow(1.0)),
-
         // Hint about preferences
         label(|| "BG3 path configured in Preferences")
             .style(|s| s.color(Color::rgb8(130, 130, 130)).font_size(11.0)),
@@ -360,5 +373,3 @@ fn get_type_icon(file_type: &str) -> &'static str {
         _ => "📄",
     }
 }
-
-

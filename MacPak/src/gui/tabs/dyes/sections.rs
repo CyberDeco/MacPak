@@ -3,19 +3,18 @@
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::gui::state::{DyeColorEntry, DyesState};
 use super::color_row::color_row;
-use super::shared::constants::*;
 use super::shared::ColorCategory;
+use super::shared::constants::*;
+use crate::gui::state::{DyeColorEntry, DyesState};
 
 /// Creates a section header - matches Results Log style
 fn section_header(title: &'static str) -> impl IntoView {
-    label(move || title)
-        .style(|s| {
-            s.font_size(FONT_HEADER)
-                .font_weight(Weight::SEMIBOLD)
-                .margin_bottom(PADDING_STD)
-        })
+    label(move || title).style(|s| {
+        s.font_size(FONT_HEADER)
+            .font_weight(Weight::SEMIBOLD)
+            .margin_bottom(PADDING_STD)
+    })
 }
 
 /// Inner card style for the color rows
@@ -95,8 +94,7 @@ pub fn common_section(state: DyesState, status: RwSignal<String>) -> impl IntoVi
 /// Header section with title and status message
 pub fn header_section(status: RwSignal<String>) -> impl IntoView {
     h_stack((
-        label(|| "Dye Lab")
-            .style(|s| s.font_size(FONT_TITLE).font_weight(Weight::BOLD)),
+        label(|| "Dye Lab").style(|s| s.font_size(FONT_TITLE).font_weight(Weight::BOLD)),
         empty().style(|s| s.flex_grow(1.0)),
         // Status message
         dyn_container(

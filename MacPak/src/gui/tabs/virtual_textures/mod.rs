@@ -18,7 +18,11 @@ use crate::gui::shared::{header_section, progress_overlay, results_section};
 use crate::gui::state::{AppState, ConfigState, VirtualTexturesState};
 use sections::operations_row;
 
-pub fn virtual_textures_tab(_app_state: AppState, vt_state: VirtualTexturesState, config_state: ConfigState) -> impl IntoView {
+pub fn virtual_textures_tab(
+    _app_state: AppState,
+    vt_state: VirtualTexturesState,
+    config_state: ConfigState,
+) -> impl IntoView {
     let state = vt_state.clone();
 
     v_stack((

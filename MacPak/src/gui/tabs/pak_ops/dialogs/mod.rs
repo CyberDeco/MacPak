@@ -19,8 +19,8 @@ use floem::prelude::*;
 use floem_reactive::create_effect;
 use std::time::Duration;
 
-use crate::gui::state::{ActiveDialog, ConfigState, PakOpsState};
 use super::types::get_shared_progress;
+use crate::gui::state::{ActiveDialog, ConfigState, PakOpsState};
 
 use create_options::create_options_content;
 use drop_action::drop_action_content;
@@ -61,10 +61,20 @@ pub fn dialog_overlay(state: PakOpsState, config_state: ConfigState) -> impl Int
             polled_msg.set(msg);
         }
 
-        if matches!(active.get_untracked(), ActiveDialog::Progress) && timer_active.get_untracked() {
+        if matches!(active.get_untracked(), ActiveDialog::Progress) && timer_active.get_untracked()
+        {
             exec_after(Duration::from_millis(50), move |_| {
-                if matches!(active.get_untracked(), ActiveDialog::Progress) && timer_active.get_untracked() {
-                    poll_and_schedule(polled_pct, polled_current, polled_total, polled_msg, active, timer_active);
+                if matches!(active.get_untracked(), ActiveDialog::Progress)
+                    && timer_active.get_untracked()
+                {
+                    poll_and_schedule(
+                        polled_pct,
+                        polled_current,
+                        polled_total,
+                        polled_msg,
+                        active,
+                        timer_active,
+                    );
                 }
             });
         }
@@ -87,7 +97,14 @@ pub fn dialog_overlay(state: PakOpsState, config_state: ConfigState) -> impl Int
 
                 exec_after(Duration::from_millis(50), move |_| {
                     if matches!(active.get_untracked(), ActiveDialog::Progress) {
-                        poll_and_schedule(polled_pct, polled_current, polled_total, polled_msg, active, timer_active);
+                        poll_and_schedule(
+                            polled_pct,
+                            polled_current,
+                            polled_total,
+                            polled_msg,
+                            active,
+                            timer_active,
+                        );
                     }
                 });
             } else {
@@ -115,7 +132,8 @@ pub fn dialog_overlay(state: PakOpsState, config_state: ConfigState) -> impl Int
             match dialog {
                 ActiveDialog::None => unreachable!(),
                 ActiveDialog::Progress => {
-                    progress_content(polled_pct, polled_current, polled_total, polled_msg).into_any()
+                    progress_content(polled_pct, polled_current, polled_total, polled_msg)
+                        .into_any()
                 }
                 ActiveDialog::CreateOptions => create_options_content(state).into_any(),
                 ActiveDialog::DropAction => drop_action_content(state).into_any(),
@@ -161,7 +179,9 @@ pub fn dialog_overlay(state: PakOpsState, config_state: ConfigState) -> impl Int
                     ActiveDialog::FileSelect => {
                         state.file_select_pak.set(None);
                         state.file_select_list.set(Vec::new());
-                        state.file_select_selected.set(std::collections::HashSet::new());
+                        state
+                            .file_select_selected
+                            .set(std::collections::HashSet::new());
                         state.file_select_filter.set(String::new());
                         state.clear_results();
                         state.active_dialog.set(ActiveDialog::None);

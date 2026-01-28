@@ -1,10 +1,10 @@
 //! Image, texture, and material methods for `GltfBuilder`
 
-use super::super::types::GltfBufferView;
 use super::super::materials::{
-    GltfImage, GltfTexture, GltfSampler, GltfMaterial, GltfPbrMetallicRoughness,
-    GltfTextureInfo, GltfNormalTextureInfo, GltfOcclusionTextureInfo,
+    GltfImage, GltfMaterial, GltfNormalTextureInfo, GltfOcclusionTextureInfo,
+    GltfPbrMetallicRoughness, GltfSampler, GltfTexture, GltfTextureInfo,
 };
+use super::super::types::GltfBufferView;
 use super::GltfBuilder;
 
 impl GltfBuilder {

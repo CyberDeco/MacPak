@@ -47,87 +47,86 @@ pub fn editor_content(
             let tabs_state_for_keys = tabs_state_for_open.clone();
 
             // Custom key handler that intercepts shortcuts before the default handler
-            let key_handler = move |editor_sig: floem::prelude::RwSignal<
-                floem::views::editor::Editor,
-            >,
-                                    keypress: &KeyPress,
-                                    mods: Modifiers| {
-                // Check for CMD/Ctrl modifier
-                let is_cmd_or_ctrl = mods.meta() || mods.control();
+            let key_handler =
+                move |editor_sig: floem::prelude::RwSignal<floem::views::editor::Editor>,
+                      keypress: &KeyPress,
+                      mods: Modifiers| {
+                    // Check for CMD/Ctrl modifier
+                    let is_cmd_or_ctrl = mods.meta() || mods.control();
 
-                // Determine if this key might modify content
-                let might_edit = if is_cmd_or_ctrl {
-                    // CMD+Z, CMD+X, CMD+V modify content
-                    matches!(&keypress.key, KeyInput::Keyboard(Key::Character(c), _)
+                    // Determine if this key might modify content
+                    let might_edit = if is_cmd_or_ctrl {
+                        // CMD+Z, CMD+X, CMD+V modify content
+                        matches!(&keypress.key, KeyInput::Keyboard(Key::Character(c), _)
                         if c.as_str().eq_ignore_ascii_case("z")
                         || c.as_str().eq_ignore_ascii_case("x")
                         || c.as_str().eq_ignore_ascii_case("v"))
-                } else {
-                    // Non-modifier keys that edit content
-                    matches!(
-                        &keypress.key,
-                        KeyInput::Keyboard(Key::Character(_), _)
-                            | KeyInput::Keyboard(
-                                Key::Named(
-                                    NamedKey::Backspace
-                                        | NamedKey::Delete
-                                        | NamedKey::Enter
-                                        | NamedKey::Tab
-                                ),
-                                _
-                            )
-                    )
-                };
+                    } else {
+                        // Non-modifier keys that edit content
+                        matches!(
+                            &keypress.key,
+                            KeyInput::Keyboard(Key::Character(_), _)
+                                | KeyInput::Keyboard(
+                                    Key::Named(
+                                        NamedKey::Backspace
+                                            | NamedKey::Delete
+                                            | NamedKey::Enter
+                                            | NamedKey::Tab
+                                    ),
+                                    _
+                                )
+                        )
+                    };
 
-                if is_cmd_or_ctrl {
-                    if let KeyInput::Keyboard(Key::Character(c), _) = &keypress.key {
-                        // CMD+F - Find
-                        if c.as_str().eq_ignore_ascii_case("f") {
-                            search_visible.set(!search_visible.get());
-                            return CommandExecuted::Yes;
-                        }
-                        // CMD+S - Save (sync content from editor first)
-                        if c.as_str().eq_ignore_ascii_case("s") {
-                            // Sync editor content to live_content before saving
-                            let new_text = editor_sig.get_untracked().doc().text().to_string();
-                            live_content.set(new_text);
-
-                            if modified.get() {
-                                if converted_from_lsf.get() {
-                                    let tab_clone = tab_for_keys.clone();
-                                    exec_after(Duration::from_millis(50), move |_| {
-                                        save_file_as_dialog(tab_clone);
-                                    });
-                                } else {
-                                    save_file(tab_for_keys.clone());
-                                }
+                    if is_cmd_or_ctrl {
+                        if let KeyInput::Keyboard(Key::Character(c), _) = &keypress.key {
+                            // CMD+F - Find
+                            if c.as_str().eq_ignore_ascii_case("f") {
+                                search_visible.set(!search_visible.get());
+                                return CommandExecuted::Yes;
                             }
-                            return CommandExecuted::Yes;
-                        }
-                        // CMD+O - Open
-                        if c.as_str().eq_ignore_ascii_case("o") {
-                            let tabs_clone = tabs_state_for_keys.clone();
-                            exec_after(Duration::from_millis(50), move |_| {
-                                open_file_dialog(tabs_clone);
-                            });
-                            return CommandExecuted::Yes;
+                            // CMD+S - Save (sync content from editor first)
+                            if c.as_str().eq_ignore_ascii_case("s") {
+                                // Sync editor content to live_content before saving
+                                let new_text = editor_sig.get_untracked().doc().text().to_string();
+                                live_content.set(new_text);
+
+                                if modified.get() {
+                                    if converted_from_lsf.get() {
+                                        let tab_clone = tab_for_keys.clone();
+                                        exec_after(Duration::from_millis(50), move |_| {
+                                            save_file_as_dialog(tab_clone);
+                                        });
+                                    } else {
+                                        save_file(tab_for_keys.clone());
+                                    }
+                                }
+                                return CommandExecuted::Yes;
+                            }
+                            // CMD+O - Open
+                            if c.as_str().eq_ignore_ascii_case("o") {
+                                let tabs_clone = tabs_state_for_keys.clone();
+                                exec_after(Duration::from_millis(50), move |_| {
+                                    open_file_dialog(tabs_clone);
+                                });
+                                return CommandExecuted::Yes;
+                            }
                         }
                     }
-                }
 
-                // Process the key through the default handler
-                let result = default_key_handler(editor_sig)(keypress, mods);
+                    // Process the key through the default handler
+                    let result = default_key_handler(editor_sig)(keypress, mods);
 
-                // If this was an editing key, sync to live_content and mark as modified
-                // live_content is NOT watched by dyn_container, so this won't cause cascades
-                if might_edit {
-                    let new_text = editor_sig.get_untracked().doc().text().to_string();
-                    live_content.set(new_text);
-                    state_change.set(true);
-                }
+                    // If this was an editing key, sync to live_content and mark as modified
+                    // live_content is NOT watched by dyn_container, so this won't cause cascades
+                    if might_edit {
+                        let new_text = editor_sig.get_untracked().doc().text().to_string();
+                        live_content.set(new_text);
+                        state_change.set(true);
+                    }
 
-                result
-            };
+                    result
+                };
 
             text_editor_keys(text, key_handler)
                 .styling(styling)

@@ -12,10 +12,7 @@ mod resolve;
 mod tree;
 
 // Re-export public API
-pub use tree::build_display_nodes;
 pub use resolve::{
-    resolve_speaker_names,
-    resolve_localized_text,
-    resolve_flag_names,
-    resolve_difficulty_classes,
+    resolve_difficulty_classes, resolve_flag_names, resolve_localized_text, resolve_speaker_names,
 };
+pub use tree::build_display_nodes;

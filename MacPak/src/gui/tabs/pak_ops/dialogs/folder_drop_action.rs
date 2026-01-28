@@ -4,10 +4,10 @@ use floem::prelude::*;
 use floem::text::Weight;
 use std::path::Path;
 
-use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::operations::{
     create_pak_from_dropped_folder, rebuild_pak_from_dropped_folder, validate_dropped_folder,
 };
+use crate::gui::state::{ActiveDialog, PakOpsState};
 
 pub fn folder_drop_action_content(state: PakOpsState) -> impl IntoView {
     let dropped_folder = state.dropped_folder;
@@ -31,8 +31,7 @@ pub fn folder_drop_action_content(state: PakOpsState) -> impl IntoView {
                 .font_weight(Weight::BOLD)
                 .margin_bottom(16.0)
         }),
-        label(|| "What would you like to do?".to_string())
-            .style(|s| s.margin_bottom(12.0)),
+        label(|| "What would you like to do?".to_string()).style(|s| s.margin_bottom(12.0)),
         button("🔧 Create PAK from Folder")
             .action(move || {
                 state_create.active_dialog.set(ActiveDialog::None);

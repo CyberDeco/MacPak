@@ -34,35 +34,22 @@
 //! }
 //! ```
 
-mod types;
-mod parser;
-mod localization;
-mod flags;
-mod speakers;
 mod difficulty;
+mod flags;
+mod localization;
+mod parser;
+mod speakers;
+mod types;
 
-pub use types::*;
-pub use parser::{parse_dialog, DialogParseError};
+pub use difficulty::{DifficultyClassCache, DifficultyClassError, DifficultyClassInfo};
+pub use flags::{FlagCache, FlagCacheError};
 pub use localization::{
-    LocalizationCache,
-    LocalizedEntry,
-    LocalizationError,
-    get_available_languages,
+    LocalizationCache, LocalizationError, LocalizedEntry, get_available_languages,
     load_localization_from_pak_parallel,
 };
-pub use flags::{
-    FlagCache,
-    FlagCacheError,
-};
-pub use speakers::{
-    SpeakerCache,
-    SpeakerCacheError,
-};
-pub use difficulty::{
-    DifficultyClassCache,
-    DifficultyClassInfo,
-    DifficultyClassError,
-};
+pub use parser::{DialogParseError, parse_dialog};
+pub use speakers::{SpeakerCache, SpeakerCacheError};
+pub use types::*;
 
 /// Parse dialog from LSJ bytes
 ///
@@ -82,9 +69,7 @@ pub fn parse_dialog_bytes(data: &[u8]) -> Result<Dialog, DialogParseError> {
 /// Returns an error if the file cannot be read or parsed as a dialog.
 pub fn parse_dialog_file<P: AsRef<std::path::Path>>(path: P) -> Result<Dialog, DialogParseError> {
     let doc = maclarian::formats::lsj::read_lsj(path)
-        .map_err(|e| DialogParseError::IoError(std::io::Error::other(
-            e.to_string()
-        )))?;
+        .map_err(|e| DialogParseError::IoError(std::io::Error::other(e.to_string())))?;
     parse_dialog(&doc)
 }
 
@@ -93,8 +78,7 @@ pub fn parse_dialog_file<P: AsRef<std::path::Path>>(path: P) -> Result<Dialog, D
 /// # Errors
 /// Returns an error if the file cannot be read or parsed.
 pub fn parse_dialog_lsf<P: AsRef<std::path::Path>>(path: P) -> Result<Dialog, DialogParseError> {
-    let data = std::fs::read(path.as_ref())
-        .map_err(DialogParseError::IoError)?;
+    let data = std::fs::read(path.as_ref()).map_err(DialogParseError::IoError)?;
     parse_dialog_lsf_bytes(&data)
 }
 
@@ -106,7 +90,7 @@ pub fn parse_dialog_lsf<P: AsRef<std::path::Path>>(path: P) -> Result<Dialog, Di
 /// # Errors
 /// Returns an error if the data cannot be parsed through the conversion pipeline.
 pub fn parse_dialog_lsf_bytes(data: &[u8]) -> Result<Dialog, DialogParseError> {
-    use maclarian::converter::{to_lsx, to_lsj};
+    use maclarian::converter::{to_lsj, to_lsx};
     use maclarian::formats::lsf::parse_lsf_bytes;
     use maclarian::formats::lsx::parse_lsx;
 
@@ -128,4 +112,3 @@ pub fn parse_dialog_lsf_bytes(data: &[u8]) -> Result<Dialog, DialogParseError> {
 
     parse_dialog(&lsj_doc)
 }
-

@@ -378,17 +378,20 @@ impl AudioCache {
 
     /// Load audio from an extracted directory
     #[cfg(feature = "gui")]
-    fn load_from_directory(&self, wem_filename: &str) -> Result<(DecodedAudio, PathBuf), AudioCacheError> {
+    fn load_from_directory(
+        &self,
+        wem_filename: &str,
+    ) -> Result<(DecodedAudio, PathBuf), AudioCacheError> {
         let wem_path = if self.indexed {
             // O(1) lookup from pre-built index
-            self.file_index.get(wem_filename)
-                .cloned()
-                .ok_or_else(|| AudioCacheError::FileNotFound(format!(
-                    "WEM file '{}' not in index", wem_filename
-                )))?
+            self.file_index.get(wem_filename).cloned().ok_or_else(|| {
+                AudioCacheError::FileNotFound(format!("WEM file '{}' not in index", wem_filename))
+            })?
         } else {
             // Fallback to slow recursive search (only if index wasn't built)
-            let voice_path = self.voice_path.as_ref()
+            let voice_path = self
+                .voice_path
+                .as_ref()
                 .ok_or(AudioCacheError::VoicePathNotSet)?;
             find_wem_file(voice_path, wem_filename)?
         };
@@ -401,36 +404,44 @@ impl AudioCache {
 
     /// Load audio from a PAK file (extracts to temp file, decodes, cleans up)
     #[cfg(feature = "gui")]
-    fn load_from_pak(&self, wem_filename: &str) -> Result<(DecodedAudio, PathBuf), AudioCacheError> {
-        let pak_path = self.voice_path.as_ref()
+    fn load_from_pak(
+        &self,
+        wem_filename: &str,
+    ) -> Result<(DecodedAudio, PathBuf), AudioCacheError> {
+        let pak_path = self
+            .voice_path
+            .as_ref()
             .ok_or(AudioCacheError::VoicePathNotSet)?;
 
         // Look up internal path in PAK index
         let internal_path = if self.indexed {
-            self.pak_index.get(wem_filename)
-                .ok_or_else(|| AudioCacheError::FileNotFound(format!(
-                    "WEM file '{}' not in PAK index", wem_filename
-                )))?
+            self.pak_index.get(wem_filename).ok_or_else(|| {
+                AudioCacheError::FileNotFound(format!(
+                    "WEM file '{}' not in PAK index",
+                    wem_filename
+                ))
+            })?
         } else {
             return Err(AudioCacheError::FileNotFound(
-                "PAK index not built - call build_index() first".to_string()
+                "PAK index not built - call build_index() first".to_string(),
             ));
         };
 
         // Extract WEM data from PAK
-        let wem_data = PakOperations::read_file_bytes(pak_path, internal_path)
-            .map_err(|e| AudioCacheError::FileNotFound(format!(
-                "Failed to extract '{}' from PAK: {}", internal_path, e
-            )))?;
+        let wem_data = PakOperations::read_file_bytes(pak_path, internal_path).map_err(|e| {
+            AudioCacheError::FileNotFound(format!(
+                "Failed to extract '{}' from PAK: {}",
+                internal_path, e
+            ))
+        })?;
 
         // Write to temp file for vgmstream
         let temp_dir = std::env::temp_dir();
         let temp_path = temp_dir.join(format!("macpak_wem_{}.wem", std::process::id()));
 
-        std::fs::write(&temp_path, &wem_data)
-            .map_err(|e| AudioCacheError::FileNotFound(format!(
-                "Failed to write temp file: {}", e
-            )))?;
+        std::fs::write(&temp_path, &wem_data).map_err(|e| {
+            AudioCacheError::FileNotFound(format!("Failed to write temp file: {}", e))
+        })?;
 
         // Decode with vgmstream
         let result = super::decoder::load_wem_file_vgmstream(&temp_path);
@@ -470,7 +481,10 @@ impl AudioCache {
     fn evict_oldest(&mut self) {
         if let Some(oldest) = self.access_order.first().cloned() {
             if let Some(entry) = self.entries.remove(&oldest) {
-                self.stats.total_bytes_cached = self.stats.total_bytes_cached.saturating_sub(entry.size_bytes);
+                self.stats.total_bytes_cached = self
+                    .stats
+                    .total_bytes_cached
+                    .saturating_sub(entry.size_bytes);
                 self.stats.evictions += 1;
             }
             self.access_order.remove(0);

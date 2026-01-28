@@ -105,35 +105,39 @@ pub fn generate_info_json_with_progress(
 }
 
 /// Find and read meta.lsx from a mod source directory
-#[must_use] 
+#[must_use]
 pub fn find_and_read_meta_lsx(source_dir: &str) -> Option<String> {
     let source_path = Path::new(source_dir);
 
     // Look for Mods/*/meta.lsx pattern
     let mods_dir = source_path.join("Mods");
-    if mods_dir.exists() && mods_dir.is_dir()
-        && let Ok(entries) = std::fs::read_dir(&mods_dir) {
-            for entry in entries.flatten() {
-                let meta_path = entry.path().join("meta.lsx");
-                if meta_path.exists()
-                    && let Ok(content) = std::fs::read_to_string(&meta_path) {
-                        return Some(content);
-                    }
+    if mods_dir.exists()
+        && mods_dir.is_dir()
+        && let Ok(entries) = std::fs::read_dir(&mods_dir)
+    {
+        for entry in entries.flatten() {
+            let meta_path = entry.path().join("meta.lsx");
+            if meta_path.exists()
+                && let Ok(content) = std::fs::read_to_string(&meta_path)
+            {
+                return Some(content);
             }
         }
+    }
 
     // Also check for meta.lsx directly in source (some mod structures)
     let direct_meta = source_path.join("meta.lsx");
     if direct_meta.exists()
-        && let Ok(content) = std::fs::read_to_string(&direct_meta) {
-            return Some(content);
-        }
+        && let Ok(content) = std::fs::read_to_string(&direct_meta)
+    {
+        return Some(content);
+    }
 
     None
 }
 
 /// Calculate MD5 hash of a file (streaming for large files)
-#[must_use] 
+#[must_use]
 pub fn calculate_file_md5(file_path: &str) -> Option<String> {
     let mut file = std::fs::File::open(file_path).ok()?;
     let mut hasher = md5::Context::new();
@@ -199,4 +203,3 @@ fn escape_json_string(s: &str) -> String {
         .replace('\r', "\\r")
         .replace('\t', "\\t")
 }
-

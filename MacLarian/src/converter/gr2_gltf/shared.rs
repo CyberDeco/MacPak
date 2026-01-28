@@ -12,13 +12,13 @@ use glam::{Mat3, Quat, Vec3};
 use half::f16;
 
 /// Convert half-float (f16) to f32.
-#[must_use] 
+#[must_use]
 pub fn half_to_f32(bits: u16) -> f32 {
     f16::from_bits(bits).to_f32()
 }
 
 /// Convert f32 to half-float (f16).
-#[must_use] 
+#[must_use]
 pub fn f32_to_half(value: f32) -> u16 {
     f16::from_f32(value).to_bits()
 }

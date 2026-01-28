@@ -4,11 +4,11 @@
 //! WEM decoding is handled by the wem module via vgmstream.
 //! Decoded audio is cached via AudioCache for efficient replay.
 
-use std::path::Path;
-use std::sync::{Arc, Mutex};
+use crate::formats::wem::{AudioCacheError, DecodedAudio, WemError};
 use floem::reactive::SignalUpdate;
 use rodio::{OutputStream, OutputStreamHandle, Sink, Source};
-use crate::formats::wem::{AudioCacheError, DecodedAudio, WemError};
+use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use crate::gui::state::DialogueState;
 
@@ -25,8 +25,8 @@ impl AudioPlayer {
     /// # Errors
     /// Returns an error if audio output cannot be initialized
     pub fn new() -> Result<Self, AudioError> {
-        let (stream, stream_handle) = OutputStream::try_default()
-            .map_err(|e| AudioError::OutputInit(e.to_string()))?;
+        let (stream, stream_handle) =
+            OutputStream::try_default().map_err(|e| AudioError::OutputInit(e.to_string()))?;
 
         Ok(Self {
             _stream: stream,
@@ -167,16 +167,18 @@ pub fn play_node_audio(
     text_handle: &str,
     node_uuid: &str,
 ) -> Result<(), AudioError> {
-
     // Get voice meta for this handle (to get the .wem filename)
-    let voice_meta = state.get_voice_meta(text_handle)
+    let voice_meta = state
+        .get_voice_meta(text_handle)
         .ok_or_else(|| AudioError::VoiceMetaNotFound(text_handle.to_string()))?;
 
     let wem_filename = voice_meta.source_file.clone();
 
     // Get or load audio from cache
     let audio = {
-        let mut cache = state.audio_cache.write()
+        let mut cache = state
+            .audio_cache
+            .write()
             .map_err(|_| AudioError::CacheLockFailed)?;
 
         // Use cache's get_or_load which handles decoding and caching

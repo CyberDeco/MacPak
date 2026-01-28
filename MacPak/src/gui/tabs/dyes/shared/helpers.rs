@@ -1,8 +1,8 @@
 //! Helper functions for the Dyes tab
 
+use super::constants::COLOR_DEFAULT_GRAY;
 use floem::prelude::*;
 use std::process::Command;
-use super::constants::COLOR_DEFAULT_GRAY;
 
 /// Parse hex string to Color for display
 pub fn parse_hex_to_color(hex: &str) -> Color {
@@ -36,9 +36,7 @@ pub fn normalize_hex(hex: &str) -> String {
     let hex = hex.trim_start_matches('#').to_uppercase();
     if hex.len() == 3 {
         // Expand shorthand (e.g., "F00" -> "FF0000")
-        hex.chars()
-            .flat_map(|c| [c, c])
-            .collect()
+        hex.chars().flat_map(|c| [c, c]).collect()
     } else if hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
         hex
     } else {

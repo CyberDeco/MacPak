@@ -34,7 +34,7 @@ pub struct DifficultyClassCache {
 
 impl DifficultyClassCache {
     /// Create a new empty cache
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             entries: HashMap::new(),
@@ -44,25 +44,25 @@ impl DifficultyClassCache {
     }
 
     /// Get the number of cached entries
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Check if cache is empty
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty() && self.pak_paths.is_empty()
     }
 
     /// Check if PAK sources are configured
-    #[must_use] 
+    #[must_use]
     pub fn has_sources(&self) -> bool {
         !self.pak_paths.is_empty()
     }
 
     /// Check if the index has been built
-    #[must_use] 
+    #[must_use]
     pub fn is_indexed(&self) -> bool {
         self.indexed
     }
@@ -83,28 +83,29 @@ impl DifficultyClassCache {
     }
 
     /// Look up DC info by UUID (O(1) after indexing)
-    #[must_use] 
+    #[must_use]
     pub fn get_info(&self, uuid: &str) -> Option<&DifficultyClassInfo> {
         self.entries.get(uuid)
     }
 
     /// Get just the difficulty value for a UUID
-    #[must_use] 
+    #[must_use]
     pub fn get_difficulty(&self, uuid: &str) -> Option<i32> {
         self.entries.get(uuid).map(|info| info.difficulty)
     }
 
     /// Get a formatted DC string (e.g., "DC 10" or "DC 15 (`Act2_Hard`)")
-    #[must_use] 
+    #[must_use]
     pub fn get_formatted(&self, uuid: &str) -> Option<String> {
-        self.entries.get(uuid).map(|info| {
-            format!("DC {}", info.difficulty)
-        })
+        self.entries
+            .get(uuid)
+            .map(|info| format!("DC {}", info.difficulty))
     }
 
     /// Insert an entry directly (for testing or manual additions)
     pub fn insert(&mut self, uuid: String, name: String, difficulty: i32) {
-        self.entries.insert(uuid, DifficultyClassInfo { name, difficulty });
+        self.entries
+            .insert(uuid, DifficultyClassInfo { name, difficulty });
     }
 
     /// Build the DC index from all configured PAK sources.
@@ -139,7 +140,11 @@ impl DifficultyClassCache {
                 continue;
             }
 
-            tracing::debug!("Found {} DC files in {}", dc_files.len(), pak_path.display());
+            tracing::debug!(
+                "Found {} DC files in {}",
+                dc_files.len(),
+                pak_path.display()
+            );
 
             // Batch read all DC files
             let file_data = PakOperations::read_files_bytes(&pak_path, &dc_files)
@@ -154,7 +159,8 @@ impl DifficultyClassCache {
             // Merge results sequentially
             for dcs in parsed_dcs {
                 for (uuid, name, difficulty) in dcs {
-                    self.entries.insert(uuid, DifficultyClassInfo { name, difficulty });
+                    self.entries
+                        .insert(uuid, DifficultyClassInfo { name, difficulty });
                     total_count += 1;
                 }
             }
@@ -168,7 +174,10 @@ impl DifficultyClassCache {
     /// Extract (UUID, Name, Difficulty) tuples from DifficultyClasses.lsx bytes
     fn extract_dcs_from_lsx(data: &[u8]) -> Vec<(String, String, i32)> {
         // Process all regions and their nodes
-        fn process_node(node: &maclarian::formats::lsx::LsxNode, results: &mut Vec<(String, String, i32)>) {
+        fn process_node(
+            node: &maclarian::formats::lsx::LsxNode,
+            results: &mut Vec<(String, String, i32)>,
+        ) {
             // DifficultyClass nodes have UUID, Name, and Difficulties attributes
             if node.id == "DifficultyClass" {
                 let mut uuid: Option<String> = None;
@@ -263,4 +272,3 @@ impl std::fmt::Display for DifficultyClassError {
 }
 
 impl std::error::Error for DifficultyClassError {}
-

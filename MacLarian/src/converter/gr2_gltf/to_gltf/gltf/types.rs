@@ -4,10 +4,10 @@
 //!
 //! Core glTF 2.0 structure types.
 
-use std::collections::HashMap;
 use serde::Serialize;
+use std::collections::HashMap;
 
-use super::materials::{GltfImage, GltfSampler, GltfTexture, GltfMaterial};
+use super::materials::{GltfImage, GltfMaterial, GltfSampler, GltfTexture};
 
 /// Asset metadata
 #[derive(Debug, Clone, Serialize)]

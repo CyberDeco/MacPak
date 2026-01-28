@@ -3,8 +3,8 @@
 //! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
-use std::collections::HashMap;
 use super::tile_processor::ProcessedTile;
+use std::collections::HashMap;
 
 /// Result of tile deduplication
 #[derive(Debug)]
@@ -83,4 +83,3 @@ fn compute_md5(data: &[u8]) -> [u8; 16] {
     let digest = md5::compute(data);
     *digest
 }
-

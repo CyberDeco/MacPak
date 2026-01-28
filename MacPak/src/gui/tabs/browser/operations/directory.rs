@@ -208,11 +208,7 @@ pub fn sort_files(state: BrowserState) {
             SortColumn::Modified => a.modified.cmp(&b.modified),
         };
 
-        if ascending {
-            cmp
-        } else {
-            cmp.reverse()
-        }
+        if ascending { cmp } else { cmp.reverse() }
     });
 
     state.files.set(files);

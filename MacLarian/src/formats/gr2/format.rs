@@ -19,26 +19,26 @@ use crate::error::{Error, Result};
 pub mod magic {
     /// Little-endian 32-bit format
     pub const LE32: [u8; 16] = [
-        0x29, 0xDE, 0x6C, 0xC0, 0xBA, 0xA4, 0x53, 0x2B,
-        0x25, 0xF5, 0xB7, 0xA5, 0xF6, 0x66, 0xE2, 0xEE,
+        0x29, 0xDE, 0x6C, 0xC0, 0xBA, 0xA4, 0x53, 0x2B, 0x25, 0xF5, 0xB7, 0xA5, 0xF6, 0x66, 0xE2,
+        0xEE,
     ];
 
     /// Little-endian 64-bit format
     pub const LE64: [u8; 16] = [
-        0xE5, 0x9B, 0x49, 0x5E, 0x6F, 0x63, 0x1F, 0x14,
-        0x1E, 0x13, 0xEB, 0xA9, 0x90, 0xBE, 0xED, 0xC4,
+        0xE5, 0x9B, 0x49, 0x5E, 0x6F, 0x63, 0x1F, 0x14, 0x1E, 0x13, 0xEB, 0xA9, 0x90, 0xBE, 0xED,
+        0xC4,
     ];
 
     /// Big-endian 32-bit format
     pub const BE32: [u8; 16] = [
-        0x0E, 0x11, 0x95, 0xB5, 0x6A, 0xA5, 0xB5, 0x4B,
-        0xEB, 0x28, 0x28, 0x50, 0x25, 0x78, 0xB3, 0x04,
+        0x0E, 0x11, 0x95, 0xB5, 0x6A, 0xA5, 0xB5, 0x4B, 0xEB, 0x28, 0x28, 0x50, 0x25, 0x78, 0xB3,
+        0x04,
     ];
 
     /// Big-endian 64-bit format
     pub const BE64: [u8; 16] = [
-        0x31, 0x95, 0xD4, 0xE3, 0x20, 0xDC, 0x4F, 0x62,
-        0xCC, 0x36, 0xD0, 0x3A, 0xB1, 0x82, 0xFF, 0x89,
+        0x31, 0x95, 0xD4, 0xE3, 0x20, 0xDC, 0x4F, 0x62, 0xCC, 0x36, 0xD0, 0x3A, 0xB1, 0x82, 0xFF,
+        0x89,
     ];
 }
 
@@ -75,7 +75,9 @@ impl Compression {
             1 => Ok(Compression::Oodle0),
             2 => Ok(Compression::Oodle1),
             4 => Ok(Compression::BitKnit),
-            _ => Err(Error::DecompressionError(format!("Unsupported GR2 compression format: {value}"))),
+            _ => Err(Error::DecompressionError(format!(
+                "Unsupported GR2 compression format: {value}"
+            ))),
         }
     }
 }
@@ -138,7 +140,9 @@ impl Gr2Magic {
         } else if self.signature == magic::LE64 || self.signature == magic::BE64 {
             Ok(PointerSize::Bit64)
         } else {
-            Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()))
+            Err(Error::DecompressionError(
+                "Invalid GR2 magic signature".to_string(),
+            ))
         }
     }
 
@@ -152,12 +156,14 @@ impl Gr2Magic {
         } else if self.signature == magic::BE32 || self.signature == magic::BE64 {
             Ok(Endian::Big)
         } else {
-            Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()))
+            Err(Error::DecompressionError(
+                "Invalid GR2 magic signature".to_string(),
+            ))
         }
     }
 
     /// Check if the magic signature is valid
-    #[must_use] 
+    #[must_use]
     pub fn is_valid(&self) -> bool {
         self.signature == magic::LE32
             || self.signature == magic::LE64
@@ -215,7 +221,9 @@ impl Gr2Header {
     pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
         let version = reader.read_u32::<LittleEndian>()?;
         if version != 6 && version != 7 {
-            return Err(Error::DecompressionError(format!("Unsupported GR2 version: {version}")));
+            return Err(Error::DecompressionError(format!(
+                "Unsupported GR2 version: {version}"
+            )));
         }
 
         let file_size = reader.read_u32::<LittleEndian>()?;
@@ -306,13 +314,13 @@ impl SectionHeader {
     }
 
     /// Check if section has data
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.compressed_size == 0
     }
 
     /// Get compression ratio
-    #[must_use] 
+    #[must_use]
     pub fn compression_ratio(&self) -> Option<f64> {
         if self.compressed_size > 0 {
             Some(f64::from(self.uncompressed_size) / f64::from(self.compressed_size))
@@ -384,12 +392,16 @@ impl Gr2File {
         // Read magic block (offset 0)
         let magic = Gr2Magic::read(&mut cursor)?;
         if !magic.is_valid() {
-            return Err(Error::DecompressionError("Invalid GR2 magic signature".to_string()));
+            return Err(Error::DecompressionError(
+                "Invalid GR2 magic signature".to_string(),
+            ));
         }
 
         // Verify endianness - only little-endian GR2 files are supported
         if magic.endian()? == Endian::Big {
-            return Err(Error::DecompressionError("Big-endian GR2 files are not supported".to_string()));
+            return Err(Error::DecompressionError(
+                "Big-endian GR2 files are not supported".to_string(),
+            ));
         }
 
         // Read main header (offset 0x20)
@@ -418,7 +430,9 @@ impl Gr2File {
     /// # Errors
     /// Returns an error if the section index is invalid or data is truncated.
     pub fn section_compressed_data(&self, index: usize) -> Result<&[u8]> {
-        let section = self.sections.get(index)
+        let section = self
+            .sections
+            .get(index)
             .ok_or_else(|| Error::DecompressionError(format!("Invalid section index: {index}")))?;
 
         if section.is_empty() {
@@ -436,7 +450,7 @@ impl Gr2File {
     }
 
     /// Get raw file data
-    #[must_use] 
+    #[must_use]
     pub fn raw_data(&self) -> &[u8] {
         &self.data
     }
@@ -449,4 +463,3 @@ impl Gr2File {
         self.magic.pointer_size()
     }
 }
-

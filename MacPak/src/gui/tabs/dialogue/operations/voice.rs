@@ -3,19 +3,16 @@
 //! Provides parallel loading and parsing of voice metadata.
 //! This module provides cache management for the GUI.
 
+use crate::formats::voice_meta::{VoiceMetaCache, find_voice_meta_path};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
-use crate::formats::voice_meta::{VoiceMetaCache, find_voice_meta_path};
 
 // Re-export for convenience
 pub use crate::formats::voice_meta::find_voice_files_path;
 
 /// Load voice metadata from VoiceMeta.pak or extracted Soundbanks folder
 /// Populates the cache with text_handle -> VoiceMetaEntry mappings
-pub fn load_voice_meta(
-    cache: &Arc<RwLock<VoiceMetaCache>>,
-    data_path: &Path,
-) -> usize {
+pub fn load_voice_meta(cache: &Arc<RwLock<VoiceMetaCache>>, data_path: &Path) -> usize {
     // Check if already loaded
     {
         let Ok(cache_read) = cache.read() else {

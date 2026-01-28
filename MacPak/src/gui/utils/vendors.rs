@@ -39,9 +39,7 @@ pub fn vendor_selection_section(selected_vendors: RwSignal<Vec<bool>>) -> impl I
                         .padding_horiz(4.0)
                 })
                 .on_click_stop(move |_| {
-                    let vendors: Vec<bool> = VENDOR_DEFS.iter()
-                        .map(|v| v.always_enabled)
-                        .collect();
+                    let vendors: Vec<bool> = VENDOR_DEFS.iter().map(|v| v.always_enabled).collect();
                     selected_vendors.set(vendors);
                 }),
         ))
@@ -64,13 +62,12 @@ fn vendor_column(
     selected_vendors: RwSignal<Vec<bool>>,
 ) -> impl IntoView {
     v_stack((
-        label(move || title)
-            .style(|s| {
-                s.font_size(11.0)
-                    .font_weight(floem::text::Weight::SEMIBOLD)
-                    .color(Color::rgb8(80, 80, 80))
-                    .padding_bottom(4.0)
-            }),
+        label(move || title).style(|s| {
+            s.font_size(11.0)
+                .font_weight(floem::text::Weight::SEMIBOLD)
+                .color(Color::rgb8(80, 80, 80))
+                .padding_bottom(4.0)
+        }),
         scroll(
             dyn_stack(
                 move || indices.to_vec(),
@@ -110,15 +107,14 @@ fn vendor_column(
                             })
                         },
                         v_stack((
-                            label(move || name.to_string())
-                                .style(move |s| {
-                                    let base = s.font_size(11.0);
-                                    if is_always {
-                                        base.color(Color::rgb8(140, 140, 140))
-                                    } else {
-                                        base
-                                    }
-                                }),
+                            label(move || name.to_string()).style(move |s| {
+                                let base = s.font_size(11.0);
+                                if is_always {
+                                    base.color(Color::rgb8(140, 140, 140))
+                                } else {
+                                    base
+                                }
+                            }),
                             label(move || loc.to_string())
                                 .style(|s| s.font_size(9.0).color(Color::rgb8(140, 140, 140))),
                         ))
@@ -127,12 +123,12 @@ fn vendor_column(
                     .style(|s| s.items_center().padding_vert(2.0))
                 },
             )
-            .style(|s| s.width_full().flex_direction(floem::style::FlexDirection::Column))
+            .style(|s| {
+                s.width_full()
+                    .flex_direction(floem::style::FlexDirection::Column)
+            }),
         )
-        .style(|s| {
-            s.flex_grow(1.0)
-                .max_height(220.0)
-        }),
+        .style(|s| s.flex_grow(1.0).max_height(220.0)),
     ))
     .style(|s| {
         s.flex_grow(1.0)

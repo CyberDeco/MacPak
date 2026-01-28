@@ -1,9 +1,9 @@
 //! Reusable selector components and utilities for dye lists
 
-use floem::prelude::*;
-use floem::text::Weight;
 use super::constants::*;
 use super::styles::{nav_button_style, selector_display_style};
+use floem::prelude::*;
+use floem::text::Weight;
 
 /// Calculate previous index with wrap-around
 pub fn prev_index(current: Option<usize>, len: usize) -> Option<usize> {
@@ -104,8 +104,7 @@ where
                 }
             }),
         // Current selection display
-        label(display_text)
-            .style(selector_display_style),
+        label(display_text).style(selector_display_style),
         // Next button
         {
             let on_next = on_next.clone();

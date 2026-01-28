@@ -20,16 +20,15 @@ pub fn preview_panel(state: BrowserState) -> impl IntoView {
                 // Placeholder when no file is selected
                 v_stack((
                     // Header matching the actual preview header style
-                    label(|| "Preview")
-                        .style(|s| {
-                            s.font_size(16.0)
-                                .font_weight(Weight::BOLD)
-                                .width_full()
-                                .padding(12.0)
-                                .background(Color::rgb8(248, 248, 248))
-                                .border_bottom(1.0)
-                                .border_color(Color::rgb8(220, 220, 220))
-                        }),
+                    label(|| "Preview").style(|s| {
+                        s.font_size(16.0)
+                            .font_weight(Weight::BOLD)
+                            .width_full()
+                            .padding(12.0)
+                            .background(Color::rgb8(248, 248, 248))
+                            .border_bottom(1.0)
+                            .border_color(Color::rgb8(220, 220, 220))
+                    }),
                     // Placeholder content
                     v_stack((
                         label(|| "📄").style(|s| s.font_size(64.0)),
@@ -47,21 +46,24 @@ pub fn preview_panel(state: BrowserState) -> impl IntoView {
                             .background(Color::WHITE)
                     }),
                 ))
-                .style(|s| {
-                    s.width_full()
-                        .height_full()
-                })
+                .style(|s| s.width_full().height_full())
                 .into_any()
             } else {
-                preview_content_view(preview_name, preview_info, preview_content, preview_image, state.clone())
-                    .into_any()
+                preview_content_view(
+                    preview_name,
+                    preview_info,
+                    preview_content,
+                    preview_image,
+                    state.clone(),
+                )
+                .into_any()
             }
         },
     )
     .style(|s| {
         s.flex_grow(1.0)
             .flex_basis(0.0)
-            .min_width(200.0)  // Minimum preview width
+            .min_width(200.0) // Minimum preview width
             .min_height(0.0)
             .border_left(1.0)
             .border_color(Color::rgb8(220, 220, 220))
@@ -99,13 +101,13 @@ fn preview_content_view(
                     let (version, data) = preview_image.get();
                     vec![(version, data)]
                 },
-                |(version, _)| *version,  // Use version as unique key to force new view creation
+                |(version, _)| *version, // Use version as unique key to force new view creation
                 move |(version, img_data)| {
                     if let Some(data) = img_data.clone() {
                         // Display image using custom RawImg view (no PNG encoding needed)
                         container(
                             raw_img(data.width, data.height, data.rgba_data, version)
-                                .style(|s| s.max_width_full().max_height_full())
+                                .style(|s| s.max_width_full().max_height_full()),
                         )
                         .style(|s| {
                             s.width_full()
@@ -118,12 +120,11 @@ fn preview_content_view(
                     } else {
                         // Display text with optional 3D preview button
                         v_stack((
-                            label(move || preview_content.get())
-                                .style(|s| {
-                                    s.width_full()
-                                        .font_family("monospace".to_string())
-                                        .font_size(12.0)
-                                }),
+                            label(move || preview_content.get()).style(|s| {
+                                s.width_full()
+                                    .font_family("monospace".to_string())
+                                    .font_size(12.0)
+                            }),
                             preview_3d_button(state.clone()),
                         ))
                         .style(|s| s.width_full().padding(12.0))
@@ -141,9 +142,5 @@ fn preview_content_view(
                 .background(Color::WHITE)
         }),
     ))
-    .style(|s| {
-        s.width_full()
-            .height_full()
-            .min_height(0.0)
-    })
+    .style(|s| s.width_full().height_full().min_height(0.0))
 }

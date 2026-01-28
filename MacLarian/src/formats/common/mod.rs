@@ -1,7 +1,7 @@
 //! Common types and utilities shared across all Larian formats
 
-pub mod types;
 pub(crate) mod hash;
+pub mod types;
 
 pub use types::*;
 

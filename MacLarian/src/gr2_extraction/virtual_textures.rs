@@ -43,7 +43,10 @@ pub fn extract_virtual_textures(
     if use_pak {
         // Use existing functionality to find GTP files in PAK
         let gtp_matches = find_gtp_files_in_pak(&vt_pak_path, &hashes)?;
-        tracing::info!("Found {} GTP matches in VirtualTextures.pak", gtp_matches.len());
+        tracing::info!(
+            "Found {} GTP matches in VirtualTextures.pak",
+            gtp_matches.len()
+        );
 
         for vt in virtual_textures {
             if vt.gtex_hash.is_empty() {
@@ -60,7 +63,12 @@ pub fn extract_virtual_textures(
             // Derive the GTS path from the GTP path
             let gts_rel_path = derive_gts_path(gtp_rel_path);
 
-            tracing::info!("Virtual texture {}: GTP={}, GTS={}", vt.name, gtp_rel_path, gts_rel_path);
+            tracing::info!(
+                "Virtual texture {}: GTP={}, GTS={}",
+                vt.name,
+                gtp_rel_path,
+                gts_rel_path
+            );
 
             match extract_virtual_texture_from_pak(
                 &vt_pak_path,
@@ -71,7 +79,11 @@ pub fn extract_virtual_textures(
             ) {
                 Ok(paths) => extracted_paths.extend(paths),
                 Err(e) => {
-                    tracing::warn!("Failed to extract virtual texture {} from PAK: {}", vt.name, e);
+                    tracing::warn!(
+                        "Failed to extract virtual texture {} from PAK: {}",
+                        vt.name,
+                        e
+                    );
                 }
             }
         }
@@ -164,14 +176,15 @@ pub fn extract_virtual_texture_from_pak(
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let unique_id = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let temp_dir = std::env::temp_dir().join(format!(
-        "maclarian_vt_{}_{}",
-        std::process::id(),
-        unique_id
-    ));
+    let temp_dir =
+        std::env::temp_dir().join(format!("maclarian_vt_{}_{}", std::process::id(), unique_id));
     std::fs::create_dir_all(&temp_dir)?;
 
-    tracing::info!("Reading virtual texture files from PAK: GTP={}, GTS={}", gtp_rel_path, gts_rel_path);
+    tracing::info!(
+        "Reading virtual texture files from PAK: GTP={}, GTS={}",
+        gtp_rel_path,
+        gts_rel_path
+    );
 
     // Read files using read_file_bytes which handles split PAKs correctly
     let gtp_data = match PakOperations::read_file_bytes(vt_pak_path, gtp_rel_path) {
@@ -179,7 +192,8 @@ pub fn extract_virtual_texture_from_pak(
         Err(e) => {
             let _ = std::fs::remove_dir_all(&temp_dir);
             return Err(Error::ConversionError(format!(
-                "Failed to read GTP from PAK: {}", e
+                "Failed to read GTP from PAK: {}",
+                e
             )));
         }
     };
@@ -189,25 +203,25 @@ pub fn extract_virtual_texture_from_pak(
         Err(e) => {
             let _ = std::fs::remove_dir_all(&temp_dir);
             return Err(Error::ConversionError(format!(
-                "Failed to read GTS from PAK: {}", e
+                "Failed to read GTS from PAK: {}",
+                e
             )));
         }
     };
 
     // Write to temp files
-    let gtp_path = temp_dir.join(
-        Path::new(gtp_rel_path).file_name().unwrap_or_default()
-    );
-    let gts_path = temp_dir.join(
-        Path::new(gts_rel_path).file_name().unwrap_or_default()
-    );
+    let gtp_path = temp_dir.join(Path::new(gtp_rel_path).file_name().unwrap_or_default());
+    let gts_path = temp_dir.join(Path::new(gts_rel_path).file_name().unwrap_or_default());
 
     std::fs::write(&gtp_path, &gtp_data)?;
     std::fs::write(&gts_path, &gts_data)?;
 
-    tracing::info!("Wrote temp files: GTP={} ({} bytes), GTS={} ({} bytes)",
-        gtp_path.display(), gtp_data.len(),
-        gts_path.display(), gts_data.len()
+    tracing::info!(
+        "Wrote temp files: GTP={} ({} bytes), GTS={} ({} bytes)",
+        gtp_path.display(),
+        gtp_data.len(),
+        gts_path.display(),
+        gts_data.len()
     );
 
     // Extract and convert

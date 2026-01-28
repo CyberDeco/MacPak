@@ -154,7 +154,9 @@ impl EditorTabsState {
         let tabs = self.tabs.get();
         if let Some(tab) = tabs.get(index) {
             if tab.modified.get() {
-                let file_name = tab.file_path.get()
+                let file_name = tab
+                    .file_path
+                    .get()
                     .as_ref()
                     .and_then(|p| std::path::Path::new(p).file_name())
                     .map(|n| n.to_string_lossy().to_string())
@@ -162,7 +164,10 @@ impl EditorTabsState {
 
                 let response = rfd::MessageDialog::new()
                     .set_title("Unsaved Changes")
-                    .set_description(&format!("'{}' has unsaved changes. Close anyway?", file_name))
+                    .set_description(&format!(
+                        "'{}' has unsaved changes. Close anyway?",
+                        file_name
+                    ))
                     .set_buttons(rfd::MessageButtons::YesNo)
                     .show();
 

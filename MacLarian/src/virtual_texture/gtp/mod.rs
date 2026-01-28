@@ -9,17 +9,17 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
-mod read_header;
-mod extract;
 mod accessors;
+mod extract;
+mod read_header;
 
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
-use crate::error::{Error, Result};
 use super::gts::GtsFile;
 use super::types::GtpHeader;
+use crate::error::{Error, Result};
 
 /// GTP file reader.
 pub struct GtpFile<R: Read + Seek> {

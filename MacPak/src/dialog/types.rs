@@ -160,7 +160,7 @@ pub enum NodeConstructor {
 }
 
 impl NodeConstructor {
-    #[must_use] 
+    #[must_use]
     pub fn from_str(s: &str) -> Self {
         match s {
             "TagAnswer" => NodeConstructor::TagAnswer,
@@ -181,7 +181,7 @@ impl NodeConstructor {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             NodeConstructor::TagAnswer => "TagAnswer",
@@ -203,7 +203,7 @@ impl NodeConstructor {
     }
 
     /// Returns a display-friendly name for UI
-    #[must_use] 
+    #[must_use]
     pub fn display_name(&self) -> &str {
         match self {
             NodeConstructor::TagAnswer => "Answer",
@@ -296,7 +296,7 @@ pub enum FlagType {
 }
 
 impl FlagType {
-    #[must_use] 
+    #[must_use]
     pub fn from_str(s: &str) -> Self {
         match s {
             "Local" => FlagType::Local,
@@ -309,7 +309,7 @@ impl FlagType {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             FlagType::Local => "Local",
@@ -362,19 +362,19 @@ pub struct GameData {
 
 // Convenience methods for Dialog
 impl Dialog {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Get a node by UUID
-    #[must_use] 
+    #[must_use]
     pub fn get_node(&self, uuid: &str) -> Option<&DialogNode> {
         self.nodes.get(uuid)
     }
 
     /// Get all root nodes
-    #[must_use] 
+    #[must_use]
     pub fn get_root_nodes(&self) -> Vec<&DialogNode> {
         self.root_nodes
             .iter()
@@ -383,7 +383,7 @@ impl Dialog {
     }
 
     /// Get children of a node
-    #[must_use] 
+    #[must_use]
     pub fn get_children(&self, node: &DialogNode) -> Vec<&DialogNode> {
         node.children
             .iter()
@@ -392,27 +392,28 @@ impl Dialog {
     }
 
     /// Get speaker info by index
-    #[must_use] 
+    #[must_use]
     pub fn get_speaker(&self, index: i32) -> Option<&SpeakerInfo> {
         self.speakers.get(&index)
     }
 
     /// Get the primary text for a node (first text entry, first tag text)
-    #[must_use] 
+    #[must_use]
     pub fn get_node_text<'a>(&self, node: &'a DialogNode) -> Option<&'a TagTextEntry> {
-        node.tagged_texts.first()
+        node.tagged_texts
+            .first()
             .and_then(|tt| tt.tag_texts.first())
     }
 
     /// Count total nodes
-    #[must_use] 
+    #[must_use]
     pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
 }
 
 impl DialogNode {
-    #[must_use] 
+    #[must_use]
     pub fn new(uuid: String, constructor: NodeConstructor) -> Self {
         Self {
             uuid,
@@ -422,23 +423,23 @@ impl DialogNode {
     }
 
     /// Check if this node has any text
-    #[must_use] 
+    #[must_use]
     pub fn has_text(&self) -> bool {
-        self.tagged_texts.iter()
-            .any(|tt| !tt.tag_texts.is_empty())
+        self.tagged_texts.iter().any(|tt| !tt.tag_texts.is_empty())
     }
 
     /// Get all text handles from this node
-    #[must_use] 
+    #[must_use]
     pub fn get_text_handles(&self) -> Vec<&str> {
-        self.tagged_texts.iter()
+        self.tagged_texts
+            .iter()
             .flat_map(|tt| tt.tag_texts.iter())
             .map(|t| t.handle.as_str())
             .collect()
     }
 
     /// Check if this node is a roll type
-    #[must_use] 
+    #[must_use]
     pub fn is_roll(&self) -> bool {
         matches!(
             self.constructor,
@@ -447,13 +448,13 @@ impl DialogNode {
     }
 
     /// Check if this node is a question type
-    #[must_use] 
+    #[must_use]
     pub fn is_question(&self) -> bool {
         matches!(self.constructor, NodeConstructor::TagQuestion)
     }
 
     /// Check if this node is an answer type
-    #[must_use] 
+    #[must_use]
     pub fn is_answer(&self) -> bool {
         matches!(self.constructor, NodeConstructor::TagAnswer)
     }

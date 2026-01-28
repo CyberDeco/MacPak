@@ -9,9 +9,9 @@
 //! - `VirtualTextures.json` (Script Extender) - has `GTex` hash → GTS path mapping
 //! - `VTexConfig.xml` - has `TileSet` name and texture definitions
 
-use std::path::{Path, PathBuf};
-use serde::Deserialize;
 use quick_xml::de::from_str as xml_from_str;
+use serde::Deserialize;
+use std::path::{Path, PathBuf};
 
 /// VirtualTextures.json structure (Script Extender)
 #[derive(Debug, Deserialize)]
@@ -118,10 +118,7 @@ pub fn load_virtual_textures_json(mod_root: &Path, mod_name: &str) -> Option<Vir
 /// Load VTexConfig.xml from a mod
 #[must_use]
 pub fn load_vtex_config_xml(mod_root: &Path, mod_name: &str) -> Option<VTexConfigXml> {
-    let xml_path = mod_root
-        .join("Mods")
-        .join(mod_name)
-        .join("VTexConfig.xml");
+    let xml_path = mod_root.join("Mods").join(mod_name).join("VTexConfig.xml");
 
     if !xml_path.exists() {
         return None;
@@ -147,7 +144,9 @@ pub fn load_mod_config(gtp_path: &Path) -> Option<ModConfig> {
 
     // Extract tileset name and GTex hashes from VTexConfig.xml
     let (tileset_name, gtex_hashes) = if let Some(ref xml) = vtex_xml {
-        let hashes = xml.textures.as_ref()
+        let hashes = xml
+            .textures
+            .as_ref()
             .map(|t| t.textures.iter().map(|tex| tex.name.clone()).collect())
             .unwrap_or_default();
         (Some(xml.name.clone()), hashes)
@@ -175,4 +174,3 @@ pub fn find_gts_for_gtex(config: &ModConfig, gtex_hash: &str) -> Option<PathBuf>
     }
     None
 }
-

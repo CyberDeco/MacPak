@@ -8,7 +8,7 @@ use floem::prelude::*;
 use floem::text::Weight;
 use floem::views::PlaceholderTextClass;
 
-use super::{meta_generator, generate_uuid, UuidFormat};
+use super::{UuidFormat, generate_uuid, meta_generator};
 
 /// Check if a string is a valid UUID format (8-4-4-4-12 hex chars with dashes)
 fn is_valid_uuid(s: &str) -> bool {
@@ -90,9 +90,22 @@ where
     let version_patch = RwSignal::new(0u32);
     let version_build = RwSignal::new(0u32);
 
-    meta_dialog_impl(show, mod_name, author, description, uuid,
-        version_major, version_minor, version_patch, version_build,
-        on_create, status_message, "Generate meta.lsx", "Create", None::<fn() -> Box<dyn View>>)
+    meta_dialog_impl(
+        show,
+        mod_name,
+        author,
+        description,
+        uuid,
+        version_major,
+        version_minor,
+        version_patch,
+        version_build,
+        on_create,
+        status_message,
+        "Generate meta.lsx",
+        "Create",
+        None::<fn() -> Box<dyn View>>,
+    )
 }
 
 /// Create the meta.lsx dialog UI with external signals (for dyes export)
@@ -112,10 +125,22 @@ where
         signals.uuid.set(generate_uuid(UuidFormat::Standard));
     }
 
-    meta_dialog_impl(show, signals.mod_name, signals.author, signals.description,
-        signals.uuid, signals.version_major, signals.version_minor,
-        signals.version_patch, signals.version_build,
-        on_create, status_message, title, button_text, None::<fn() -> Box<dyn View>>)
+    meta_dialog_impl(
+        show,
+        signals.mod_name,
+        signals.author,
+        signals.description,
+        signals.uuid,
+        signals.version_major,
+        signals.version_minor,
+        signals.version_patch,
+        signals.version_build,
+        on_create,
+        status_message,
+        title,
+        button_text,
+        None::<fn() -> Box<dyn View>>,
+    )
 }
 
 /// Create the meta.lsx dialog UI with external signals and extra content (for dyes export with vendor selection)
@@ -138,10 +163,22 @@ where
         signals.uuid.set(generate_uuid(UuidFormat::Standard));
     }
 
-    meta_dialog_impl(show, signals.mod_name, signals.author, signals.description,
-        signals.uuid, signals.version_major, signals.version_minor,
-        signals.version_patch, signals.version_build,
-        on_create, status_message, title, button_text, Some(extra_content))
+    meta_dialog_impl(
+        show,
+        signals.mod_name,
+        signals.author,
+        signals.description,
+        signals.uuid,
+        signals.version_major,
+        signals.version_minor,
+        signals.version_patch,
+        signals.version_build,
+        on_create,
+        status_message,
+        title,
+        button_text,
+        Some(extra_content),
+    )
 }
 
 /// Implementation of meta dialog with configurable signals
@@ -188,15 +225,14 @@ where
                     meta_text_field("Author", author, "Your Name (e.g., Nexus Mods username)..."),
                 ))
                 .style(|s| s.width_full().gap(12.0)),
-
                 // Row 2: Description (full width)
                 meta_text_field("Description", description, "A short description..."),
-
                 // Row 3: UUID and Version on same row
                 h_stack((
                     // UUID with regenerate button
                     v_stack((
-                        label(|| "UUID").style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
+                        label(|| "UUID")
+                            .style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
                         h_stack((
                             text_input(uuid)
                                 .style(|s| {
@@ -217,11 +253,11 @@ where
                                 }),
                             {
                                 let uuid = uuid;
-                                button("Regenerate")
-                                    .style(|s| s.margin_left(8.0))
-                                    .action(move || {
+                                button("Regenerate").style(|s| s.margin_left(8.0)).action(
+                                    move || {
                                         uuid.set(generate_uuid(UuidFormat::Standard));
-                                    })
+                                    },
+                                )
                             },
                         ))
                         .style(|s| s.width_full().items_center()),
@@ -229,7 +265,8 @@ where
                     .style(|s| s.flex_grow(1.0).gap(4.0)),
                     // Version fields
                     v_stack((
-                        label(|| "Version").style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
+                        label(|| "Version")
+                            .style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
                         h_stack((
                             meta_version_field(version_major, "Major"),
                             label(|| ".").style(|s| s.font_size(16.0).margin_horiz(2.0)),
@@ -309,27 +346,27 @@ where
             // Dialog box
             v_stack((
                 // Header
-                label(move || title)
-                    .style(|s| s.font_size(18.0).font_weight(Weight::BOLD).margin_bottom(16.0)),
+                label(move || title).style(|s| {
+                    s.font_size(18.0)
+                        .font_weight(Weight::BOLD)
+                        .margin_bottom(16.0)
+                }),
                 form_fields,
                 // Extra content (if provided)
-                dyn_container(
-                    move || has_extra,
-                    {
-                        let extra = extra.clone();
-                        move |show_extra| {
-                            if show_extra {
-                                if let Some(ref content_fn) = extra {
-                                    content_fn().into_any()
-                                } else {
-                                    empty().into_any()
-                                }
+                dyn_container(move || has_extra, {
+                    let extra = extra.clone();
+                    move |show_extra| {
+                        if show_extra {
+                            if let Some(ref content_fn) = extra {
+                                content_fn().into_any()
                             } else {
                                 empty().into_any()
                             }
+                        } else {
+                            empty().into_any()
                         }
                     }
-                ),
+                }),
                 buttons,
             ))
             .style(move |s| {
@@ -376,16 +413,16 @@ fn meta_text_field(
 ) -> impl IntoView {
     v_stack((
         label(move || label_text).style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100))),
-        text_input(signal)
-            .placeholder(placeholder)
-            .style(|s| {
-                s.width_full()
-                    .padding(8.0)
-                    .border(1.0)
-                    .border_color(Color::rgb8(200, 200, 200))
-                    .border_radius(4.0)
-                    .class(PlaceholderTextClass, |s| s.color(Color::rgb8(120, 120, 120)))
-            }),
+        text_input(signal).placeholder(placeholder).style(|s| {
+            s.width_full()
+                .padding(8.0)
+                .border(1.0)
+                .border_color(Color::rgb8(200, 200, 200))
+                .border_radius(4.0)
+                .class(PlaceholderTextClass, |s| {
+                    s.color(Color::rgb8(120, 120, 120))
+                })
+        }),
     ))
     .style(|s| s.flex_grow(1.0).gap(4.0))
 }
@@ -401,7 +438,9 @@ fn meta_version_field(signal: RwSignal<u32>, placeholder: &'static str) -> impl 
                 .border(1.0)
                 .border_color(Color::rgb8(200, 200, 200))
                 .border_radius(4.0)
-                .class(PlaceholderTextClass, |s| s.color(Color::rgb8(120, 120, 120)))
+                .class(PlaceholderTextClass, |s| {
+                    s.color(Color::rgb8(120, 120, 120))
+                })
         })
         .on_event(floem::event::EventListener::FocusLost, move |_| {
             // Parse and update the u32 signal when focus is lost

@@ -3,10 +3,10 @@
 use std::thread;
 
 use floem::prelude::*;
-use maclarian::pak::{find_pak_files, find_packable_folders, batch_extract, batch_create};
+use maclarian::pak::{batch_create, batch_extract, find_packable_folders, find_pak_files};
 
+use super::super::types::{PakResult, create_result_sender, get_shared_progress};
 use crate::gui::state::{ActiveDialog, PakOpsState};
-use super::super::types::{create_result_sender, get_shared_progress, PakResult};
 
 /// Batch extract multiple PAK files from a folder (recursively)
 pub fn batch_extract_paks(state: PakOpsState) {
@@ -69,7 +69,10 @@ pub fn batch_extract_paks(state: PakOpsState) {
             &source_dir,
             &dest_dir,
             |progress: &maclarian::pak::PakProgress| {
-                let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+                let desc = progress
+                    .current_file
+                    .as_deref()
+                    .unwrap_or(progress.phase.as_str());
                 shared_progress.update(progress.current, progress.total, desc);
             },
         );
@@ -144,7 +147,10 @@ pub fn batch_create_paks(state: PakOpsState) {
             &source_dir,
             &dest_dir,
             |progress: &maclarian::pak::PakProgress| {
-                let desc = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+                let desc = progress
+                    .current_file
+                    .as_deref()
+                    .unwrap_or(progress.phase.as_str());
                 shared_progress.update(progress.current, progress.total, desc);
             },
         );

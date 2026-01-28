@@ -5,13 +5,12 @@ use std::path::Path;
 use indicatif::{ProgressBar, ProgressStyle};
 use walkdir::WalkDir;
 
-use crate::converter::{convert_dds_to_png, convert_png_to_dds_with_format, DdsFormat};
+use crate::converter::{DdsFormat, convert_dds_to_png, convert_png_to_dds_with_format};
 
 /// Show info about a DDS texture file
 pub fn info(path: &Path) -> anyhow::Result<()> {
     let file = std::fs::File::open(path)?;
-    let dds = ddsfile::Dds::read(file)
-        .map_err(|e| anyhow::anyhow!("Failed to read DDS: {e}"))?;
+    let dds = ddsfile::Dds::read(file).map_err(|e| anyhow::anyhow!("Failed to read DDS: {e}"))?;
 
     println!("DDS Information: {}", path.display());
     println!();
@@ -98,7 +97,11 @@ pub fn batch_convert(
         .collect();
 
     if files.is_empty() {
-        println!("No {} files found in: {}", source_ext.to_uppercase(), dir.display());
+        println!(
+            "No {} files found in: {}",
+            source_ext.to_uppercase(),
+            dir.display()
+        );
         return Ok(());
     }
 
@@ -124,9 +127,7 @@ pub fn batch_convert(
 
     for entry in &files {
         let relative = entry.path().strip_prefix(dir).unwrap_or(entry.path());
-        let output_path = output_dir
-            .join(relative)
-            .with_extension(target_ext);
+        let output_path = output_dir.join(relative).with_extension(target_ext);
 
         // Create parent directory
         if let Some(parent) = output_path.parent() {
@@ -173,8 +174,6 @@ fn parse_dds_format(s: &str) -> anyhow::Result<DdsFormat> {
         "bc2" | "dxt3" => Ok(DdsFormat::BC2),
         "bc3" | "dxt5" => Ok(DdsFormat::BC3),
         "rgba" | "uncompressed" => Ok(DdsFormat::Rgba),
-        other => anyhow::bail!(
-            "Unknown DDS format: '{other}'. Valid options: bc1, bc2, bc3, rgba"
-        ),
+        other => anyhow::bail!("Unknown DDS format: '{other}'. Valid options: bc1, bc2, bc3, rgba"),
     }
 }

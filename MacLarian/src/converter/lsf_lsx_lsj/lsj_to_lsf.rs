@@ -27,29 +27,58 @@ pub fn convert_lsj_to_lsf_with_progress<P: AsRef<Path>>(
     dest: P,
     progress: crate::converter::ConvertProgressCallback,
 ) -> Result<()> {
-    use crate::converter::{ConvertProgress, ConvertPhase};
-    tracing::info!("Converting LSJ→LSF: {:?} → {:?}", source.as_ref(), dest.as_ref());
+    use crate::converter::{ConvertPhase, ConvertProgress};
+    tracing::info!(
+        "Converting LSJ→LSF: {:?} → {:?}",
+        source.as_ref(),
+        dest.as_ref()
+    );
 
     // Step 1: Read LSJ
-    progress(&ConvertProgress::with_file(ConvertPhase::ReadingSource, 1, 5, "Reading LSJ file..."));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::ReadingSource,
+        1,
+        5,
+        "Reading LSJ file...",
+    ));
     let lsj_doc = lsj::read_lsj(&source)?;
 
     // Step 2: Convert to LSX document structure
     let region_count = lsj_doc.save.regions.len();
-    progress(&ConvertProgress::with_file(ConvertPhase::Converting, 2, 5, format!("Converting {region_count} regions to XML...")));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::Converting,
+        2,
+        5,
+        format!("Converting {region_count} regions to XML..."),
+    ));
     let lsx_doc = super::lsj_to_lsx::to_lsx(&lsj_doc)?;
 
     // Step 3: Serialize LSX to XML string
-    progress(&ConvertProgress::with_file(ConvertPhase::Converting, 3, 5, "Serializing XML..."));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::Converting,
+        3,
+        5,
+        "Serializing XML...",
+    ));
     let lsx_xml = lsx::serialize_lsx(&lsx_doc)?;
 
     // Step 4: Parse XML and convert to LSF
-    progress(&ConvertProgress::with_file(ConvertPhase::Converting, 4, 5, "Converting to LSF binary..."));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::Converting,
+        4,
+        5,
+        "Converting to LSF binary...",
+    ));
     let lsf_doc = super::lsx_to_lsf::from_lsx(&lsx_xml)?;
 
     // Step 5: Write LSF
     let node_count = lsf_doc.nodes.len();
-    progress(&ConvertProgress::with_file(ConvertPhase::WritingOutput, 5, 5, format!("Writing LSF binary ({node_count} nodes)...")));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::WritingOutput,
+        5,
+        5,
+        format!("Writing LSF binary ({node_count} nodes)..."),
+    ));
     lsf::write_lsf(&lsf_doc, dest)?;
 
     tracing::info!("Conversion complete");

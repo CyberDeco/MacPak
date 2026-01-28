@@ -59,7 +59,10 @@ pub fn handle_gr2_result(state: Gr2State, result: Gr2Result) {
             let status = if error_count == 0 {
                 format!("Converted {} files successfully!", success_count)
             } else {
-                format!("Completed: {} succeeded, {} failed", success_count, error_count)
+                format!(
+                    "Completed: {} succeeded, {} failed",
+                    success_count, error_count
+                )
             };
             state.status_message.set(status);
             state.is_converting.set(false);

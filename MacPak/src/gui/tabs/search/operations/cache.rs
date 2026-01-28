@@ -44,26 +44,29 @@ pub fn auto_load_cached_index(state: SearchState) {
     });
 
     // Load in background thread
-    let send = create_ext_action(Scope::new(), move |result: Result<(usize, usize), String>| {
-        match result {
-            Ok((file_count, pak_count)) => {
-                index_status.set(IndexStatus::Ready {
-                    file_count,
-                    pak_count,
-                });
-                tracing::info!(
-                    "Auto-loaded cached index: {} files from {} PAKs",
-                    file_count,
-                    pak_count
-                );
+    let send = create_ext_action(
+        Scope::new(),
+        move |result: Result<(usize, usize), String>| {
+            match result {
+                Ok((file_count, pak_count)) => {
+                    index_status.set(IndexStatus::Ready {
+                        file_count,
+                        pak_count,
+                    });
+                    tracing::info!(
+                        "Auto-loaded cached index: {} files from {} PAKs",
+                        file_count,
+                        pak_count
+                    );
+                }
+                Err(e) => {
+                    // Silently fail - user can manually rebuild
+                    tracing::warn!("Failed to auto-load cached index: {}", e);
+                    index_status.set(IndexStatus::NotBuilt);
+                }
             }
-            Err(e) => {
-                // Silently fail - user can manually rebuild
-                tracing::warn!("Failed to auto-load cached index: {}", e);
-                index_status.set(IndexStatus::NotBuilt);
-            }
-        }
-    });
+        },
+    );
 
     std::thread::spawn(move || {
         let result = index

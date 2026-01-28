@@ -4,8 +4,10 @@ use floem::prelude::*;
 use std::path::Path;
 use std::thread;
 
+use super::super::types::{
+    PakResult, create_progress_sender, create_result_sender, get_shared_progress,
+};
 use crate::gui::state::{ActiveDialog, PakOpsState};
-use super::super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
 
 /// List contents of a PAK file via file dialog
 pub fn list_pak_contents(state: PakOpsState) {
@@ -54,10 +56,7 @@ pub fn list_pak_contents(state: PakOpsState) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = maclarian::pak::PakOperations::list_with_progress(
-            &pak_path,
-            &progress_sender,
-        );
+        let result = maclarian::pak::PakOperations::list_with_progress(&pak_path, &progress_sender);
 
         let pak_result = match result {
             Ok(files) => PakResult::ListDone {
@@ -103,10 +102,7 @@ pub fn list_dropped_file(state: PakOpsState, pak_path: String) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = maclarian::pak::PakOperations::list_with_progress(
-            &pak_path,
-            &progress_sender,
-        );
+        let result = maclarian::pak::PakOperations::list_with_progress(&pak_path, &progress_sender);
 
         let pak_result = match result {
             Ok(files) => PakResult::ListDone {

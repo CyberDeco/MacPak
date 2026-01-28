@@ -37,10 +37,10 @@ pub struct GltfSampler {
 impl Default for GltfSampler {
     fn default() -> Self {
         Self {
-            mag_filter: Some(9729),  // LINEAR
-            min_filter: Some(9987),  // LINEAR_MIPMAP_LINEAR
-            wrap_s: Some(10497),     // REPEAT
-            wrap_t: Some(10497),     // REPEAT
+            mag_filter: Some(9729), // LINEAR
+            min_filter: Some(9987), // LINEAR_MIPMAP_LINEAR
+            wrap_s: Some(10497),    // REPEAT
+            wrap_t: Some(10497),    // REPEAT
         }
     }
 }

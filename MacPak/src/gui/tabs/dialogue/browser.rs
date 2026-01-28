@@ -1,15 +1,15 @@
 //! Dialog file browser panel
 
+use super::operations;
+use crate::gui::state::{DialogEntry, DialogueState};
 use floem::prelude::*;
 use floem::text::Weight;
-use floem::views::{virtual_list, VirtualDirection, VirtualItemSize};
+use floem::views::{VirtualDirection, VirtualItemSize, virtual_list};
 use im::Vector as ImVector;
-use crate::gui::state::{DialogueState, DialogEntry};
-use super::operations;
 
 const ROW_HEIGHT: f64 = 44.0;
-const ROW_PADDING: f64 = 24.0;  // 12px on each side
-const CHAR_WIDTH: f64 = 7.0;    // estimated average character width at 13px font
+const ROW_PADDING: f64 = 24.0; // 12px on each side
+const CHAR_WIDTH: f64 = 7.0; // estimated average character width at 13px font
 
 /// Left panel showing available dialog files
 pub fn browser_panel(state: DialogueState) -> impl IntoView {
@@ -20,7 +20,6 @@ pub fn browser_panel(state: DialogueState) -> impl IntoView {
     v_stack((
         // Search box
         search_box(state_for_search),
-
         // Count label
         label(move || {
             let count = state_for_count.available_dialogs.get().len();
@@ -33,14 +32,13 @@ pub fn browser_panel(state: DialogueState) -> impl IntoView {
                 .border_bottom(1.0)
                 .border_color(Color::rgb8(230, 230, 230))
         }),
-
         // Dialog list using virtual_list like browser tab
         dialog_list(state_for_list, state.browser_panel_width),
     ))
     .style(|s| {
         s.width_full()
             .height_full()
-            .min_height(0.0)  // Critical for scroll to work
+            .min_height(0.0) // Critical for scroll to work
             .background(Color::WHITE)
             .border_right(1.0)
             .border_color(Color::rgb8(220, 220, 220))
@@ -62,7 +60,7 @@ fn search_box(state: DialogueState) -> impl IntoView {
                     .border_radius(4.0)
                     .border_color(Color::rgb8(200, 200, 200))
                     .font_size(13.0)
-            })
+            }),
     )
     .style(|s| s.width_full().padding(8.0))
 }
@@ -76,8 +74,13 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
 
     // Cache the filtered results to avoid returning a new collection on every call
     // which could cause floem to think data changed and reset scroll
-    let cached_result: std::rc::Rc<std::cell::RefCell<(Vec<DialogEntry>, String, ImVector<DialogEntry>)>> =
-        std::rc::Rc::new(std::cell::RefCell::new((Vec::new(), String::new(), ImVector::new())));
+    let cached_result: std::rc::Rc<
+        std::cell::RefCell<(Vec<DialogEntry>, String, ImVector<DialogEntry>)>,
+    > = std::rc::Rc::new(std::cell::RefCell::new((
+        Vec::new(),
+        String::new(),
+        ImVector::new(),
+    )));
     let cache = cached_result.clone();
 
     // virtual_list handles empty data gracefully
@@ -94,8 +97,8 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
                 let (cached_dialogs, cached_search, cached_im) = &mut *cache_ref;
 
                 // Only recompute if source data or search changed
-                let dialogs_changed = cached_dialogs.len() != dialogs.len() ||
-                    cached_dialogs.first().map(|d| &d.path) != dialogs.first().map(|d| &d.path);
+                let dialogs_changed = cached_dialogs.len() != dialogs.len()
+                    || cached_dialogs.first().map(|d| &d.path) != dialogs.first().map(|d| &d.path);
                 let search_changed = cached_search != &search;
 
                 if dialogs_changed || search_changed {
@@ -103,9 +106,12 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
                         dialogs.clone()
                     } else {
                         let search_lower = search.to_lowercase();
-                        dialogs.iter()
-                            .filter(|d| d.name.to_lowercase().contains(&search_lower) ||
-                                        d.path.to_lowercase().contains(&search_lower))
+                        dialogs
+                            .iter()
+                            .filter(|d| {
+                                d.name.to_lowercase().contains(&search_lower)
+                                    || d.path.to_lowercase().contains(&search_lower)
+                            })
                             .cloned()
                             .collect()
                     };
@@ -128,12 +134,15 @@ fn dialog_list(state: DialogueState, panel_width: RwSignal<f64>) -> impl IntoVie
                         // resetting scroll position when clicking on rows
                         .on_event_stop(floem::event::EventListener::PointerDown, |_| {})
                         .on_click_stop(move |_| {
-                            operations::load_dialog_entry(state_click.clone(), entry_for_load.clone());
+                            operations::load_dialog_entry(
+                                state_click.clone(),
+                                entry_for_load.clone(),
+                            );
                         })
                 }
             },
         )
-        .style(|s| s.width_full().flex_col())
+        .style(|s| s.width_full().flex_col()),
     )
     .style(|s| {
         s.width_full()
@@ -152,7 +161,8 @@ fn dialog_row(
     let path = entry.path.clone();
     let name = entry.name.clone();
     // Show only the directory path, not the filename (already shown above)
-    let display_path = entry.path
+    let display_path = entry
+        .path
         .rfind(|c| c == '/' || c == '\\')
         .map(|i| entry.path[..i].to_string())
         .unwrap_or_default();

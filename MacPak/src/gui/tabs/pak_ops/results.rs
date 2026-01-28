@@ -3,7 +3,7 @@
 use floem::prelude::*;
 use floem::style::AlignItems;
 use floem::text::Weight;
-use floem::views::{text_input, virtual_list, VirtualDirection, VirtualItemSize};
+use floem::views::{VirtualDirection, VirtualItemSize, text_input, virtual_list};
 use im::Vector as ImVector;
 
 use crate::gui::state::PakOpsState;
@@ -71,7 +71,9 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
 
     // Count failures for badge
     let failure_count = move || {
-        state.results_log.get()
+        state
+            .results_log
+            .get()
             .iter()
             .filter(|msg| is_error_message(msg))
             .count()
@@ -99,19 +101,17 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
             ),
             empty().style(|s| s.flex_grow(1.0)),
             // Search input
-            text_input(file_search)
-                .placeholder("Search...")
-                .style(|s| {
-                    s.width(180.0)
-                        .height(26.0)
-                        .padding_horiz(8.0)
-                        .border(1.0)
-                        .border_color(Color::rgb8(200, 200, 200))
-                        .border_radius(4.0)
-                        .font_size(12.0)
-                        .background(Color::WHITE)
-                        .margin_right(8.0)
-                }),
+            text_input(file_search).placeholder("Search...").style(|s| {
+                s.width(180.0)
+                    .height(26.0)
+                    .padding_horiz(8.0)
+                    .border(1.0)
+                    .border_color(Color::rgb8(200, 200, 200))
+                    .border_radius(4.0)
+                    .font_size(12.0)
+                    .background(Color::WHITE)
+                    .margin_right(8.0)
+            }),
             // Show Failures Only toggle button
             button(label(move || {
                 let count = failure_count();
@@ -134,8 +134,7 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
                     .margin_right(8.0);
 
                 if is_active {
-                    s.background(Color::rgb8(211, 47, 47))
-                        .color(Color::WHITE)
+                    s.background(Color::rgb8(211, 47, 47)).color(Color::WHITE)
                 } else if has_failures {
                     s.background(Color::rgb8(255, 235, 235))
                         .color(Color::rgb8(180, 30, 30))
@@ -164,7 +163,12 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
                     file_search.set(String::new());
                 }),
         ))
-        .style(|s| s.width_full().margin_bottom(8.0).gap(4.0).align_items(AlignItems::Center)),
+        .style(|s| {
+            s.width_full()
+                .margin_bottom(8.0)
+                .gap(4.0)
+                .align_items(AlignItems::Center)
+        }),
         // Virtual list for results
         scroll(
             virtual_list(
@@ -176,22 +180,21 @@ fn results_log_section(state: PakOpsState) -> impl IntoView {
                     let is_error = is_error_message(&msg);
                     let is_success = msg.starts_with('✅') || msg.starts_with('✓');
 
-                    container(
-                        label(move || msg.clone())
-                            .style(move |s| {
-                                let s = s.font_size(11.0)
-                                    .font_family("Monaco, Menlo, monospace".to_string());
-                                if is_error {
-                                    s.color(Color::rgb8(180, 30, 30))
-                                } else if is_success {
-                                    s.color(Color::rgb8(46, 125, 50))
-                                } else {
-                                    s.color(Color::rgb8(60, 60, 60))
-                                }
-                            }),
-                    )
+                    container(label(move || msg.clone()).style(move |s| {
+                        let s = s
+                            .font_size(11.0)
+                            .font_family("Monaco, Menlo, monospace".to_string());
+                        if is_error {
+                            s.color(Color::rgb8(180, 30, 30))
+                        } else if is_success {
+                            s.color(Color::rgb8(46, 125, 50))
+                        } else {
+                            s.color(Color::rgb8(60, 60, 60))
+                        }
+                    }))
                     .style(move |s| {
-                        let s = s.width_full()
+                        let s = s
+                            .width_full()
                             .height(LOG_ITEM_HEIGHT)
                             .padding_vert(2.0)
                             .padding_horiz(8.0);

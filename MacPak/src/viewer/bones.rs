@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 
 use bevy::color::palettes::tailwind;
-use bevy::prelude::*;
 use bevy::mesh::skinning::SkinnedMesh;
+use bevy::prelude::*;
 
 use crate::viewer::types::ViewSettings;
 

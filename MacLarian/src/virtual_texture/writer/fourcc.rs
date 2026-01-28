@@ -12,9 +12,9 @@
 //! - 8: Binary data
 //! - 0x0D: GUID (16 bytes)
 
-use std::io::{Write, Seek, SeekFrom};
 use crate::error::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
+use std::io::{Seek, SeekFrom, Write};
 
 /// Format codes for `FourCC` nodes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,25 +41,13 @@ pub enum FourCCNode {
         children: Vec<FourCCNode>,
     },
     /// String value
-    String {
-        fourcc: [u8; 4],
-        value: String,
-    },
+    String { fourcc: [u8; 4], value: String },
     /// Integer value
-    Int {
-        fourcc: [u8; 4],
-        value: u32,
-    },
+    Int { fourcc: [u8; 4], value: u32 },
     /// Binary data
-    Binary {
-        fourcc: [u8; 4],
-        data: Vec<u8>,
-    },
+    Binary { fourcc: [u8; 4], data: Vec<u8> },
     /// GUID value
-    Guid {
-        fourcc: [u8; 4],
-        guid: [u8; 16],
-    },
+    Guid { fourcc: [u8; 4], guid: [u8; 16] },
 }
 
 impl FourCCNode {

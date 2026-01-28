@@ -10,6 +10,6 @@ pub mod vendors;
 
 pub use config_dialog::config_dialog;
 pub use errors::show_file_error;
-pub use uuid::{generate_uuid, UuidFormat};
 pub use meta_generator::generate_meta_lsx;
+pub use uuid::{UuidFormat, generate_uuid};
 pub use vendors::vendor_selection_section;

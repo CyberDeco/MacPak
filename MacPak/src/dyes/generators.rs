@@ -1,10 +1,10 @@
 //! Content generation functions for dye mod files
 
-use std::collections::HashMap;
 use super::registry::DEFAULT_HEX;
+use std::collections::HashMap;
 
 /// Convert sRGB color value to linear (inverse gamma correction)
-#[must_use] 
+#[must_use]
 pub fn srgb_to_linear(c: f32) -> f32 {
     if c <= 0.04045 {
         c / 12.92
@@ -15,7 +15,7 @@ pub fn srgb_to_linear(c: f32) -> f32 {
 
 /// Convert hex color (e.g., "FF0000") to fvec3 string (e.g., "1 0 0")
 /// Applies inverse gamma correction since game expects colors in linear space
-#[must_use] 
+#[must_use]
 pub fn hex_to_fvec3(hex: &str) -> String {
     let hex = hex.trim_start_matches('#');
     if hex.len() != 6 {
@@ -69,15 +69,14 @@ fn generate_color_nodes_impl(colors: &HashMap<String, String>, include_defaults:
 
 /// Generate `Vector3Parameters` XML nodes, skipping default colors
 /// Use for new mod exports where unchanged colors shouldn't be included
-#[must_use] 
+#[must_use]
 pub fn generate_color_nodes(colors: &HashMap<String, String>) -> String {
     generate_color_nodes_impl(colors, false)
 }
 
 /// Generate `Vector3Parameters` XML nodes, including ALL colors
 /// Use for re-exporting imported mods where all colors should be preserved
-#[must_use] 
+#[must_use]
 pub fn generate_all_color_nodes(colors: &HashMap<String, String>) -> String {
     generate_color_nodes_impl(colors, true)
 }
-

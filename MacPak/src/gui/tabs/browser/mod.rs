@@ -22,9 +22,9 @@ use preview::preview_panel;
 use status_bar::browser_status_bar;
 use toolbar::browser_toolbar;
 
-pub use preview_3d::kill_preview_process;
 pub use operations::cleanup_temp_files;
 pub use operations::open_folder_dialog;
+pub use preview_3d::kill_preview_process;
 
 pub fn browser_tab(
     _app_state: AppState,
@@ -45,7 +45,7 @@ pub fn browser_tab(
         s.width_full()
             .flex_grow(1.0)
             .flex_basis(0.0)
-            .min_height(0.0)  // Allow shrinking for scroll to work
+            .min_height(0.0) // Allow shrinking for scroll to work
     });
 
     // Stack main content with loading overlay and GR2 dialog
@@ -54,11 +54,7 @@ pub fn browser_tab(
         loading_overlay(browser_state_overlay),
         gr2_conversion_dialog(browser_state_dialog, config_state),
     )
-        .style(|s| {
-            s.width_full()
-                .height_full()
-                .position(Position::Relative)
-        })
+        .style(|s| s.width_full().height_full().position(Position::Relative))
 }
 
 fn browser_content(
@@ -154,15 +150,12 @@ fn loading_overlay(state: BrowserState) -> impl IntoView {
                         label(move || message.clone())
                             .style(|s| s.font_size(14.0).margin_bottom(16.0)),
                         // Indeterminate progress indicator (animated bar)
-                        container(
-                            container(empty())
-                                .style(|s| {
-                                    s.height_full()
-                                        .width_pct(30.0)
-                                        .background(Color::rgb8(76, 175, 80))
-                                        .border_radius(4.0)
-                                })
-                        )
+                        container(container(empty()).style(|s| {
+                            s.height_full()
+                                .width_pct(30.0)
+                                .background(Color::rgb8(76, 175, 80))
+                                .border_radius(4.0)
+                        }))
                         .style(|s| {
                             s.width_full()
                                 .height(8.0)

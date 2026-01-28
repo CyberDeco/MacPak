@@ -8,10 +8,10 @@
 
 #![allow(clippy::cast_possible_truncation)]
 
-use std::path::Path;
-use crate::error::Result;
-use super::{Gr2File, Compression, PointerSize};
+use super::{Compression, Gr2File, PointerSize};
 use crate::converter::gr2_gltf::to_gltf::Gr2Reader;
+use crate::error::Result;
+use std::path::Path;
 
 /// Information about a GR2 file.
 #[derive(Debug, Clone)]
@@ -44,21 +44,26 @@ pub fn inspect_gr2<P: AsRef<Path>>(source: P) -> Result<Gr2Info> {
 
     let is_64bit = matches!(gr2.pointer_size()?, PointerSize::Bit64);
 
-    let sections: Vec<SectionInfo> = gr2.sections.iter().enumerate().map(|(i, s)| {
-        let compression = match s.compression {
-            Compression::None => "None".to_string(),
-            Compression::Oodle0 => "Oodle0".to_string(),
-            Compression::Oodle1 => "Oodle1".to_string(),
-            Compression::BitKnit => "BitKnit".to_string(),
-        };
-        SectionInfo {
-            index: i,
-            compression,
-            compressed_size: s.compressed_size,
-            uncompressed_size: s.uncompressed_size,
-            compression_ratio: s.compression_ratio(),
-        }
-    }).collect();
+    let sections: Vec<SectionInfo> = gr2
+        .sections
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let compression = match s.compression {
+                Compression::None => "None".to_string(),
+                Compression::Oodle0 => "Oodle0".to_string(),
+                Compression::Oodle1 => "Oodle1".to_string(),
+                Compression::BitKnit => "BitKnit".to_string(),
+            };
+            SectionInfo {
+                index: i,
+                compression,
+                compressed_size: s.compressed_size,
+                uncompressed_size: s.uncompressed_size,
+                compression_ratio: s.compression_ratio(),
+            }
+        })
+        .collect();
 
     Ok(Gr2Info {
         version: gr2.header.version,
@@ -112,26 +117,29 @@ pub fn extract_gr2_info<P: AsRef<Path>>(source: P) -> Result<Gr2ModelInfo> {
     let data = std::fs::read(source_path)?;
     let reader = Gr2Reader::new(&data)?;
 
-    let skeleton_info = reader.parse_skeleton(&data)?.map(|skel| {
-        Gr2SkeletonInfo {
-            name: skel.name,
-            bone_count: skel.bones.len(),
-            bones: skel.bones.iter().map(|b| Gr2BoneInfo {
+    let skeleton_info = reader.parse_skeleton(&data)?.map(|skel| Gr2SkeletonInfo {
+        name: skel.name,
+        bone_count: skel.bones.len(),
+        bones: skel
+            .bones
+            .iter()
+            .map(|b| Gr2BoneInfo {
                 name: b.name.clone(),
                 parent_index: b.parent_index,
-            }).collect(),
-        }
+            })
+            .collect(),
     });
 
     let meshes = reader.parse_meshes(&data)?;
-    let mesh_infos: Vec<Gr2MeshInfo> = meshes.iter().map(|m| {
-        Gr2MeshInfo {
+    let mesh_infos: Vec<Gr2MeshInfo> = meshes
+        .iter()
+        .map(|m| Gr2MeshInfo {
             name: m.name.clone(),
             vertex_count: m.vertices.len(),
             triangle_count: m.indices.len() / 3,
             has_skeleton: skeleton_info.is_some(),
-        }
-    }).collect();
+        })
+        .collect();
 
     Ok(Gr2ModelInfo {
         file_path: source_path.display().to_string(),

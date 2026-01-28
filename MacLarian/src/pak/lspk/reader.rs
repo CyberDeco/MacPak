@@ -12,11 +12,11 @@ use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 // use ruzstd::StreamingDecoder;
 
-use crate::error::{Error, Result};
 use super::{
-    CompressionMethod, FileTableEntry, LspkFooter, LspkHeader, PakContents, PakFile,
-    PakPhase, PakProgress, MAGIC, MAX_VERSION, MIN_VERSION, PATH_LENGTH, TABLE_ENTRY_SIZE,
+    CompressionMethod, FileTableEntry, LspkFooter, LspkHeader, MAGIC, MAX_VERSION, MIN_VERSION,
+    PATH_LENGTH, PakContents, PakFile, PakPhase, PakProgress, TABLE_ENTRY_SIZE,
 };
+use crate::error::{Error, Result};
 
 /// Progress callback type for read operations.
 ///
@@ -73,23 +73,25 @@ impl<R: Read + Seek> LspkReader<R> {
 
         // Checks if this part is already open
         if !self.part_readers.contains_key(&part) {
-            let part_path = self.get_part_path(part)
-                .ok_or_else(|| Error::ConversionError(
-                    format!("Cannot determine path for archive part {part}")
-                ))?;
+            let part_path = self.get_part_path(part).ok_or_else(|| {
+                Error::ConversionError(format!("Cannot determine path for archive part {part}"))
+            })?;
 
             if !part_path.exists() {
                 let path_display = part_path.display();
-                return Err(Error::ConversionError(
-                    format!("Archive part file not found: {path_display}")
-                ));
+                return Err(Error::ConversionError(format!(
+                    "Archive part file not found: {path_display}"
+                )));
             }
 
             let file = File::open(&part_path)?;
             self.part_readers.insert(part, BufReader::new(file));
         }
 
-        Ok(self.part_readers.get_mut(&part).expect("part reader just inserted"))
+        Ok(self
+            .part_readers
+            .get_mut(&part)
+            .expect("part reader just inserted"))
     }
 }
 
@@ -146,7 +148,9 @@ impl<R: Read + Seek> LspkReader<R> {
     /// # Panics
     /// This function does not panic under normal conditions.
     pub fn read_footer(&mut self) -> Result<&LspkFooter> {
-        let header = self.header.as_ref()
+        let header = self
+            .header
+            .as_ref()
             .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?;
 
         // Footer offset in header is absolute position from start of file
@@ -176,9 +180,13 @@ impl<R: Read + Seek> LspkReader<R> {
     /// # Panics
     /// This function does not panic under normal conditions.
     pub fn read_file_table(&mut self) -> Result<&[FileTableEntry]> {
-        let footer = self.footer.as_ref()
+        let footer = self
+            .footer
+            .as_ref()
             .ok_or_else(|| Error::ConversionError("Footer not read yet".to_string()))?;
-        let header = self.header.as_ref()
+        let header = self
+            .header
+            .as_ref()
             .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?;
 
         let num_files = footer.num_files as usize;
@@ -190,8 +198,10 @@ impl<R: Read + Seek> LspkReader<R> {
         self.reader.read_exact(&mut compressed_table)?;
 
         // Decompress the table using LZ4
-        let decompressed_table = lz4_flex::block::decompress(&compressed_table, table_size_decompressed)
-            .map_err(|e| Error::DecompressionError(format!("Failed to decompress file table: {e}")))?;
+        let decompressed_table =
+            lz4_flex::block::decompress(&compressed_table, table_size_decompressed).map_err(
+                |e| Error::DecompressionError(format!("Failed to decompress file table: {e}")),
+            )?;
 
         // Parse file entries
         self.file_table.clear();
@@ -236,10 +246,12 @@ impl<R: Read + Seek> LspkReader<R> {
         let compression = CompressionMethod::from_flags(flags);
 
         // Compressed size: bytes 264-267
-        let size_compressed = u32::from_le_bytes(bytes[264..268].try_into().expect("fixed-size slice"));
+        let size_compressed =
+            u32::from_le_bytes(bytes[264..268].try_into().expect("fixed-size slice"));
 
         // Decompressed size: bytes 268-271
-        let size_decompressed = u32::from_le_bytes(bytes[268..272].try_into().expect("fixed-size slice"));
+        let size_decompressed =
+            u32::from_le_bytes(bytes[268..272].try_into().expect("fixed-size slice"));
 
         Ok(FileTableEntry {
             path,
@@ -282,16 +294,19 @@ impl<R: Read + Seek> LspkReader<R> {
 
             CompressionMethod::Zlib => {
                 self.decompress_zlib(&compressed, entry.size_decompressed as usize, &entry.path)
-            }
-
-            // CompressionMethod::Zstd => {
-            //     self.decompress_zstd(&compressed, entry.size_decompressed as usize, &entry.path)
-            // }
+            } // CompressionMethod::Zstd => {
+              //     self.decompress_zstd(&compressed, entry.size_decompressed as usize, &entry.path)
+              // }
         }
     }
 
     /// Decompress LZ4 data with multiple fallback strategies
-    fn decompress_lz4(&self, compressed: &[u8], expected_size: usize, path: &Path) -> Result<Vec<u8>> {
+    fn decompress_lz4(
+        &self,
+        compressed: &[u8],
+        expected_size: usize,
+        path: &Path,
+    ) -> Result<Vec<u8>> {
         // Try standard block decompression first
         if let Ok(data) = lz4_flex::block::decompress(compressed, expected_size) {
             return Ok(data);
@@ -323,19 +338,23 @@ impl<R: Read + Seek> LspkReader<R> {
     }
 
     /// Decompress Zlib data
-    fn decompress_zlib(&self, compressed: &[u8], expected_size: usize, path: &Path) -> Result<Vec<u8>> {
+    fn decompress_zlib(
+        &self,
+        compressed: &[u8],
+        expected_size: usize,
+        path: &Path,
+    ) -> Result<Vec<u8>> {
         use flate2::read::ZlibDecoder;
 
         let mut decoder = ZlibDecoder::new(compressed);
         let mut decompressed = Vec::with_capacity(expected_size);
 
-        decoder.read_to_end(&mut decompressed)
-            .map_err(|e| {
-                let path_display = path.display();
-                Error::DecompressionError(format!(
-                    "Failed to decompress Zlib data for {path_display}: {e}"
-                ))
-            })?;
+        decoder.read_to_end(&mut decompressed).map_err(|e| {
+            let path_display = path.display();
+            Error::DecompressionError(format!(
+                "Failed to decompress Zlib data for {path_display}: {e}"
+            ))
+        })?;
 
         Ok(decompressed)
     }
@@ -381,7 +400,9 @@ impl<R: Read + Seek> LspkReader<R> {
         });
         self.read_file_table()?;
 
-        let version = self.header.as_ref()
+        let version = self
+            .header
+            .as_ref()
             .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?
             .version;
         let mut contents = PakContents::new(version);
@@ -392,7 +413,10 @@ impl<R: Read + Seek> LspkReader<R> {
 
         // Decompress each file
         for (i, entry) in entries.iter().enumerate() {
-            let file_name = entry.path.file_name().map_or_else(|| entry.path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+            let file_name = entry.path.file_name().map_or_else(
+                || entry.path.to_string_lossy().to_string(),
+                |n| n.to_string_lossy().to_string(),
+            );
 
             progress(&PakProgress {
                 phase: PakPhase::DecompressingFiles,

@@ -20,91 +20,108 @@ pub fn select_file(file: &FileEntry, state: BrowserState) {
 
     if file.is_dir {
         state.preview_info.set("Directory".to_string());
-        state.preview_content.set("[Double-click to open]".to_string());
+        state
+            .preview_content
+            .set("[Double-click to open]".to_string());
         return;
     }
 
-    state.preview_info.set(format!("{} | {}", file.file_type, file.size_formatted));
+    state
+        .preview_info
+        .set(format!("{} | {}", file.file_type, file.size_formatted));
 
     let path = Path::new(&file.path);
     let ext = file.extension.to_lowercase();
 
     match ext.as_str() {
-        "lsx" | "lsj" | "xml" | "txt" | "json" | "lua" => {
-            match std::fs::read_to_string(path) {
-                Ok(content) => {
-                    let preview = if content.len() > 5000 {
-                        format!(
-                            "{}...\n\n[Truncated - {} bytes total]",
-                            &content[..5000],
-                            content.len()
-                        )
-                    } else {
-                        content
-                    };
-                    state.preview_content.set(preview);
-                }
-                Err(_) => {
-                    state.preview_content.set("[Unable to read file]".to_string());
-                }
+        "lsx" | "lsj" | "xml" | "txt" | "json" | "lua" => match std::fs::read_to_string(path) {
+            Ok(content) => {
+                let preview = if content.len() > 5000 {
+                    format!(
+                        "{}...\n\n[Truncated - {} bytes total]",
+                        &content[..5000],
+                        content.len()
+                    )
+                } else {
+                    content
+                };
+                state.preview_content.set(preview);
             }
-        }
+            Err(_) => {
+                state
+                    .preview_content
+                    .set("[Unable to read file]".to_string());
+            }
+        },
         "lsf" => {
-            state.preview_content.set("[Binary LSF file - double-click to open in editor]".to_string());
+            state
+                .preview_content
+                .set("[Binary LSF file - double-click to open in editor]".to_string());
         }
         "loca" => {
             // Convert to XML for preview
             let temp_path = std::path::Path::new("/tmp/temp_loca.xml");
             match maclarian::converter::convert_loca_to_xml(path, temp_path) {
-                Ok(_) => {
-                    match std::fs::read_to_string(temp_path) {
-                        Ok(content) => {
-                            let preview = if content.len() > 5000 {
-                                format!(
-                                    "{}...\n\n[Truncated - {} bytes total]",
-                                    &content[..5000],
-                                    content.len()
-                                )
-                            } else {
-                                content
-                            };
-                            state.preview_content.set(preview);
-                        }
-                        Err(_) => {
-                            state.preview_content.set("[Unable to read converted file]".to_string());
-                        }
+                Ok(_) => match std::fs::read_to_string(temp_path) {
+                    Ok(content) => {
+                        let preview = if content.len() > 5000 {
+                            format!(
+                                "{}...\n\n[Truncated - {} bytes total]",
+                                &content[..5000],
+                                content.len()
+                            )
+                        } else {
+                            content
+                        };
+                        state.preview_content.set(preview);
                     }
-                }
+                    Err(_) => {
+                        state
+                            .preview_content
+                            .set("[Unable to read converted file]".to_string());
+                    }
+                },
                 Err(e) => {
-                    state.preview_content.set(format!("[Error converting LOCA: {}]", e));
+                    state
+                        .preview_content
+                        .set(format!("[Error converting LOCA: {}]", e));
                 }
             }
         }
-        "pak" => {
-            match maclarian::pak::PakOperations::list(path) {
-                Ok(pak_files) => {
-                    let preview = format!(
-                        "PAK Archive: {} files\n\n{}",
-                        pak_files.len(),
-                        pak_files.iter().take(50).cloned().collect::<Vec<_>>().join("\n")
-                    );
-                    state.preview_content.set(preview);
-                }
-                Err(e) => {
-                    state.preview_content.set(format!("[Error reading PAK: {}]", e));
-                }
+        "pak" => match maclarian::pak::PakOperations::list(path) {
+            Ok(pak_files) => {
+                let preview = format!(
+                    "PAK Archive: {} files\n\n{}",
+                    pak_files.len(),
+                    pak_files
+                        .iter()
+                        .take(50)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                );
+                state.preview_content.set(preview);
             }
-        }
+            Err(e) => {
+                state
+                    .preview_content
+                    .set(format!("[Error reading PAK: {}]", e));
+            }
+        },
         "dds" => {
             // Load DDS synchronously (decode to raw RGBA, no PNG encoding)
             let current_version = state.preview_image.get().0;
             match load_dds_image(path) {
                 Ok(img_data) => {
                     state.preview_content.set(String::new());
-                    state.preview_image.set((current_version + 1, Some(img_data)));
+                    state
+                        .preview_image
+                        .set((current_version + 1, Some(img_data)));
                 }
                 Err(e) => {
-                    state.preview_content.set(format!("[Error loading DDS: {}]", e));
+                    state
+                        .preview_content
+                        .set(format!("[Error loading DDS: {}]", e));
                 }
             }
         }
@@ -114,26 +131,36 @@ pub fn select_file(file: &FileEntry, state: BrowserState) {
             match load_standard_image(path) {
                 Ok(img_data) => {
                     state.preview_content.set(String::new());
-                    state.preview_image.set((current_version + 1, Some(img_data)));
+                    state
+                        .preview_image
+                        .set((current_version + 1, Some(img_data)));
                 }
                 Err(e) => {
-                    state.preview_content.set(format!("[Error loading image: {}]", e));
+                    state
+                        .preview_content
+                        .set(format!("[Error loading image: {}]", e));
                 }
             }
         }
         "glb" | "gltf" => {
-            state.preview_content.set("[3D Model - Click button to preview]".to_string());
+            state
+                .preview_content
+                .set("[3D Model - Click button to preview]".to_string());
             state.preview_3d_path.set(Some(file.path.clone()));
         }
         "gr2" => {
-            state.preview_content.set("[GR2 Model - Click button to preview]".to_string());
+            state
+                .preview_content
+                .set("[GR2 Model - Click button to preview]".to_string());
             state.preview_3d_path.set(Some(file.path.clone()));
         }
         "wem" | "wav" => {
             state.preview_content.set("[Audio file]".to_string());
         }
         _ => {
-            state.preview_content.set(format!("File type: {}", ext.to_uppercase()));
+            state
+                .preview_content
+                .set(format!("File type: {}", ext.to_uppercase()));
         }
     }
 }
@@ -156,7 +183,9 @@ fn load_dds_image(path: &Path) -> Result<RawImageData, String> {
     let view = ImageViewMut::new(&mut rgba_buffer, size, ColorFormat::RGBA_U8)
         .ok_or_else(|| "Failed to create image view".to_string())?;
 
-    decoder.read_surface(view).map_err(|e| format!("Failed to decode DDS: {:?}", e))?;
+    decoder
+        .read_surface(view)
+        .map_err(|e| format!("Failed to decode DDS: {:?}", e))?;
 
     // Create image from raw bytes for resizing
     let img: image::RgbaImage = image::ImageBuffer::from_raw(size.width, size.height, rgba_buffer)

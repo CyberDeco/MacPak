@@ -5,7 +5,7 @@ use std::panic;
 use floem::ext_event::create_ext_action;
 use floem::prelude::*;
 use floem::text::Weight;
-use floem_reactive::{create_effect, Scope};
+use floem_reactive::{Scope, create_effect};
 use maclarian::converter::to_lsx;
 use maclarian::formats::lsf::parse_lsf_bytes;
 use maclarian::pak::PakOperations;
@@ -113,54 +113,40 @@ pub fn all_matches_dialog(state: SearchState) -> impl IntoView {
                             }),
                     ))
                     .style(|s| s.width_full().margin_bottom(16.0)),
-
                     // Content area
                     dyn_container(
                         move || (is_loading.get(), error_msg.get(), matches.get().len()),
                         move |(loading, error, match_count)| {
                             if loading {
                                 label(|| "Loading matches...")
-                                    .style(|s| {
-                                        s.padding(40.0)
-                                            .color(Color::rgb8(100, 100, 100))
-                                    })
+                                    .style(|s| s.padding(40.0).color(Color::rgb8(100, 100, 100)))
                                     .into_any()
                             } else if let Some(err) = error {
                                 label(move || format!("Error: {}", err))
-                                    .style(|s| {
-                                        s.padding(20.0)
-                                            .color(Color::rgb8(200, 50, 50))
-                                    })
+                                    .style(|s| s.padding(20.0).color(Color::rgb8(200, 50, 50)))
                                     .into_any()
                             } else if match_count == 0 {
                                 label(|| "No matches found in file content")
-                                    .style(|s| {
-                                        s.padding(40.0)
-                                            .color(Color::rgb8(100, 100, 100))
-                                    })
+                                    .style(|s| s.padding(40.0).color(Color::rgb8(100, 100, 100)))
                                     .into_any()
                             } else {
                                 // Show matches
                                 let current_matches = matches.get();
                                 scroll(
                                     v_stack_from_iter(
-                                        current_matches.into_iter().enumerate().map(|(i, m)| {
-                                            match_row(m, i)
-                                        })
+                                        current_matches
+                                            .into_iter()
+                                            .enumerate()
+                                            .map(|(i, m)| match_row(m, i)),
                                     )
-                                    .style(|s| s.width_full().gap(12.0))
+                                    .style(|s| s.width_full().gap(12.0)),
                                 )
                                 .scroll_style(|s| s.handle_thickness(6.0))
-                                .style(|s| {
-                                    s.width_full()
-                                        .max_height(400.0)
-                                        .flex_grow(1.0)
-                                })
+                                .style(|s| s.width_full().max_height(400.0).flex_grow(1.0))
                                 .into_any()
                             }
                         },
                     ),
-
                     // Match count footer
                     dyn_container(
                         move || matches.get().len(),
@@ -223,35 +209,34 @@ fn match_row(m: MatchWithContext, index: usize) -> impl IntoView {
         h_stack((
             label(move || format!("Match #{}", index + 1))
                 .style(|s| s.font_weight(Weight::SEMIBOLD).font_size(12.0)),
-            label(move || format!("Line {}", line_num))
-                .style(|s| {
-                    s.font_size(11.0)
-                        .color(Color::rgb8(100, 100, 100))
-                        .margin_left(8.0)
-                }),
+            label(move || format!("Line {}", line_num)).style(|s| {
+                s.font_size(11.0)
+                    .color(Color::rgb8(100, 100, 100))
+                    .margin_left(8.0)
+            }),
         )),
-
         // Context display with horizontal scroll for long lines
         scroll(
             v_stack((
                 // Lines before
                 v_stack_from_iter(
-                    context_before.into_iter().enumerate().map(move |(i, line)| {
-                        let ln = line_num.saturating_sub(3 - i);
-                        context_line(ln, line, false)
-                    })
+                    context_before
+                        .into_iter()
+                        .enumerate()
+                        .map(move |(i, line)| {
+                            let ln = line_num.saturating_sub(3 - i);
+                            context_line(ln, line, false)
+                        }),
                 ),
                 // Matched line (highlighted)
                 context_line(line_num, matched_line, true),
                 // Lines after
-                v_stack_from_iter(
-                    context_after.into_iter().enumerate().map(move |(i, line)| {
-                        let ln = line_num + 1 + i;
-                        context_line(ln, line, false)
-                    })
-                ),
+                v_stack_from_iter(context_after.into_iter().enumerate().map(move |(i, line)| {
+                    let ln = line_num + 1 + i;
+                    context_line(ln, line, false)
+                })),
             ))
-            .style(|s| s.padding(8.0))
+            .style(|s| s.padding(8.0)),
         )
         .scroll_style(|s| s.handle_thickness(4.0))
         .style(|s| {
@@ -275,28 +260,26 @@ fn match_row(m: MatchWithContext, index: usize) -> impl IntoView {
 fn context_line(line_num: usize, text: String, is_match: bool) -> impl IntoView {
     h_stack((
         // Line number
-        label(move || format!("{:4}", line_num))
-            .style(|s| {
-                s.font_size(11.0)
-                    .font_family("monospace".to_string())
-                    .color(Color::rgb8(150, 150, 150))
-                    .width(40.0)
-                    .flex_shrink(0.0)
-            }),
+        label(move || format!("{:4}", line_num)).style(|s| {
+            s.font_size(11.0)
+                .font_family("monospace".to_string())
+                .color(Color::rgb8(150, 150, 150))
+                .width(40.0)
+                .flex_shrink(0.0)
+        }),
         // Line content - no truncation, allows horizontal scroll
-        label(move || text.clone())
-            .style(move |s| {
-                let s = s
-                    .font_size(12.0)
-                    .font_family("monospace".to_string())
-                    .flex_shrink(0.0);
-                if is_match {
-                    s.background(Color::rgb8(255, 255, 200))
-                        .font_weight(Weight::MEDIUM)
-                } else {
-                    s.color(Color::rgb8(80, 80, 80))
-                }
-            }),
+        label(move || text.clone()).style(move |s| {
+            let s = s
+                .font_size(12.0)
+                .font_family("monospace".to_string())
+                .flex_shrink(0.0);
+            if is_match {
+                s.background(Color::rgb8(255, 255, 200))
+                    .font_weight(Weight::MEDIUM)
+            } else {
+                s.color(Color::rgb8(80, 80, 80))
+            }
+        }),
     ))
 }
 
@@ -311,17 +294,20 @@ fn load_all_matches(
     let pak_path = result.pak_path.clone();
     let file_path = result.path.clone();
 
-    let send = create_ext_action(Scope::new(), move |found: Result<Vec<MatchWithContext>, String>| {
-        is_loading.set(false);
-        match found {
-            Ok(results) => {
-                matches.set(results);
+    let send = create_ext_action(
+        Scope::new(),
+        move |found: Result<Vec<MatchWithContext>, String>| {
+            is_loading.set(false);
+            match found {
+                Ok(results) => {
+                    matches.set(results);
+                }
+                Err(e) => {
+                    error_msg.set(Some(e));
+                }
             }
-            Err(e) => {
-                error_msg.set(Some(e));
-            }
-        }
-    });
+        },
+    );
 
     std::thread::spawn(move || {
         // Wrap in catch_unwind to handle panics gracefully
@@ -345,8 +331,12 @@ fn load_all_matches(
                     }
                 }
                 Err(e) => {
-                    return Err(format!("Failed to read file '{}' from PAK '{}': {}",
-                        normalized_path, pak_path.display(), e));
+                    return Err(format!(
+                        "Failed to read file '{}' from PAK '{}': {}",
+                        normalized_path,
+                        pak_path.display(),
+                        e
+                    ));
                 }
             };
 
@@ -366,9 +356,17 @@ fn load_all_matches(
 
                     found.push(MatchWithContext {
                         line_number: i + 1,
-                        context_before: lines[start..i].iter().map(|s| decode_xml_entities(s)).collect(),
+                        context_before: lines[start..i]
+                            .iter()
+                            .map(|s| decode_xml_entities(s))
+                            .collect(),
                         matched_line: decode_xml_entities(line),
-                        context_after: lines.get(i + 1..end).unwrap_or(&[]).iter().map(|s| decode_xml_entities(s)).collect(),
+                        context_after: lines
+                            .get(i + 1..end)
+                            .unwrap_or(&[])
+                            .iter()
+                            .map(|s| decode_xml_entities(s))
+                            .collect(),
                     });
                 }
             }
@@ -378,7 +376,9 @@ fn load_all_matches(
 
         match result {
             Ok(inner_result) => send(inner_result),
-            Err(_) => send(Err("Internal error: thread panicked while loading matches".to_string())),
+            Err(_) => send(Err(
+                "Internal error: thread panicked while loading matches".to_string()
+            )),
         }
     });
 }

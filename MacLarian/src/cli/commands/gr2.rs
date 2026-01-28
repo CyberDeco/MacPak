@@ -2,10 +2,10 @@
 //!
 //! Commands for inspecting, converting, and decompressing GR2 files.
 
-use std::path::Path;
-use crate::formats::gr2::{inspect_gr2, extract_gr2_info, decompress_gr2};
-use crate::gr2_extraction::{process_extracted_gr2, Gr2ExtractionOptions};
 use crate::converter::gr2_gltf::convert_gr2_bytes_to_glb_with_textures;
+use crate::formats::gr2::{decompress_gr2, extract_gr2_info, inspect_gr2};
+use crate::gr2_extraction::{Gr2ExtractionOptions, process_extracted_gr2};
+use std::path::Path;
 
 /// Inspect a GR2 file and display its structure.
 pub fn inspect(path: &Path) -> anyhow::Result<()> {
@@ -25,7 +25,9 @@ pub fn inspect(path: &Path) -> anyhow::Result<()> {
     println!("Sections:");
     println!("---------");
     for section in &info.sections {
-        let ratio = section.compression_ratio.map_or_else(|| "N/A".to_string(), |r| format!("{r:.2}x"));
+        let ratio = section
+            .compression_ratio
+            .map_or_else(|| "N/A".to_string(), |r| format!("{r:.2}x"));
         println!(
             "  [{:2}] {:8} | {:>8} -> {:>8} bytes ({})",
             section.index,
@@ -79,12 +81,11 @@ pub fn decompress(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
     let output_path = if let Some(out) = output {
         out.to_path_buf()
     } else {
-        let stem = path.file_stem()
+        let stem = path
+            .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("output");
-        let ext = path.extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("gr2");
+        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("gr2");
         path.with_file_name(format!("{stem}_decompressed.{ext}"))
     };
 
@@ -110,7 +111,7 @@ pub fn decompress(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
 
 /// Convert GR2 to GLB format.
 pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
-    use crate::cli::progress::{print_step, print_done, CUBE, LOOKING_GLASS, GEAR, DISK};
+    use crate::cli::progress::{CUBE, DISK, GEAR, LOOKING_GLASS, print_done, print_step};
     use crate::converter::{Gr2Phase, convert_gr2_to_glb_with_progress};
     use std::time::Instant;
 
@@ -134,7 +135,12 @@ pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
             Gr2Phase::WritingOutput => DISK,
             _ => GEAR,
         };
-        print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+        print_step(
+            progress.current,
+            progress.total,
+            emoji,
+            progress.phase.as_str(),
+        );
     })?;
 
     let output_size = std::fs::metadata(&output_path)?.len();
@@ -147,7 +153,7 @@ pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
 
 /// Convert GLB/glTF to GR2 format.
 pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
-    use crate::cli::progress::{print_step, print_done, CUBE, LOOKING_GLASS, GEAR, DISK};
+    use crate::cli::progress::{CUBE, DISK, GEAR, LOOKING_GLASS, print_done, print_step};
     use crate::converter::{Gr2Phase, convert_gltf_to_gr2_with_progress};
     use std::time::Instant;
 
@@ -173,7 +179,12 @@ pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
             Gr2Phase::WritingFile => DISK,
             _ => GEAR,
         };
-        print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+        print_step(
+            progress.current,
+            progress.total,
+            emoji,
+            progress.phase.as_str(),
+        );
     })?;
 
     let output_size = std::fs::metadata(&output_path)?.len();
@@ -204,7 +215,8 @@ pub fn convert_to_glb_textured(
 
     // Read GR2 bytes
     let gr2_data = std::fs::read(path)?;
-    let gr2_filename = path.file_name()
+    let gr2_filename = path
+        .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("unknown.GR2");
 
@@ -250,10 +262,14 @@ pub fn bundle(
     let base_output_dir = if let Some(out) = output {
         out.to_path_buf()
     } else {
-        path.parent().map_or_else(|| std::env::current_dir().unwrap_or_default(), std::path::Path::to_path_buf)
+        path.parent().map_or_else(
+            || std::env::current_dir().unwrap_or_default(),
+            std::path::Path::to_path_buf,
+        )
     };
 
-    let stem = path.file_stem()
+    let stem = path
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("output");
 
@@ -319,7 +335,7 @@ pub fn bundle(
     let glb_path = if no_glb {
         None
     } else if use_gltf {
-        use crate::cli::progress::{print_step, CUBE, LOOKING_GLASS, GEAR, DISK};
+        use crate::cli::progress::{CUBE, DISK, GEAR, LOOKING_GLASS, print_step};
         use crate::converter::{Gr2Phase, convert_gr2_to_gltf_with_progress};
 
         // Convert to glTF
@@ -334,7 +350,12 @@ pub fn bundle(
                     Gr2Phase::WritingOutput => DISK,
                     _ => GEAR,
                 };
-                print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+                print_step(
+                    progress.current,
+                    progress.total,
+                    emoji,
+                    progress.phase.as_str(),
+                );
             }
         })?;
         println!();
@@ -355,16 +376,28 @@ pub fn bundle(
     // Show the glTF/GLB output
     if let Some(ref gltf) = glb_path {
         let size = std::fs::metadata(gltf).map(|m| m.len()).unwrap_or(0);
-        println!("  {}: {} ({} bytes)", format_name, gltf.file_name().unwrap_or_default().to_string_lossy(), size);
+        println!(
+            "  {}: {} ({} bytes)",
+            format_name,
+            gltf.file_name().unwrap_or_default().to_string_lossy(),
+            size
+        );
     } else if let Some(glb) = &result.glb_path {
         let size = std::fs::metadata(glb).map(|m| m.len()).unwrap_or(0);
-        println!("  GLB: {} ({} bytes)", glb.file_name().unwrap_or_default().to_string_lossy(), size);
+        println!(
+            "  GLB: {} ({} bytes)",
+            glb.file_name().unwrap_or_default().to_string_lossy(),
+            size
+        );
     }
 
     if !result.texture_paths.is_empty() {
         println!("  Textures extracted: {}", result.texture_paths.len());
         for tex_path in &result.texture_paths {
-            println!("    - {}", tex_path.file_name().unwrap_or_default().to_string_lossy());
+            println!(
+                "    - {}",
+                tex_path.file_name().unwrap_or_default().to_string_lossy()
+            );
         }
     } else if !no_textures {
         println!("  Textures: none found in database");

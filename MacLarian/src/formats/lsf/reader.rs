@@ -7,9 +7,13 @@
 //! SPDX-License-Identifier: MIT AND Apache-2.0
 
 // Binary format parsing requires many intentional casts between integer types
-#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
-use super::document::{LsfDocument, LsfNode, LsfAttribute, LsfMetadataFormat};
+use super::document::{LsfAttribute, LsfDocument, LsfMetadataFormat, LsfNode};
 use crate::error::{Error, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::fs::File;
@@ -90,11 +94,16 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
 
     // Determine if using extended node/attribute format
     // V3+ format is only used when MetadataFormat is KeysAndAdjacency
-    let has_extended_nodes = version >= LSF_VER_EXTENDED_NODES
-        && metadata_format == LsfMetadataFormat::KeysAndAdjacency;
+    let has_extended_nodes =
+        version >= LSF_VER_EXTENDED_NODES && metadata_format == LsfMetadataFormat::KeysAndAdjacency;
 
     // Read sections in FILE ORDER: Strings, Nodes, Attributes, Values, [Keys]
-    let names = read_names(&mut cursor, strings_uncompressed, strings_compressed, is_compressed)?;
+    let names = read_names(
+        &mut cursor,
+        strings_uncompressed,
+        strings_compressed,
+        is_compressed,
+    )?;
 
     // Detect node format - this also determines attribute format since they must match
     let node_extended_format = detect_extended_format(nodes_uncompressed, has_extended_nodes);
@@ -117,11 +126,21 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
         &nodes,
     )?;
 
-    let values = read_section(&mut cursor, values_uncompressed, values_compressed, is_compressed)?;
+    let values = read_section(
+        &mut cursor,
+        values_uncompressed,
+        values_compressed,
+        is_compressed,
+    )?;
 
     // Keys section comes AFTER values (only in v6+)
     let node_keys = if version >= LSF_VER_BG3_NODE_KEYS && keys_uncompressed > 0 {
-        let keys_data = read_section(&mut cursor, keys_uncompressed, keys_compressed, is_compressed)?;
+        let keys_data = read_section(
+            &mut cursor,
+            keys_uncompressed,
+            keys_compressed,
+            is_compressed,
+        )?;
         parse_keys(&keys_data, &names, nodes.len())?
     } else {
         vec![None; nodes.len()]
@@ -144,7 +163,7 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
 /// Detect if extended format (16-byte) or V2 format (12-byte) based on data size
 fn detect_extended_format(data_size: usize, version_hint: bool) -> bool {
     if data_size % 16 == 0 && data_size % 12 != 0 {
-        true  // Only divisible by 16
+        true // Only divisible by 16
     } else if data_size % 12 == 0 && data_size % 16 != 0 {
         false // Only divisible by 12
     } else {
@@ -344,7 +363,8 @@ fn read_attributes<R: Read>(
         // The next_index field currently holds -(node_index + 1)
 
         // First, collect attribute indices for each node
-        let mut node_attrs: std::collections::HashMap<i32, Vec<usize>> = std::collections::HashMap::new();
+        let mut node_attrs: std::collections::HashMap<i32, Vec<usize>> =
+            std::collections::HashMap::new();
         for (attr_idx, attr) in attributes.iter().enumerate() {
             // Decode node_index from temporary encoding
             let node_index = -(attr.next_index + 1);
@@ -395,9 +415,10 @@ fn parse_keys(
 
         if let Some(name_list) = names.get(name_index_outer)
             && let Some(key_name) = name_list.get(name_index_inner)
-                && node_index < keys.len() {
-                    keys[node_index] = Some(key_name.clone());
-                }
+            && node_index < keys.len()
+        {
+            keys[node_index] = Some(key_name.clone());
+        }
     }
 
     Ok(keys)

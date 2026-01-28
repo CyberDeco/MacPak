@@ -4,7 +4,7 @@ use floem::prelude::*;
 use std::collections::HashMap;
 
 // Import from local dyes module (moved from maclarian)
-use crate::dyes::{ColorCategory, COLOR_REGISTRY, DEFAULT_HEX};
+use crate::dyes::{COLOR_REGISTRY, ColorCategory, DEFAULT_HEX};
 // Re-export ImportedDyeEntry for public use
 pub use crate::dyes::ImportedDyeEntry;
 
@@ -20,59 +20,280 @@ pub struct VendorDef {
 /// All available vendor tables for dye distribution
 pub const VENDOR_DEFS: &[VendorDef] = &[
     // Always enabled
-    VendorDef { id: "TUT_Chest_Potions", display_name: "Tutorial Chest", location: "Nautiloid", always_enabled: true }, // 0
-
+    VendorDef {
+        id: "TUT_Chest_Potions",
+        display_name: "Tutorial Chest",
+        location: "Nautiloid",
+        always_enabled: true,
+    }, // 0
     // Act 1 - Wilderness / Underdark [0, 1, 2, 7, 10, 14, 15, 16]
-    VendorDef { id: "DEN_Entrance_Trade", display_name: "Arron", location: "Emerald Grove", always_enabled: false }, // 1
-    VendorDef { id: "DEN_Weaponsmith_Trade", display_name: "Dammon", location: "Emerald Grove", always_enabled: false }, // 2
-    VendorDef { id: "DEN_Trader_Food", display_name: "Okta", location: "Emerald Grove", always_enabled: false }, // 3, Commented out of dialog
-    VendorDef { id: "DEN_Ethel", display_name: "Auntie Ethel", location: "Emerald Grove", always_enabled: false }, // 4, Commented out of dialog
-    VendorDef { id: "DEN_Thieflings_Pickpocket_Trade", display_name: "Mattis", location: "Emerald Grove", always_enabled: false }, // 5, Commented out of dialog
-    VendorDef { id: "GOB_Festivities_Trader", display_name: "Grat the Trader", location: "Goblin Camp", always_enabled: false }, // 6
-    VendorDef { id: "GOB_Quartermaster", display_name: "Roah Moonglow", location: "Goblin Camp", always_enabled: false }, // 7
-    VendorDef { id: "PLA_ZhentarimTrader_Common", display_name: "Brem", location: "Zhentarim Hideout", always_enabled: false }, // 8, Commented out of dialog
-    VendorDef { id: "PLA_Tollhouse_SuppliesTrader", display_name: "Cyrel", location: "Tollhouse", always_enabled: false }, // 9, Commented out of dialog
-    VendorDef { id: "UND_MycoVillage_AlchemistDwarf_Trade", display_name: "Derryth Bonecloak", location: "Myconid Colony", always_enabled: false }, // 10
-    VendorDef { id: "UND_MushroomHunter", display_name: "Baelen Bonecloak", location: "Underdark", always_enabled: false }, // 11, Commented out of dialog
-    VendorDef { id: "UND_SocietyOfBrilliance_Hobgoblin", display_name: "Blurg", location: "Myconid Colony", always_enabled: false }, // 12, Commented out of dialog
-    VendorDef { id: "UND_Duergar_Generic", display_name: "Elder Brithvar", location: "Grymforge", always_enabled: false }, // 13, Commented out of dialog
-    VendorDef { id: "UND_KC_Trader_Weapons", display_name: "Corsair Greymon", location: "Grymforge", always_enabled: false }, // 14
-    VendorDef { id: "UND_KC_Trader_Utility", display_name: "Stonemason Kith", location: "Grymforge", always_enabled: false }, // 15
-    VendorDef { id: "DEN_Volo_Trade", display_name: "Volo", location: "", always_enabled: false }, // 16
-
+    VendorDef {
+        id: "DEN_Entrance_Trade",
+        display_name: "Arron",
+        location: "Emerald Grove",
+        always_enabled: false,
+    }, // 1
+    VendorDef {
+        id: "DEN_Weaponsmith_Trade",
+        display_name: "Dammon",
+        location: "Emerald Grove",
+        always_enabled: false,
+    }, // 2
+    VendorDef {
+        id: "DEN_Trader_Food",
+        display_name: "Okta",
+        location: "Emerald Grove",
+        always_enabled: false,
+    }, // 3, Commented out of dialog
+    VendorDef {
+        id: "DEN_Ethel",
+        display_name: "Auntie Ethel",
+        location: "Emerald Grove",
+        always_enabled: false,
+    }, // 4, Commented out of dialog
+    VendorDef {
+        id: "DEN_Thieflings_Pickpocket_Trade",
+        display_name: "Mattis",
+        location: "Emerald Grove",
+        always_enabled: false,
+    }, // 5, Commented out of dialog
+    VendorDef {
+        id: "GOB_Festivities_Trader",
+        display_name: "Grat the Trader",
+        location: "Goblin Camp",
+        always_enabled: false,
+    }, // 6
+    VendorDef {
+        id: "GOB_Quartermaster",
+        display_name: "Roah Moonglow",
+        location: "Goblin Camp",
+        always_enabled: false,
+    }, // 7
+    VendorDef {
+        id: "PLA_ZhentarimTrader_Common",
+        display_name: "Brem",
+        location: "Zhentarim Hideout",
+        always_enabled: false,
+    }, // 8, Commented out of dialog
+    VendorDef {
+        id: "PLA_Tollhouse_SuppliesTrader",
+        display_name: "Cyrel",
+        location: "Tollhouse",
+        always_enabled: false,
+    }, // 9, Commented out of dialog
+    VendorDef {
+        id: "UND_MycoVillage_AlchemistDwarf_Trade",
+        display_name: "Derryth Bonecloak",
+        location: "Myconid Colony",
+        always_enabled: false,
+    }, // 10
+    VendorDef {
+        id: "UND_MushroomHunter",
+        display_name: "Baelen Bonecloak",
+        location: "Underdark",
+        always_enabled: false,
+    }, // 11, Commented out of dialog
+    VendorDef {
+        id: "UND_SocietyOfBrilliance_Hobgoblin",
+        display_name: "Blurg",
+        location: "Myconid Colony",
+        always_enabled: false,
+    }, // 12, Commented out of dialog
+    VendorDef {
+        id: "UND_Duergar_Generic",
+        display_name: "Elder Brithvar",
+        location: "Grymforge",
+        always_enabled: false,
+    }, // 13, Commented out of dialog
+    VendorDef {
+        id: "UND_KC_Trader_Weapons",
+        display_name: "Corsair Greymon",
+        location: "Grymforge",
+        always_enabled: false,
+    }, // 14
+    VendorDef {
+        id: "UND_KC_Trader_Utility",
+        display_name: "Stonemason Kith",
+        location: "Grymforge",
+        always_enabled: false,
+    }, // 15
+    VendorDef {
+        id: "DEN_Volo_Trade",
+        display_name: "Volo",
+        location: "",
+        always_enabled: false,
+    }, // 16
     // Act 2 - Creche / Shadow-Cursed Lands [17, 18, 19, 20, 21]
-    VendorDef { id: "CRE_GithQuartermistress_Trade", display_name: "A'jak'nir Jeera", location: "Creche Y'llek", always_enabled: false }, // 17
-    VendorDef { id: "CRE_Expeditioner_Trade", display_name: "Lady Esther", location: "Rosymorn Monastery", always_enabled: false }, // 18
-    VendorDef { id: "HAV_HarperQuarterMaster_Magic_Trade", display_name: "Quartermaster Talli", location: "Last Light Inn", always_enabled: false }, // 19
-    VendorDef { id: "MOO_BugBearvendor_Trade", display_name: "Lann Tarv", location: "Moonrise Towers", always_enabled: false }, // 20
-    VendorDef { id: "MOO_InfernalTrader_Trade", display_name: "Araj Oblodra", location: "Moonrise Towers", always_enabled: false }, // 21
-    VendorDef { id: "TWN_Hospital_CorpseTender", display_name: "Sister Lidwin", location: "House of Healing", always_enabled: false }, // 22, Commented out of dialog
-    VendorDef { id: "SHA_MerregonTrader", display_name: "Hoarding Merregon", location: "Gauntlet of Shar", always_enabled: false }, // 23, Commented out of dialog
-
+    VendorDef {
+        id: "CRE_GithQuartermistress_Trade",
+        display_name: "A'jak'nir Jeera",
+        location: "Creche Y'llek",
+        always_enabled: false,
+    }, // 17
+    VendorDef {
+        id: "CRE_Expeditioner_Trade",
+        display_name: "Lady Esther",
+        location: "Rosymorn Monastery",
+        always_enabled: false,
+    }, // 18
+    VendorDef {
+        id: "HAV_HarperQuarterMaster_Magic_Trade",
+        display_name: "Quartermaster Talli",
+        location: "Last Light Inn",
+        always_enabled: false,
+    }, // 19
+    VendorDef {
+        id: "MOO_BugBearvendor_Trade",
+        display_name: "Lann Tarv",
+        location: "Moonrise Towers",
+        always_enabled: false,
+    }, // 20
+    VendorDef {
+        id: "MOO_InfernalTrader_Trade",
+        display_name: "Araj Oblodra",
+        location: "Moonrise Towers",
+        always_enabled: false,
+    }, // 21
+    VendorDef {
+        id: "TWN_Hospital_CorpseTender",
+        display_name: "Sister Lidwin",
+        location: "House of Healing",
+        always_enabled: false,
+    }, // 22, Commented out of dialog
+    VendorDef {
+        id: "SHA_MerregonTrader",
+        display_name: "Hoarding Merregon",
+        location: "Gauntlet of Shar",
+        always_enabled: false,
+    }, // 23, Commented out of dialog
     // Act 3 - Wyrm's Crossing / Rivington [24, 25, 26, 29, 33, 34, 37, 38, 40]
-    VendorDef { id: "WYR_OrinsImpersonation_Smith", display_name: "The Rivington General", location: "Rivington", always_enabled: false }, // 24
-    VendorDef { id: "WYR_Danthelon_Trader", display_name: "Danthelon's Dancing Axe", location: "Rivington", always_enabled: false }, // 25
-    VendorDef { id: "WYR_AlchemyTrader", display_name: "Stylin' Horst", location: "Wyrm's Crossing", always_enabled: false }, // 26
-    VendorDef { id: "WYR_Bridge_Trader_Art", display_name: "Roberon Silt", location: "Wyrm's Crossing", always_enabled: false }, // 27, Commented out of dialog
-    VendorDef { id: "WYR_Bridge_Trader_Supplies", display_name: "Velson Oakes", location: "Wyrm's Crossing", always_enabled: false }, // 28, Commented out of dialog
-    VendorDef { id: "WYR_Bridge_Trader_Tools", display_name: "Glynda Oltower", location: "Wyrm's Crossing", always_enabled: false }, // 29
-    VendorDef { id: "WYR_Flophouse_Cook", display_name: "Queelia Arvis", location: "Wyrm's Crossing", always_enabled: false }, // 30, Commented out of dialog
-    VendorDef { id: "WYR_Ironhand_Merchant", display_name: "Bumpnagel", location: "Ironhand Gnomes", always_enabled: false }, // 31, Commented out of dialog
-    VendorDef { id: "WYR_SharessCaress_Bartender_Trade", display_name: "Hoots Hooligan", location: "Sharess' Caress", always_enabled: false }, // 32, Commented out of dialog
-    
+    VendorDef {
+        id: "WYR_OrinsImpersonation_Smith",
+        display_name: "The Rivington General",
+        location: "Rivington",
+        always_enabled: false,
+    }, // 24
+    VendorDef {
+        id: "WYR_Danthelon_Trader",
+        display_name: "Danthelon's Dancing Axe",
+        location: "Rivington",
+        always_enabled: false,
+    }, // 25
+    VendorDef {
+        id: "WYR_AlchemyTrader",
+        display_name: "Stylin' Horst",
+        location: "Wyrm's Crossing",
+        always_enabled: false,
+    }, // 26
+    VendorDef {
+        id: "WYR_Bridge_Trader_Art",
+        display_name: "Roberon Silt",
+        location: "Wyrm's Crossing",
+        always_enabled: false,
+    }, // 27, Commented out of dialog
+    VendorDef {
+        id: "WYR_Bridge_Trader_Supplies",
+        display_name: "Velson Oakes",
+        location: "Wyrm's Crossing",
+        always_enabled: false,
+    }, // 28, Commented out of dialog
+    VendorDef {
+        id: "WYR_Bridge_Trader_Tools",
+        display_name: "Glynda Oltower",
+        location: "Wyrm's Crossing",
+        always_enabled: false,
+    }, // 29
+    VendorDef {
+        id: "WYR_Flophouse_Cook",
+        display_name: "Queelia Arvis",
+        location: "Wyrm's Crossing",
+        always_enabled: false,
+    }, // 30, Commented out of dialog
+    VendorDef {
+        id: "WYR_Ironhand_Merchant",
+        display_name: "Bumpnagel",
+        location: "Ironhand Gnomes",
+        always_enabled: false,
+    }, // 31, Commented out of dialog
+    VendorDef {
+        id: "WYR_SharessCaress_Bartender_Trade",
+        display_name: "Hoots Hooligan",
+        location: "Sharess' Caress",
+        always_enabled: false,
+    }, // 32, Commented out of dialog
     // Act 3 - Baldur's Gate / Lower City
-    VendorDef { id: "LOW_Figaro_Trade", display_name: "Facemaker's Boutique", location: "Lower City", always_enabled: false }, // 33
-    VendorDef { id: "LOW_DevilsFee_Diabolist_Trade", display_name: "Devil's Fee", location: "Lower City", always_enabled: false }, // 34
-    VendorDef { id: "LOW_MysticCarrion_Trade", display_name: "Mystic Carrion", location: "Philgrave's Mansion", always_enabled: false }, // 35, Commented out of dialog
-    VendorDef { id: "LOW_Guildhall_FetchersBrat_Trade", display_name: "Sticky Dondo", location: "Guildhall", always_enabled: false }, // 36, Commented out of dialog
-    VendorDef { id: "LOW_SteepsTrader_Weapons", display_name: "Fytz the Firecracker", location: "Lower City", always_enabled: false }, // 37
-    VendorDef { id: "LOW_SteepsTrader_Armor", display_name: "Gloomy Fentonson", location: "Lower City", always_enabled: false }, // 38
-    VendorDef { id: "LOW_SteepsTrader_BooksAndScrolls", display_name: "Nansi Gretta", location: "Lower City", always_enabled: false }, // 39, Commented out of dialog
-    VendorDef { id: "LOW_SteepsTrader_Consumables", display_name: "Beehive General", location: "Lower City", always_enabled: false }, // 40
-    VendorDef { id: "LOW_MusicTrader", display_name: "Thomas C. Quirkilious", location: "Lower City", always_enabled: false }, // 41, Commented out of dialog
-    VendorDef { id: "LOW_JewelTrader", display_name: "Omotola", location: "Lower City", always_enabled: false }, // 42, Commented out of dialog
-    VendorDef { id: "LOW_MurderTribunal_Merchant", display_name: "Echo of Abazigal", location: "Murder Tribunal", always_enabled: false }, // 43, Commented out of dialog
-    VendorDef { id: "LOW_GortashParent_Trade", display_name: "Flymm Family", location: "Lower City", always_enabled: false }, // 44, Commented out of dialog
+    VendorDef {
+        id: "LOW_Figaro_Trade",
+        display_name: "Facemaker's Boutique",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 33
+    VendorDef {
+        id: "LOW_DevilsFee_Diabolist_Trade",
+        display_name: "Devil's Fee",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 34
+    VendorDef {
+        id: "LOW_MysticCarrion_Trade",
+        display_name: "Mystic Carrion",
+        location: "Philgrave's Mansion",
+        always_enabled: false,
+    }, // 35, Commented out of dialog
+    VendorDef {
+        id: "LOW_Guildhall_FetchersBrat_Trade",
+        display_name: "Sticky Dondo",
+        location: "Guildhall",
+        always_enabled: false,
+    }, // 36, Commented out of dialog
+    VendorDef {
+        id: "LOW_SteepsTrader_Weapons",
+        display_name: "Fytz the Firecracker",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 37
+    VendorDef {
+        id: "LOW_SteepsTrader_Armor",
+        display_name: "Gloomy Fentonson",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 38
+    VendorDef {
+        id: "LOW_SteepsTrader_BooksAndScrolls",
+        display_name: "Nansi Gretta",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 39, Commented out of dialog
+    VendorDef {
+        id: "LOW_SteepsTrader_Consumables",
+        display_name: "Beehive General",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 40
+    VendorDef {
+        id: "LOW_MusicTrader",
+        display_name: "Thomas C. Quirkilious",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 41, Commented out of dialog
+    VendorDef {
+        id: "LOW_JewelTrader",
+        display_name: "Omotola",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 42, Commented out of dialog
+    VendorDef {
+        id: "LOW_MurderTribunal_Merchant",
+        display_name: "Echo of Abazigal",
+        location: "Murder Tribunal",
+        always_enabled: false,
+    }, // 43, Commented out of dialog
+    VendorDef {
+        id: "LOW_GortashParent_Trade",
+        display_name: "Flymm Family",
+        location: "Lower City",
+        always_enabled: false,
+    }, // 44, Commented out of dialog
 ];
 
 /// A single dye color entry with its category name and color value
@@ -203,9 +424,7 @@ impl DyesState {
             show_meta_dialog: RwSignal::new(false),
 
             // Vendor selection - default to none (except always_enabled ones)
-            selected_vendors: RwSignal::new(
-                VENDOR_DEFS.iter().map(|v| v.always_enabled).collect()
-            ),
+            selected_vendors: RwSignal::new(VENDOR_DEFS.iter().map(|v| v.always_enabled).collect()),
         }
     }
 

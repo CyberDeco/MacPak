@@ -1,8 +1,8 @@
 //! GTS header reading.
 
-use std::io::{Read, Seek, SeekFrom};
-use crate::error::Result;
 use super::super::types::GtsHeader;
+use crate::error::Result;
+use std::io::{Read, Seek, SeekFrom};
 
 /// Read and parse a GTS header from a reader.
 pub(super) fn read_header<R: Read + Seek>(reader: &mut R) -> Result<GtsHeader> {

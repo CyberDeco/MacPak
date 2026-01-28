@@ -30,7 +30,12 @@ impl ModProgress {
 
     /// Create a progress update with a file/item name
     #[must_use]
-    pub fn with_file(phase: ModPhase, current: usize, total: usize, file: impl Into<String>) -> Self {
+    pub fn with_file(
+        phase: ModPhase,
+        current: usize,
+        total: usize,
+        file: impl Into<String>,
+    ) -> Self {
         Self {
             phase,
             current,

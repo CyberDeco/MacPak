@@ -25,7 +25,9 @@ pub fn search_toolbar(state: SearchState, config_state: ConfigState) -> impl Int
             .style(|s| {
                 s.flex_grow(1.0)
                     .max_width(400.0)
-                    .class(PlaceholderTextClass, |s| s.color(Color::rgb8(120, 120, 120)))
+                    .class(PlaceholderTextClass, |s| {
+                        s.color(Color::rgb8(120, 120, 120))
+                    })
             })
             .on_key_down(
                 Key::Named(NamedKey::Enter),
@@ -34,22 +36,15 @@ pub fn search_toolbar(state: SearchState, config_state: ConfigState) -> impl Int
                     perform_search(state_enter.clone());
                 },
             ),
-
         // Search button
         search_button(state.clone()),
-
         separator(),
-
         // Filter buttons
         filter_buttons(active_filter),
-
         separator(),
-
         // Extract selected button
         extract_selected_button(state.clone()),
-
         empty().style(|s| s.flex_grow(1.0)),
-
         // Rebuild index button (uses BG3 path from preferences)
         rebuild_index_button(state.clone(), config_state, index_status),
     ))
@@ -159,7 +154,11 @@ fn filter_button(
     )
 }
 
-fn rebuild_index_button(state: SearchState, config_state: ConfigState, index_status: RwSignal<IndexStatus>) -> impl IntoView {
+fn rebuild_index_button(
+    state: SearchState,
+    config_state: ConfigState,
+    index_status: RwSignal<IndexStatus>,
+) -> impl IntoView {
     let bg3_path = config_state.bg3_data_path;
 
     dyn_container(
@@ -183,7 +182,11 @@ fn rebuild_index_button(state: SearchState, config_state: ConfigState, index_sta
             } else {
                 let path_for_action = path.clone();
                 // Change label based on whether index already exists
-                let button_label = if is_ready { "Rebuild Index" } else { "Build Index" };
+                let button_label = if is_ready {
+                    "Rebuild Index"
+                } else {
+                    "Build Index"
+                };
 
                 button(button_label)
                     .disabled(move || !path_valid)
@@ -206,10 +209,11 @@ fn rebuild_index_button(state: SearchState, config_state: ConfigState, index_sta
                                 .set_title("Rebuild Index?")
                                 .set_description(
                                     "An index already exists. Rebuilding will take some time.\n\n\
-                                    Do you want to rebuild the index?"
+                                    Do you want to rebuild the index?",
                                 )
                                 .set_buttons(rfd::MessageButtons::YesNo)
-                                .show() == rfd::MessageDialogResult::Yes
+                                .show()
+                                == rfd::MessageDialogResult::Yes
                         } else {
                             true
                         };
@@ -271,4 +275,3 @@ fn extract_selected_button(state: SearchState) -> impl IntoView {
         },
     )
 }
-

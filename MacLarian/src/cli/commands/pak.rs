@@ -4,8 +4,10 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::time::Instant;
 
-use crate::cli::progress::{print_step, print_done, simple_bar, LOOKING_GLASS, PACKAGE, SPARKLE};
-use crate::pak::{batch_create, batch_extract, find_pak_files, find_packable_folders, PakOperations};
+use crate::cli::progress::{LOOKING_GLASS, PACKAGE, SPARKLE, print_done, print_step, simple_bar};
+use crate::pak::{
+    PakOperations, batch_create, batch_extract, find_packable_folders, find_pak_files,
+};
 use crate::search::FileType;
 
 /// Show aggregate info about a PAK file
@@ -92,10 +94,7 @@ pub fn find(dir: &Path) -> anyhow::Result<()> {
         println!("Found {} PAK files:", paks.len());
         for pak in &paks {
             // Show relative path if possible
-            let display = pak
-                .strip_prefix(dir)
-                .unwrap_or(pak.as_path())
-                .display();
+            let display = pak.strip_prefix(dir).unwrap_or(pak.as_path()).display();
             println!("  {display}");
         }
     }
@@ -115,7 +114,12 @@ pub fn batch_extract_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    print_step(2, 2, PACKAGE, &format!("Extracting {} PAK files...", paks.len()));
+    print_step(
+        2,
+        2,
+        PACKAGE,
+        &format!("Extracting {} PAK files...", paks.len()),
+    );
 
     let pb = simple_bar(paks.len() as u64, "Extracting");
     let result = batch_extract(&paks, source, dest, |progress| {
@@ -154,7 +158,12 @@ pub fn batch_create_cmd(source: &Path, dest: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    print_step(2, 2, PACKAGE, &format!("Creating {} PAK files...", folders.len()));
+    print_step(
+        2,
+        2,
+        PACKAGE,
+        &format!("Creating {} PAK files...", folders.len()),
+    );
 
     let pb = simple_bar(folders.len() as u64, "Creating");
     let result = batch_create(&folders, source, dest, |progress| {

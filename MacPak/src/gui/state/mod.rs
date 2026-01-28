@@ -15,11 +15,16 @@ pub mod virtual_textures;
 pub use app::AppState;
 pub use browser::{BrowserState, FileEntry, RawImageData, SortColumn};
 pub use config::{
-    ConfigState, PersistedConfig, PersistedWindowState, PersistedEditorState,
-    PersistedBrowserState, PersistedSearchState, PersistedDialogueState,
+    ConfigState, PersistedBrowserState, PersistedConfig, PersistedDialogueState,
+    PersistedEditorState, PersistedSearchState, PersistedWindowState,
 };
-pub use dialogue::{DialogueState, DialogEntry, DialogSource, DisplayNode, DisplayFlag, VoiceMetaEntry, VoiceMetaCache, NODE_TYPE_OPTIONS};
-pub use dyes::{DyeColorEntry, DyesState, GeneratedDyeEntry, ImportedDyeEntry, VendorDef, VENDOR_DEFS};
+pub use dialogue::{
+    DialogEntry, DialogSource, DialogueState, DisplayFlag, DisplayNode, NODE_TYPE_OPTIONS,
+    VoiceMetaCache, VoiceMetaEntry,
+};
+pub use dyes::{
+    DyeColorEntry, DyesState, GeneratedDyeEntry, ImportedDyeEntry, VENDOR_DEFS, VendorDef,
+};
 pub use editor::{EditorState, EditorTab, EditorTabsState};
 pub use gr2::Gr2State;
 pub use pak_ops::{ActiveDialog, PakCompression, PakOpsState};

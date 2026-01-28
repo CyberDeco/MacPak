@@ -104,7 +104,6 @@ fn matches_glob_recursive(pattern: &[char], text: &[char], pi: usize, ti: usize)
     }
 }
 
-
 pub fn execute(
     source: &Path,
     destination: &Path,
@@ -229,7 +228,11 @@ pub fn execute(
         pb.finish_with_message("done");
         println!("Extraction complete");
     } else {
-        println!("Extracting {} to {}", source.display(), destination.display());
+        println!(
+            "Extracting {} to {}",
+            source.display(),
+            destination.display()
+        );
         PakOperations::extract(source, destination)?;
         println!("Extraction complete");
     }
@@ -250,7 +253,10 @@ fn execute_smart_extraction(
     let extraction_opts = gr2_options.to_extraction_options();
 
     // Count GR2 files for progress reporting
-    let gr2_count = files.iter().filter(|f| f.to_lowercase().ends_with(".gr2")).count();
+    let gr2_count = files
+        .iter()
+        .filter(|f| f.to_lowercase().ends_with(".gr2"))
+        .count();
     if gr2_count > 0 {
         println!("Found {gr2_count} GR2 files to process");
     }
@@ -260,12 +266,8 @@ fn execute_smart_extraction(
         let pb = simple_bar(total as u64, "Extracting");
         let count = AtomicUsize::new(0);
 
-        let result = extract_files_smart(
-            source,
-            destination,
-            files,
-            extraction_opts,
-            &|progress| {
+        let result =
+            extract_files_smart(source, destination, files, extraction_opts, &|progress| {
                 let n = count.fetch_add(1, Ordering::SeqCst) + 1;
                 pb.set_position(n as u64);
                 if let Some(ref name) = progress.current_file {
@@ -275,19 +277,13 @@ fn execute_smart_extraction(
                         .unwrap_or(name);
                     pb.set_message(short_name.to_string());
                 }
-            },
-        )?;
+            })?;
 
         pb.finish_with_message("done");
         print_smart_extraction_result(&result);
     } else {
-        let result = extract_files_smart(
-            source,
-            destination,
-            files,
-            extraction_opts,
-            &|_progress| {},
-        )?;
+        let result =
+            extract_files_smart(source, destination, files, extraction_opts, &|_progress| {})?;
         print_smart_extraction_result(&result);
     }
 
@@ -319,4 +315,3 @@ fn print_smart_extraction_result(result: &crate::pak::SmartExtractionResult) {
         }
     }
 }
-

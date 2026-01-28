@@ -10,9 +10,7 @@ use std::path::Path;
 ///
 /// Use for: file read/write failures, rename/delete errors, data corruption
 pub fn show_file_error(path: &Path, operation: &str, error: &str) {
-    let filename = path.file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("file");
+    let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
 
     rfd::MessageDialog::new()
         .set_title(&format!("Error {} File", operation))

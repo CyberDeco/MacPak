@@ -4,11 +4,10 @@ use floem::prelude::*;
 use floem::text::Weight;
 use std::path::Path;
 
-use crate::gui::state::{ActiveDialog, PakOpsState};
 use super::super::operations::{
-    extract_dropped_file, extract_individual_dropped_file, list_dropped_file,
-    validate_dropped_pak,
+    extract_dropped_file, extract_individual_dropped_file, list_dropped_file, validate_dropped_pak,
 };
+use crate::gui::state::{ActiveDialog, PakOpsState};
 
 pub fn drop_action_content(state: PakOpsState) -> impl IntoView {
     let dropped_file = state.dropped_file;
@@ -34,8 +33,7 @@ pub fn drop_action_content(state: PakOpsState) -> impl IntoView {
                 .font_weight(Weight::BOLD)
                 .margin_bottom(16.0)
         }),
-        label(|| "What would you like to do?".to_string())
-            .style(|s| s.margin_bottom(12.0)),
+        label(|| "What would you like to do?".to_string()).style(|s| s.margin_bottom(12.0)),
         button("📦 Extract PAK")
             .action(move || {
                 state_extract.active_dialog.set(ActiveDialog::None);
@@ -53,7 +51,10 @@ pub fn drop_action_content(state: PakOpsState) -> impl IntoView {
         button("📄 Extract Individual Files")
             .action(move || {
                 state_individual.active_dialog.set(ActiveDialog::None);
-                extract_individual_dropped_file(state_individual.clone(), file_path_individual.clone());
+                extract_individual_dropped_file(
+                    state_individual.clone(),
+                    file_path_individual.clone(),
+                );
             })
             .style(|s| {
                 s.width_full()

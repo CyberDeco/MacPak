@@ -35,16 +35,14 @@ pub fn perform_search(state: SearchState) {
     results_signal.set(Vec::new());
 
     // Create action for sending final results back to UI thread
-    let send_results = create_ext_action(Scope::new(), move |msg: SearchMessage| {
-        match msg {
-            SearchMessage::Results(results) => {
-                is_searching.set(false);
-                results_signal.set(results);
-            }
-            SearchMessage::Error(msg) => {
-                is_searching.set(false);
-                tracing::error!("Search error: {}", msg);
-            }
+    let send_results = create_ext_action(Scope::new(), move |msg: SearchMessage| match msg {
+        SearchMessage::Results(results) => {
+            is_searching.set(false);
+            results_signal.set(results);
+        }
+        SearchMessage::Error(msg) => {
+            is_searching.set(false);
+            tracing::error!("Search error: {}", msg);
         }
     });
 

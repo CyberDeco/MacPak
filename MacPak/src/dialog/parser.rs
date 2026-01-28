@@ -2,8 +2,11 @@
 //!
 //! Extracts dialog data from the generic LSJ format into typed Dialog structures.
 
-use maclarian::formats::lsj::{LsjDocument, LsjNode, LsjAttribute};
-use super::types::{Dialog, SpeakerInfo, DialogNode, NodeConstructor, GameData, FlagGroup, FlagType, Flag, TaggedText, Rule, RuleGroup, TagTextEntry, DialogEditorData};
+use super::types::{
+    Dialog, DialogEditorData, DialogNode, Flag, FlagGroup, FlagType, GameData, NodeConstructor,
+    Rule, RuleGroup, SpeakerInfo, TagTextEntry, TaggedText,
+};
+use maclarian::formats::lsj::{LsjAttribute, LsjDocument, LsjNode};
 
 /// Parse a dialog from an LSJ document
 ///
@@ -13,7 +16,10 @@ pub fn parse_dialog(doc: &LsjDocument) -> Result<Dialog, DialogParseError> {
     let mut dialog = Dialog::new();
 
     // Get the dialog region
-    let dialog_region = doc.save.regions.get("dialog")
+    let dialog_region = doc
+        .save
+        .regions
+        .get("dialog")
         .or_else(|| doc.save.regions.get("Dialog"))
         .ok_or(DialogParseError::MissingRegion("dialog".to_string()))?;
 
@@ -46,10 +52,8 @@ pub fn parse_dialog(doc: &LsjDocument) -> Result<Dialog, DialogParseError> {
         for das_node in das_list {
             if let Some(objects) = das_node.children.get("Object") {
                 for obj in objects {
-                    let map_key = obj.attributes.get("MapKey")
-                        .map_or(0, get_int_value);
-                    let map_value = obj.attributes.get("MapValue")
-                        .map_or(0, get_int_value);
+                    let map_key = obj.attributes.get("MapKey").map_or(0, get_int_value);
+                    let map_value = obj.attributes.get("MapValue").map_or(0, get_int_value);
                     dialog.default_addressed_speakers.insert(map_key, map_value);
                 }
             }
@@ -85,7 +89,10 @@ pub fn parse_dialog(doc: &LsjDocument) -> Result<Dialog, DialogParseError> {
     }
 
     // Parse editor data region
-    if let Some(editor_region) = doc.save.regions.get("editorData")
+    if let Some(editor_region) = doc
+        .save
+        .regions
+        .get("editorData")
         .or_else(|| doc.save.regions.get("EditorData"))
     {
         dialog.editor_data = parse_editor_data(editor_region);
@@ -96,14 +103,20 @@ pub fn parse_dialog(doc: &LsjDocument) -> Result<Dialog, DialogParseError> {
 
 /// Parse a speaker from LSJ node
 fn parse_speaker(node: &LsjNode) -> Option<SpeakerInfo> {
-    let index = node.attributes.get("index")
+    let index = node
+        .attributes
+        .get("index")
         .map_or(0, |a| get_string_value(a).parse::<i32>().unwrap_or(0));
 
-    let speaker_mapping_id = node.attributes.get("SpeakerMappingId")
+    let speaker_mapping_id = node
+        .attributes
+        .get("SpeakerMappingId")
         .map(get_string_value)
         .unwrap_or_default();
 
-    let speaker_list: Vec<String> = node.attributes.get("list")
+    let speaker_list: Vec<String> = node
+        .attributes
+        .get("list")
         .map(|a| {
             get_string_value(a)
                 .split(';')
@@ -113,7 +126,9 @@ fn parse_speaker(node: &LsjNode) -> Option<SpeakerInfo> {
         })
         .unwrap_or_default();
 
-    let is_peanut = node.attributes.get("IsPeanutSpeaker")
+    let is_peanut = node
+        .attributes
+        .get("IsPeanutSpeaker")
         .is_some_and(get_bool_value);
 
     Some(SpeakerInfo {
@@ -126,10 +141,11 @@ fn parse_speaker(node: &LsjNode) -> Option<SpeakerInfo> {
 
 /// Parse a dialog node from LSJ
 fn parse_node(node: &LsjNode) -> Option<DialogNode> {
-    let uuid = node.attributes.get("UUID")
-        .map(get_string_value)?;
+    let uuid = node.attributes.get("UUID").map(get_string_value)?;
 
-    let constructor = node.attributes.get("constructor")
+    let constructor = node
+        .attributes
+        .get("constructor")
         .map(|a| NodeConstructor::from_str(&get_string_value(a)))
         .unwrap_or_default();
 
@@ -306,10 +322,14 @@ fn parse_node(node: &LsjNode) -> Option<DialogNode> {
         for ed_container in ed_list {
             if let Some(data_list) = ed_container.children.get("data") {
                 for data in data_list {
-                    let key = data.attributes.get("key")
+                    let key = data
+                        .attributes
+                        .get("key")
                         .map(get_string_value)
                         .unwrap_or_default();
-                    let val = data.attributes.get("val")
+                    let val = data
+                        .attributes
+                        .get("val")
                         .map(get_string_value)
                         .unwrap_or_default();
                     if !key.is_empty() {
@@ -346,7 +366,9 @@ fn parse_node(node: &LsjNode) -> Option<DialogNode> {
 
 /// Parse a flag group
 fn parse_flag_group(node: &LsjNode) -> Option<FlagGroup> {
-    let flag_type = node.attributes.get("type")
+    let flag_type = node
+        .attributes
+        .get("type")
         .map(|a| FlagType::from_str(&get_string_value(a)))
         .unwrap_or_default();
 
@@ -354,15 +376,17 @@ fn parse_flag_group(node: &LsjNode) -> Option<FlagGroup> {
 
     if let Some(flag_list) = node.children.get("flag") {
         for flag_node in flag_list {
-            let uuid = flag_node.attributes.get("UUID")
+            let uuid = flag_node
+                .attributes
+                .get("UUID")
                 .map(get_string_value)
                 .unwrap_or_default();
-            let value = flag_node.attributes.get("value")
+            let value = flag_node
+                .attributes
+                .get("value")
                 .is_some_and(get_bool_value);
-            let param_val = flag_node.attributes.get("paramval")
-                .map(get_int_value);
-            let name = flag_node.attributes.get("name")
-                .map(get_string_value);
+            let param_val = flag_node.attributes.get("paramval").map(get_int_value);
+            let name = flag_node.attributes.get("name").map(get_string_value);
 
             flags.push(Flag {
                 uuid,
@@ -378,7 +402,9 @@ fn parse_flag_group(node: &LsjNode) -> Option<FlagGroup> {
 
 /// Parse tagged text structure
 fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
-    let has_tag_rule = node.attributes.get("HasTagRule")
+    let has_tag_rule = node
+        .attributes
+        .get("HasTagRule")
         .is_some_and(get_bool_value);
 
     let mut rule_groups = Vec::new();
@@ -387,8 +413,7 @@ fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
     // Parse rule groups
     if let Some(rg_list) = node.children.get("RuleGroup") {
         for rg in rg_list {
-            let tag_combine_op = rg.attributes.get("TagCombineOp")
-                .map_or(0, get_int_value);
+            let tag_combine_op = rg.attributes.get("TagCombineOp").map_or(0, get_int_value);
 
             let mut rules = Vec::new();
 
@@ -396,12 +421,15 @@ fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
                 for rules_container in rules_list {
                     if let Some(rule_nodes) = rules_container.children.get("Rule") {
                         for rule_node in rule_nodes {
-                            let has_child_rules = rule_node.attributes.get("HasChildRules")
+                            let has_child_rules = rule_node
+                                .attributes
+                                .get("HasChildRules")
                                 .is_some_and(get_bool_value);
-                            let rule_combine_op = rule_node.attributes.get("TagCombineOp")
+                            let rule_combine_op = rule_node
+                                .attributes
+                                .get("TagCombineOp")
                                 .map_or(0, get_int_value);
-                            let speaker = rule_node.attributes.get("speaker")
-                                .map(get_int_value);
+                            let speaker = rule_node.attributes.get("speaker").map(get_int_value);
 
                             let mut rule_tags = Vec::new();
                             if let Some(tags_list) = rule_node.children.get("Tags") {
@@ -439,27 +467,29 @@ fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
         for tt_container in tt_list {
             if let Some(text_nodes) = tt_container.children.get("TagText") {
                 for text_node in text_nodes {
-                    let line_id = text_node.attributes.get("LineId")
-                        .map(get_string_value);
-                    let stub = text_node.attributes.get("stub")
-                        .is_some_and(get_bool_value);
+                    let line_id = text_node.attributes.get("LineId").map(get_string_value);
+                    let stub = text_node.attributes.get("stub").is_some_and(get_bool_value);
 
                     // Get the translated string
-                    let (handle, value, version) = if let Some(tt_attr) = text_node.attributes.get("TagText") {
-                        match tt_attr {
-                            LsjAttribute::TranslatedString { handle, value, version, .. } => {
-                                (handle.clone(), value.clone(), *version)
+                    let (handle, value, version) =
+                        if let Some(tt_attr) = text_node.attributes.get("TagText") {
+                            match tt_attr {
+                                LsjAttribute::TranslatedString {
+                                    handle,
+                                    value,
+                                    version,
+                                    ..
+                                } => (handle.clone(), value.clone(), *version),
+                                LsjAttribute::TranslatedFSString { handle, value, .. } => {
+                                    (handle.clone(), value.clone(), None)
+                                }
+                                LsjAttribute::Simple { value, .. } => {
+                                    (value.as_str().unwrap_or("").to_string(), None, None)
+                                }
                             }
-                            LsjAttribute::TranslatedFSString { handle, value, .. } => {
-                                (handle.clone(), value.clone(), None)
-                            }
-                            LsjAttribute::Simple { value, .. } => {
-                                (value.as_str().unwrap_or("").to_string(), None, None)
-                            }
-                        }
-                    } else {
-                        (String::new(), None, None)
-                    };
+                        } else {
+                            (String::new(), None, None)
+                        };
 
                     tag_texts.push(TagTextEntry {
                         line_id,
@@ -502,8 +532,16 @@ fn parse_editor_data(node: &LsjNode) -> DialogEditorData {
         for da_container in da_list {
             if let Some(data_list) = da_container.children.get("data") {
                 for data in data_list {
-                    let key = data.attributes.get("key").map(get_string_value).unwrap_or_default();
-                    let val = data.attributes.get("val").map(get_string_value).unwrap_or_default();
+                    let key = data
+                        .attributes
+                        .get("key")
+                        .map(get_string_value)
+                        .unwrap_or_default();
+                    let val = data
+                        .attributes
+                        .get("val")
+                        .map(get_string_value)
+                        .unwrap_or_default();
                     if !key.is_empty() {
                         editor_data.default_attitudes.insert(key, val);
                     }
@@ -517,8 +555,16 @@ fn parse_editor_data(node: &LsjNode) -> DialogEditorData {
         for de_container in de_list {
             if let Some(data_list) = de_container.children.get("data") {
                 for data in data_list {
-                    let key = data.attributes.get("key").map(get_string_value).unwrap_or_default();
-                    let val = data.attributes.get("val").map(get_string_value).unwrap_or_default();
+                    let key = data
+                        .attributes
+                        .get("key")
+                        .map(get_string_value)
+                        .unwrap_or_default();
+                    let val = data
+                        .attributes
+                        .get("val")
+                        .map(get_string_value)
+                        .unwrap_or_default();
                     if !key.is_empty() {
                         editor_data.default_emotions.insert(key, val);
                     }
@@ -532,8 +578,16 @@ fn parse_editor_data(node: &LsjNode) -> DialogEditorData {
         for ip_container in ip_list {
             if let Some(data_list) = ip_container.children.get("data") {
                 for data in data_list {
-                    let key = data.attributes.get("key").map(get_string_value).unwrap_or_default();
-                    let val = data.attributes.get("val").map(get_string_value).unwrap_or_default();
+                    let key = data
+                        .attributes
+                        .get("key")
+                        .map(get_string_value)
+                        .unwrap_or_default();
+                    let val = data
+                        .attributes
+                        .get("val")
+                        .map(get_string_value)
+                        .unwrap_or_default();
                     if !key.is_empty() {
                         editor_data.is_peanut.insert(key, val);
                     }
@@ -549,9 +603,10 @@ fn parse_editor_data(node: &LsjNode) -> DialogEditorData {
 
 fn get_string_value(attr: &LsjAttribute) -> String {
     match attr {
-        LsjAttribute::Simple { value, .. } => {
-            value.as_str().map(std::string::ToString::to_string).unwrap_or_default()
-        }
+        LsjAttribute::Simple { value, .. } => value
+            .as_str()
+            .map(std::string::ToString::to_string)
+            .unwrap_or_default(),
         LsjAttribute::TranslatedString { value, handle, .. } => {
             value.clone().unwrap_or_else(|| handle.clone())
         }
@@ -563,33 +618,36 @@ fn get_string_value(attr: &LsjAttribute) -> String {
 
 fn get_int_value(attr: &LsjAttribute) -> i32 {
     match attr {
-        LsjAttribute::Simple { value, .. } => {
-            value.as_i64().map(|v| v as i32)
-                .or_else(|| value.as_str().and_then(|s| s.parse().ok()))
-                .unwrap_or(0)
-        }
+        LsjAttribute::Simple { value, .. } => value
+            .as_i64()
+            .map(|v| v as i32)
+            .or_else(|| value.as_str().and_then(|s| s.parse().ok()))
+            .unwrap_or(0),
         _ => 0,
     }
 }
 
 fn get_float_value(attr: &LsjAttribute) -> f32 {
     match attr {
-        LsjAttribute::Simple { value, .. } => {
-            value.as_f64().map(|v| v as f32)
-                .or_else(|| value.as_str().and_then(|s| s.parse().ok()))
-                .unwrap_or(0.0)
-        }
+        LsjAttribute::Simple { value, .. } => value
+            .as_f64()
+            .map(|v| v as f32)
+            .or_else(|| value.as_str().and_then(|s| s.parse().ok()))
+            .unwrap_or(0.0),
         _ => 0.0,
     }
 }
 
 fn get_bool_value(attr: &LsjAttribute) -> bool {
     match attr {
-        LsjAttribute::Simple { value, .. } => {
-            value.as_bool()
-                .or_else(|| value.as_str().map(|s| s.eq_ignore_ascii_case("true") || s == "1"))
-                .unwrap_or(false)
-        }
+        LsjAttribute::Simple { value, .. } => value
+            .as_bool()
+            .or_else(|| {
+                value
+                    .as_str()
+                    .map(|s| s.eq_ignore_ascii_case("true") || s == "1")
+            })
+            .unwrap_or(false),
         _ => false,
     }
 }
@@ -619,4 +677,3 @@ impl From<std::io::Error> for DialogParseError {
         DialogParseError::IoError(err)
     }
 }
-

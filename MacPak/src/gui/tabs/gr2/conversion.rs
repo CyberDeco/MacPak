@@ -7,24 +7,35 @@ use std::thread;
 use floem::prelude::*;
 use rayon::prelude::*;
 
+use super::types::{Gr2Result, create_result_sender, get_shared_progress};
 use crate::gui::state::Gr2State;
-use super::types::{create_result_sender, get_shared_progress, Gr2Result};
 
 /// Convert a single file with explicit options (for operation buttons UI)
 /// Determines direction from input file extension
 pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path: String) {
     let Some(input_path) = state.input_file.get() else {
-        state.status_message.set("No input file selected".to_string());
+        state
+            .status_message
+            .set("No input file selected".to_string());
         return;
     };
 
     let input = Path::new(&input_path);
-    let stem = input.file_stem().unwrap_or_default().to_string_lossy().to_string();
+    let stem = input
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
     let parent = input.parent().unwrap_or(Path::new(".")).to_path_buf();
-    let input_ext = input.extension()
+    let input_ext = input
+        .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
         .unwrap_or_default();
-    let input_name = input.file_name().unwrap_or_default().to_string_lossy().to_string();
+    let input_name = input
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
 
     // Determine direction from input file extension
     let is_gr2_input = input_ext == "gr2";
@@ -46,13 +57,23 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
     let use_subdir = is_gr2_input && (!to_glb || extract_textures);
     let (output_dir, output_path) = if use_subdir {
         let subdir = parent.join(&stem);
-        (subdir.clone(), subdir.join(format!("{}.{}", stem, output_ext)))
+        (
+            subdir.clone(),
+            subdir.join(format!("{}.{}", stem, output_ext)),
+        )
     } else {
-        (parent.clone(), parent.join(format!("{}.{}", stem, output_ext)))
+        (
+            parent.clone(),
+            parent.join(format!("{}.{}", stem, output_ext)),
+        )
     };
 
     let output_str = output_path.to_string_lossy().to_string();
-    let output_name = output_path.file_name().unwrap_or_default().to_string_lossy().to_string();
+    let output_name = output_path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
 
     // Start conversion
     state.is_converting.set(true);
@@ -76,7 +97,11 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
                     Path::new(&input_str),
                     Path::new(&output_str),
                     &|progress| {
-                        shared.update(progress.current, progress.total + 1, progress.phase.as_str());
+                        shared.update(
+                            progress.current,
+                            progress.total + 1,
+                            progress.phase.as_str(),
+                        );
                     },
                 )
             } else {
@@ -84,7 +109,11 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
                     Path::new(&input_str),
                     Path::new(&output_str),
                     &|progress| {
-                        shared.update(progress.current, progress.total + 1, progress.phase.as_str());
+                        shared.update(
+                            progress.current,
+                            progress.total + 1,
+                            progress.phase.as_str(),
+                        );
                     },
                 )
             }
@@ -118,7 +147,11 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
                 keep_original_dds,
             };
 
-            match maclarian::gr2_extraction::process_extracted_gr2_to_dir(Path::new(&input_str), &output_dir, &options) {
+            match maclarian::gr2_extraction::process_extracted_gr2_to_dir(
+                Path::new(&input_str),
+                &output_dir,
+                &options,
+            ) {
                 Ok(tex_result) => {
                     if !tex_result.texture_paths.is_empty() {
                         texture_info = format!(" + {} textures", tex_result.texture_paths.len());
@@ -205,13 +238,21 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
             .par_iter()
             .map(|input_path| {
                 let input = Path::new(input_path);
-                let stem = input.file_stem().unwrap_or_default().to_string_lossy().to_string();
+                let stem = input
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
                 let parent = input.parent().unwrap_or(Path::new("."));
                 let input_ext = input
                     .extension()
                     .map(|e| e.to_string_lossy().to_lowercase())
                     .unwrap_or_default();
-                let input_name = input.file_name().unwrap_or_default().to_string_lossy().to_string();
+                let input_name = input
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
 
                 // Determine direction from input file extension
                 let is_gr2_input = input_ext == "gr2";
@@ -227,7 +268,10 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                 let use_subdir = is_gr2_input && (!to_glb || extract_textures);
                 let (output_dir, output_path) = if use_subdir {
                     let subdir = parent.join(&stem);
-                    (Some(subdir.clone()), subdir.join(format!("{}.{}", stem, output_ext)))
+                    (
+                        Some(subdir.clone()),
+                        subdir.join(format!("{}.{}", stem, output_ext)),
+                    )
                 } else {
                     (None, parent.join(format!("{}.{}", stem, output_ext)))
                 };
@@ -265,7 +309,10 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                 match result {
                     Ok(()) => {
                         success_counter.fetch_add(1, Ordering::SeqCst);
-                        let output_name = output_path.file_name().unwrap_or_default().to_string_lossy();
+                        let output_name = output_path
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy();
 
                         // Handle texture extraction for GR2→GLB/glTF conversions
                         let texture_info = if is_gr2_input && extract_textures {
@@ -286,7 +333,11 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
 
                             let parent_buf = parent.to_path_buf();
                             let tex_output_dir = output_dir.as_ref().unwrap_or(&parent_buf);
-                            match maclarian::gr2_extraction::process_extracted_gr2_to_dir(input, tex_output_dir, &options) {
+                            match maclarian::gr2_extraction::process_extracted_gr2_to_dir(
+                                input,
+                                tex_output_dir,
+                                &options,
+                            ) {
                                 Ok(tex_result) if !tex_result.texture_paths.is_empty() => {
                                     format!(" + {} textures", tex_result.texture_paths.len())
                                 }

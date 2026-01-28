@@ -7,13 +7,12 @@ pub use export_mod::export_dye_mod;
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::gui::state::DyesState;
-use super::shared::{
-    secondary_button_style,
-    collect_all_colors, reset_colors_to_default, load_colors_from_map,
-    nav_row, selector_container_green, empty_state_style, selector_label_style,
-};
 use super::shared::constants::*;
+use super::shared::{
+    collect_all_colors, empty_state_style, load_colors_from_map, nav_row, reset_colors_to_default,
+    secondary_button_style, selector_container_green, selector_label_style,
+};
+use crate::gui::state::DyesState;
 
 pub use export_mod::check_required_colors_at_default;
 
@@ -26,8 +25,7 @@ pub fn export_section(state: DyesState) -> impl IntoView {
     v_stack((
         // Section header with Export button
         h_stack((
-            label(|| "Export")
-                .style(|s| s.font_size(FONT_HEADER).font_weight(Weight::SEMIBOLD)),
+            label(|| "Export").style(|s| s.font_size(FONT_HEADER).font_weight(Weight::SEMIBOLD)),
             empty().style(|s| s.flex_grow(1.0)),
             {
                 let generated_dyes = generated_dyes;
@@ -38,7 +36,9 @@ pub fn export_section(state: DyesState) -> impl IntoView {
                     .on_click_stop(move |_| {
                         let dyes = generated_dyes.get();
                         if dyes.is_empty() {
-                            status.set("Error: No dyes generated. Use 'Generate Dye' first.".to_string());
+                            status.set(
+                                "Error: No dyes generated. Use 'Generate Dye' first.".to_string(),
+                            );
                             return;
                         }
 
@@ -47,13 +47,16 @@ pub fn export_section(state: DyesState) -> impl IntoView {
                     })
             },
         ))
-        .style(|s| s.width_full().items_center().gap(GAP_STD).margin_bottom(PADDING_STD)),
-
+        .style(|s| {
+            s.width_full()
+                .items_center()
+                .gap(GAP_STD)
+                .margin_bottom(PADDING_STD)
+        }),
         // Inner card with generated dyes list
         v_stack((
             // Generated dyes selector (only shows when there are generated dyes)
             generated_dyes_selector(state.clone()),
-
             // Display selected dye info
             selected_dye_display(generated_dyes, selected_index, status),
         ))
@@ -264,8 +267,7 @@ fn selected_dye_display(
                 v_stack((
                     // Dye Name row - editable (stable, won't re-render on typing)
                     h_stack((
-                        label(|| "Dye Name")
-                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        label(|| "Dye Name").style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
                         text_input(edit_name)
                             .on_event_stop(floem::event::EventListener::FocusLost, move |_| {
                                 // Update the name in generated_dyes when focus is lost
@@ -293,7 +295,6 @@ fn selected_dye_display(
                             }),
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
                     // Display Name row - editable
                     h_stack((
                         label(|| "Display Name")
@@ -322,7 +323,6 @@ fn selected_dye_display(
                             }),
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
                     // Description row - editable
                     h_stack((
                         label(|| "Description")
@@ -351,22 +351,19 @@ fn selected_dye_display(
                             }),
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
-
                     // Dye UUID row (read-only)
                     h_stack((
-                        label(|| "Dye UUID")
-                            .style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
-                        label(move || display_uuid.get())
-                            .style(|s| {
-                                s.flex_grow(1.0)
-                                    .padding(PADDING_BTN_V)
-                                    .font_size(FONT_BODY)
-                                    .font_family("monospace".to_string())
-                                    .background(BG_INPUT_READONLY)
-                                    .border(1.0)
-                                    .border_color(BORDER_INPUT)
-                                    .border_radius(RADIUS_STD)
-                            }),
+                        label(|| "Dye UUID").style(|s| s.width(LABEL_WIDTH).font_size(FONT_BODY)),
+                        label(move || display_uuid.get()).style(|s| {
+                            s.flex_grow(1.0)
+                                .padding(PADDING_BTN_V)
+                                .font_size(FONT_BODY)
+                                .font_family("monospace".to_string())
+                                .background(BG_INPUT_READONLY)
+                                .border(1.0)
+                                .border_color(BORDER_INPUT)
+                                .border_radius(RADIUS_STD)
+                        }),
                     ))
                     .style(|s| s.width_full().items_center().gap(GAP_STD)),
                 ))

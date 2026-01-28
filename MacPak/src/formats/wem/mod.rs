@@ -21,20 +21,15 @@
 //!
 //! Use `AudioCache` to cache decoded audio for efficient repeated playback.
 
-mod decoder;
 mod cache;
+mod decoder;
 
 pub use decoder::{
-    WemError,
-    WemHeader,
-    DecodedAudio,
-    WwiseVorbisHeader,
-    parse_wem_header,
-    parse_wwise_vorbis_header,
-    decode_wwise_vorbis_fallback,
+    DecodedAudio, WemError, WemHeader, WwiseVorbisHeader, decode_wwise_vorbis_fallback,
+    parse_wem_header, parse_wwise_vorbis_header,
 };
 
-pub use cache::{AudioCache, AudioCacheError, CachedAudio, CacheStats};
+pub use cache::{AudioCache, AudioCacheError, CacheStats, CachedAudio};
 
 #[cfg(feature = "gui")]
 pub use decoder::load_wem_file_vgmstream;

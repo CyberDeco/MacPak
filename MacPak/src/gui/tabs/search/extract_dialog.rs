@@ -27,7 +27,10 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
 
     // Check if selection contains GR2 files
     let has_gr2 = move || {
-        pending_files.get().iter().any(|(path, _)| path.to_lowercase().ends_with(".gr2"))
+        pending_files
+            .get()
+            .iter()
+            .any(|(path, _)| path.to_lowercase().ends_with(".gr2"))
     };
 
     // Check if all options are enabled (bundle mode)
@@ -36,9 +39,7 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
     };
 
     // Show warning when texture extraction enabled but path not configured
-    let needs_warning = move || {
-        extract_textures.get() && game_data_path.get().is_empty()
-    };
+    let needs_warning = move || extract_textures.get() && game_data_path.get().is_empty();
 
     dyn_container(
         move || show.get(),
@@ -53,20 +54,20 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
             let config_for_extract = config_state.clone();
 
             let file_count = pending_files.get().len();
-            let gr2_count = pending_files.get().iter()
+            let gr2_count = pending_files
+                .get()
+                .iter()
                 .filter(|(p, _)| p.to_lowercase().ends_with(".gr2"))
                 .count();
 
             container(
                 v_stack((
                     // Header
-                    label(|| "Extract Files")
-                        .style(|s| {
-                            s.font_size(16.0)
-                                .font_weight(Weight::BOLD)
-                                .margin_bottom(8.0)
-                        }),
-
+                    label(|| "Extract Files").style(|s| {
+                        s.font_size(16.0)
+                            .font_weight(Weight::BOLD)
+                            .margin_bottom(8.0)
+                    }),
                     // File count summary
                     label(move || {
                         if gr2_count > 0 {
@@ -75,8 +76,11 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
                             format!("{} files", file_count)
                         }
                     })
-                    .style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100)).margin_bottom(16.0)),
-
+                    .style(|s| {
+                        s.font_size(12.0)
+                            .color(Color::rgb8(100, 100, 100))
+                            .margin_bottom(16.0)
+                    }),
                     // GR2 options panel (only shown when GR2 files are in selection)
                     v_stack((
                         label(|| "GR2 Processing Options").style(|s| {
@@ -84,7 +88,6 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
                                 .font_weight(Weight::BOLD)
                                 .margin_bottom(8.0)
                         }),
-
                         // Full Bundle checkbox
                         h_stack((
                             checkbox(is_bundle)
@@ -102,17 +105,14 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
                                 .style(|s| s.font_size(11.0).color(Color::rgb8(100, 100, 100))),
                         ))
                         .style(|s| s.items_center().margin_bottom(10.0)),
-
                         // Extract GR2
                         h_stack((
                             checkbox(move || extract_gr2.get())
                                 .on_update(move |checked| extract_gr2.set(checked))
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Extract GR2")
-                                .style(|s| s.font_size(12.0)),
+                            label(|| "Extract GR2").style(|s| s.font_size(12.0)),
                         ))
                         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
                         // Convert to GLB
                         h_stack((
                             checkbox(move || convert_to_glb.get())
@@ -123,15 +123,16 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
                                     }
                                 })
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Convert to GLB")
-                                .style(move |s| {
-                                    let disabled = convert_to_gltf.get();
-                                    s.font_size(12.0)
-                                        .color(if disabled { Color::rgb8(160, 160, 160) } else { Color::BLACK })
-                                }),
+                            label(|| "Convert to GLB").style(move |s| {
+                                let disabled = convert_to_gltf.get();
+                                s.font_size(12.0).color(if disabled {
+                                    Color::rgb8(160, 160, 160)
+                                } else {
+                                    Color::BLACK
+                                })
+                            }),
                         ))
                         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
                         // Convert to glTF
                         h_stack((
                             checkbox(move || convert_to_gltf.get())
@@ -142,53 +143,47 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
                                     }
                                 })
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Convert to glTF")
-                                .style(move |s| {
-                                    let disabled = convert_to_glb.get();
-                                    s.font_size(12.0)
-                                        .color(if disabled { Color::rgb8(160, 160, 160) } else { Color::BLACK })
-                                }),
+                            label(|| "Convert to glTF").style(move |s| {
+                                let disabled = convert_to_glb.get();
+                                s.font_size(12.0).color(if disabled {
+                                    Color::rgb8(160, 160, 160)
+                                } else {
+                                    Color::BLACK
+                                })
+                            }),
                         ))
                         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
                         // Extract textures DDS
                         h_stack((
                             checkbox(move || extract_textures.get())
                                 .on_update(move |checked| extract_textures.set(checked))
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Extract textures DDS")
-                                .style(|s| s.font_size(12.0)),
+                            label(|| "Extract textures DDS").style(|s| s.font_size(12.0)),
                         ))
                         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
                         // Convert textures DDS to PNG
                         h_stack((
                             checkbox(move || convert_to_png.get())
                                 .on_update(move |checked| convert_to_png.set(checked))
                                 .style(|s| s.margin_right(6.0)),
-                            label(|| "Convert textures DDS to PNG")
-                                .style(|s| s.font_size(12.0)),
+                            label(|| "Convert textures DDS to PNG").style(|s| s.font_size(12.0)),
                         ))
                         .style(|s| s.items_center().margin_left(20.0)),
-
                         // Warning when textures enabled but path not configured
-                        dyn_container(
-                            needs_warning,
-                            move |show_warning| {
-                                if show_warning {
-                                    label(|| "Warning: BG3 game data path not set in Settings")
-                                        .style(|s| {
-                                            s.font_size(11.0)
-                                                .color(Color::rgb8(180, 80, 30))
-                                                .margin_top(8.0)
-                                                .margin_left(20.0)
-                                        })
-                                        .into_any()
-                                } else {
-                                    empty().into_any()
-                                }
-                            },
-                        ),
+                        dyn_container(needs_warning, move |show_warning| {
+                            if show_warning {
+                                label(|| "Warning: BG3 game data path not set in Settings")
+                                    .style(|s| {
+                                        s.font_size(11.0)
+                                            .color(Color::rgb8(180, 80, 30))
+                                            .margin_top(8.0)
+                                            .margin_left(20.0)
+                                    })
+                                    .into_any()
+                            } else {
+                                empty().into_any()
+                            }
+                        }),
                     ))
                     .style(move |s| {
                         let visible = has_gr2();
@@ -206,7 +201,6 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
                             s.display(floem::style::Display::None)
                         }
                     }),
-
                     // Action buttons
                     h_stack((
                         empty().style(|s| s.flex_grow(1.0)),
@@ -226,7 +220,10 @@ pub fn extract_dialog(state: SearchState, config_state: ConfigState) -> impl Int
                             }),
                         button("Extract")
                             .action(move || {
-                                execute_extraction(state_extract.clone(), config_for_extract.clone());
+                                execute_extraction(
+                                    state_extract.clone(),
+                                    config_for_extract.clone(),
+                                );
                             })
                             .style(|s| {
                                 s.padding_vert(8.0)

@@ -61,14 +61,22 @@ fn decode_dxgi_format(
             Ok(rgba)
         }
         // BC compressed formats
-        DxgiFormat::BC1_UNorm | DxgiFormat::BC1_UNorm_sRGB => decode_bc(data, width, height, BcFormat::Bc1),
-        DxgiFormat::BC2_UNorm | DxgiFormat::BC2_UNorm_sRGB => decode_bc(data, width, height, BcFormat::Bc2),
-        DxgiFormat::BC3_UNorm | DxgiFormat::BC3_UNorm_sRGB => decode_bc(data, width, height, BcFormat::Bc3),
+        DxgiFormat::BC1_UNorm | DxgiFormat::BC1_UNorm_sRGB => {
+            decode_bc(data, width, height, BcFormat::Bc1)
+        }
+        DxgiFormat::BC2_UNorm | DxgiFormat::BC2_UNorm_sRGB => {
+            decode_bc(data, width, height, BcFormat::Bc2)
+        }
+        DxgiFormat::BC3_UNorm | DxgiFormat::BC3_UNorm_sRGB => {
+            decode_bc(data, width, height, BcFormat::Bc3)
+        }
         DxgiFormat::BC4_UNorm => decode_bc(data, width, height, BcFormat::Bc4),
         DxgiFormat::BC5_UNorm => decode_bc(data, width, height, BcFormat::Bc5),
         DxgiFormat::BC6H_UF16 => decode_bc6h(data, width, height, false), // unsigned
         DxgiFormat::BC6H_SF16 => decode_bc6h(data, width, height, true),  // signed
-        DxgiFormat::BC7_UNorm | DxgiFormat::BC7_UNorm_sRGB => decode_bc(data, width, height, BcFormat::Bc7),
+        DxgiFormat::BC7_UNorm | DxgiFormat::BC7_UNorm_sRGB => {
+            decode_bc(data, width, height, BcFormat::Bc7)
+        }
         _ => Err(Error::DdsError(format!(
             "Unsupported DXGI format: {format:?}"
         ))),
@@ -102,7 +110,7 @@ fn decode_d3d_format(
                 rgba.push(chunk[1]); // R
                 rgba.push(chunk[2]); // G
                 rgba.push(chunk[3]); // B
-                rgba.push(255);      // A (opaque)
+                rgba.push(255); // A (opaque)
             }
             Ok(rgba)
         }
@@ -114,7 +122,7 @@ fn decode_d3d_format(
                 rgba.push(chunk[0]); // R
                 rgba.push(chunk[1]); // G
                 rgba.push(chunk[2]); // B
-                rgba.push(255);      // A (opaque)
+                rgba.push(255); // A (opaque)
             }
             Ok(rgba)
         }
@@ -157,12 +165,12 @@ fn decode_fourcc(data: &[u8], width: usize, height: usize, fourcc: u32) -> Resul
 /// Supported BC compression formats
 #[derive(Clone, Copy)]
 enum BcFormat {
-    Bc1,  // DXT1 - 8 bytes per 4x4 block
-    Bc2,  // DXT3 - 16 bytes per 4x4 block (explicit alpha)
-    Bc3,  // DXT5 - 16 bytes per 4x4 block (interpolated alpha)
-    Bc4,  // Single channel - 8 bytes per 4x4 block
-    Bc5,  // Two channels - 16 bytes per 4x4 block
-    Bc7,  // High quality - 16 bytes per 4x4 block
+    Bc1, // DXT1 - 8 bytes per 4x4 block
+    Bc2, // DXT3 - 16 bytes per 4x4 block (explicit alpha)
+    Bc3, // DXT5 - 16 bytes per 4x4 block (interpolated alpha)
+    Bc4, // Single channel - 8 bytes per 4x4 block
+    Bc5, // Two channels - 16 bytes per 4x4 block
+    Bc7, // High quality - 16 bytes per 4x4 block
 }
 
 impl BcFormat {
@@ -290,4 +298,3 @@ fn tone_map_hdr(value: f32) -> u8 {
     // Convert to 8-bit
     (gamma_corrected * 255.0).clamp(0.0, 255.0) as u8
 }
-

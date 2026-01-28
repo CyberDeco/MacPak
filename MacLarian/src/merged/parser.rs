@@ -5,7 +5,9 @@
 
 use crate::formats::lsx::{LsxNode, LsxRegion};
 
-use super::types::{MergedDatabase, VisualAsset, MaterialDef, TextureParam, TextureRef, VirtualTextureRef};
+use super::types::{
+    MaterialDef, MergedDatabase, TextureParam, TextureRef, VirtualTextureRef, VisualAsset,
+};
 
 use std::path::Path;
 
@@ -63,10 +65,12 @@ fn parse_visual_resource(node: &LsxNode) -> Option<VisualAsset> {
     for child in &node.children {
         if child.id == "Objects" {
             for attr in &child.attributes {
-                if attr.id == "MaterialID" && !attr.value.is_empty()
-                    && !material_ids.contains(&attr.value) {
-                        material_ids.push(attr.value.clone());
-                    }
+                if attr.id == "MaterialID"
+                    && !attr.value.is_empty()
+                    && !material_ids.contains(&attr.value)
+                {
+                    material_ids.push(attr.value.clone());
+                }
             }
         }
     }
@@ -143,10 +147,12 @@ fn parse_material_resource(node: &LsxNode) -> Option<MaterialDef> {
         } else if child.id == "VirtualTextureParameters" {
             // Extract virtual texture references
             for attr in &child.attributes {
-                if attr.id == "ID" && !attr.value.is_empty()
-                    && !virtual_texture_ids.contains(&attr.value) {
-                        virtual_texture_ids.push(attr.value.clone());
-                    }
+                if attr.id == "ID"
+                    && !attr.value.is_empty()
+                    && !virtual_texture_ids.contains(&attr.value)
+                {
+                    virtual_texture_ids.push(attr.value.clone());
+                }
             }
         }
     }
@@ -290,7 +296,10 @@ pub fn resolve_references(db: &mut MergedDatabase) {
                     if let Some(texture) = textures.get(&tex_param.texture_id) {
                         let mut tex_ref = texture.clone();
                         tex_ref.parameter_name = Some(tex_param.name.clone());
-                        if !resolved_textures.iter().any(|t: &TextureRef| t.id == tex_ref.id) {
+                        if !resolved_textures
+                            .iter()
+                            .any(|t: &TextureRef| t.id == tex_ref.id)
+                        {
                             resolved_textures.push(tex_ref);
                         }
                     }
@@ -303,9 +312,12 @@ pub fn resolve_references(db: &mut MergedDatabase) {
             if let Some(material) = materials.get(mat_id) {
                 for vt_id in &material.virtual_texture_ids {
                     if let Some(vt) = virtual_textures.get(vt_id)
-                        && !resolved_vts.iter().any(|v: &VirtualTextureRef| v.id == vt.id) {
-                            resolved_vts.push(vt.clone());
-                        }
+                        && !resolved_vts
+                            .iter()
+                            .any(|v: &VirtualTextureRef| v.id == vt.id)
+                    {
+                        resolved_vts.push(vt.clone());
+                    }
                 }
             }
         }

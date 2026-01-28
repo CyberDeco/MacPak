@@ -9,9 +9,9 @@ pub mod info_json;
 pub mod types;
 pub mod validation;
 
-pub use info_json::{generate_info_json, generate_info_json_with_progress, InfoJsonResult};
+pub use info_json::{InfoJsonResult, generate_info_json, generate_info_json_with_progress};
 pub use types::{ModPhase, ModProgress, ModProgressCallback};
 pub use validation::{
-    validate_mod_structure, validate_mod_structure_with_progress, validate_pak_mod_structure,
-    validate_pak_mod_structure_with_progress, ModValidationResult,
+    ModValidationResult, validate_mod_structure, validate_mod_structure_with_progress,
+    validate_pak_mod_structure, validate_pak_mod_structure_with_progress,
 };

@@ -22,15 +22,15 @@ mod ui;
 use bevy::asset::{AssetPlugin, UnapprovedPathMode};
 use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
 use bevy::prelude::*;
-use bevy::render::settings::{RenderCreation, WgpuFeatures, WgpuSettings};
 use bevy::render::RenderPlugin;
+use bevy::render::settings::{RenderCreation, WgpuFeatures, WgpuSettings};
 use clap::Parser;
 
 use bones::draw_bones;
 use camera::{fit_camera_to_model, handle_keyboard, orbit_camera};
 use scene::{auto_rotate_model, setup_scene};
 use types::{CameraFitPending, ModelBounds, ModelPath, ViewSettings};
-use ui::{handle_checkbox_clicks, setup_ui, sync_view_settings, WireframeState};
+use ui::{WireframeState, handle_checkbox_clicks, setup_ui, sync_view_settings};
 
 #[derive(Parser)]
 #[command(name = "macpak-viewer")]

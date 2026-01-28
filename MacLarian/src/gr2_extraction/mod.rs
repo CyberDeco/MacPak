@@ -26,10 +26,12 @@ mod dds;
 mod types;
 mod virtual_textures;
 
-pub use dds::{cleanup_empty_dirs, extract_dds_textures, extract_textures_from_pak, find_texture_paks};
+pub use dds::{
+    cleanup_empty_dirs, extract_dds_textures, extract_textures_from_pak, find_texture_paks,
+};
 pub use types::{
-    Gr2ExtractionOptions, Gr2ExtractionPhase, Gr2ExtractionProgress,
-    Gr2ExtractionProgressCallback, Gr2ExtractionResult,
+    Gr2ExtractionOptions, Gr2ExtractionPhase, Gr2ExtractionProgress, Gr2ExtractionProgressCallback,
+    Gr2ExtractionResult,
 };
 pub use virtual_textures::{
     adjust_vt_path_for_extraction, derive_gts_path, extract_and_rename_virtual_texture,
@@ -38,7 +40,9 @@ pub use virtual_textures::{
 
 use crate::converter::{convert_dds_to_png, convert_gr2_to_glb};
 use crate::error::{Error, Result};
-use crate::merged::{bg3_data_path, GameDataResolver, MergedDatabase, TextureRef, VirtualTextureRef};
+use crate::merged::{
+    GameDataResolver, MergedDatabase, TextureRef, VirtualTextureRef, bg3_data_path,
+};
 use crate::pak::PakOperations;
 use std::collections::HashSet;
 use std::path::Path;
@@ -67,9 +71,7 @@ pub fn process_extracted_gr2(
 
     let output_dir = gr2_path
         .parent()
-        .ok_or_else(|| Error::InvalidPath(
-            "GR2 path has no parent directory".to_string()
-        ))?;
+        .ok_or_else(|| Error::InvalidPath("GR2 path has no parent directory".to_string()))?;
 
     // Step 1: Convert GR2 to GLB
     if options.convert_to_glb {
@@ -79,7 +81,9 @@ pub fn process_extracted_gr2(
                 result.glb_path = Some(glb_path);
             }
             Err(e) => {
-                result.warnings.push(format!("Failed to convert to GLB: {e}"));
+                result
+                    .warnings
+                    .push(format!("Failed to convert to GLB: {e}"));
             }
         }
     }
@@ -94,11 +98,13 @@ pub fn process_extracted_gr2(
         };
 
         if let Some(resolver) = resolver {
-            let textures = extract_textures_for_gr2(gr2_path, resolver.database(), output_dir, options)?;
+            let textures =
+                extract_textures_for_gr2(gr2_path, resolver.database(), output_dir, options)?;
 
             // Convert DDS to PNG if requested
             if options.convert_to_png {
-                result.texture_paths = convert_textures_to_png(&textures, options, &mut result.warnings);
+                result.texture_paths =
+                    convert_textures_to_png(&textures, options, &mut result.warnings);
             } else {
                 result.texture_paths = textures;
             }
@@ -129,9 +135,8 @@ pub fn process_extracted_gr2_to_dir(
     };
 
     // Create output directory if it doesn't exist
-    std::fs::create_dir_all(output_dir).map_err(|e| {
-        Error::ConversionError(format!("Failed to create output directory: {e}"))
-    })?;
+    std::fs::create_dir_all(output_dir)
+        .map_err(|e| Error::ConversionError(format!("Failed to create output directory: {e}")))?;
 
     // Step 1: Convert GR2 to GLB (if requested)
     if options.convert_to_glb {
@@ -142,7 +147,9 @@ pub fn process_extracted_gr2_to_dir(
                 result.glb_path = Some(glb_path);
             }
             Err(e) => {
-                result.warnings.push(format!("Failed to convert to GLB: {e}"));
+                result
+                    .warnings
+                    .push(format!("Failed to convert to GLB: {e}"));
             }
         }
     }
@@ -157,11 +164,13 @@ pub fn process_extracted_gr2_to_dir(
         };
 
         if let Some(resolver) = resolver {
-            let textures = extract_textures_for_gr2(gr2_path, resolver.database(), output_dir, options)?;
+            let textures =
+                extract_textures_for_gr2(gr2_path, resolver.database(), output_dir, options)?;
 
             // Convert DDS to PNG if requested
             if options.convert_to_png {
-                result.texture_paths = convert_textures_to_png(&textures, options, &mut result.warnings);
+                result.texture_paths =
+                    convert_textures_to_png(&textures, options, &mut result.warnings);
             } else {
                 result.texture_paths = textures;
             }
@@ -238,9 +247,9 @@ fn extract_textures_for_gr2(
         .game_data_path
         .clone()
         .or_else(bg3_data_path)
-        .ok_or_else(|| Error::ConversionError(
-            "Could not determine BG3 install path".to_string()
-        ))?;
+        .ok_or_else(|| {
+            Error::ConversionError("Could not determine BG3 install path".to_string())
+        })?;
 
     // Collect unique textures from all visuals
     let mut seen_textures: HashSet<String> = HashSet::new();

@@ -4,8 +4,8 @@
 
 use floem::prelude::*;
 use muda::{
-    accelerator::{Accelerator, Code, Modifiers},
     Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu,
+    accelerator::{Accelerator, Code, Modifiers},
 };
 use std::collections::HashMap;
 use std::sync::Mutex;

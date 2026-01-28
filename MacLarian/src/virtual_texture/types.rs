@@ -43,7 +43,12 @@ impl VTexProgress {
 
     /// Create a progress update with a file/item name
     #[must_use]
-    pub fn with_file(phase: VTexPhase, current: usize, total: usize, file: impl Into<String>) -> Self {
+    pub fn with_file(
+        phase: VTexPhase,
+        current: usize,
+        total: usize,
+        file: impl Into<String>,
+    ) -> Self {
         Self {
             phase,
             current,
@@ -307,21 +312,21 @@ pub struct GtsBCParameterBlock {
 
 impl GtsBCParameterBlock {
     /// Get compression name 1 as string
-    #[must_use] 
+    #[must_use]
     pub fn compression_name1(&self) -> String {
         let end = self.compression1.iter().position(|&b| b == 0).unwrap_or(16);
         String::from_utf8_lossy(&self.compression1[..end]).to_string()
     }
 
     /// Get compression name 2 as string
-    #[must_use] 
+    #[must_use]
     pub fn compression_name2(&self) -> String {
         let end = self.compression2.iter().position(|&b| b == 0).unwrap_or(16);
         String::from_utf8_lossy(&self.compression2[..end]).to_string()
     }
 
     /// Determine the tile compression method
-    #[must_use] 
+    #[must_use]
     pub fn get_compression_method(&self) -> TileCompression {
         let name1 = self.compression_name1();
         let name2 = self.compression_name2();

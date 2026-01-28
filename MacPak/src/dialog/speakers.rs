@@ -3,9 +3,9 @@
 //! Dynamically loads character templates from PAK files to map
 //! speaker UUIDs to their `DisplayName` localization handles.
 
+use maclarian::formats::common::{extract_translated_string, extract_value};
 use maclarian::formats::lsf::parse_lsf_bytes;
 use maclarian::formats::lsx::parse_lsx;
-use maclarian::formats::common::{extract_value, extract_translated_string};
 use maclarian::pak::PakOperations;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ pub struct SpeakerCache {
 
 impl SpeakerCache {
     /// Create a new empty cache
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             handles: HashMap::new(),
@@ -37,25 +37,25 @@ impl SpeakerCache {
     }
 
     /// Get the number of cached speakers
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.handles.len()
     }
 
     /// Check if cache is empty
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.handles.is_empty() && self.pak_paths.is_empty()
     }
 
     /// Check if PAK sources are configured
-    #[must_use] 
+    #[must_use]
     pub fn has_sources(&self) -> bool {
         !self.pak_paths.is_empty()
     }
 
     /// Check if the index has been built
-    #[must_use] 
+    #[must_use]
     pub fn is_indexed(&self) -> bool {
         self.indexed
     }
@@ -76,7 +76,7 @@ impl SpeakerCache {
     }
 
     /// Look up a `DisplayName` handle by speaker UUID (O(1) after indexing)
-    #[must_use] 
+    #[must_use]
     pub fn get_handle(&self, uuid: &str) -> Option<&str> {
         self.handles.get(uuid).map(std::string::String::as_str)
     }
@@ -129,7 +129,11 @@ impl SpeakerCache {
                 continue;
             }
 
-            tracing::debug!("Found {} template files in {}", template_files.len(), pak_path.display());
+            tracing::debug!(
+                "Found {} template files in {}",
+                template_files.len(),
+                pak_path.display()
+            );
 
             // Batch read all template files
             let file_data = PakOperations::read_files_bytes(&pak_path, &template_files)
@@ -178,7 +182,6 @@ impl SpeakerCache {
         // Scan all nodes for UUID + DisplayName attribute pairs
         // UUID can come from MapKey (RootTemplates) or GlobalTemplate (Origins)
         for node in &doc.nodes {
-
             let mut map_key: Option<String> = None;
             let mut global_template: Option<String> = None;
             let mut display_name_handle: Option<String> = None;
@@ -199,28 +202,39 @@ impl SpeakerCache {
 
                     match attr_name {
                         "MapKey" => {
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id)
-                                && !val.is_empty() && val.contains('-') {
-                                    map_key = Some(val);
-                                }
+                            if let Ok(val) =
+                                extract_value(&doc.values, attr.offset, value_length, type_id)
+                                && !val.is_empty()
+                                && val.contains('-')
+                            {
+                                map_key = Some(val);
+                            }
                         }
                         "GlobalTemplate" => {
                             // GlobalTemplate in Origins files maps speaker UUIDs to characters
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id)
-                                && !val.is_empty() && val.contains('-') {
-                                    global_template = Some(val);
-                                }
+                            if let Ok(val) =
+                                extract_value(&doc.values, attr.offset, value_length, type_id)
+                                && !val.is_empty()
+                                && val.contains('-')
+                            {
+                                global_template = Some(val);
+                            }
                         }
                         "DisplayName" => {
                             // DisplayName is a TranslatedString (type 28) - use special extraction
                             if type_id == 28
-                                && let Ok((handle, _version, _value)) = extract_translated_string(&doc.values, attr.offset, value_length) {
-                                    // Accept any non-empty handle - don't require 'h' prefix
-                                    // as handle formats can vary
-                                    if !handle.is_empty() {
-                                        display_name_handle = Some(handle);
-                                    }
+                                && let Ok((handle, _version, _value)) = extract_translated_string(
+                                    &doc.values,
+                                    attr.offset,
+                                    value_length,
+                                )
+                            {
+                                // Accept any non-empty handle - don't require 'h' prefix
+                                // as handle formats can vary
+                                if !handle.is_empty() {
+                                    display_name_handle = Some(handle);
                                 }
+                            }
                         }
                         _ => {}
                     }
@@ -276,16 +290,21 @@ impl SpeakerCache {
 
                     match attr_name {
                         "UUID" => {
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id)
-                                && !val.is_empty() && val.contains('-') {
-                                    uuid = Some(val);
-                                }
+                            if let Ok(val) =
+                                extract_value(&doc.values, attr.offset, value_length, type_id)
+                                && !val.is_empty()
+                                && val.contains('-')
+                            {
+                                uuid = Some(val);
+                            }
                         }
                         "Name" => {
-                            if let Ok(val) = extract_value(&doc.values, attr.offset, value_length, type_id)
-                                && !val.is_empty() {
-                                    name = Some(val);
-                                }
+                            if let Ok(val) =
+                                extract_value(&doc.values, attr.offset, value_length, type_id)
+                                && !val.is_empty()
+                            {
+                                name = Some(val);
+                            }
                         }
                         _ => {}
                     }
@@ -346,7 +365,10 @@ impl SpeakerCache {
     /// Used for Origins files which define companion characters
     fn extract_speakers_from_lsx(data: &[u8]) -> Vec<(String, String)> {
         // Recursively process all nodes in all regions
-        fn process_node(node: &maclarian::formats::lsx::LsxNode, results: &mut Vec<(String, String)>) {
+        fn process_node(
+            node: &maclarian::formats::lsx::LsxNode,
+            results: &mut Vec<(String, String)>,
+        ) {
             let mut global_template: Option<String> = None;
             let mut display_name_handle: Option<String> = None;
 
@@ -361,9 +383,10 @@ impl SpeakerCache {
                     "DisplayName" => {
                         // For TranslatedString, the handle is in the handle field
                         if let Some(ref handle) = attr.handle
-                            && !handle.is_empty() {
-                                display_name_handle = Some(handle.clone());
-                            }
+                            && !handle.is_empty()
+                        {
+                            display_name_handle = Some(handle.clone());
+                        }
                     }
                     _ => {}
                 }
@@ -435,4 +458,3 @@ impl std::fmt::Display for SpeakerCacheError {
 }
 
 impl std::error::Error for SpeakerCacheError {}
-

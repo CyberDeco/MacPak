@@ -7,9 +7,11 @@ use rayon::prelude::*;
 
 use crate::error::Result;
 
-use super::fulltext::FullTextIndex;
-use super::types::{IndexedFile, IndexMetadata, SearchPhase, SearchProgress, SearchProgressCallback};
 use super::SearchIndex;
+use super::fulltext::FullTextIndex;
+use super::types::{
+    IndexMetadata, IndexedFile, SearchPhase, SearchProgress, SearchProgressCallback,
+};
 
 impl SearchIndex {
     /// Export the fulltext index to a directory
@@ -62,8 +64,9 @@ impl SearchIndex {
             "Saving file entries...",
         ));
         let entries_path = dir.join("entries.json");
-        let entries_json = serde_json::to_string(&self.entries)
-            .map_err(|e| crate::error::Error::SearchError(format!("Failed to serialize entries: {e}")))?;
+        let entries_json = serde_json::to_string(&self.entries).map_err(|e| {
+            crate::error::Error::SearchError(format!("Failed to serialize entries: {e}"))
+        })?;
         std::fs::write(&entries_path, entries_json)?;
 
         // Save metadata
@@ -80,8 +83,9 @@ impl SearchIndex {
             fulltext_doc_count: self.fulltext_doc_count(),
         };
         let meta_path = dir.join("metadata.json");
-        let meta_json = serde_json::to_string_pretty(&metadata)
-            .map_err(|e| crate::error::Error::SearchError(format!("Failed to serialize metadata: {e}")))?;
+        let meta_json = serde_json::to_string_pretty(&metadata).map_err(|e| {
+            crate::error::Error::SearchError(format!("Failed to serialize metadata: {e}"))
+        })?;
         std::fs::write(&meta_path, meta_json)?;
 
         // Create a new index in the directory with larger heap for faster writes
@@ -124,8 +128,9 @@ impl SearchIndex {
 
         // Sequential write (IndexWriter is not thread-safe for concurrent adds)
         for (i, doc) in all_docs.into_iter().enumerate() {
-            writer.add_document(doc)
-                .map_err(|e| crate::error::Error::SearchError(format!("Failed to copy doc: {e}")))?;
+            writer.add_document(doc).map_err(|e| {
+                crate::error::Error::SearchError(format!("Failed to copy doc: {e}"))
+            })?;
             if i % 5000 == 0 {
                 progress(&SearchProgress::with_file(
                     SearchPhase::ExportingIndex,
@@ -146,8 +151,16 @@ impl SearchIndex {
             .commit()
             .map_err(|e| crate::error::Error::SearchError(format!("Export commit failed: {e}")))?;
 
-        progress(&SearchProgress::new(SearchPhase::Complete, total_docs, total_docs));
-        tracing::info!("Exported index to {} ({} docs)", dir.display(), metadata.fulltext_doc_count);
+        progress(&SearchProgress::new(
+            SearchPhase::Complete,
+            total_docs,
+            total_docs,
+        ));
+        tracing::info!(
+            "Exported index to {} ({} docs)",
+            dir.display(),
+            metadata.fulltext_doc_count
+        );
         Ok(())
     }
 
@@ -182,8 +195,9 @@ impl SearchIndex {
         // Load metadata
         let meta_path = dir.join("metadata.json");
         let meta_json = std::fs::read_to_string(&meta_path)?;
-        let metadata: IndexMetadata = serde_json::from_str(&meta_json)
-            .map_err(|e| crate::error::Error::SearchError(format!("Failed to parse metadata: {e}")))?;
+        let metadata: IndexMetadata = serde_json::from_str(&meta_json).map_err(|e| {
+            crate::error::Error::SearchError(format!("Failed to parse metadata: {e}"))
+        })?;
 
         progress(&SearchProgress::with_file(
             SearchPhase::ImportingIndex,
@@ -196,8 +210,9 @@ impl SearchIndex {
         let entries_path = dir.join("entries.json");
         let entries: HashMap<String, IndexedFile> = if entries_path.exists() {
             let entries_json = std::fs::read_to_string(&entries_path)?;
-            serde_json::from_str(&entries_json)
-                .map_err(|e| crate::error::Error::SearchError(format!("Failed to parse entries: {e}")))?
+            serde_json::from_str(&entries_json).map_err(|e| {
+                crate::error::Error::SearchError(format!("Failed to parse entries: {e}"))
+            })?
         } else {
             HashMap::new()
         };

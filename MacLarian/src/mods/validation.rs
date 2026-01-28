@@ -75,7 +75,8 @@ pub fn validate_mod_structure_with_progress(
 
     let mut found_meta = false;
     for base in meta_paths {
-        if base.exists() && base.is_dir()
+        if base.exists()
+            && base.is_dir()
             && let Ok(entries) = std::fs::read_dir(&base)
         {
             for entry in entries.flatten() {
@@ -97,9 +98,8 @@ pub fn validate_mod_structure_with_progress(
     }
 
     if structure.is_empty() {
-        warnings.push(
-            "No standard mod directories found (Mods/, Public/, Localization/)".to_string(),
-        );
+        warnings
+            .push("No standard mod directories found (Mods/, Public/, Localization/)".to_string());
         valid = false;
     }
 
@@ -183,9 +183,8 @@ pub fn validate_pak_mod_structure_with_progress(
     }
 
     if structure.is_empty() {
-        warnings.push(
-            "No standard mod directories found (Mods/, Public/, Localization/)".to_string(),
-        );
+        warnings
+            .push("No standard mod directories found (Mods/, Public/, Localization/)".to_string());
         valid = false;
     }
 
@@ -197,4 +196,3 @@ pub fn validate_pak_mod_structure_with_progress(
         warnings,
     })
 }
-

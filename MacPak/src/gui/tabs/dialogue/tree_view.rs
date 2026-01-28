@@ -1,13 +1,13 @@
 //! Dialog tree view panel
 
+use super::context_menu::show_node_context_menu;
+use crate::dialog::NodeConstructor;
+use crate::gui::state::{DialogueState, DisplayNode};
 use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::text::{Attrs, AttrsList, Style as FontStyle, TextLayout, Weight, Wrap};
-use floem::views::{clip, rich_text, virtual_list, VirtualDirection, VirtualItemSize};
+use floem::views::{VirtualDirection, VirtualItemSize, clip, rich_text, virtual_list};
 use im::Vector as ImVector;
-use crate::dialog::NodeConstructor;
-use crate::gui::state::{DialogueState, DisplayNode};
-use super::context_menu::show_node_context_menu;
 
 const NODE_ROW_HEIGHT: f64 = 32.0;
 
@@ -38,7 +38,11 @@ fn parse_html_styles(text: &str) -> (String, Vec<StyledSpan>) {
                 continue;
             }
             // Check for </i> tag
-            if i + 3 < chars.len() && chars[i + 1] == '/' && chars[i + 2] == 'i' && chars[i + 3] == '>' {
+            if i + 3 < chars.len()
+                && chars[i + 1] == '/'
+                && chars[i + 2] == 'i'
+                && chars[i + 3] == '>'
+            {
                 if let Some(start) = italic_stack.pop() {
                     spans.push(StyledSpan {
                         start,
@@ -57,7 +61,11 @@ fn parse_html_styles(text: &str) -> (String, Vec<StyledSpan>) {
                 continue;
             }
             // Check for </b> tag
-            if i + 3 < chars.len() && chars[i + 1] == '/' && chars[i + 2] == 'b' && chars[i + 3] == '>' {
+            if i + 3 < chars.len()
+                && chars[i + 1] == '/'
+                && chars[i + 2] == 'b'
+                && chars[i + 3] == '>'
+            {
                 if let Some(start) = bold_stack.pop() {
                     spans.push(StyledSpan {
                         start,
@@ -90,15 +98,15 @@ fn parse_html_styles(text: &str) -> (String, Vec<StyledSpan>) {
 }
 
 /// Create a TextLayout with HTML styling applied
-fn create_styled_text_layout(text: &str, font_size: f32, text_color: floem::peniko::Color) -> TextLayout {
+fn create_styled_text_layout(
+    text: &str,
+    font_size: f32,
+    text_color: floem::peniko::Color,
+) -> TextLayout {
     let (plain_text, spans) = parse_html_styles(text);
 
     // Create attrs list with base styling
-    let mut attrs_list = AttrsList::new(
-        Attrs::new()
-            .font_size(font_size)
-            .color(text_color)
-    );
+    let mut attrs_list = AttrsList::new(Attrs::new().font_size(font_size).color(text_color));
 
     // Add italic spans
     for span in spans {
@@ -108,7 +116,7 @@ fn create_styled_text_layout(text: &str, font_size: f32, text_color: floem::peni
                 Attrs::new()
                     .font_size(font_size)
                     .style(FontStyle::Italic)
-                    .color(text_color)
+                    .color(text_color),
             );
         }
         if span.bold && span.start < span.end {
@@ -117,7 +125,7 @@ fn create_styled_text_layout(text: &str, font_size: f32, text_color: floem::peni
                 Attrs::new()
                     .font_size(font_size)
                     .weight(Weight::BOLD)
-                    .color(text_color)
+                    .color(text_color),
             );
         }
     }
@@ -135,14 +143,13 @@ pub fn tree_view_panel(state: DialogueState) -> impl IntoView {
     v_stack((
         // Dialog header with info
         dialog_header(state_for_header),
-
         // Node tree
         node_tree(state_for_list),
     ))
     .style(|s| {
         s.width_full()
             .height_full()
-            .min_height(0.0)  // Critical for scroll to work
+            .min_height(0.0) // Critical for scroll to work
             .background(Color::WHITE)
     })
 }
@@ -157,32 +164,32 @@ fn dialog_header(state: DialogueState) -> impl IntoView {
             if let Some(dialog) = d {
                 let node_count = dialog.node_count();
                 let root_count = dialog.root_nodes.len();
-                let synopsis = dialog.editor_data.synopsis.clone()
+                let synopsis = dialog
+                    .editor_data
+                    .synopsis
+                    .clone()
                     .unwrap_or_else(|| "No synopsis".to_string());
 
                 v_stack((
                     h_stack((
-                        label(move || format!("{} nodes", node_count))
-                            .style(|s| {
-                                s.font_size(12.0)
-                                    .color(Color::rgb8(100, 100, 100))
-                                    .padding_horiz(8.0)
-                                    .padding_vert(2.0)
-                                    .background(Color::rgb8(240, 240, 240))
-                                    .border_radius(4.0)
-                            }),
-                        label(move || format!("{} roots", root_count))
-                            .style(|s| {
-                                s.font_size(12.0)
-                                    .color(Color::rgb8(100, 100, 100))
-                                    .padding_horiz(8.0)
-                                    .padding_vert(2.0)
-                                    .background(Color::rgb8(240, 240, 240))
-                                    .border_radius(4.0)
-                            }),
+                        label(move || format!("{} nodes", node_count)).style(|s| {
+                            s.font_size(12.0)
+                                .color(Color::rgb8(100, 100, 100))
+                                .padding_horiz(8.0)
+                                .padding_vert(2.0)
+                                .background(Color::rgb8(240, 240, 240))
+                                .border_radius(4.0)
+                        }),
+                        label(move || format!("{} roots", root_count)).style(|s| {
+                            s.font_size(12.0)
+                                .color(Color::rgb8(100, 100, 100))
+                                .padding_horiz(8.0)
+                                .padding_vert(2.0)
+                                .background(Color::rgb8(240, 240, 240))
+                                .border_radius(4.0)
+                        }),
                     ))
                     .style(|s| s.gap(8.0)),
-
                     rich_text(move || {
                         let mut layout = TextLayout::new();
                         let attrs = Attrs::new()
@@ -216,8 +223,8 @@ fn node_tree(state: DialogueState) -> impl IntoView {
     let tree_version = state.tree_version;
 
     // Cache the filtered results to avoid returning a new collection on every call
-    use std::rc::Rc;
     use std::cell::RefCell;
+    use std::rc::Rc;
     let cached_result: Rc<RefCell<(u64, usize, ImVector<DisplayNode>)>> =
         Rc::new(RefCell::new((u64::MAX, 0, ImVector::new())));
     let cache = cached_result.clone();
@@ -240,7 +247,8 @@ fn node_tree(state: DialogueState) -> impl IntoView {
                     if *cached_version != version || *cached_total != total_count {
                         // Filter to only visible nodes - don't rely on CSS to hide
                         // This ensures virtual_list scroll math is correct
-                        let filtered: ImVector<_> = all_nodes.into_iter()
+                        let filtered: ImVector<_> = all_nodes
+                            .into_iter()
                             .filter(|node| node.is_visible.get_untracked())
                             .collect();
 
@@ -252,22 +260,24 @@ fn node_tree(state: DialogueState) -> impl IntoView {
                     cached_im.clone()
                 },
                 // Use only UUID as key - stable across expand/collapse
-                |node| {
-                    node.uuid.clone()
-                },
+                |node| node.uuid.clone(),
                 {
                     let state_for_row = state.clone();
                     move |node| {
-                        node_row(node, selected_uuid, display_nodes, tree_version, max_content_width.get(), state_for_row.clone())
+                        node_row(
+                            node,
+                            selected_uuid,
+                            display_nodes,
+                            tree_version,
+                            max_content_width.get(),
+                            state_for_row.clone(),
+                        )
                     }
                 },
             )
-            .style(|s| s.flex_col())
+            .style(|s| s.flex_col()),
         )
-        .style(|s| {
-            s.width_full()
-                .height_full()
-        })
+        .style(|s| s.width_full().height_full()),
     )
     .style(|s| {
         s.width_full()
@@ -307,7 +317,11 @@ fn update_descendant_visibility(
 }
 
 /// Recursively update visibility of descendants
-fn update_descendants_recursive(parent_uuid: &str, parent_visible: bool, all_nodes: &[DisplayNode]) {
+fn update_descendants_recursive(
+    parent_uuid: &str,
+    parent_visible: bool,
+    all_nodes: &[DisplayNode],
+) {
     for node in all_nodes.iter() {
         if node.parent_uuid.as_deref() == Some(parent_uuid) {
             node.is_visible.set(parent_visible);
@@ -348,12 +362,16 @@ fn node_row(
     let constructor_for_roll = node.constructor.clone();
     let constructor_for_roll_info = node.constructor.clone();
     // Get NodeContext (the primary dev note field) if available
-    let node_context = node.editor_data.get("NodeContext")
+    let node_context = node
+        .editor_data
+        .get("NodeContext")
         .filter(|s| !s.is_empty())
         .cloned()
         .unwrap_or_default();
     // Get stateContext for VisualState nodes
-    let state_context = node.editor_data.get("stateContext")
+    let state_context = node
+        .editor_data
+        .get("stateContext")
         .filter(|s| !s.is_empty())
         .cloned()
         .unwrap_or_default();
@@ -370,7 +388,8 @@ fn node_row(
     let check_flags_str = if node.check_flags.is_empty() {
         String::new()
     } else {
-        node.check_flags.iter()
+        node.check_flags
+            .iter()
             .map(|f| {
                 if f.value {
                     format!("{} = True", f.name)
@@ -387,7 +406,8 @@ fn node_row(
     let set_flags_str = if node.set_flags.is_empty() {
         String::new()
     } else {
-        node.set_flags.iter()
+        node.set_flags
+            .iter()
             .map(|f| {
                 if f.value {
                     format!("{} = True", f.name)
@@ -403,7 +423,6 @@ fn node_row(
     h_stack((
         // Indentation
         empty().style(move |s| s.width((depth * 20) as f32)),
-
         // Expand/collapse indicator (clickable)
         {
             let has_children = child_count > 0;
@@ -427,10 +446,8 @@ fn node_row(
                 empty().style(|s| s.width(16.0)).into_any()
             }
         },
-
         // Node type badge
         node_type_badge(constructor),
-
         // Content area with flags above text
         v_stack((
             // Flags row (check flags and set flags on same line above text)
@@ -492,7 +509,6 @@ fn node_row(
                     },
                 )
             },
-
             // Main content row: Speaker + Text (only show if there's text)
             {
                 let text_for_display = text.clone();
@@ -533,7 +549,8 @@ fn node_row(
                                     create_styled_text_layout(&display_text, 13.0, text_color)
                                 })
                                 .style(|s| s.flex_shrink(0.0)),
-                            )).into_any()
+                            ))
+                            .into_any()
                         } else {
                             empty().into_any()
                         }
@@ -541,7 +558,6 @@ fn node_row(
                 )
             },
         )),
-
         // End node indicator
         dyn_container(
             move || is_end,
@@ -562,7 +578,6 @@ fn node_row(
                 }
             },
         ),
-
         // Roll success/failure indicator for RollResult nodes
         dyn_container(
             move || constructor_for_roll == NodeConstructor::RollResult && roll_success.is_some(),
@@ -570,9 +585,9 @@ fn node_row(
                 if show_indicator {
                     let is_success = roll_success.unwrap_or(false);
                     let (indicator, bg_color) = if is_success {
-                        ("✓", Color::rgb8(34, 197, 94))  // Green for success
+                        ("✓", Color::rgb8(34, 197, 94)) // Green for success
                     } else {
-                        ("✗", Color::rgb8(239, 68, 68))  // Red for failure
+                        ("✗", Color::rgb8(239, 68, 68)) // Red for failure
                     };
                     label(move || indicator)
                         .style(move |s| {
@@ -590,7 +605,6 @@ fn node_row(
                 }
             },
         ),
-
         // Roll info (skill/ability/DC) for RollResult nodes
         {
             let info = roll_info.clone().unwrap_or_default();
@@ -602,7 +616,7 @@ fn node_row(
                         label(move || info_text.clone())
                             .style(|s| {
                                 s.font_size(10.0)
-                                    .color(Color::rgb8(100, 149, 237))  // Cornflower blue
+                                    .color(Color::rgb8(100, 149, 237)) // Cornflower blue
                                     .font_weight(Weight::MEDIUM)
                                     .margin_left(4.0)
                             })
@@ -613,7 +627,6 @@ fn node_row(
                 },
             )
         },
-
         // Dev notes indicator - shows NodeContext and/or stateContext when available
         {
             let notes = combined_notes.clone();
@@ -694,15 +707,14 @@ fn node_type_badge(constructor: NodeConstructor) -> impl IntoView {
         _ => ("?", Color::rgb8(156, 163, 175)),
     };
 
-    label(move || text)
-        .style(move |s| {
-            s.font_size(10.0)
-                .font_weight(Weight::BOLD)
-                .padding_horiz(4.0)
-                .padding_vert(2.0)
-                .min_width(20.0)
-                .background(bg_color)
-                .color(Color::WHITE)
-                .border_radius(3.0)
-        })
+    label(move || text).style(move |s| {
+        s.font_size(10.0)
+            .font_weight(Weight::BOLD)
+            .padding_horiz(4.0)
+            .padding_vert(2.0)
+            .min_width(20.0)
+            .background(bg_color)
+            .color(Color::WHITE)
+            .border_radius(3.0)
+    })
 }

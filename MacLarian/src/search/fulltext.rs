@@ -6,11 +6,11 @@ use std::path::{Path, PathBuf};
 
 use tantivy::collector::TopDocs;
 use tantivy::query::QueryParser;
-use tantivy::schema::{Field, Schema, Value, STORED, STRING, TEXT};
-use tantivy::{doc, Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument};
+use tantivy::schema::{Field, STORED, STRING, Schema, TEXT, Value};
+use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument, doc};
 
+use super::{SearchPhase, SearchProgress, SearchProgressCallback};
 use crate::error::{Error, Result};
-use super::{SearchProgress, SearchPhase, SearchProgressCallback};
 
 /// Full-text search index using Tantivy with in-memory storage.
 ///
@@ -127,8 +127,9 @@ impl FullTextIndex {
         let index = match dir {
             Some(path) => {
                 std::fs::create_dir_all(path)?;
-                Index::create_in_dir(path, schema.clone())
-                    .map_err(|e| Error::SearchError(format!("Failed to create index in dir: {e}")))?
+                Index::create_in_dir(path, schema.clone()).map_err(|e| {
+                    Error::SearchError(format!("Failed to create index in dir: {e}"))
+                })?
             }
             None => Index::create_in_ram(schema.clone()),
         };
@@ -221,26 +222,45 @@ impl FullTextIndex {
     ///
     /// # Errors
     /// Returns an error if the query is invalid or the search fails.
-    pub fn search_with_progress(&self, query: &str, limit: usize, progress: SearchProgressCallback) -> Result<Vec<FullTextResult>>
-    {
+    pub fn search_with_progress(
+        &self,
+        query: &str,
+        limit: usize,
+        progress: SearchProgressCallback,
+    ) -> Result<Vec<FullTextResult>> {
         let searcher = self.reader.searcher();
 
         // Create query parser that searches name and content fields
         let query_parser =
             QueryParser::for_index(&self.index, vec![self.name_field, self.content_field]);
 
-        progress(&SearchProgress::with_file(SearchPhase::Searching, 0, 1, "Parsing query..."));
+        progress(&SearchProgress::with_file(
+            SearchPhase::Searching,
+            0,
+            1,
+            "Parsing query...",
+        ));
         let parsed_query = query_parser
             .parse_query(query)
             .map_err(|e| Error::SearchError(format!("Invalid query: {e}")))?;
 
-        progress(&SearchProgress::with_file(SearchPhase::Searching, 0, 1, "Searching index..."));
+        progress(&SearchProgress::with_file(
+            SearchPhase::Searching,
+            0,
+            1,
+            "Searching index...",
+        ));
         let top_docs = searcher
             .search(&parsed_query, &TopDocs::with_limit(limit))
             .map_err(|e| Error::SearchError(format!("Search failed: {e}")))?;
 
         let total = top_docs.len();
-        progress(&SearchProgress::with_file(SearchPhase::Searching, 0, total, "Processing results..."));
+        progress(&SearchProgress::with_file(
+            SearchPhase::Searching,
+            0,
+            total,
+            "Processing results...",
+        ));
 
         // Extract search terms from the query for custom snippet generation
         let search_terms = extract_search_terms(query);
@@ -281,11 +301,17 @@ impl FullTextIndex {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
 
-            let (snippet_text, match_count) = find_first_match_and_count(content, &search_terms, 150);
+            let (snippet_text, match_count) =
+                find_first_match_and_count(content, &search_terms, 150);
 
             // Report progress every 50 docs
             if i % 50 == 0 {
-                progress(&SearchProgress::with_file(SearchPhase::Searching, i, total, &name));
+                progress(&SearchProgress::with_file(
+                    SearchPhase::Searching,
+                    i,
+                    total,
+                    &name,
+                ));
             }
 
             results.push(FullTextResult {
@@ -304,13 +330,13 @@ impl FullTextIndex {
     }
 
     /// Get the number of documents in the index
-    #[must_use] 
+    #[must_use]
     pub fn num_docs(&self) -> u64 {
         self.reader.searcher().num_docs()
     }
 
     /// Get access to the searcher for iteration
-    #[must_use] 
+    #[must_use]
     pub fn searcher(&self) -> tantivy::Searcher {
         self.reader.searcher()
     }
@@ -441,7 +467,9 @@ fn extract_snippet_around(
         snippet.push_str("...");
     }
 
-    snippet.push_str(&collapse_to_single_line(&content[snippet_start..snippet_end]));
+    snippet.push_str(&collapse_to_single_line(
+        &content[snippet_start..snippet_end],
+    ));
 
     if snippet_end < content_len {
         snippet.push_str("...");

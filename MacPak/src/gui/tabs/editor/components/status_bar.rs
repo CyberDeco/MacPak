@@ -27,19 +27,12 @@ pub fn editor_status_bar(tabs_state: EditorTabsState) -> impl IntoView {
                     }),
                     empty().style(|s| s.flex_grow(1.0)),
                     // Modified indicator
-                    label(move || {
-                        if modified.get() {
-                            "● Modified"
-                        } else {
-                            ""
-                        }
-                        .to_string()
-                    })
-                    .style(|s| {
-                        s.color(Color::rgb8(255, 152, 0))
-                            .font_size(12.0)
-                            .margin_right(12.0)
-                    }),
+                    label(move || if modified.get() { "● Modified" } else { "" }.to_string())
+                        .style(|s| {
+                            s.color(Color::rgb8(255, 152, 0))
+                                .font_size(12.0)
+                                .margin_right(12.0)
+                        }),
                 ))
                 .style(|s| {
                     s.width_full()

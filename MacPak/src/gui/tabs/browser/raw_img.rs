@@ -1,8 +1,8 @@
 //! Custom RawImg View - Displays RGBA image data without PNG encoding
 
-use floem::prelude::*;
 use floem::peniko::{self, Blob};
-use floem::{taffy, View, ViewId};
+use floem::prelude::*;
+use floem::{View, ViewId, taffy};
 use floem_reactive::create_effect;
 use floem_renderer::Renderer;
 use std::sync::Arc;
@@ -55,7 +55,9 @@ impl View for RawImg {
 
     fn layout(&mut self, cx: &mut floem::context::LayoutCx) -> taffy::tree::NodeId {
         cx.layout_node(self.id(), true, |_cx| {
-            let content_node = *self.content_node.get_or_insert_with(|| self.id.new_taffy_node());
+            let content_node = *self
+                .content_node
+                .get_or_insert_with(|| self.id.new_taffy_node());
 
             let (width, height) = self
                 .img

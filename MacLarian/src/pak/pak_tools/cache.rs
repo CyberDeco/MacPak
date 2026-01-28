@@ -1,9 +1,9 @@
 //! PAK file table caching for repeated file access
 
-use crate::error::{Error, Result};
 use super::super::lspk::{CompressionMethod, FileTableEntry, LspkReader};
 use super::decompression::decompress_data;
 use super::helpers::get_part_path;
+use crate::error::{Error, Result};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
@@ -109,10 +109,12 @@ impl PakReaderCache {
             .clone();
 
         // Get the correct part file for this entry
-        let part_path = get_part_path(pak_path, entry.archive_part)
-            .ok_or_else(|| Error::ConversionError(
-                format!("Cannot determine path for archive part {}", entry.archive_part)
-            ))?;
+        let part_path = get_part_path(pak_path, entry.archive_part).ok_or_else(|| {
+            Error::ConversionError(format!(
+                "Cannot determine path for archive part {}",
+                entry.archive_part
+            ))
+        })?;
 
         // Read compressed data from the correct part file
         let mut file = File::open(&part_path)?;
@@ -152,9 +154,10 @@ impl PakReaderCache {
         let requested: HashSet<&str> = file_paths.iter().copied().collect();
 
         // Get matching entries from cached table
-        let table = self.tables.get(pak_path).ok_or_else(|| {
-            Error::FileNotFoundInPak(pak_path.to_string_lossy().to_string())
-        })?;
+        let table = self
+            .tables
+            .get(pak_path)
+            .ok_or_else(|| Error::FileNotFoundInPak(pak_path.to_string_lossy().to_string()))?;
 
         let entries_to_read: Vec<&FileTableEntry> = table
             .iter()
@@ -168,7 +171,10 @@ impl PakReaderCache {
         // Group entries by archive part for multi-part PAK support
         let mut entries_by_part: HashMap<u8, Vec<&FileTableEntry>> = HashMap::new();
         for entry in entries_to_read {
-            entries_by_part.entry(entry.archive_part).or_default().push(entry);
+            entries_by_part
+                .entry(entry.archive_part)
+                .or_default()
+                .push(entry);
         }
 
         // Phase 1: Read all compressed data sequentially from each part file

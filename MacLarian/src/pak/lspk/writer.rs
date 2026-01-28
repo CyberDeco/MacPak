@@ -16,8 +16,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rayon::prelude::*;
 
+use super::{
+    CompressionMethod, MAGIC, MAX_VERSION, PATH_LENGTH, PakPhase, PakProgress, TABLE_ENTRY_SIZE,
+};
 use crate::error::{Error, Result};
-use super::{CompressionMethod, MAGIC, MAX_VERSION, PATH_LENGTH, TABLE_ENTRY_SIZE, PakPhase, PakProgress};
 
 /// Progress callback type for write operations.
 ///
@@ -73,7 +75,7 @@ impl LspkWriter {
         Ok(Self {
             root_path,
             files,
-            version: MAX_VERSION, // Use latest supported version
+            version: MAX_VERSION,                // Use latest supported version
             compression: CompressionMethod::Lz4, // Default to LZ4
         })
     }
@@ -87,7 +89,7 @@ impl LspkWriter {
     }
 
     /// Set the compression method to use
-    #[must_use] 
+    #[must_use]
     pub fn with_compression(mut self, compression: CompressionMethod) -> Self {
         self.compression = compression;
         self
@@ -120,7 +122,8 @@ impl LspkWriter {
                 if file_type.is_dir() {
                     dirs_to_check.push_back(path);
                 } else {
-                    let relative_path = path.strip_prefix(root)
+                    let relative_path = path
+                        .strip_prefix(root)
                         .map_err(|_| Error::InvalidPath(path.display().to_string()))?
                         .to_path_buf();
 
@@ -181,9 +184,10 @@ impl LspkWriter {
             .files
             .par_iter()
             .map(|file| {
-                let file_name = file
-                    .relative_path
-                    .file_name().map_or_else(|| file.relative_path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+                let file_name = file.relative_path.file_name().map_or_else(
+                    || file.relative_path.to_string_lossy().to_string(),
+                    |n| n.to_string_lossy().to_string(),
+                );
 
                 // Update progress (atomic)
                 let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
@@ -197,23 +201,23 @@ impl LspkWriter {
                 let size_decompressed = file.data.len();
 
                 // Validate size fits in u32
-                let size_decompressed: u32 = size_decompressed
-                    .try_into()
-                    .map_err(|_| format!("File {file_name} is too large: {size_decompressed} bytes"))?;
+                let size_decompressed: u32 = size_decompressed.try_into().map_err(|_| {
+                    format!("File {file_name} is too large: {size_decompressed} bytes")
+                })?;
 
                 let compressed_data = match self.compression {
                     CompressionMethod::None => file.data.clone(),
                     CompressionMethod::Lz4 => lz4_flex::block::compress(&file.data),
                     CompressionMethod::Zlib => {
-                        use flate2::write::ZlibEncoder;
                         use flate2::Compression;
+                        use flate2::write::ZlibEncoder;
                         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
                         encoder
                             .write_all(&file.data)
                             .map_err(|e| format!("Failed to compress {file_name}: {e}"))?;
-                        encoder
-                            .finish()
-                            .map_err(|e| format!("Failed to finish compression for {file_name}: {e}"))?
+                        encoder.finish().map_err(|e| {
+                            format!("Failed to finish compression for {file_name}: {e}")
+                        })?
                     }
                 };
 

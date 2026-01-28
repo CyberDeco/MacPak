@@ -6,7 +6,7 @@
 
 #![allow(clippy::cast_possible_truncation)]
 
-use super::{LocalizedText, LocaResource, LOCA_SIGNATURE, KEY_SIZE};
+use super::{KEY_SIZE, LOCA_SIGNATURE, LocaResource, LocalizedText};
 use crate::error::{Error, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::fs::File;
@@ -83,7 +83,11 @@ pub fn parse_loca_bytes(data: &[u8]) -> Result<LocaResource> {
             entries.push(LocalizedText { key, version, text });
         } else {
             // Empty text
-            entries.push(LocalizedText { key, version, text: String::new() });
+            entries.push(LocalizedText {
+                key,
+                version,
+                text: String::new(),
+            });
         }
     }
 

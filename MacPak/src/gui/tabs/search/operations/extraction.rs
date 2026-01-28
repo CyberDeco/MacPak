@@ -143,10 +143,7 @@ pub fn execute_extraction(state: SearchState, config: crate::gui::state::ConfigS
                             total_files,
                             format!(
                                 "Extracting from {}",
-                                pak_path
-                                    .file_name()
-                                    .unwrap_or_default()
-                                    .to_string_lossy()
+                                pak_path.file_name().unwrap_or_default().to_string_lossy()
                             ),
                         );
                     },
@@ -183,10 +180,7 @@ pub fn execute_extraction(state: SearchState, config: crate::gui::state::ConfigS
                     match maclarian::pak::extract_files_smart(
                         &pak_path,
                         &dest,
-                        &gr2_paths
-                            .iter()
-                            .map(|s| s.to_string())
-                            .collect::<Vec<_>>(),
+                        &gr2_paths.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
                         extraction_opts,
                         &|progress| {
                             let desc = progress
@@ -223,10 +217,7 @@ pub fn execute_extraction(state: SearchState, config: crate::gui::state::ConfigS
                                 total_files,
                                 format!(
                                     "Extracting from {}",
-                                    pak_path
-                                        .file_name()
-                                        .unwrap_or_default()
-                                        .to_string_lossy()
+                                    pak_path.file_name().unwrap_or_default().to_string_lossy()
                                 ),
                             );
                         },

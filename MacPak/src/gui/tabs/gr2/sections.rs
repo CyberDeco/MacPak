@@ -4,9 +4,9 @@ use floem::event::{Event, EventListener};
 use floem::prelude::*;
 use floem::text::Weight;
 
+use super::conversion::{convert_batch_with_options, convert_single_with_options};
 use crate::gui::shared::operation_button;
 use crate::gui::state::{ConfigState, Gr2State};
-use super::conversion::{convert_batch_with_options, convert_single_with_options};
 
 /// Main operations row with 3 columns
 pub fn operations_row(state: Gr2State, config: ConfigState) -> impl IntoView {
@@ -30,7 +30,11 @@ pub fn operations_row(state: Gr2State, config: ConfigState) -> impl IntoView {
     .style(|s| s.gap(16.0).margin_bottom(20.0))
 }
 
-fn gr2_to_gltf_group(state: Gr2State, config: ConfigState, use_glb: RwSignal<bool>) -> impl IntoView {
+fn gr2_to_gltf_group(
+    state: Gr2State,
+    config: ConfigState,
+    use_glb: RwSignal<bool>,
+) -> impl IntoView {
     let state1 = state.clone();
     let state2 = state.clone();
     let config1 = config.clone();
@@ -52,7 +56,13 @@ fn gr2_to_gltf_group(state: Gr2State, config: ConfigState, use_glb: RwSignal<boo
         // Convert single file
         dynamic_operation_button(
             use_glb,
-            |glb| if glb { "🔄 Convert GR2 → GLB" } else { "🔄 Convert GR2 → glTF" },
+            |glb| {
+                if glb {
+                    "🔄 Convert GR2 → GLB"
+                } else {
+                    "🔄 Convert GR2 → glTF"
+                }
+            },
             move || {
                 let to_glb = use_glb.get_untracked();
                 select_and_convert_gr2(state1.clone(), config1.clone(), to_glb, false);
@@ -61,7 +71,13 @@ fn gr2_to_gltf_group(state: Gr2State, config: ConfigState, use_glb: RwSignal<boo
         // Batch convert
         dynamic_operation_button(
             use_glb,
-            |glb| if glb { "📁 Batch GR2 → GLB" } else { "📁 Batch GR2 → glTF" },
+            |glb| {
+                if glb {
+                    "📁 Batch GR2 → GLB"
+                } else {
+                    "📁 Batch GR2 → glTF"
+                }
+            },
             move || {
                 let to_glb = use_glb.get_untracked();
                 select_and_convert_gr2(state2.clone(), config2.clone(), to_glb, true);
@@ -171,11 +187,7 @@ fn drop_zone(state: Gr2State, config: ConfigState, use_glb: RwSignal<bool>) -> i
 }
 
 /// Toggle button for format selection
-fn format_toggle_button(
-    text: &'static str,
-    value: bool,
-    signal: RwSignal<bool>,
-) -> impl IntoView {
+fn format_toggle_button(text: &'static str, value: bool, signal: RwSignal<bool>) -> impl IntoView {
     button(text)
         .action(move || signal.set(value))
         .style(move |s| {
@@ -230,16 +242,19 @@ fn select_and_convert_gr2(state: Gr2State, config: ConfigState, to_glb: bool, ba
 
     if batch {
         // Batch mode - select directory
-        let mut dialog = rfd::FileDialog::new()
-            .set_title("Select Directory with GR2 Files");
+        let mut dialog = rfd::FileDialog::new().set_title("Select Directory with GR2 Files");
 
         if let Some(dir) = state.working_dir.get() {
             dialog = dialog.set_directory(&dir);
         }
 
         if let Some(dir) = dialog.pick_folder() {
-            state.working_dir.set(Some(dir.to_string_lossy().to_string()));
-            state.batch_input_dir.set(Some(dir.to_string_lossy().to_string()));
+            state
+                .working_dir
+                .set(Some(dir.to_string_lossy().to_string()));
+            state
+                .batch_input_dir
+                .set(Some(dir.to_string_lossy().to_string()));
 
             // Scan for GR2 files
             let mut files = Vec::new();
@@ -274,9 +289,13 @@ fn select_and_convert_gr2(state: Gr2State, config: ConfigState, to_glb: bool, ba
 
         if let Some(file) = dialog.pick_file() {
             if let Some(parent) = file.parent() {
-                state.working_dir.set(Some(parent.to_string_lossy().to_string()));
+                state
+                    .working_dir
+                    .set(Some(parent.to_string_lossy().to_string()));
             }
-            state.input_file.set(Some(file.to_string_lossy().to_string()));
+            state
+                .input_file
+                .set(Some(file.to_string_lossy().to_string()));
             convert_single_with_options(state, to_glb, game_data);
         }
     }
@@ -286,16 +305,19 @@ fn select_and_convert_gr2(state: Gr2State, config: ConfigState, to_glb: bool, ba
 fn select_and_convert_gltf(state: Gr2State, batch: bool) {
     if batch {
         // Batch mode - select directory
-        let mut dialog = rfd::FileDialog::new()
-            .set_title("Select Directory with glTF/GLB Files");
+        let mut dialog = rfd::FileDialog::new().set_title("Select Directory with glTF/GLB Files");
 
         if let Some(dir) = state.working_dir.get() {
             dialog = dialog.set_directory(&dir);
         }
 
         if let Some(dir) = dialog.pick_folder() {
-            state.working_dir.set(Some(dir.to_string_lossy().to_string()));
-            state.batch_input_dir.set(Some(dir.to_string_lossy().to_string()));
+            state
+                .working_dir
+                .set(Some(dir.to_string_lossy().to_string()));
+            state
+                .batch_input_dir
+                .set(Some(dir.to_string_lossy().to_string()));
 
             // Scan for glTF/GLB files
             let mut files = Vec::new();
@@ -331,9 +353,13 @@ fn select_and_convert_gltf(state: Gr2State, batch: bool) {
 
         if let Some(file) = dialog.pick_file() {
             if let Some(parent) = file.parent() {
-                state.working_dir.set(Some(parent.to_string_lossy().to_string()));
+                state
+                    .working_dir
+                    .set(Some(parent.to_string_lossy().to_string()));
             }
-            state.input_file.set(Some(file.to_string_lossy().to_string()));
+            state
+                .input_file
+                .set(Some(file.to_string_lossy().to_string()));
             convert_single_with_options(state, false, String::new());
         }
     }
@@ -345,7 +371,11 @@ pub fn open_gr2_file(state: Gr2State, config: ConfigState) {
 }
 
 /// Bundle options panel for texture extraction when converting GR2→GLB/glTF
-fn bundle_options_panel(state: Gr2State, config: ConfigState, use_glb: RwSignal<bool>) -> impl IntoView {
+fn bundle_options_panel(
+    state: Gr2State,
+    config: ConfigState,
+    use_glb: RwSignal<bool>,
+) -> impl IntoView {
     let extract_textures = state.extract_textures;
     let convert_png = state.convert_to_png;
     let keep_dds = state.keep_original_dds;
@@ -367,7 +397,8 @@ fn bundle_options_panel(state: Gr2State, config: ConfigState, use_glb: RwSignal<
             } else {
                 "Bundle Options (GR2→glTF)".to_string()
             }
-        }).style(|s| {
+        })
+        .style(|s| {
             s.font_size(13.0)
                 .font_weight(Weight::SEMIBOLD)
                 .color(Color::rgb8(80, 80, 80))

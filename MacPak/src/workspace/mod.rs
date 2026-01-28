@@ -13,7 +13,7 @@ impl Workspace {
     pub fn new() -> Result<Self> {
         Ok(Self {})
     }
-    
+
     pub fn open(&mut self, _path: impl AsRef<Path>) -> Result<()> {
         // TODO: Implement workspace opening
         Ok(())

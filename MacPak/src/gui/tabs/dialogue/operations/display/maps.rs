@@ -1,7 +1,7 @@
 //! Map building helpers for dialogue tree construction
 
-use std::collections::{HashMap, HashSet};
 use crate::dialog::{Dialog, NodeConstructor};
+use std::collections::{HashMap, HashSet};
 
 /// Build a map from node UUIDs to logicalnames inherited from Alias nodes that reference them
 pub fn build_alias_logicalname_map(dialog: &Dialog) -> HashMap<String, String> {
@@ -12,14 +12,15 @@ pub fn build_alias_logicalname_map(dialog: &Dialog) -> HashMap<String, String> {
             if let Some(ref source_uuid) = node.source_node {
                 // Check if this Alias has a logicalname with INCLUSION pattern
                 if let Some(logicalname) = node.editor_data.get("logicalname") {
-                    let display_name = if logicalname.starts_with("Alias (") && logicalname.ends_with(")") {
-                        // Extract inner name: "Alias (INCLUSION_LAE'ZEL)" -> "INCLUSION_LAE'ZEL"
-                        Some(logicalname[7..logicalname.len()-1].to_string())
-                    } else if logicalname.starts_with("INCLUSION_") {
-                        Some(logicalname.clone())
-                    } else {
-                        None
-                    };
+                    let display_name =
+                        if logicalname.starts_with("Alias (") && logicalname.ends_with(")") {
+                            // Extract inner name: "Alias (INCLUSION_LAE'ZEL)" -> "INCLUSION_LAE'ZEL"
+                            Some(logicalname[7..logicalname.len() - 1].to_string())
+                        } else if logicalname.starts_with("INCLUSION_") {
+                            Some(logicalname.clone())
+                        } else {
+                            None
+                        };
 
                     if let Some(name) = display_name {
                         map.insert(source_uuid.clone(), name);

@@ -2,10 +2,10 @@
 
 use std::f32::consts::PI;
 
+use bevy::camera::primitives::MeshAabb;
 use bevy::input::gestures::{PinchGesture, RotationGesture};
 use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll};
 use bevy::prelude::*;
-use bevy::camera::primitives::MeshAabb;
 
 use crate::viewer::types::{CameraFitPending, GroundGrid, ModelBounds, OrbitCamera, ViewSettings};
 

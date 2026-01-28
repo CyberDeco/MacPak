@@ -9,10 +9,9 @@ mod reader;
 mod writer;
 
 // Public API
-pub use document::{LsfDocument, LsfNode, LsfAttribute};
-pub use reader::{read_lsf, parse_lsf_bytes};
-pub use writer::{write_lsf, write_lsf_with_format, serialize_lsf, serialize_lsf_with_format};
+pub use document::{LsfAttribute, LsfDocument, LsfNode};
+pub use reader::{parse_lsf_bytes, read_lsf};
+pub use writer::{serialize_lsf, serialize_lsf_with_format, write_lsf, write_lsf_with_format};
 
 // Internal API (used by converter module)
 pub(crate) use document::LsfMetadataFormat;
-

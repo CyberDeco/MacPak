@@ -14,16 +14,28 @@ pub struct MemberDef {
 
 impl MemberDef {
     pub fn new(name: &'static str, member_type: u32) -> Self {
-        Self { name, member_type, array_size: 0 }
+        Self {
+            name,
+            member_type,
+            array_size: 0,
+        }
     }
 
     pub fn array(name: &'static str, member_type: u32, size: u32) -> Self {
-        Self { name, member_type, array_size: size }
+        Self {
+            name,
+            member_type,
+            array_size: size,
+        }
     }
 }
 
 /// Write a type definition to a section.
-pub fn write_type_def(section: &mut Section, members: &[MemberDef], string_offsets: &HashMap<&str, u32>) {
+pub fn write_type_def(
+    section: &mut Section,
+    members: &[MemberDef],
+    string_offsets: &HashMap<&str, u32>,
+) {
     // Member size in 64-bit mode: 44 bytes
     // [type:4][name_ptr:8][def_ptr:8][array_size:4][extra:12][unknown:8]
     for member in members {

@@ -4,7 +4,7 @@ use floem::event::{EventListener, EventPropagation};
 use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::text::Weight;
-use floem::views::{virtual_list, VirtualDirection, VirtualItemSize};
+use floem::views::{VirtualDirection, VirtualItemSize, virtual_list};
 use im::Vector as ImVector;
 
 use crate::gui::state::{BrowserState, EditorTabsState, FileEntry, SortColumn};
@@ -16,9 +16,9 @@ const ICON_WIDTH: f64 = 24.0;
 const TYPE_WIDTH: f64 = 60.0;
 const SIZE_WIDTH: f64 = 80.0;
 const MODIFIED_WIDTH: f64 = 120.0;
-const ROW_PADDING: f64 = 16.0;  // 8px on each side
-const COLUMN_GAPS: f64 = 32.0;  // gaps between columns
-const CHAR_WIDTH: f64 = 7.5;    // estimated average character width
+const ROW_PADDING: f64 = 16.0; // 8px on each side
+const COLUMN_GAPS: f64 = 32.0; // gaps between columns
+const CHAR_WIDTH: f64 = 7.5; // estimated average character width
 
 /// Truncate filename with middle ellipsis like macOS Finder
 /// e.g., "VeryLongFileName.extension" -> "VeryLong...ension"
@@ -121,7 +121,7 @@ pub fn file_list(
     )
     .style(move |s| {
         s.width(file_list_width.get())
-            .flex_shrink(0.0)  // Don't shrink below specified width
+            .flex_shrink(0.0) // Don't shrink below specified width
             .min_height(0.0)
             .background(Color::WHITE)
     })
@@ -148,13 +148,37 @@ fn file_list_content(
     v_stack((
         // Column headers
         h_stack((
-            sortable_header("Name", SortColumn::Name, sort_column, sort_ascending, state_name),
-            sortable_header("Type", SortColumn::Type, sort_column, sort_ascending, state_type)
-                .style(|s| s.width(TYPE_WIDTH)),
-            sortable_header("Size", SortColumn::Size, sort_column, sort_ascending, state_size)
-                .style(|s| s.width(SIZE_WIDTH)),
-            sortable_header("Modified", SortColumn::Modified, sort_column, sort_ascending, state_modified)
-                .style(|s| s.width(MODIFIED_WIDTH)),
+            sortable_header(
+                "Name",
+                SortColumn::Name,
+                sort_column,
+                sort_ascending,
+                state_name,
+            ),
+            sortable_header(
+                "Type",
+                SortColumn::Type,
+                sort_column,
+                sort_ascending,
+                state_type,
+            )
+            .style(|s| s.width(TYPE_WIDTH)),
+            sortable_header(
+                "Size",
+                SortColumn::Size,
+                sort_column,
+                sort_ascending,
+                state_size,
+            )
+            .style(|s| s.width(SIZE_WIDTH)),
+            sortable_header(
+                "Modified",
+                SortColumn::Modified,
+                sort_column,
+                sort_ascending,
+                state_modified,
+            )
+            .style(|s| s.width(MODIFIED_WIDTH)),
         ))
         .style(|s| {
             s.width_full()
@@ -228,7 +252,7 @@ fn file_list_content(
             s.width_full()
                 .flex_grow(1.0)
                 .flex_basis(0.0)
-                .min_height(0.0)  // Allow scroll to shrink - critical for scroll to work
+                .min_height(0.0) // Allow scroll to shrink - critical for scroll to work
         }),
     ))
     .style(|s| {
@@ -353,7 +377,11 @@ fn file_row(
                                         // Confirm rename
                                         let new_name = state_inner.rename_text.get();
                                         if !new_name.is_empty() {
-                                            perform_rename(&file_path_inner, &new_name, state_inner.clone());
+                                            perform_rename(
+                                                &file_path_inner,
+                                                &new_name,
+                                                state_inner.clone(),
+                                            );
                                         }
                                         state_inner.renaming_path.set(None);
                                     },
@@ -372,7 +400,13 @@ fn file_row(
                             let name_for_label = name_inner.clone();
                             label(move || {
                                 let width = list_width.get();
-                                let available_width = width - ICON_WIDTH - TYPE_WIDTH - SIZE_WIDTH - MODIFIED_WIDTH - ROW_PADDING - COLUMN_GAPS;
+                                let available_width = width
+                                    - ICON_WIDTH
+                                    - TYPE_WIDTH
+                                    - SIZE_WIDTH
+                                    - MODIFIED_WIDTH
+                                    - ROW_PADDING
+                                    - COLUMN_GAPS;
                                 let max_chars = (available_width / CHAR_WIDTH).max(10.0) as usize;
                                 truncate_middle(&name_for_label, max_chars)
                             })
@@ -433,22 +467,20 @@ fn sortable_header(
     sort_ascending: RwSignal<bool>,
     state: BrowserState,
 ) -> impl IntoView {
-    h_stack((
-        label(move || {
-            let current = sort_column.get();
-            let asc = sort_ascending.get();
-            if current == column {
-                if asc {
-                    format!("{} ▲", name)
-                } else {
-                    format!("{} ▼", name)
-                }
+    h_stack((label(move || {
+        let current = sort_column.get();
+        let asc = sort_ascending.get();
+        if current == column {
+            if asc {
+                format!("{} ▲", name)
             } else {
-                name.to_string()
+                format!("{} ▼", name)
             }
-        })
-        .style(|s| s.font_weight(Weight::BOLD)),
-    ))
+        } else {
+            name.to_string()
+        }
+    })
+    .style(|s| s.font_weight(Weight::BOLD)),))
     .style(move |s| {
         s.cursor(floem::style::CursorStyle::Pointer)
             .hover(|s| s.background(Color::rgb8(230, 230, 230)))

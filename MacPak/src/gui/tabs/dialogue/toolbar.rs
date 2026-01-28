@@ -1,10 +1,10 @@
 //! Dialogue tab toolbar
 
-use std::path::PathBuf;
+use super::operations;
+use crate::gui::state::{ConfigState, DialogueState};
 use floem::prelude::*;
 use floem::reactive::SignalGet;
-use crate::gui::state::{ConfigState, DialogueState};
-use super::operations;
+use std::path::PathBuf;
 
 /// Expand all nodes in the tree
 fn expand_all_nodes(state: &DialogueState) {
@@ -58,10 +58,11 @@ pub fn toolbar(state: DialogueState, config: ConfigState) -> impl IntoView {
                     let gustav_path = PathBuf::from(&bg3_path).join("Gustav.pak");
                     operations::load_pak_directly(state_for_gustav.clone(), gustav_path);
                 } else {
-                    state_for_gustav.status_message.set("BG3 path not configured. Set it in Preferences (⌘,)".to_string());
+                    state_for_gustav
+                        .status_message
+                        .set("BG3 path not configured. Set it in Preferences (⌘,)".to_string());
                 }
             }),
-
         // Load from Shared.pak button
         button("Load from Shared.pak")
             .style(|s| {
@@ -79,13 +80,13 @@ pub fn toolbar(state: DialogueState, config: ConfigState) -> impl IntoView {
                     let shared_path = PathBuf::from(&bg3_path).join("Shared.pak");
                     operations::load_pak_directly(state_for_shared.clone(), shared_path);
                 } else {
-                    state_for_shared.status_message.set("BG3 path not configured. Set it in Preferences (⌘,)".to_string());
+                    state_for_shared
+                        .status_message
+                        .set("BG3 path not configured. Set it in Preferences (⌘,)".to_string());
                 }
             }),
-
         // Language selector
         language_selector(state.clone()),
-
         // Expand/Collapse All buttons
         button("Expand All")
             .style(|s| {
@@ -102,7 +103,6 @@ pub fn toolbar(state: DialogueState, config: ConfigState) -> impl IntoView {
             .action(move || {
                 expand_all_nodes(&state_for_expand);
             }),
-
         button("Collapse All")
             .style(|s| {
                 s.padding_horiz(8.0)
@@ -118,20 +118,16 @@ pub fn toolbar(state: DialogueState, config: ConfigState) -> impl IntoView {
             .action(move || {
                 collapse_all_nodes(&state_for_collapse);
             }),
-
         // Spacer
         empty().style(|s| s.flex_grow(1.0)),
-
         // Export buttons (disabled when no dialog loaded)
         export_buttons(state.clone()),
-
         // Status message
-        label(move || state_for_status.status_message.get())
-            .style(|s| {
-                s.font_size(12.0)
-                    .color(Color::rgb8(100, 100, 100))
-                    .margin_left(12.0)
-            }),
+        label(move || state_for_status.status_message.get()).style(|s| {
+            s.font_size(12.0)
+                .color(Color::rgb8(100, 100, 100))
+                .margin_left(12.0)
+        }),
     ))
     .style(|s| {
         s.width_full()
@@ -151,18 +147,16 @@ fn language_selector(state: DialogueState) -> impl IntoView {
     let state_for_label = state.clone();
 
     h_stack((
-        label(|| "Language:")
-            .style(|s| s.font_size(13.0).color(Color::rgb8(80, 80, 80))),
-        label(move || state_for_label.language.get())
-            .style(|s| {
-                s.font_size(13.0)
-                    .padding_horiz(8.0)
-                    .padding_vert(4.0)
-                    .border(1.0)
-                    .border_radius(4.0)
-                    .border_color(Color::rgb8(200, 200, 200))
-                    .background(Color::WHITE)
-            }),
+        label(|| "Language:").style(|s| s.font_size(13.0).color(Color::rgb8(80, 80, 80))),
+        label(move || state_for_label.language.get()).style(|s| {
+            s.font_size(13.0)
+                .padding_horiz(8.0)
+                .padding_vert(4.0)
+                .border(1.0)
+                .border_radius(4.0)
+                .border_color(Color::rgb8(200, 200, 200))
+                .background(Color::WHITE)
+        }),
     ))
     .style(|s| s.gap(4.0).items_center())
 }
@@ -191,14 +185,13 @@ fn export_buttons(state: DialogueState) -> impl IntoView {
                 } else {
                     base.background(Color::rgb8(240, 240, 240))
                         .color(Color::rgb8(180, 180, 180))
-                                        }
+                }
             })
             .action(move || {
                 if state_for_html.current_dialog.get().is_some() {
                     operations::export_html(state_for_html.clone());
                 }
             }),
-
         button("Export DE2")
             .style(move |s| {
                 let base = s
@@ -216,7 +209,7 @@ fn export_buttons(state: DialogueState) -> impl IntoView {
                 } else {
                     base.background(Color::rgb8(240, 240, 240))
                         .color(Color::rgb8(180, 180, 180))
-                                        }
+                }
             })
             .action(move || {
                 if state_for_de2.current_dialog.get().is_some() {

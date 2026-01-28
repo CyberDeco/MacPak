@@ -14,12 +14,12 @@
 //!
 //! SPDX-License-Identifier: MIT
 
+mod lsf_to_lsj;
 mod lsf_to_lsx;
+mod lsj_to_lsf;
+mod lsj_to_lsx;
 mod lsx_to_lsf;
 mod lsx_to_lsj;
-mod lsj_to_lsx;
-mod lsf_to_lsj;
-mod lsj_to_lsf;
 
 // Re-export conversion functions
 pub use lsf_to_lsj::{convert_lsf_to_lsj, convert_lsf_to_lsj_with_progress};

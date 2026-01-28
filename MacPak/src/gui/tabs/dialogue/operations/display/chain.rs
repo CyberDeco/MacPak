@@ -16,7 +16,11 @@ pub struct ChainResult {
 
 /// Follow a chain of nodes (through Jump, Alias, or single children) to find text
 /// Returns the first text found, or a fallback description
-pub fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth: usize) -> ChainResult {
+pub fn follow_chain_for_text(
+    dialog: &Dialog,
+    start_node: &DialogNode,
+    max_depth: usize,
+) -> ChainResult {
     let mut current = start_node;
     let mut depth = 0;
 
@@ -80,11 +84,16 @@ pub fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth
                     if let Some(point) = current.jump_target_point {
                         let child_index = point as usize;
                         if child_index < target.children.len() {
-                            if let Some(entry_child) = dialog.get_node(&target.children[child_index]) {
+                            if let Some(entry_child) =
+                                dialog.get_node(&target.children[child_index])
+                            {
                                 // Keep following first children until first Jump/Alias
                                 let mut entry_node = entry_child;
                                 loop {
-                                    if matches!(entry_node.constructor, NodeConstructor::Jump | NodeConstructor::Alias) {
+                                    if matches!(
+                                        entry_node.constructor,
+                                        NodeConstructor::Jump | NodeConstructor::Alias
+                                    ) {
                                         break;
                                     }
                                     if entry_node.children.is_empty() {
@@ -125,7 +134,10 @@ pub fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth
         // Don't follow through regular nodes with single children - those should display as-is
         if current.children.len() == 1 {
             if let Some(child) = dialog.get_node(&current.children[0]) {
-                if matches!(child.constructor, NodeConstructor::Jump | NodeConstructor::Alias | NodeConstructor::VisualState) {
+                if matches!(
+                    child.constructor,
+                    NodeConstructor::Jump | NodeConstructor::Alias | NodeConstructor::VisualState
+                ) {
                     current = child;
                     continue;
                 }
@@ -137,7 +149,9 @@ pub fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth
     }
 
     // No text found - return fallback based on place in tree
-    let fallback = current.editor_data.get("ID")
+    let fallback = current
+        .editor_data
+        .get("ID")
         .cloned()
         .unwrap_or_else(|| current.constructor.display_name().to_string());
 
@@ -152,7 +166,11 @@ pub fn follow_chain_for_text(dialog: &Dialog, start_node: &DialogNode, max_depth
 /// Get effective children for a Jump node's target, handling VisualState pass-through
 /// For display purposes, show ALL content children (ignore jump_target_point for tree display)
 /// The jump_target_point is only used for text resolution, not for determining children to display
-pub fn get_jump_effective_children(dialog: &Dialog, target_node: &DialogNode, _jump_target_point: Option<i32>) -> Vec<String> {
+pub fn get_jump_effective_children(
+    dialog: &Dialog,
+    target_node: &DialogNode,
+    _jump_target_point: Option<i32>,
+) -> Vec<String> {
     // If target is a VisualState, its children are the content nodes
     if target_node.constructor == NodeConstructor::VisualState {
         return target_node.children.clone();
@@ -202,7 +220,11 @@ pub fn resolve_single_passthrough(dialog: &Dialog, uuid: &str) -> Vec<String> {
         for child_uuid in &node.children {
             result.extend(resolve_single_passthrough(dialog, child_uuid));
         }
-        return if result.is_empty() { vec![uuid.to_string()] } else { result };
+        return if result.is_empty() {
+            vec![uuid.to_string()]
+        } else {
+            result
+        };
     }
 
     // Check if this is a pass-through node: no text, no flags, single Alias/VisualState child
@@ -210,7 +232,10 @@ pub fn resolve_single_passthrough(dialog: &Dialog, uuid: &str) -> Vec<String> {
     // so that the all-visited-content check can work properly
     if !has_text && !has_flags && node.children.len() == 1 {
         if let Some(child) = dialog.get_node(&node.children[0]) {
-            if matches!(child.constructor, NodeConstructor::Alias | NodeConstructor::VisualState) {
+            if matches!(
+                child.constructor,
+                NodeConstructor::Alias | NodeConstructor::VisualState
+            ) {
                 // Follow through to child
                 return resolve_single_passthrough(dialog, &node.children[0]);
             }

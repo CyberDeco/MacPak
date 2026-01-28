@@ -6,22 +6,26 @@
 //! - Export to HTML and DE2 formats
 //! - Audio playback via right-click context menu
 
-mod toolbar;
 mod browser;
-mod tree_view;
 mod context_menu;
 pub mod operations;
+mod toolbar;
+mod tree_view;
 
+use crate::gui::state::{AppState, ConfigState, DialogEntry, DialogSource, DialogueState};
 use floem::prelude::*;
 use floem::reactive::create_effect;
 use floem::style::{FlexDirection, Position};
 use floem::text::Weight;
-use crate::gui::state::{AppState, ConfigState, DialogEntry, DialogSource, DialogueState};
 
-pub use operations::{open_dialog_folder, load_dialog_from_pak};
+pub use operations::{load_dialog_from_pak, open_dialog_folder};
 
 /// Main dialogue tab view
-pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigState) -> impl IntoView {
+pub fn dialogue_tab(
+    _app_state: AppState,
+    state: DialogueState,
+    config: ConfigState,
+) -> impl IntoView {
     let state_for_content = state.clone();
     let state_for_overlay = state.clone();
     let state_for_pending = state.clone();
@@ -39,10 +43,15 @@ pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigSt
 
                 // Now load the dialog
                 match source.clone() {
-                    DialogSource::PakFile { pak_path, internal_path } => {
+                    DialogSource::PakFile {
+                        pak_path,
+                        internal_path,
+                    } => {
                         // Add to browser list if not already there
                         let display_path = format!("[Search] {}", internal_path);
-                        let name = internal_path.split('/').last()
+                        let name = internal_path
+                            .split('/')
+                            .last()
                             .unwrap_or(&internal_path)
                             .to_string();
 
@@ -57,7 +66,9 @@ pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigSt
                         }
 
                         // Select it in the browser
-                        state_for_pending.selected_dialog_path.set(Some(display_path));
+                        state_for_pending
+                            .selected_dialog_path
+                            .set(Some(display_path));
 
                         // Load the dialog
                         operations::load_dialog_from_pak(
@@ -67,7 +78,9 @@ pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigSt
                         );
                     }
                     DialogSource::LocalFile(_path) => {
-                        state_for_pending.status_message.set("Loading not supported for local files from Search".to_string());
+                        state_for_pending
+                            .status_message
+                            .set("Loading not supported for local files from Search".to_string());
                     }
                 }
             }
@@ -78,7 +91,6 @@ pub fn dialogue_tab(_app_state: AppState, state: DialogueState, config: ConfigSt
     let main_content = v_stack((
         // Toolbar
         toolbar::toolbar(state.clone(), config),
-
         // Main content area - horizontal split with adjustable divider
         dialogue_content(state.clone(), state_for_content),
     ))
@@ -107,19 +119,12 @@ fn dialogue_content(state: DialogueState, state_for_content: DialogueState) -> i
         // Left panel: Dialog browser - width controlled by signal
         browser::browser_panel(state.clone())
             .style(move |s| s.width(browser_panel_width.get()).height_full()),
-
         // Draggable divider
         divider_handle(is_dragging, drag_offset),
-
         // Right panel: Dialog tree view and details
-        dialog_content(state_for_content)
-            .style(|s| s.flex_grow(1.0).height_full().min_width(0.0)),
+        dialog_content(state_for_content).style(|s| s.flex_grow(1.0).height_full().min_width(0.0)),
     ))
-    .style(move |s| {
-        s.flex_grow(1.0)
-            .width_full()
-            .min_height(0.0)
-    });
+    .style(move |s| s.flex_grow(1.0).width_full().min_height(0.0));
 
     // Transparent overlay that appears during drag to capture all pointer events
     let drag_overlay = empty()
@@ -152,20 +157,16 @@ fn dialogue_content(state: DialogueState, state_for_content: DialogueState) -> i
         });
 
     // Stack content with overlay on top
-    (content, drag_overlay)
-        .style(|s| {
-            s.position(floem::style::Position::Relative)
-                .flex_grow(1.0)
-                .width_full()
-                .min_height(0.0)
-        })
+    (content, drag_overlay).style(|s| {
+        s.position(floem::style::Position::Relative)
+            .flex_grow(1.0)
+            .width_full()
+            .min_height(0.0)
+    })
 }
 
 /// Divider handle that initiates drag
-fn divider_handle(
-    is_dragging: RwSignal<bool>,
-    drag_offset: RwSignal<f64>,
-) -> impl IntoView {
+fn divider_handle(is_dragging: RwSignal<bool>, drag_offset: RwSignal<f64>) -> impl IntoView {
     empty()
         .style(move |s| {
             let dragging = is_dragging.get();
@@ -199,25 +200,23 @@ fn dialog_content(state: DialogueState) -> impl IntoView {
     // This prevents recreating tree_view_panel when switching dialogs
     (
         // Empty state - shown when no dialog loaded
-        empty_state()
-            .style(move |s| {
-                let has_dialog = current_dialog.get().is_some();
-                if has_dialog {
-                    s.display(floem::style::Display::None)
-                } else {
-                    s.width_full().height_full()
-                }
-            }),
+        empty_state().style(move |s| {
+            let has_dialog = current_dialog.get().is_some();
+            if has_dialog {
+                s.display(floem::style::Display::None)
+            } else {
+                s.width_full().height_full()
+            }
+        }),
         // Tree view - shown when dialog is loaded
-        tree_view::tree_view_panel(state_for_tree)
-            .style(move |s| {
-                let has_dialog = current_dialog.get().is_some();
-                if has_dialog {
-                    s.width_full().height_full()
-                } else {
-                    s.display(floem::style::Display::None)
-                }
-            }),
+        tree_view::tree_view_panel(state_for_tree).style(move |s| {
+            let has_dialog = current_dialog.get().is_some();
+            if has_dialog {
+                s.width_full().height_full()
+            } else {
+                s.display(floem::style::Display::None)
+            }
+        }),
     )
         .style(|s| s.width_full().height_full().min_width(0.0))
 }
@@ -225,12 +224,11 @@ fn dialog_content(state: DialogueState) -> impl IntoView {
 /// Empty state when no dialog is loaded
 fn empty_state() -> impl IntoView {
     v_stack((
-        label(|| "No Dialog Loaded")
-            .style(|s| {
-                s.font_size(18.0)
-                    .font_weight(Weight::MEDIUM)
-                    .color(Color::rgb8(100, 100, 100))
-            }),
+        label(|| "No Dialog Loaded").style(|s| {
+            s.font_size(18.0)
+                .font_weight(Weight::MEDIUM)
+                .color(Color::rgb8(100, 100, 100))
+        }),
         label(|| "Select a dialog file from the browser\nor open a folder containing dialogs")
             .style(|s| {
                 s.font_size(13.0)
@@ -256,19 +254,16 @@ fn loading_overlay(state: DialogueState) -> impl IntoView {
         move || show.get(),
         move |is_loading| {
             if is_loading {
-                container(
-                    label(move || message.get())
-                        .style(|s| s.font_size(14.0)),
-                )
-                .style(|s| {
-                    s.padding(24.0)
-                        .background(Color::WHITE)
-                        .border(1.0)
-                        .border_color(Color::rgb8(200, 200, 200))
-                        .border_radius(8.0)
-                        .min_width(300.0)
-                })
-                .into_any()
+                container(label(move || message.get()).style(|s| s.font_size(14.0)))
+                    .style(|s| {
+                        s.padding(24.0)
+                            .background(Color::WHITE)
+                            .border(1.0)
+                            .border_color(Color::rgb8(200, 200, 200))
+                            .border_radius(8.0)
+                            .min_width(300.0)
+                    })
+                    .into_any()
             } else {
                 empty().into_any()
             }

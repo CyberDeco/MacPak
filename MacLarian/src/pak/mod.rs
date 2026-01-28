@@ -1,20 +1,20 @@
 //! PAK archive operations module
 
-pub mod pak_tools;
-mod creator;
-pub(crate) mod lspk;
 mod batch;
-mod smart_extract;
+mod creator;
 mod extractor;
 mod lister;
+pub(crate) mod lspk;
+pub mod pak_tools;
+mod smart_extract;
 
 // Primary public API
 pub use pak_tools::{PakOperations, ProgressCallback};
 
 // Internal API (used by search module)
-pub(crate) use pak_tools::PakReaderCache;
-pub use lspk::CompressionMethod;
 pub use creator::create_pak;
+pub use lspk::CompressionMethod;
+pub(crate) use pak_tools::PakReaderCache;
 
 // Re-export for convenience
 pub use extractor::extract_pak;
@@ -25,11 +25,11 @@ pub use lspk::{PakContents, PakFile, PakPhase, PakProgress};
 
 // Re-export batch operations
 pub use batch::{
-    find_pak_files, find_packable_folders, batch_extract, batch_create, BatchPakResult,
+    BatchPakResult, batch_create, batch_extract, find_packable_folders, find_pak_files,
 };
 
 // Re-export smart extraction
-pub use smart_extract::{extract_files_smart, extract_pak_smart, SmartExtractionResult};
+pub use smart_extract::{SmartExtractionResult, extract_files_smart, extract_pak_smart};
 
 // Re-export Gr2ExtractionOptions from gr2_extraction for convenience
 pub use crate::gr2_extraction::Gr2ExtractionOptions;

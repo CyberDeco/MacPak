@@ -5,7 +5,7 @@ use std::thread;
 
 use floem::prelude::*;
 
-use super::super::types::{create_result_sender, get_shared_progress, PakResult};
+use super::super::types::{PakResult, create_result_sender, get_shared_progress};
 use crate::gui::state::{ActiveDialog, PakOpsState};
 
 /// Validate mod structure
@@ -40,13 +40,11 @@ pub fn validate_mod_structure(state: PakOpsState) {
 
     thread::spawn(move || {
         // Use maclarian's validation with progress
-        let result = maclarian::mods::validate_mod_structure_with_progress(
-            Path::new(&mod_path),
-            &|p| {
+        let result =
+            maclarian::mods::validate_mod_structure_with_progress(Path::new(&mod_path), &|p| {
                 let desc = p.current_file.as_deref().unwrap_or(p.phase.as_str());
                 shared_progress.update(p.current, p.total, desc);
-            },
-        );
+            });
 
         send(PakResult::ValidateDone {
             valid: result.valid,
@@ -74,13 +72,11 @@ pub fn validate_dropped_folder(state: PakOpsState, folder_path: String) {
 
     thread::spawn(move || {
         // Use maclarian's validation with progress
-        let result = maclarian::mods::validate_mod_structure_with_progress(
-            Path::new(&folder_path),
-            &|p| {
+        let result =
+            maclarian::mods::validate_mod_structure_with_progress(Path::new(&folder_path), &|p| {
                 let desc = p.current_file.as_deref().unwrap_or(p.phase.as_str());
                 shared_progress.update(p.current, p.total, desc);
-            },
-        );
+            });
 
         send(PakResult::ValidateDone {
             valid: result.valid,

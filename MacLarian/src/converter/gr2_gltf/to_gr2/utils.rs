@@ -6,10 +6,10 @@
 //!
 //! Re-exports shared utilities from the parent module, plus GR2-specific functions.
 
-pub use crate::converter::gr2_gltf::shared::{f32_to_half, encode_qtangent};
+pub use crate::converter::gr2_gltf::shared::{encode_qtangent, f32_to_half};
 
 /// Calculate CRC32 checksum (GR2 uses standard CRC-32)
-#[must_use] 
+#[must_use]
 pub fn crc32(data: &[u8]) -> u32 {
     const TABLE: [u32; 256] = {
         let mut table = [0u32; 256];
@@ -37,4 +37,3 @@ pub fn crc32(data: &[u8]) -> u32 {
     }
     !crc
 }
-

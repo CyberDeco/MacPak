@@ -1,6 +1,6 @@
 //! Vertex attribute methods for `GltfBuilder`
 
-use super::super::types::{GltfBufferView, GltfAccessor};
+use super::super::types::{GltfAccessor, GltfBufferView};
 use super::GltfBuilder;
 
 impl GltfBuilder {

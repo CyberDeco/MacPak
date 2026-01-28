@@ -16,27 +16,13 @@ pub use builder::GltfBuilder;
 // Re-export all types for external use
 #[allow(unused_imports)]
 pub use types::{
-    GltfAccessor,
-    GltfAsset,
-    GltfBuffer,
-    GltfBufferView,
-    GltfDocument,
-    GltfMesh,
-    GltfNode,
-    GltfPrimitive,
-    GltfScene,
-    GltfSkin,
+    GltfAccessor, GltfAsset, GltfBuffer, GltfBufferView, GltfDocument, GltfMesh, GltfNode,
+    GltfPrimitive, GltfScene, GltfSkin,
 };
 
 // Re-export material types for external use
 #[allow(unused_imports)]
 pub use materials::{
-    GltfImage,
-    GltfMaterial,
-    GltfNormalTextureInfo,
-    GltfOcclusionTextureInfo,
-    GltfPbrMetallicRoughness,
-    GltfSampler,
-    GltfTexture,
-    GltfTextureInfo,
+    GltfImage, GltfMaterial, GltfNormalTextureInfo, GltfOcclusionTextureInfo,
+    GltfPbrMetallicRoughness, GltfSampler, GltfTexture, GltfTextureInfo,
 };

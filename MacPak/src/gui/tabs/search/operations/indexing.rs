@@ -126,7 +126,10 @@ pub fn build_index(state: SearchState) {
                 }
             }
             Err(e) => {
-                send(IndexMessage::Error(format!("Failed to acquire lock: {}", e)));
+                send(IndexMessage::Error(format!(
+                    "Failed to acquire lock: {}",
+                    e
+                )));
                 build_succeeded = false;
             }
         }

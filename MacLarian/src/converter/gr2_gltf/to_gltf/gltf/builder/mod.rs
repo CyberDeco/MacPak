@@ -12,8 +12,8 @@ mod mesh;
 mod skeleton;
 mod vertex_attributes;
 
-use super::types::{GltfBufferView, GltfAccessor, GltfMesh, GltfNode, GltfSkin};
-use super::materials::{GltfImage, GltfTexture, GltfSampler, GltfMaterial};
+use super::materials::{GltfImage, GltfMaterial, GltfSampler, GltfTexture};
+use super::types::{GltfAccessor, GltfBufferView, GltfMesh, GltfNode, GltfSkin};
 
 /// Builder for constructing glTF documents.
 pub struct GltfBuilder {

@@ -11,7 +11,9 @@ impl GltfBuilder {
 
         // Add bone nodes
         for (bone_idx, bone) in skeleton.bones.iter().enumerate() {
-            let children: Vec<usize> = skeleton.bones.iter()
+            let children: Vec<usize> = skeleton
+                .bones
+                .iter()
                 .enumerate()
                 .filter(|(_, b)| b.parent_index >= 0 && b.parent_index as usize == bone_idx)
                 .map(|(i, _)| self.bone_node_offset + i)
@@ -36,7 +38,9 @@ impl GltfBuilder {
             });
         }
 
-        let ibm: Vec<[f32; 16]> = skeleton.bones.iter()
+        let ibm: Vec<[f32; 16]> = skeleton
+            .bones
+            .iter()
             .map(|b| b.inverse_world_transform)
             .collect();
 
@@ -46,7 +50,9 @@ impl GltfBuilder {
             .map(|i| self.bone_node_offset + i)
             .collect();
 
-        let root_bone_idx = skeleton.bones.iter()
+        let root_bone_idx = skeleton
+            .bones
+            .iter()
             .position(|b| b.parent_index < 0)
             .map(|i| self.bone_node_offset + i);
 

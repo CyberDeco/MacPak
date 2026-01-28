@@ -4,8 +4,10 @@ use floem::prelude::*;
 use std::path::Path;
 use std::thread;
 
+use super::super::types::{
+    PakResult, create_progress_sender, create_result_sender, get_shared_progress,
+};
 use crate::gui::state::{ActiveDialog, PakOpsState};
-use super::super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
 
 /// Extract a PAK file via file dialog
 pub fn extract_pak_file(state: PakOpsState) {
@@ -69,8 +71,7 @@ pub fn extract_pak_file(state: PakOpsState) {
             &progress_sender,
         );
 
-        let files = maclarian::pak::PakOperations::list(&pak_path)
-            .unwrap_or_default();
+        let files = maclarian::pak::PakOperations::list(&pak_path).unwrap_or_default();
 
         let pak_result = match result {
             Ok(_) => PakResult::ExtractDone {
@@ -124,7 +125,9 @@ pub fn extract_individual_files(state: PakOpsState) {
     state.is_listing.set(true);
     state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
-    state.progress_message.set(format!("Reading {}...", pak_name));
+    state
+        .progress_message
+        .set(format!("Reading {}...", pak_name));
 
     get_shared_progress().reset();
 
@@ -134,10 +137,7 @@ pub fn extract_individual_files(state: PakOpsState) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = maclarian::pak::PakOperations::list_with_progress(
-            &pak_path,
-            &progress_sender,
-        );
+        let result = maclarian::pak::PakOperations::list_with_progress(&pak_path, &progress_sender);
 
         let pak_result = match result {
             Ok(files) => PakResult::FileSelectLoaded {
@@ -198,7 +198,10 @@ pub fn execute_individual_extract(state: PakOpsState) {
     state.clear_results();
 
     if use_smart_extract {
-        let gr2_count = selected.iter().filter(|f| f.to_lowercase().ends_with(".gr2")).count();
+        let gr2_count = selected
+            .iter()
+            .filter(|f| f.to_lowercase().ends_with(".gr2"))
+            .count();
         state.add_result(&format!(
             "Extracting {} files ({} GR2 with processing)...",
             selected.len(),
@@ -304,7 +307,9 @@ pub fn extract_individual_dropped_file(state: PakOpsState, pak_path: String) {
     state.is_listing.set(true);
     state.active_dialog.set(ActiveDialog::Progress);
     state.progress.set(0.0);
-    state.progress_message.set(format!("Reading {}...", pak_name));
+    state
+        .progress_message
+        .set(format!("Reading {}...", pak_name));
     state.dropped_file.set(None);
 
     get_shared_progress().reset();
@@ -313,10 +318,7 @@ pub fn extract_individual_dropped_file(state: PakOpsState, pak_path: String) {
     let progress_sender = create_progress_sender(state);
 
     thread::spawn(move || {
-        let result = maclarian::pak::PakOperations::list_with_progress(
-            &pak_path,
-            &progress_sender,
-        );
+        let result = maclarian::pak::PakOperations::list_with_progress(&pak_path, &progress_sender);
 
         let pak_result = match result {
             Ok(files) => PakResult::FileSelectLoaded {
@@ -380,8 +382,7 @@ pub fn extract_dropped_file(state: PakOpsState, pak_path: String) {
             &progress_sender,
         );
 
-        let files = maclarian::pak::PakOperations::list(&pak_path)
-            .unwrap_or_default();
+        let files = maclarian::pak::PakOperations::list(&pak_path).unwrap_or_default();
 
         let pak_result = match result {
             Ok(_) => PakResult::ExtractDone {

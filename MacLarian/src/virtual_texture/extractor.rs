@@ -18,11 +18,11 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
-use crate::error::{Error, Result};
-use super::gts::GtsFile;
 use super::gtp::GtpFile;
+use super::gts::GtsFile;
 use super::mod_config;
 use super::types::VirtualTextureLayer;
+use crate::error::{Error, Result};
 
 /// DDS file writer for BC/DXT5 compressed textures
 pub struct DdsWriter;
@@ -58,8 +58,11 @@ impl DdsWriter {
         writer.write_all(&Self::DDS_HEADER_SIZE.to_le_bytes())?;
 
         // Flags
-        let flags = Self::DDSD_CAPS | Self::DDSD_HEIGHT | Self::DDSD_WIDTH
-            | Self::DDSD_PIXELFORMAT | Self::DDSD_LINEARSIZE;
+        let flags = Self::DDSD_CAPS
+            | Self::DDSD_HEIGHT
+            | Self::DDSD_WIDTH
+            | Self::DDSD_PIXELFORMAT
+            | Self::DDSD_LINEARSIZE;
         writer.write_all(&flags.to_le_bytes())?;
 
         // Height
@@ -138,10 +141,7 @@ impl VirtualTextureExtractor {
     ///
     /// # Errors
     /// Returns an error if the GTS file cannot be found or extraction fails.
-    pub fn extract<P: AsRef<Path>>(
-        gtp_path: P,
-        output_dir: P,
-    ) -> Result<()> {
+    pub fn extract<P: AsRef<Path>>(gtp_path: P, output_dir: P) -> Result<()> {
         let gtp_path = gtp_path.as_ref();
         let output_dir = output_dir.as_ref();
 
@@ -189,68 +189,73 @@ impl VirtualTextureExtractor {
         let mut gtp = GtpFile::open(gtp_path, &gts)?;
 
         // Extract GTP filename for matching
-        let gtp_name = gtp_path.file_name()
+        let gtp_name = gtp_path
+            .file_name()
             .and_then(|n| n.to_str())
             .ok_or_else(|| Error::ConversionError("Invalid GTP filename".to_string()))?;
 
         // Find page file index and gather naming info
         // Format: {mod_name}_{gtex_hash}_[Layer].dds
-        let (page_file_idx, mod_name, gtex_hash): (u16, String, String) =
-            if let Some(hash) = Self::extract_hash_from_filename(gtp_name) {
-                // BG3 vanilla: hash in filename (e.g., "Name_<32hexhash>.gtp")
-                let idx = gts.find_page_file_index(hash)
-                    .ok_or_else(|| Error::ConversionError(
-                        format!("Hash '{hash}' not found in GTS metadata")
-                    ))?;
-                // Extract base name before the hash
-                let base_name = gtp_name
-                    .strip_suffix(".gtp")
-                    .and_then(|n| n.rfind('_').map(|pos| &n[..pos]))
-                    .unwrap_or("BG3")
-                    .to_string();
-                (idx, base_name, hash.to_string())
+        let (page_file_idx, mod_name, gtex_hash): (u16, String, String) = if let Some(hash) =
+            Self::extract_hash_from_filename(gtp_name)
+        {
+            // BG3 vanilla: hash in filename (e.g., "Name_<32hexhash>.gtp")
+            let idx = gts.find_page_file_index(hash).ok_or_else(|| {
+                Error::ConversionError(format!("Hash '{hash}' not found in GTS metadata"))
+            })?;
+            // Extract base name before the hash
+            let base_name = gtp_name
+                .strip_suffix(".gtp")
+                .and_then(|n| n.rfind('_').map(|pos| &n[..pos]))
+                .unwrap_or("BG3")
+                .to_string();
+            (idx, base_name, hash.to_string())
+        } else {
+            // Mod: read config files and match by filename
+            let config = mod_config::load_mod_config(gtp_path);
+            let idx = gts.find_page_file_index_by_name(gtp_name).ok_or_else(|| {
+                Error::ConversionError(format!("GTP file '{gtp_name}' not found in GTS metadata"))
+            })?;
+
+            // Get name and GTex hash from config files
+            let (name, gtex_hash) = if let Some(ref cfg) = config {
+                // Use TileSet name from VTexConfig.xml, or mod_name as fallback
+                let name = cfg
+                    .tileset_name
+                    .clone()
+                    .unwrap_or_else(|| cfg.mod_name.clone());
+
+                // Get GTex hash: first from VTexConfig.xml, then from VirtualTextures.json
+                let hash = cfg
+                    .gtex_hashes
+                    .first()
+                    .cloned()
+                    .or_else(|| {
+                        // Fallback: find in VirtualTextures.json by GTS path
+                        let gts_filename =
+                            gts_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                        cfg.mappings
+                            .iter()
+                            .find(|m| m.gts_path.ends_with(gts_filename))
+                            .map(|m| m.gtex_name.clone())
+                    })
+                    .unwrap_or_else(|| "unknown".to_string());
+
+                tracing::debug!(
+                    "Loaded mod config: tileset='{}', mod='{}', gtex_hash='{}'",
+                    cfg.tileset_name.as_deref().unwrap_or("none"),
+                    cfg.mod_name,
+                    hash
+                );
+                (name, hash)
             } else {
-                // Mod: read config files and match by filename
-                let config = mod_config::load_mod_config(gtp_path);
-                let idx = gts.find_page_file_index_by_name(gtp_name)
-                    .ok_or_else(|| Error::ConversionError(
-                        format!("GTP file '{gtp_name}' not found in GTS metadata")
-                    ))?;
-
-                // Get name and GTex hash from config files
-                let (name, gtex_hash) = if let Some(ref cfg) = config {
-                    // Use TileSet name from VTexConfig.xml, or mod_name as fallback
-                    let name = cfg.tileset_name.clone()
-                        .unwrap_or_else(|| cfg.mod_name.clone());
-
-                    // Get GTex hash: first from VTexConfig.xml, then from VirtualTextures.json
-                    let hash = cfg.gtex_hashes.first().cloned()
-                        .or_else(|| {
-                            // Fallback: find in VirtualTextures.json by GTS path
-                            let gts_filename = gts_path.file_name()
-                                .and_then(|n| n.to_str())
-                                .unwrap_or("");
-                            cfg.mappings.iter()
-                                .find(|m| m.gts_path.ends_with(gts_filename))
-                                .map(|m| m.gtex_name.clone())
-                        })
-                        .unwrap_or_else(|| "unknown".to_string());
-
-                    tracing::debug!(
-                        "Loaded mod config: tileset='{}', mod='{}', gtex_hash='{}'",
-                        cfg.tileset_name.as_deref().unwrap_or("none"),
-                        cfg.mod_name,
-                        hash
-                    );
-                    (name, hash)
-                } else {
-                    // Fallback: use GTP stem as name
-                    let stem = gtp_name.strip_suffix(".gtp").unwrap_or(gtp_name);
-                    (stem.to_string(), "unknown".to_string())
-                };
-
-                (idx, name, gtex_hash)
+                // Fallback: use GTP stem as name
+                let stem = gtp_name.strip_suffix(".gtp").unwrap_or(gtp_name);
+                (stem.to_string(), "unknown".to_string())
             };
+
+            (idx, name, gtex_hash)
+        };
 
         // Get tile locations for each layer
         let tiles_by_layer = gts.get_tiles_for_page_file(page_file_idx);
@@ -324,17 +329,14 @@ impl VirtualTextureExtractor {
             // Extract and place each tile
             for tile in tiles {
                 // Extract tile
-                let tile_data = match gtp.extract_chunk(
-                    tile.page as usize,
-                    tile.chunk as usize,
-                    &gts,
-                ) {
-                    Ok(data) => data,
-                    Err(e) => {
-                        eprintln!("Warning: Failed to extract chunk: {e}");
-                        continue;
-                    }
-                };
+                let tile_data =
+                    match gtp.extract_chunk(tile.page as usize, tile.chunk as usize, &gts) {
+                        Ok(data) => data,
+                        Err(e) => {
+                            eprintln!("Warning: Failed to extract chunk: {e}");
+                            continue;
+                        }
+                    };
 
                 if tile_data.len() < tile_bc_size {
                     continue;
@@ -350,7 +352,8 @@ impl VirtualTextureExtractor {
 
                     let dst_block_row = out_y * content_block_height + content_row;
                     let dst_block_col = out_x * content_block_width;
-                    let dst_offset = (dst_block_row * output_block_width + dst_block_col) * bytes_per_block;
+                    let dst_offset =
+                        (dst_block_row * output_block_width + dst_block_col) * bytes_per_block;
 
                     let row_size = content_block_width * bytes_per_block;
 
@@ -370,7 +373,12 @@ impl VirtualTextureExtractor {
                 format!("{}_{}_{}.dds", mod_name, gtex_hash, layer.as_str())
             };
             let output_path = output_dir.join(filename);
-            DdsWriter::write(&output_path, &output_data, output_width as u32, output_height as u32)?;
+            DdsWriter::write(
+                &output_path,
+                &output_data,
+                output_width as u32,
+                output_height as u32,
+            )?;
         }
 
         Ok(())
@@ -398,11 +406,13 @@ impl VirtualTextureExtractor {
 
     /// Find the corresponding GTS file for a GTP file
     fn find_gts_file(gtp_path: &Path) -> Result<std::path::PathBuf> {
-        let gtp_name = gtp_path.file_name()
+        let gtp_name = gtp_path
+            .file_name()
             .and_then(|n| n.to_str())
             .ok_or_else(|| Error::ConversionError("Invalid GTP filename".to_string()))?;
 
-        let gtp_dir = gtp_path.parent()
+        let gtp_dir = gtp_path
+            .parent()
             .ok_or_else(|| Error::ConversionError("No parent directory".to_string()))?;
 
         // Extract base name (e.g., "Albedo_Normal_Physical_1" from "Albedo_Normal_Physical_1_xxx.gtp")
@@ -438,4 +448,3 @@ impl VirtualTextureExtractor {
         )))
     }
 }
-

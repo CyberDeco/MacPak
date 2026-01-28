@@ -47,12 +47,14 @@ use std::sync::OnceLock;
 
 use rayon::prelude::*;
 
+use super::parser::merge_databases;
+use super::types::{
+    MaterialDef, MergedDatabase, TextureParam, TextureRef, VirtualTextureRef, VisualAsset,
+};
 use crate::error::{Error, Result};
 use crate::formats::common::extract_value;
-use crate::formats::lsf::{parse_lsf_bytes, LsfDocument};
+use crate::formats::lsf::{LsfDocument, parse_lsf_bytes};
 use crate::pak::PakOperations;
-use super::parser::merge_databases;
-use super::types::{MaterialDef, MergedDatabase, TextureParam, TextureRef, VirtualTextureRef, VisualAsset};
 
 /// Windows Steam default path
 pub const BG3_DATA_PATH_WINDOWS: &str =
@@ -144,7 +146,7 @@ impl GameDataResolver {
         }
 
         Err(Error::InvalidPath(
-            "Could not find BG3 install path. Use --bg3-path to specify the path.".to_string()
+            "Could not find BG3 install path. Use --bg3-path to specify the path.".to_string(),
         ))
     }
 
@@ -222,10 +224,7 @@ impl GameDataResolver {
             return Ok(());
         }
 
-        let pak_name = pak_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy();
+        let pak_name = pak_path.file_name().unwrap_or_default().to_string_lossy();
 
         tracing::info!(
             "Parsing {} relevant _merged.lsf files from {}",
@@ -284,10 +283,7 @@ impl GameDataResolver {
         }
 
         let total = relevant_paths.len();
-        let pak_name = pak_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy();
+        let pak_name = pak_path.file_name().unwrap_or_default().to_string_lossy();
 
         tracing::info!(
             "Parsing {} relevant _merged.lsf files from {}",
@@ -426,8 +422,7 @@ fn get_attr_string(doc: &LsfDocument, node_idx: usize, attr_name: &str) -> Optio
 
 /// Get an attribute value as u32 from an LSF node
 fn get_attr_u32(doc: &LsfDocument, node_idx: usize, attr_name: &str) -> Option<u32> {
-    get_attr_string(doc, node_idx, attr_name)
-        .and_then(|s| s.parse().ok())
+    get_attr_string(doc, node_idx, attr_name).and_then(|s| s.parse().ok())
 }
 
 /// Parse VisualBank directly from LSF document
@@ -473,7 +468,10 @@ fn parse_visual_bank_lsf(doc: &LsfDocument, bank_idx: usize, db: &mut MergedData
             .map(|s| s.to_string_lossy().to_string())
             .unwrap_or_default();
         if !gr2_filename.is_empty() {
-            db.visuals_by_gr2.entry(gr2_filename).or_default().push(id.clone());
+            db.visuals_by_gr2
+                .entry(gr2_filename)
+                .or_default()
+                .push(id.clone());
         }
 
         db.visuals_by_id.insert(id, visual);
@@ -514,14 +512,17 @@ fn parse_material_bank_lsf(doc: &LsfDocument, bank_idx: usize, db: &mut MergedDa
             }
         }
 
-        db.materials.insert(id.clone(), MaterialDef {
-            id,
-            name,
-            source_file,
-            source_pak: String::new(),
-            texture_ids,
-            virtual_texture_ids,
-        });
+        db.materials.insert(
+            id.clone(),
+            MaterialDef {
+                id,
+                name,
+                source_file,
+                source_pak: String::new(),
+                texture_ids,
+                virtual_texture_ids,
+            },
+        );
     }
 }
 
@@ -537,15 +538,18 @@ fn parse_texture_bank_lsf(doc: &LsfDocument, bank_idx: usize, db: &mut MergedDat
         let width = get_attr_u32(doc, resource_idx, "Width").unwrap_or(0);
         let height = get_attr_u32(doc, resource_idx, "Height").unwrap_or(0);
 
-        db.textures.insert(id.clone(), TextureRef {
-            id,
-            name,
-            dds_path,
-            source_pak: String::new(),
-            width,
-            height,
-            parameter_name: None,
-        });
+        db.textures.insert(
+            id.clone(),
+            TextureRef {
+                id,
+                name,
+                dds_path,
+                source_pak: String::new(),
+                width,
+                height,
+                parameter_name: None,
+            },
+        );
     }
 }
 
@@ -559,11 +563,14 @@ fn parse_virtual_texture_bank_lsf(doc: &LsfDocument, bank_idx: usize, db: &mut M
         let name = get_attr_string(doc, resource_idx, "Name").unwrap_or_default();
         let gtex_hash = get_attr_string(doc, resource_idx, "GTexFileName").unwrap_or_default();
 
-        db.virtual_textures.insert(id.clone(), VirtualTextureRef {
-            id,
-            name,
-            gtex_hash,
-        });
+        db.virtual_textures.insert(
+            id.clone(),
+            VirtualTextureRef {
+                id,
+                name,
+                gtex_hash,
+            },
+        );
     }
 }
 
@@ -586,9 +593,7 @@ fn is_relevant_asset_path(path: &str) -> bool {
     if let Some(pak_start) = path.find("[PAK]_") {
         let pak_part = &path[pak_start..];
         // Use byte matching for speed
-        if pak_part.contains("Armor")
-            || pak_part.contains("Clothing")
-            || pak_part.contains("Body")
+        if pak_part.contains("Armor") || pak_part.contains("Clothing") || pak_part.contains("Body")
         {
             return true;
         }
@@ -597,4 +602,3 @@ fn is_relevant_asset_path(path: &str) -> bool {
     // Check for Loot and Equipment paths
     path.contains("/Loot/") || path.contains("/Equipment/")
 }
-

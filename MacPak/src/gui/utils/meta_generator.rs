@@ -22,7 +22,8 @@ pub fn generate_meta_lsx(
 ) -> String {
     let version64 = version_to_int64(version_major, version_minor, version_patch, version_build);
 
-    format!(r#"<?xml version="1.0" encoding="UTF-8"?>
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
 <save>
     <version major="4" minor="0" revision="9" build="331"/>
     <region id="Config">

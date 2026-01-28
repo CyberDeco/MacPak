@@ -12,8 +12,8 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::error::{Error, Result};
 use super::utils::encode_qtangent;
+use crate::error::{Error, Result};
 
 // ============================================================================
 // Data Structures
@@ -105,7 +105,10 @@ impl GltfModel {
         Self::load_from_document(&document, &buffers)
     }
 
-    fn load_from_document(document: &gltf::Document, buffers: &[gltf::buffer::Data]) -> Result<Self> {
+    fn load_from_document(
+        document: &gltf::Document,
+        buffers: &[gltf::buffer::Data],
+    ) -> Result<Self> {
         let mut meshes = Vec::new();
         let mut skeleton = None;
 
@@ -116,9 +119,12 @@ impl GltfModel {
         }
 
         // Build a map of node indices to bone indices (for future use with bone bindings)
-        let _bone_map: HashMap<usize, usize> = skeleton.as_ref()
+        let _bone_map: HashMap<usize, usize> = skeleton
+            .as_ref()
             .map(|_| {
-                document.skins().next()
+                document
+                    .skins()
+                    .next()
                     .map(|skin| {
                         skin.joints()
                             .enumerate()
@@ -149,7 +155,9 @@ impl GltfModel {
         }
 
         if meshes.is_empty() {
-            return Err(Error::ConversionError("No meshes found in glTF file".to_string()));
+            return Err(Error::ConversionError(
+                "No meshes found in glTF file".to_string(),
+            ));
         }
 
         Ok(GltfModel { meshes, skeleton })
@@ -166,7 +174,8 @@ fn load_skeleton(
     let joints: Vec<_> = skin.joints().collect();
 
     // Build parent index map
-    let joint_indices: HashMap<usize, usize> = joints.iter()
+    let joint_indices: HashMap<usize, usize> = joints
+        .iter()
         .enumerate()
         .map(|(i, j)| (j.index(), i))
         .collect();
@@ -176,18 +185,21 @@ fn load_skeleton(
         read_accessor_mat4(&accessor, buffers)?
     } else {
         // Identity matrices as fallback
-        vec![[
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0,
-        ]; joints.len()]
+        vec![
+            [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ];
+            joints.len()
+        ]
     };
 
     let mut bones = Vec::with_capacity(joints.len());
 
     for (bone_idx, joint) in joints.iter().enumerate() {
-        let bone_name = joint.name().unwrap_or(&format!("Bone_{bone_idx}")).to_string();
+        let bone_name = joint
+            .name()
+            .unwrap_or(&format!("Bone_{bone_idx}"))
+            .to_string();
 
         // Find parent index
         let parent_index = find_parent_bone_index(document, joint, &joint_indices);
@@ -199,22 +211,13 @@ fn load_skeleton(
         let transform = Transform {
             translation,
             rotation,
-            scale_shear: [
-                scale[0], 0.0, 0.0,
-                0.0, scale[1], 0.0,
-                0.0, 0.0, scale[2],
-            ],
+            scale_shear: [scale[0], 0.0, 0.0, 0.0, scale[1], 0.0, 0.0, 0.0, scale[2]],
         };
 
         // NO coordinate conversion for inverse bind matrices - gr2_to_gltf exports them as-is
-        let inverse_world_transform = ibm.get(bone_idx)
-            .copied()
-            .unwrap_or([
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
-            ]);
+        let inverse_world_transform = ibm.get(bone_idx).copied().unwrap_or([
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ]);
 
         bones.push(Bone {
             name: bone_name,
@@ -261,7 +264,8 @@ fn load_primitive(
     let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
 
     // Read positions (required)
-    let positions: Vec<[f32; 3]> = reader.read_positions()
+    let positions: Vec<[f32; 3]> = reader
+        .read_positions()
         .ok_or_else(|| Error::ConversionError("Missing positions in mesh".into()))?
         .collect();
 
@@ -270,25 +274,46 @@ fn load_primitive(
     }
 
     // Read normals
-    let normals: Vec<[f32; 3]> = reader.read_normals().map_or_else(|| vec![[0.0, 0.0, 1.0]; positions.len()], std::iter::Iterator::collect);
+    let normals: Vec<[f32; 3]> = reader.read_normals().map_or_else(
+        || vec![[0.0, 0.0, 1.0]; positions.len()],
+        std::iter::Iterator::collect,
+    );
 
     // Read tangents
-    let tangents: Vec<[f32; 4]> = reader.read_tangents().map_or_else(|| vec![[1.0, 0.0, 0.0, 1.0]; positions.len()], std::iter::Iterator::collect);
+    let tangents: Vec<[f32; 4]> = reader.read_tangents().map_or_else(
+        || vec![[1.0, 0.0, 0.0, 1.0]; positions.len()],
+        std::iter::Iterator::collect,
+    );
 
     // Read UVs
-    let uvs: Vec<[f32; 2]> = reader.read_tex_coords(0).map_or_else(|| vec![[0.0, 0.0]; positions.len()], |iter| iter.into_f32().collect());
+    let uvs: Vec<[f32; 2]> = reader.read_tex_coords(0).map_or_else(
+        || vec![[0.0, 0.0]; positions.len()],
+        |iter| iter.into_f32().collect(),
+    );
 
     // Read colors
-    let colors: Vec<[u8; 4]> = reader.read_colors(0).map_or_else(|| vec![[255, 255, 255, 255]; positions.len()], |iter| iter.into_rgba_u8().collect());
+    let colors: Vec<[u8; 4]> = reader.read_colors(0).map_or_else(
+        || vec![[255, 255, 255, 255]; positions.len()],
+        |iter| iter.into_rgba_u8().collect(),
+    );
 
     // Read joints (bone indices)
-    let joints: Vec<[u16; 4]> = reader.read_joints(0).map_or_else(|| vec![[0, 0, 0, 0]; positions.len()], |iter| iter.into_u16().collect());
+    let joints: Vec<[u16; 4]> = reader.read_joints(0).map_or_else(
+        || vec![[0, 0, 0, 0]; positions.len()],
+        |iter| iter.into_u16().collect(),
+    );
 
     // Read weights
-    let weights: Vec<[f32; 4]> = reader.read_weights(0).map_or_else(|| vec![[1.0, 0.0, 0.0, 0.0]; positions.len()], |iter| iter.into_f32().collect());
+    let weights: Vec<[f32; 4]> = reader.read_weights(0).map_or_else(
+        || vec![[1.0, 0.0, 0.0, 0.0]; positions.len()],
+        |iter| iter.into_f32().collect(),
+    );
 
     // Read indices
-    let indices: Vec<u32> = reader.read_indices().map_or_else(|| (0..positions.len() as u32).collect(), |iter| iter.into_u32().collect());
+    let indices: Vec<u32> = reader.read_indices().map_or_else(
+        || (0..positions.len() as u32).collect(),
+        |iter| iter.into_u32().collect(),
+    );
 
     // Build vertices with coordinate system conversion
     let mut vertices = Vec::with_capacity(positions.len());
@@ -362,7 +387,8 @@ fn read_accessor_mat4(
     accessor: &gltf::Accessor,
     buffers: &[gltf::buffer::Data],
 ) -> Result<Vec<[f32; 16]>> {
-    let view = accessor.view()
+    let view = accessor
+        .view()
         .ok_or_else(|| Error::ConversionError("Missing buffer view for accessor".into()))?;
     let buffer = &buffers[view.buffer().index()];
     let offset = view.offset() + accessor.offset();

@@ -6,13 +6,13 @@ use std::path::{Path, PathBuf};
 use rayon::prelude::*;
 
 use crate::error::Result;
-use crate::pak::lspk::LspkReader;
 use crate::pak::PakReaderCache;
+use crate::pak::lspk::LspkReader;
 
+use super::SearchIndex;
 use super::extract;
 use super::fulltext::FullTextIndex;
 use super::types::{FileType, IndexedFile, SearchPhase, SearchProgress, SearchProgressCallback};
-use super::SearchIndex;
 
 impl SearchIndex {
     /// Build index from multiple PAK files
@@ -119,10 +119,13 @@ impl SearchIndex {
             })
             .map(|e| {
                 let path_str = e.path.to_string_lossy().to_string();
-                let name = e.path
-                    .file_name().map_or_else(|| path_str.clone(), |n| n.to_string_lossy().to_string());
+                let name = e
+                    .path
+                    .file_name()
+                    .map_or_else(|| path_str.clone(), |n| n.to_string_lossy().to_string());
 
-                let ext = e.path
+                let ext = e
+                    .path
                     .extension()
                     .map(|e| e.to_string_lossy().to_string())
                     .unwrap_or_default();
@@ -176,10 +179,7 @@ impl SearchIndex {
         // Group files by PAK for efficient reading
         let mut by_pak: HashMap<PathBuf, Vec<&IndexedFile>> = HashMap::new();
         for file in &searchable_files {
-            by_pak
-                .entry(file.pak_file.clone())
-                .or_default()
-                .push(file);
+            by_pak.entry(file.pak_file.clone()).or_default().push(file);
         }
 
         // Get a writer with 500MB heap (larger = fewer internal commits)
@@ -188,8 +188,10 @@ impl SearchIndex {
 
         // Process each PAK using bulk reading (sorted by offset, parallel decompress)
         for (pak_path, files) in &by_pak {
-            let pak_name = pak_path
-                .file_name().map_or_else(|| "Unknown".to_string(), |n| n.to_string_lossy().to_string());
+            let pak_name = pak_path.file_name().map_or_else(
+                || "Unknown".to_string(),
+                |n| n.to_string_lossy().to_string(),
+            );
 
             progress(&SearchProgress::with_file(
                 SearchPhase::IndexingContent,
@@ -203,14 +205,14 @@ impl SearchIndex {
 
             // Create cache and do bulk read (sorted by offset, parallel decompress)
             let mut cache = PakReaderCache::new(1);
-            let bulk_bytes = cache.read_files_bulk(pak_path, &file_paths).unwrap_or_default();
+            let bulk_bytes = cache
+                .read_files_bulk(pak_path, &file_paths)
+                .unwrap_or_default();
 
             // Build list of (file, bytes) pairs
             let file_bytes: Vec<(&IndexedFile, &Vec<u8>)> = files
                 .iter()
-                .filter_map(|file| {
-                    bulk_bytes.get(&file.path).map(|bytes| (*file, bytes))
-                })
+                .filter_map(|file| bulk_bytes.get(&file.path).map(|bytes| (*file, bytes)))
                 .collect();
 
             // Extract text in parallel (CPU bound)
@@ -261,7 +263,11 @@ impl SearchIndex {
             fulltext.num_docs()
         );
 
-        progress(&SearchProgress::new(SearchPhase::Complete, total_files, total_files));
+        progress(&SearchProgress::new(
+            SearchPhase::Complete,
+            total_files,
+            total_files,
+        ));
 
         self.fulltext = Some(fulltext);
         Ok(indexed_count)

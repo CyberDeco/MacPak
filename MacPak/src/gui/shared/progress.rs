@@ -199,15 +199,13 @@ pub fn progress_overlay<S: BatchOperationState>(state: S) -> impl IntoView {
                         label(move || polled_msg.get())
                             .style(|s| s.font_size(14.0).margin_bottom(12.0)),
                         // Progress bar - full width
-                        container(
-                            container(empty()).style(move |s| {
-                                let pct = polled_pct.get();
-                                s.height_full()
-                                    .width_pct(pct as f64)
-                                    .background(Color::rgb8(76, 175, 80))
-                                    .border_radius(4.0)
-                            }),
-                        )
+                        container(container(empty()).style(move |s| {
+                            let pct = polled_pct.get();
+                            s.height_full()
+                                .width_pct(pct as f64)
+                                .background(Color::rgb8(76, 175, 80))
+                                .border_radius(4.0)
+                        }))
                         .style(|s| {
                             s.width_full()
                                 .height(8.0)

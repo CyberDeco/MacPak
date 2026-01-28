@@ -21,16 +21,13 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
 pub use encode::DdsFormat;
-pub use types::{ImageProgress, ImagePhase, ImageProgressCallback};
+pub use types::{ImagePhase, ImageProgress, ImageProgressCallback};
 
 /// Convert a DDS file to PNG
 ///
 /// # Errors
 /// Returns an error if the file cannot be read or conversion fails.
-pub fn convert_dds_to_png<P: AsRef<Path>, Q: AsRef<Path>>(
-    dds_path: P,
-    png_path: Q,
-) -> Result<()> {
+pub fn convert_dds_to_png<P: AsRef<Path>, Q: AsRef<Path>>(dds_path: P, png_path: Q) -> Result<()> {
     convert_dds_to_png_with_progress(dds_path, png_path, &|_| {})
 }
 
@@ -43,7 +40,12 @@ pub fn convert_dds_to_png_with_progress<P: AsRef<Path>, Q: AsRef<Path>>(
     png_path: Q,
     progress: ImageProgressCallback,
 ) -> Result<()> {
-    progress(&ImageProgress::with_file(ImagePhase::ReadingFile, 1, 4, dds_path.as_ref().display().to_string()));
+    progress(&ImageProgress::with_file(
+        ImagePhase::ReadingFile,
+        1,
+        4,
+        dds_path.as_ref().display().to_string(),
+    ));
     let file = File::open(dds_path.as_ref())?;
     let mut reader = BufReader::new(file);
     let mut data = Vec::new();
@@ -62,7 +64,12 @@ pub fn convert_dds_to_png_with_progress<P: AsRef<Path>, Q: AsRef<Path>>(
     img.write_with_encoder(encoder)
         .map_err(|e| Error::DdsError(format!("Failed to encode PNG: {e}")))?;
 
-    progress(&ImageProgress::with_file(ImagePhase::WritingFile, 4, 4, png_path.as_ref().display().to_string()));
+    progress(&ImageProgress::with_file(
+        ImagePhase::WritingFile,
+        4,
+        4,
+        png_path.as_ref().display().to_string(),
+    ));
     let mut output = BufWriter::new(File::create(png_path.as_ref())?);
     output.write_all(&png_data)?;
 
@@ -95,10 +102,7 @@ pub fn dds_bytes_to_png_bytes(dds_data: &[u8]) -> Result<Vec<u8>> {
 ///
 /// # Errors
 /// Returns an error if the file cannot be read or conversion fails.
-pub fn convert_png_to_dds<P: AsRef<Path>, Q: AsRef<Path>>(
-    png_path: P,
-    dds_path: Q,
-) -> Result<()> {
+pub fn convert_png_to_dds<P: AsRef<Path>, Q: AsRef<Path>>(png_path: P, dds_path: Q) -> Result<()> {
     convert_png_to_dds_with_format(png_path, dds_path, DdsFormat::BC3)
 }
 
@@ -136,7 +140,12 @@ pub fn convert_png_to_dds_with_format_and_progress<P: AsRef<Path>, Q: AsRef<Path
     format: DdsFormat,
     progress: ImageProgressCallback,
 ) -> Result<()> {
-    progress(&ImageProgress::with_file(ImagePhase::ReadingFile, 1, 4, png_path.as_ref().display().to_string()));
+    progress(&ImageProgress::with_file(
+        ImagePhase::ReadingFile,
+        1,
+        4,
+        png_path.as_ref().display().to_string(),
+    ));
     let img = image::open(png_path.as_ref())
         .map_err(|e| Error::DdsError(format!("Failed to open PNG: {e}")))?;
 
@@ -146,10 +155,20 @@ pub fn convert_png_to_dds_with_format_and_progress<P: AsRef<Path>, Q: AsRef<Path
     let height = rgba.height();
     let pixels = rgba.as_raw();
 
-    progress(&ImageProgress::with_file(ImagePhase::Encoding, 3, 4, format!("{format:?}")));
+    progress(&ImageProgress::with_file(
+        ImagePhase::Encoding,
+        3,
+        4,
+        format!("{format:?}"),
+    ));
     let dds_data = encode::encode_to_dds(pixels, width, height, format)?;
 
-    progress(&ImageProgress::with_file(ImagePhase::WritingFile, 4, 4, dds_path.as_ref().display().to_string()));
+    progress(&ImageProgress::with_file(
+        ImagePhase::WritingFile,
+        4,
+        4,
+        dds_path.as_ref().display().to_string(),
+    ));
     let mut output = BufWriter::new(File::create(dds_path.as_ref())?);
     output.write_all(&dds_data)?;
 
@@ -169,4 +188,3 @@ pub fn png_image_to_dds_bytes(img: &DynamicImage, format: DdsFormat) -> Result<V
 
     encode::encode_to_dds(pixels, width, height, format)
 }
-

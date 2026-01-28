@@ -101,7 +101,8 @@ pub fn resolve_localized_text(state: &DialogueState, nodes: &mut [DisplayNode]) 
             if let Some(handle) = &node.text_handle {
                 if let Some(text) = loca_cache.get_text_opt(handle) {
                     // For Jump/Alias/Link, keep the prefix
-                    let is_link = matches!(&node.constructor, NodeConstructor::Other(s) if s == "Link");
+                    let is_link =
+                        matches!(&node.constructor, NodeConstructor::Other(s) if s == "Link");
                     if node.constructor == NodeConstructor::Jump || is_link {
                         node.text = format!("→ {}", text);
                     } else if node.constructor == NodeConstructor::Alias {

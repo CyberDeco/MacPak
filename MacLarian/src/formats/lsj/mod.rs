@@ -4,10 +4,13 @@
 //!
 //! SPDX-License-Identifier: MIT
 
+mod document;
 mod reader;
 mod writer;
-mod document;
 
-pub use document::{LsjDocument, LsjNode, LsjAttribute, LsjHeader, LsjSave, TranslatedFSStringArgument, TranslatedFSStringValue};
-pub use reader::{read_lsj, parse_lsj};
-pub use writer::{write_lsj, serialize_lsj};
+pub use document::{
+    LsjAttribute, LsjDocument, LsjHeader, LsjNode, LsjSave, TranslatedFSStringArgument,
+    TranslatedFSStringValue,
+};
+pub use reader::{parse_lsj, read_lsj};
+pub use writer::{serialize_lsj, write_lsj};

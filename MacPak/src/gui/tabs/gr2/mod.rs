@@ -18,7 +18,11 @@ use crate::gui::shared::{header_section, progress_overlay, results_section};
 use crate::gui::state::{AppState, ConfigState, Gr2State};
 use sections::operations_row;
 
-pub fn gr2_tab(_app_state: AppState, gr2_state: Gr2State, config_state: ConfigState) -> impl IntoView {
+pub fn gr2_tab(
+    _app_state: AppState,
+    gr2_state: Gr2State,
+    config_state: ConfigState,
+) -> impl IntoView {
     let state = gr2_state.clone();
 
     v_stack((

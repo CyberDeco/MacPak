@@ -4,11 +4,11 @@
 //! - Direct LSF parsing (no XML conversion overhead)
 //! - Parallel processing with rayon
 
+use maclarian::formats::lsf::{LsfDocument, parse_lsf_bytes};
+use maclarian::pak::PakOperations;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use rayon::prelude::*;
-use maclarian::formats::lsf::{parse_lsf_bytes, LsfDocument};
-use maclarian::pak::PakOperations;
 
 /// Voice metadata entry for audio playback
 #[derive(Clone, Debug)]
@@ -34,8 +34,8 @@ pub type VoiceMetaCache = HashMap<String, VoiceMetaEntry>;
 /// Returns an error if the PAK file cannot be read or parsed.
 pub fn load_voice_meta_from_pak(pak_path: &Path) -> Result<VoiceMetaCache, String> {
     // List all .lsf files in the PAK
-    let entries = PakOperations::list(pak_path)
-        .map_err(|e| format!("Failed to list VoiceMeta.pak: {e}"))?;
+    let entries =
+        PakOperations::list(pak_path).map_err(|e| format!("Failed to list VoiceMeta.pak: {e}"))?;
 
     // Filter to Soundbanks .lsf files
     let soundbank_files: Vec<_> = entries
@@ -44,15 +44,18 @@ pub fn load_voice_meta_from_pak(pak_path: &Path) -> Result<VoiceMetaCache, Strin
         .cloned()
         .collect();
 
-    tracing::info!("Found {} soundbank files in VoiceMeta.pak", soundbank_files.len());
+    tracing::info!(
+        "Found {} soundbank files in VoiceMeta.pak",
+        soundbank_files.len()
+    );
     let start = std::time::Instant::now();
 
     // Process soundbank files in parallel
     let pak_path_owned = pak_path.to_path_buf();
     let all_entries: Vec<HashMap<String, VoiceMetaEntry>> = soundbank_files
         .par_iter()
-        .filter_map(|internal_path| {
-            match load_soundbank_from_pak(&pak_path_owned, internal_path) {
+        .filter_map(
+            |internal_path| match load_soundbank_from_pak(&pak_path_owned, internal_path) {
                 Ok(entries) => {
                     if entries.is_empty() {
                         tracing::debug!("Soundbank {} yielded 0 entries", internal_path);
@@ -63,8 +66,8 @@ pub fn load_voice_meta_from_pak(pak_path: &Path) -> Result<VoiceMetaCache, Strin
                     tracing::warn!("Failed to load soundbank {}: {}", internal_path, e);
                     None
                 }
-            }
-        })
+            },
+        )
         .collect();
 
     tracing::debug!(
@@ -99,7 +102,10 @@ pub fn load_voice_meta_from_pak(pak_path: &Path) -> Result<VoiceMetaCache, Strin
 pub fn load_voice_meta_from_folder(folder: &Path) -> Result<VoiceMetaCache, String> {
     // Find all Soundbanks .lsf files recursively
     let soundbank_files = find_soundbank_files(folder);
-    tracing::info!("Found {} soundbank files in extracted folder", soundbank_files.len());
+    tracing::info!(
+        "Found {} soundbank files in extracted folder",
+        soundbank_files.len()
+    );
     let start = std::time::Instant::now();
 
     // Process soundbank files in parallel
@@ -142,23 +148,23 @@ fn find_soundbank_files(folder: &Path) -> Vec<PathBuf> {
 }
 
 /// Load a soundbank file from within a PAK and extract voice meta entries
-fn load_soundbank_from_pak(pak_path: &Path, internal_path: &str) -> Result<HashMap<String, VoiceMetaEntry>, String> {
+fn load_soundbank_from_pak(
+    pak_path: &Path,
+    internal_path: &str,
+) -> Result<HashMap<String, VoiceMetaEntry>, String> {
     let lsf_data = PakOperations::read_file_bytes(pak_path, internal_path)
         .map_err(|e| format!("Failed to read from PAK: {e}"))?;
 
-    let lsf_doc = parse_lsf_bytes(&lsf_data)
-        .map_err(|e| format!("Failed to parse LSF: {e}"))?;
+    let lsf_doc = parse_lsf_bytes(&lsf_data).map_err(|e| format!("Failed to parse LSF: {e}"))?;
 
     parse_soundbank_lsf(&lsf_doc)
 }
 
 /// Load a soundbank file from disk and extract voice meta entries
 fn load_soundbank_from_file(file_path: &Path) -> Result<HashMap<String, VoiceMetaEntry>, String> {
-    let lsf_data = std::fs::read(file_path)
-        .map_err(|e| format!("Failed to read file: {e}"))?;
+    let lsf_data = std::fs::read(file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
-    let lsf_doc = parse_lsf_bytes(&lsf_data)
-        .map_err(|e| format!("Failed to parse LSF: {e}"))?;
+    let lsf_doc = parse_lsf_bytes(&lsf_data).map_err(|e| format!("Failed to parse LSF: {e}"))?;
 
     parse_soundbank_lsf(&lsf_doc)
 }
@@ -246,7 +252,7 @@ pub fn find_voice_files_path(data_path: &Path) -> Option<PathBuf> {
 }
 
 /// Find the path to VoiceMeta.pak or extracted `VoiceMeta` folder
-#[must_use] 
+#[must_use]
 pub fn find_voice_meta_path(data_path: &Path) -> Option<PathBuf> {
     let localization_dir = data_path.join("Localization");
 

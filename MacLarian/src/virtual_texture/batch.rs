@@ -7,13 +7,13 @@
 //!
 //! SPDX-License-Identifier: MIT
 
+use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use rayon::prelude::*;
 
-use super::{GtsFile, VirtualTextureExtractor};
-use super::types::{VTexProgress, VTexPhase};
+use super::types::{VTexPhase, VTexProgress};
 use super::utils::find_gts_path;
+use super::{GtsFile, VirtualTextureExtractor};
 use crate::error::Error;
 
 /// Result of extracting a GTS/GTP file
@@ -81,28 +81,33 @@ where
     let output_path = match output_dir {
         Some(dir) => dir.to_path_buf(),
         None => input_path
-            .parent().map_or_else(|| PathBuf::from("."), std::path::Path::to_path_buf),
+            .parent()
+            .map_or_else(|| PathBuf::from("."), std::path::Path::to_path_buf),
     };
 
     // Create subdirectory based on input filename
-    let input_stem = input_path
-        .file_stem().map_or_else(|| "textures".to_string(), |n| n.to_string_lossy().to_string());
+    let input_stem = input_path.file_stem().map_or_else(
+        || "textures".to_string(),
+        |n| n.to_string_lossy().to_string(),
+    );
     let texture_output_dir = output_path.join(&input_stem);
 
-    std::fs::create_dir_all(&texture_output_dir)
-        .map_err(|e| Error::Io(std::io::Error::other(
-            format!("Failed to create output directory: {e}")
-        )))?;
+    std::fs::create_dir_all(&texture_output_dir).map_err(|e| {
+        Error::Io(std::io::Error::other(format!(
+            "Failed to create output directory: {e}"
+        )))
+    })?;
 
     if is_single_gtp {
         // Single GTP mode: extract just this GTP file
-        progress(&VTexProgress::with_file(VTexPhase::ExtractingTiles, 1, 1, "Extracting GTP"));
+        progress(&VTexProgress::with_file(
+            VTexPhase::ExtractingTiles,
+            1,
+            1,
+            "Extracting GTP",
+        ));
 
-        VirtualTextureExtractor::extract_with_gts(
-            input_path,
-            &gts_path,
-            &texture_output_dir,
-        )?;
+        VirtualTextureExtractor::extract_with_gts(input_path, &gts_path, &texture_output_dir)?;
 
         progress(&VTexProgress::new(VTexPhase::Complete, 1, 1));
 
@@ -123,7 +128,9 @@ where
         let total_page_files = gts.page_files.len();
 
         if total_page_files == 0 {
-            return Err(Error::InvalidFormat("No page files found in GTS".to_string()));
+            return Err(Error::InvalidFormat(
+                "No page files found in GTS".to_string(),
+            ));
         }
 
         let mut extracted_count = 0;
@@ -142,7 +149,8 @@ where
             if gtp_path.exists() {
                 // Create a subdirectory for this GTP's output
                 let gtp_stem = Path::new(&page_file.filename)
-                    .file_stem().map_or_else(|| format!("gtp_{i}"), |n| n.to_string_lossy().to_string());
+                    .file_stem()
+                    .map_or_else(|| format!("gtp_{i}"), |n| n.to_string_lossy().to_string());
                 let gtp_output_dir = texture_output_dir.join(&gtp_stem);
 
                 match VirtualTextureExtractor::extract_with_gts(
@@ -164,7 +172,11 @@ where
             }
         }
 
-        progress(&VTexProgress::new(VTexPhase::Complete, total_page_files, total_page_files));
+        progress(&VTexProgress::new(
+            VTexPhase::Complete,
+            total_page_files,
+            total_page_files,
+        ));
 
         if extracted_count == 0 && total_page_files > 0 {
             return Err(Error::InvalidFormat(format!(
@@ -206,8 +218,10 @@ where
     let results: Vec<String> = gts_files
         .par_iter()
         .map(|gts_path| {
-            let gts_name = gts_path
-                .file_name().map_or_else(|| "unknown".to_string(), |n| n.to_string_lossy().to_string());
+            let gts_name = gts_path.file_name().map_or_else(
+                || "unknown".to_string(),
+                |n| n.to_string_lossy().to_string(),
+            );
 
             // Update progress (atomic)
             let current = processed.fetch_add(1, Ordering::SeqCst) + 1;
@@ -225,7 +239,10 @@ where
                 Ok(result) => {
                     success_counter.fetch_add(1, Ordering::SeqCst);
                     texture_counter.fetch_add(result.texture_count, Ordering::SeqCst);
-                    format!("Extracted {} textures from {}", result.texture_count, gts_name)
+                    format!(
+                        "Extracted {} textures from {}",
+                        result.texture_count, gts_name
+                    )
                 }
                 Err(e) => {
                     error_counter.fetch_add(1, Ordering::SeqCst);

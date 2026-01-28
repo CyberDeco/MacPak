@@ -167,18 +167,20 @@ pub(crate) struct PakPaths {
 
 impl PakPaths {
     /// Default BG3 pak paths
-    #[must_use] 
+    #[must_use]
     pub fn bg3_default() -> Self {
         Self {
             models: "Models.pak".to_string(),
             textures: "Textures.pak".to_string(),
             virtual_textures: "VirtualTextures.pak".to_string(),
-            gtp_path_pattern: "Generated/Public/VirtualTextures/Albedo_Normal_Physical_{first}_{hash}.gtp".to_string(),
+            gtp_path_pattern:
+                "Generated/Public/VirtualTextures/Albedo_Normal_Physical_{first}_{hash}.gtp"
+                    .to_string(),
         }
     }
 
     /// Derive the GTP path from a gtex hash
-    #[must_use] 
+    #[must_use]
     pub fn gtp_path_from_hash(&self, gtex_hash: &str) -> String {
         if gtex_hash.is_empty() {
             return String::new();
@@ -249,14 +251,14 @@ impl MergedDatabase {
     }
 
     /// Get a visual asset by its exact name (e.g., "`HUM_M_ARM_Robe_C_Bracers_1`")
-    #[must_use] 
+    #[must_use]
     pub fn get_by_visual_name(&self, visual_name: &str) -> Option<&VisualAsset> {
         let id = self.visuals_by_name.get(visual_name)?;
         self.visuals_by_id.get(id)
     }
 
     /// Get all visuals that use a specific GR2 file
-    #[must_use] 
+    #[must_use]
     pub fn get_visuals_for_gr2(&self, gr2_name: &str) -> Vec<&VisualAsset> {
         // Extract just the filename
         let filename = std::path::Path::new(gr2_name)
@@ -301,7 +303,7 @@ impl MergedDatabase {
     }
 
     /// Get count statistics
-    #[must_use] 
+    #[must_use]
     pub fn stats(&self) -> DatabaseStats {
         DatabaseStats {
             visual_count: self.visuals_by_id.len(),
@@ -359,7 +361,10 @@ impl MergedDatabase {
                         if let Some(texture) = textures.get(&tex_param.texture_id) {
                             let mut tex_ref = texture.clone();
                             tex_ref.parameter_name = Some(tex_param.name.clone());
-                            if !resolved_textures.iter().any(|t: &TextureRef| t.id == tex_ref.id) {
+                            if !resolved_textures
+                                .iter()
+                                .any(|t: &TextureRef| t.id == tex_ref.id)
+                            {
                                 resolved_textures.push(tex_ref);
                             }
                         }
@@ -372,9 +377,12 @@ impl MergedDatabase {
                 if let Some(material) = materials.get(mat_id) {
                     for vt_id in &material.virtual_texture_ids {
                         if let Some(vt) = virtual_textures.get(vt_id)
-                            && !resolved_vts.iter().any(|v: &VirtualTextureRef| v.id == vt.id) {
-                                resolved_vts.push(vt.clone());
-                            }
+                            && !resolved_vts
+                                .iter()
+                                .any(|v: &VirtualTextureRef| v.id == vt.id)
+                        {
+                            resolved_vts.push(vt.clone());
+                        }
                     }
                 }
             }

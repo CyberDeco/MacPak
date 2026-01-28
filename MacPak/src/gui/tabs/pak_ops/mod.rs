@@ -20,7 +20,11 @@ use dialogs::dialog_overlay;
 use results::results_area;
 use sections::{header_section, operations_row};
 
-pub fn pak_ops_tab(_app_state: AppState, pak_state: PakOpsState, config_state: ConfigState) -> impl IntoView {
+pub fn pak_ops_tab(
+    _app_state: AppState,
+    pak_state: PakOpsState,
+    config_state: ConfigState,
+) -> impl IntoView {
     v_stack((
         // Header with title and status message
         header_section(pak_state.clone()),

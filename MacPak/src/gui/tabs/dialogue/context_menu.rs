@@ -8,8 +8,8 @@ use floem::action::show_context_menu;
 use floem::menu::{Menu, MenuItem};
 use floem::reactive::SignalUpdate;
 
-use crate::gui::state::{DialogueState, DisplayNode};
 use super::operations::{AudioPlayer, play_node_audio};
+use crate::gui::state::{DialogueState, DisplayNode};
 
 // Thread-local audio player (OutputStream is !Send+!Sync, must stay on main thread)
 thread_local! {
@@ -42,13 +42,12 @@ where
 }
 
 /// Show context menu for a dialogue node
-pub fn show_node_context_menu(
-    node: &DisplayNode,
-    state: DialogueState,
-) {
+pub fn show_node_context_menu(node: &DisplayNode, state: DialogueState) {
     let node_uuid = node.uuid.clone();
     // Use text_handle if available, otherwise fall back to jump_target_handle for Jump/Alias nodes
-    let text_handle = node.text_handle.clone()
+    let text_handle = node
+        .text_handle
+        .clone()
         .or_else(|| node.jump_target_handle.clone());
     let has_audio = text_handle.as_ref().is_some_and(|h| state.has_audio(h));
 
@@ -60,38 +59,36 @@ pub fn show_node_context_menu(
         let uuid_play = node_uuid.clone();
         let handle_play = text_handle.clone();
 
-        menu = menu.entry(
-            MenuItem::new("Play Audio")
-                .action(move || {
-                    if let Some(ref handle) = handle_play {
-                        let result = with_audio_player(|player| {
-                            play_node_audio(player, &state_play, handle, &uuid_play)
-                        });
+        menu = menu.entry(MenuItem::new("Play Audio").action(move || {
+            if let Some(ref handle) = handle_play {
+                let result = with_audio_player(|player| {
+                    play_node_audio(player, &state_play, handle, &uuid_play)
+                });
 
-                        match result {
-                            Some(Ok(())) => {}
-                            Some(Err(e)) => {
-                                state_play.error_message.set(Some(format!("Audio playback failed: {}", e)));
-                            }
-                            None => {
-                                state_play.error_message.set(Some("Audio player not available".to_string()));
-                            }
-                        }
+                match result {
+                    Some(Ok(())) => {}
+                    Some(Err(e)) => {
+                        state_play
+                            .error_message
+                            .set(Some(format!("Audio playback failed: {}", e)));
                     }
-                })
-        );
+                    None => {
+                        state_play
+                            .error_message
+                            .set(Some("Audio player not available".to_string()));
+                    }
+                }
+            }
+        }));
 
         // Stop Audio option
         let state_stop = state.clone();
-        menu = menu.entry(
-            MenuItem::new("Stop Audio")
-                .action(move || {
-                    with_audio_player(|player| {
-                        player.stop();
-                    });
-                    state_stop.playing_audio_node.set(None);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Stop Audio").action(move || {
+            with_audio_player(|player| {
+                player.stop();
+            });
+            state_stop.playing_audio_node.set(None);
+        }));
 
         menu = menu.separator();
     }
@@ -99,34 +96,25 @@ pub fn show_node_context_menu(
     // Copy UUID
     {
         let uuid = node_uuid.clone();
-        menu = menu.entry(
-            MenuItem::new("Copy UUID")
-                .action(move || {
-                    copy_to_clipboard(&uuid);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Copy UUID").action(move || {
+            copy_to_clipboard(&uuid);
+        }));
     }
 
     // Copy Text Handle (if available)
     if let Some(ref handle) = text_handle {
         let handle_copy = handle.clone();
-        menu = menu.entry(
-            MenuItem::new("Copy Text Handle")
-                .action(move || {
-                    copy_to_clipboard(&handle_copy);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Copy Text Handle").action(move || {
+            copy_to_clipboard(&handle_copy);
+        }));
     }
 
     // Copy Node Text (if available)
     if !node.text.is_empty() {
         let text_copy = node.text.clone();
-        menu = menu.entry(
-            MenuItem::new("Copy Text")
-                .action(move || {
-                    copy_to_clipboard(&text_copy);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Copy Text").action(move || {
+            copy_to_clipboard(&text_copy);
+        }));
     }
 
     show_context_menu(menu, None);

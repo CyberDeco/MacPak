@@ -38,7 +38,9 @@ pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
 
     // If it's a GR2 file, convert to temp GLB first
     let preview_path = if ext == "gr2" {
-        state.status_message.set("Converting GR2 to GLB...".to_string());
+        state
+            .status_message
+            .set("Converting GR2 to GLB...".to_string());
 
         match convert_gr2_to_temp_glb(path) {
             Ok(result) => {
@@ -53,13 +55,17 @@ pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
                     // Log warnings and show briefly in status
                     tracing::warn!("GR2 preview warnings: {}", warning_msg);
                     // Show first warning in status bar
-                    state.status_message.set(format!("Warning: {}", result.warnings[0]));
+                    state
+                        .status_message
+                        .set(format!("Warning: {}", result.warnings[0]));
                 }
 
                 result.glb_path.to_string_lossy().to_string()
             }
             Err(e) => {
-                state.status_message.set(format!("GR2 conversion failed: {}", e));
+                state
+                    .status_message
+                    .set(format!("GR2 conversion failed: {}", e));
                 return;
             }
         }
@@ -69,7 +75,9 @@ pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
 
     // Find and launch the preview binary
     let preview_binary = find_preview_binary();
-    state.status_message.set("Loading 3D preview...".to_string());
+    state
+        .status_message
+        .set("Loading 3D preview...".to_string());
 
     match Command::new(&preview_binary).arg(&preview_path).spawn() {
         Ok(child) => {
@@ -121,7 +129,9 @@ pub fn launch_3d_preview(file_path: &str, state: BrowserState) {
             });
         }
         Err(e) => {
-            state.status_message.set(format!("Failed to open preview: {}", e));
+            state
+                .status_message
+                .set(format!("Failed to open preview: {}", e));
         }
     }
 }
@@ -146,8 +156,7 @@ fn convert_gr2_to_temp_glb(gr2_path: &Path) -> Result<Gr2ConversionResult, Strin
     let temp_glb = temp_dir.join(format!("{}_preview.glb", file_stem));
 
     // Use geometry-only conversion (texture matching temporarily disabled)
-    maclarian::converter::convert_gr2_to_glb(gr2_path, &temp_glb)
-        .map_err(|e| e.to_string())?;
+    maclarian::converter::convert_gr2_to_glb(gr2_path, &temp_glb).map_err(|e| e.to_string())?;
 
     Ok(Gr2ConversionResult {
         glb_path: temp_glb,

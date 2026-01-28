@@ -1,8 +1,8 @@
 //! Search methods for `SearchIndex`
 
+use super::SearchIndex;
 use super::fulltext::FullTextResult;
 use super::types::{FileType, IndexedFile, SearchProgressCallback};
-use super::SearchIndex;
 
 impl SearchIndex {
     /// Search for files by filename (case-insensitive)
@@ -18,9 +18,7 @@ impl SearchIndex {
             .filter(|(filename, _)| filename.contains(&query_lower))
             .flat_map(|(_, paths)| paths.iter())
             .filter_map(|path| self.entries.get(path))
-            .filter(|entry| {
-                filter.is_none_or(|f| entry.file_type == f)
-            })
+            .filter(|entry| filter.is_none_or(|f| entry.file_type == f))
             .collect()
     }
 
@@ -57,7 +55,8 @@ impl SearchIndex {
         self.entries
             .values()
             .filter(|entry| {
-                let path_normalized: String = entry.path
+                let path_normalized: String = entry
+                    .path
                     .chars()
                     .filter(char::is_ascii_hexdigit)
                     .collect::<String>()
@@ -95,7 +94,9 @@ impl SearchIndex {
     /// Returns None if fulltext index hasn't been built.
     #[must_use]
     pub fn search_fulltext(&self, query: &str, limit: usize) -> Option<Vec<FullTextResult>> {
-        self.fulltext.as_ref().and_then(|ft| ft.search(query, limit).ok())
+        self.fulltext
+            .as_ref()
+            .and_then(|ft| ft.search(query, limit).ok())
     }
 
     /// Search fulltext index with progress callback
@@ -105,12 +106,16 @@ impl SearchIndex {
         limit: usize,
         progress: SearchProgressCallback,
     ) -> Option<Vec<FullTextResult>> {
-        self.fulltext.as_ref().and_then(|ft| ft.search_with_progress(query, limit, progress).ok())
+        self.fulltext
+            .as_ref()
+            .and_then(|ft| ft.search_with_progress(query, limit, progress).ok())
     }
 
     /// Get number of documents in fulltext index
     #[must_use]
     pub fn fulltext_doc_count(&self) -> u64 {
-        self.fulltext.as_ref().map_or(0, super::fulltext::FullTextIndex::num_docs)
+        self.fulltext
+            .as_ref()
+            .map_or(0, super::fulltext::FullTextIndex::num_docs)
     }
 }

@@ -8,9 +8,9 @@ use floem::action::show_context_menu;
 use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 
+use super::operations::{convert_file_quick, delete_file, is_text_file};
 use crate::gui::state::{BrowserState, EditorTabsState, FileEntry};
 use crate::gui::tabs::load_file_in_tab;
-use super::operations::{convert_file_quick, delete_file, is_text_file};
 
 /// Show context menu for a file entry
 pub fn show_file_context_menu(
@@ -30,46 +30,34 @@ pub fn show_file_context_menu(
     if !is_dir && is_text_file(&file_ext) {
         let path = file_path.clone();
         let editor_tabs = editor_tabs_state.clone();
-        menu = menu.entry(
-            MenuItem::new("Open in Editor")
-                .action(move || {
-                    load_file_in_tab(Path::new(&path), editor_tabs.clone());
-                    active_tab.set(1);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Open in Editor").action(move || {
+            load_file_in_tab(Path::new(&path), editor_tabs.clone());
+            active_tab.set(1);
+        }));
         menu = menu.separator();
     }
 
     // Show in Finder
     {
         let path = file_path.clone();
-        menu = menu.entry(
-            MenuItem::new("Show in Finder")
-                .action(move || {
-                    let _ = Command::new("open")
-                        .arg("-R")
-                        .arg(&path)
-                        .spawn();
-                })
-        );
+        menu = menu.entry(MenuItem::new("Show in Finder").action(move || {
+            let _ = Command::new("open").arg("-R").arg(&path).spawn();
+        }));
     }
 
     // Copy Path
     {
         let path = file_path.clone();
-        menu = menu.entry(
-            MenuItem::new("Copy Path")
-                .action(move || {
-                    if let Ok(mut child) = Command::new("pbcopy")
-                        .stdin(std::process::Stdio::piped())
-                        .spawn()
-                    {
-                        if let Some(stdin) = child.stdin.as_mut() {
-                            let _ = stdin.write_all(path.as_bytes());
-                        }
-                    }
-                })
-        );
+        menu = menu.entry(MenuItem::new("Copy Path").action(move || {
+            if let Ok(mut child) = Command::new("pbcopy")
+                .stdin(std::process::Stdio::piped())
+                .spawn()
+            {
+                if let Some(stdin) = child.stdin.as_mut() {
+                    let _ = stdin.write_all(path.as_bytes());
+                }
+            }
+        }));
     }
 
     menu = menu.separator();
@@ -79,14 +67,11 @@ pub fn show_file_context_menu(
         let path = file_path.clone();
         let name = file_name.clone();
         let browser_state = state.clone();
-        menu = menu.entry(
-            MenuItem::new("Rename")
-                .action(move || {
-                    // Start inline rename
-                    browser_state.rename_text.set(name.clone());
-                    browser_state.renaming_path.set(Some(path.clone()));
-                })
-        );
+        menu = menu.entry(MenuItem::new("Rename").action(move || {
+            // Start inline rename
+            browser_state.rename_text.set(name.clone());
+            browser_state.renaming_path.set(Some(path.clone()));
+        }));
     }
 
     // Convert options (for LSX/LSF/LSJ files only)
@@ -99,36 +84,27 @@ pub fn show_file_context_menu(
             if ext_lower != "lsx" {
                 let path = file_path.clone();
                 let browser_state = state.clone();
-                menu = menu.entry(
-                    MenuItem::new("Convert to LSX")
-                        .action(move || {
-                            convert_file_quick(&path, "lsx", browser_state.clone());
-                        })
-                );
+                menu = menu.entry(MenuItem::new("Convert to LSX").action(move || {
+                    convert_file_quick(&path, "lsx", browser_state.clone());
+                }));
             }
 
             // Convert to LSF (if not already LSF)
             if ext_lower != "lsf" {
                 let path = file_path.clone();
                 let browser_state = state.clone();
-                menu = menu.entry(
-                    MenuItem::new("Convert to LSF")
-                        .action(move || {
-                            convert_file_quick(&path, "lsf", browser_state.clone());
-                        })
-                );
+                menu = menu.entry(MenuItem::new("Convert to LSF").action(move || {
+                    convert_file_quick(&path, "lsf", browser_state.clone());
+                }));
             }
 
             // Convert to LSJ (if not already LSJ)
             if ext_lower != "lsj" {
                 let path = file_path.clone();
                 let browser_state = state.clone();
-                menu = menu.entry(
-                    MenuItem::new("Convert to LSJ")
-                        .action(move || {
-                            convert_file_quick(&path, "lsj", browser_state.clone());
-                        })
-                );
+                menu = menu.entry(MenuItem::new("Convert to LSJ").action(move || {
+                    convert_file_quick(&path, "lsj", browser_state.clone());
+                }));
             }
         }
 
@@ -137,12 +113,9 @@ pub fn show_file_context_menu(
             menu = menu.separator();
             let path = file_path.clone();
             let browser_state = state.clone();
-            menu = menu.entry(
-                MenuItem::new("Convert to XML")
-                    .action(move || {
-                        convert_file_quick(&path, "xml", browser_state.clone());
-                    })
-            );
+            menu = menu.entry(MenuItem::new("Convert to XML").action(move || {
+                convert_file_quick(&path, "xml", browser_state.clone());
+            }));
         }
 
         // XML to LOCA option
@@ -150,12 +123,9 @@ pub fn show_file_context_menu(
             menu = menu.separator();
             let path = file_path.clone();
             let browser_state = state.clone();
-            menu = menu.entry(
-                MenuItem::new("Convert to LOCA")
-                    .action(move || {
-                        convert_file_quick(&path, "loca", browser_state.clone());
-                    })
-            );
+            menu = menu.entry(MenuItem::new("Convert to LOCA").action(move || {
+                convert_file_quick(&path, "loca", browser_state.clone());
+            }));
         }
 
         // GR2 conversion options
@@ -163,14 +133,11 @@ pub fn show_file_context_menu(
             menu = menu.separator();
             let path = file_path.clone();
             let browser_state = state.clone();
-            menu = menu.entry(
-                MenuItem::new("Convert to...")
-                    .action(move || {
-                        // Show GR2 conversion dialog
-                        browser_state.gr2_convert_path.set(Some(path.clone()));
-                        browser_state.show_gr2_dialog.set(true);
-                    })
-            );
+            menu = menu.entry(MenuItem::new("Convert to...").action(move || {
+                // Show GR2 conversion dialog
+                browser_state.gr2_convert_path.set(Some(path.clone()));
+                browser_state.show_gr2_dialog.set(true);
+            }));
         }
     }
 
@@ -182,10 +149,9 @@ pub fn show_file_context_menu(
         let browser_state = state.clone();
         let item_type = if is_dir { "folder" } else { "file" };
         menu = menu.entry(
-            MenuItem::new(format!("Delete {}", item_type))
-                .action(move || {
-                    delete_file(&path, browser_state.clone());
-                })
+            MenuItem::new(format!("Delete {}", item_type)).action(move || {
+                delete_file(&path, browser_state.clone());
+            }),
         );
     }
 

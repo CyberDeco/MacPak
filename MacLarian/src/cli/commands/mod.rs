@@ -70,7 +70,6 @@ pub enum Commands {
         quiet: bool,
 
         // GR2 processing options
-
         /// Enable all GR2 processing (convert to GLB, extract textures and virtual textures)
         #[arg(long)]
         bundle: bool,

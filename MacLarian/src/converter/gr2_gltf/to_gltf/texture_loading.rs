@@ -1,12 +1,12 @@
 //! Texture loading helpers for GR2 to glTF conversion.
 
-use std::collections::HashSet;
-use std::path::Path;
+use super::gltf::GltfBuilder;
 use crate::converter::dds_png::dds_bytes_to_png_bytes;
-use crate::virtual_texture::VirtualTextureExtractor;
 use crate::merged::{GameDataResolver, MergedDatabase};
 use crate::pak::PakOperations;
-use super::gltf::GltfBuilder;
+use crate::virtual_texture::VirtualTextureExtractor;
+use std::collections::HashSet;
+use std::path::Path;
 
 /// Texture type for glTF PBR mapping.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -43,7 +43,9 @@ pub(super) fn load_textures_for_gr2(
     tracing::debug!("Found {} visuals for GR2", visuals.len());
 
     if visuals.is_empty() {
-        warnings.push(format!("No texture info found in database for: {gr2_filename}"));
+        warnings.push(format!(
+            "No texture info found in database for: {gr2_filename}"
+        ));
         return None;
     }
 
@@ -61,14 +63,19 @@ pub(super) fn load_textures_for_gr2(
     }
 
     // If no PBR textures found, try virtual textures
-    if albedo_texture_idx.is_none() && normal_texture_idx.is_none() && physical_texture_idx.is_none() {
+    if albedo_texture_idx.is_none()
+        && normal_texture_idx.is_none()
+        && physical_texture_idx.is_none()
+    {
         tracing::debug!("No regular PBR textures found, trying virtual textures");
 
         // Find VirtualTextures.pak (sibling to Textures.pak)
         if let Some(parent) = textures_pak_path.parent() {
             let vt_pak_path = parent.join("VirtualTextures.pak");
             if vt_pak_path.exists() {
-                if let Some((albedo, normal, physical)) = load_virtual_textures(&visuals, &vt_pak_path, db, builder, warnings) {
+                if let Some((albedo, normal, physical)) =
+                    load_virtual_textures(&visuals, &vt_pak_path, db, builder, warnings)
+                {
                     albedo_texture_idx = albedo;
                     normal_texture_idx = normal;
                     physical_texture_idx = physical;
@@ -81,11 +88,16 @@ pub(super) fn load_textures_for_gr2(
 
     tracing::debug!(
         "Final texture indices - Albedo: {:?}, Normal: {:?}, Physical: {:?}",
-        albedo_texture_idx, normal_texture_idx, physical_texture_idx
+        albedo_texture_idx,
+        normal_texture_idx,
+        physical_texture_idx
     );
 
     // Create material if there's at least one texture
-    if albedo_texture_idx.is_some() || normal_texture_idx.is_some() || physical_texture_idx.is_some() {
+    if albedo_texture_idx.is_some()
+        || normal_texture_idx.is_some()
+        || physical_texture_idx.is_some()
+    {
         let material_idx = builder.add_material(
             Some(gr2_filename.to_string()),
             albedo_texture_idx,
@@ -113,7 +125,11 @@ fn load_regular_textures(
     let mut textures_to_load: Vec<(&str, &str)> = Vec::new(); // (dds_path, parameter_name)
 
     for visual in visuals {
-        tracing::debug!("Visual '{}' has {} regular textures", visual.name, visual.textures.len());
+        tracing::debug!(
+            "Visual '{}' has {} regular textures",
+            visual.name,
+            visual.textures.len()
+        );
         for texture in &visual.textures {
             if seen_paths.insert(texture.dds_path.clone()) {
                 let param_name = texture.parameter_name.as_deref().unwrap_or("");
@@ -129,7 +145,10 @@ fn load_regular_textures(
 
     // Check if Textures.pak exists
     if !textures_pak_path.exists() {
-        warnings.push(format!("Textures.pak not found at: {}", textures_pak_path.display()));
+        warnings.push(format!(
+            "Textures.pak not found at: {}",
+            textures_pak_path.display()
+        ));
         return None;
     }
 
@@ -192,7 +211,10 @@ fn load_regular_textures(
     }
 
     // Only return if there's at least one PBR texture
-    if albedo_texture_idx.is_some() || normal_texture_idx.is_some() || physical_texture_idx.is_some() {
+    if albedo_texture_idx.is_some()
+        || normal_texture_idx.is_some()
+        || physical_texture_idx.is_some()
+    {
         Some((albedo_texture_idx, normal_texture_idx, physical_texture_idx))
     } else {
         None
@@ -210,7 +232,11 @@ fn load_virtual_textures(
     // Collect virtual textures from visuals
     let mut vt_hashes: Vec<&str> = Vec::new();
     for visual in visuals {
-        tracing::debug!("Visual '{}' has {} virtual textures", visual.name, visual.virtual_textures.len());
+        tracing::debug!(
+            "Visual '{}' has {} virtual textures",
+            visual.name,
+            visual.virtual_textures.len()
+        );
         for vt in &visual.virtual_textures {
             if !vt.gtex_hash.is_empty() {
                 tracing::debug!("  Virtual texture: {} (hash: {})", vt.name, vt.gtex_hash);
@@ -248,7 +274,11 @@ fn load_virtual_textures(
     let gtp_data = file_bytes.get(&gtp_path)?;
     let gts_data = file_bytes.get(&gts_path)?;
 
-    tracing::debug!("Read GTP ({} bytes) and GTS ({} bytes)", gtp_data.len(), gts_data.len());
+    tracing::debug!(
+        "Read GTP ({} bytes) and GTS ({} bytes)",
+        gtp_data.len(),
+        gts_data.len()
+    );
 
     // Write to temp files for the extractor
     // VirtualTextureExtractor expects filename format "SomeName_{hash}.gtp" so use full basename
@@ -285,29 +315,42 @@ fn load_virtual_textures(
     let mut normal_texture_idx: Option<usize> = None;
     let mut physical_texture_idx: Option<usize> = None;
 
-    for (layer_name, texture_slot) in [("Albedo", &mut albedo_texture_idx), ("Normal", &mut normal_texture_idx), ("Physical", &mut physical_texture_idx)] {
+    for (layer_name, texture_slot) in [
+        ("Albedo", &mut albedo_texture_idx),
+        ("Normal", &mut normal_texture_idx),
+        ("Physical", &mut physical_texture_idx),
+    ] {
         let dds_path = temp_dir.join(format!("{layer_name}.dds"));
         if dds_path.exists()
-            && let Ok(dds_data) = std::fs::read(&dds_path) {
-                tracing::debug!("Converting virtual texture {}.dds ({} bytes)", layer_name, dds_data.len());
-                match dds_bytes_to_png_bytes(&dds_data) {
-                    Ok(png_data) => {
-                        tracing::debug!("  -> PNG: {} bytes", png_data.len());
-                        let idx = builder.add_image_as_texture(&png_data, Some(format!("{layer_name}.dds")));
-                        *texture_slot = Some(idx);
-                    }
-                    Err(e) => {
-                        warnings.push(format!("Failed to convert {layer_name}.dds: {e}"));
-                    }
+            && let Ok(dds_data) = std::fs::read(&dds_path)
+        {
+            tracing::debug!(
+                "Converting virtual texture {}.dds ({} bytes)",
+                layer_name,
+                dds_data.len()
+            );
+            match dds_bytes_to_png_bytes(&dds_data) {
+                Ok(png_data) => {
+                    tracing::debug!("  -> PNG: {} bytes", png_data.len());
+                    let idx =
+                        builder.add_image_as_texture(&png_data, Some(format!("{layer_name}.dds")));
+                    *texture_slot = Some(idx);
+                }
+                Err(e) => {
+                    warnings.push(format!("Failed to convert {layer_name}.dds: {e}"));
                 }
             }
+        }
     }
 
     // Clean up temp directory
     let _ = std::fs::remove_dir_all(&temp_dir);
 
     // Return if there's at least one texture
-    if albedo_texture_idx.is_some() || normal_texture_idx.is_some() || physical_texture_idx.is_some() {
+    if albedo_texture_idx.is_some()
+        || normal_texture_idx.is_some()
+        || physical_texture_idx.is_some()
+    {
         Some((albedo_texture_idx, normal_texture_idx, physical_texture_idx))
     } else {
         None
@@ -337,13 +380,20 @@ fn categorize_texture(dds_path: &str, param_name: &str) -> TextureType {
 
     // Check parameter name first (more reliable)
     // Database uses: basecolor, normalmap, physicalmap, mskcolor
-    if param_lower == "basecolor" || param_lower.contains("albedo") || param_lower.contains("diffuse") {
+    if param_lower == "basecolor"
+        || param_lower.contains("albedo")
+        || param_lower.contains("diffuse")
+    {
         return TextureType::Albedo;
     }
     if param_lower == "normalmap" || param_lower.contains("normal") {
         return TextureType::Normal;
     }
-    if param_lower == "physicalmap" || param_lower.contains("physical") || param_lower.contains("metallic") || param_lower.contains("roughness") {
+    if param_lower == "physicalmap"
+        || param_lower.contains("physical")
+        || param_lower.contains("metallic")
+        || param_lower.contains("roughness")
+    {
         return TextureType::Physical;
     }
     if param_lower == "mskcolor" || param_lower.contains("msk") {
@@ -351,7 +401,11 @@ fn categorize_texture(dds_path: &str, param_name: &str) -> TextureType {
     }
 
     // Fall back to filename patterns (BG3 naming: _BMA = basecolor, _NM = normal, _PM = physical)
-    if path_lower.contains("_bma.") || path_lower.contains("_bm.") || path_lower.contains("_albedo") || path_lower.contains("_diffuse") {
+    if path_lower.contains("_bma.")
+        || path_lower.contains("_bm.")
+        || path_lower.contains("_albedo")
+        || path_lower.contains("_diffuse")
+    {
         return TextureType::Albedo;
     }
     if path_lower.contains("_nm.") || path_lower.contains("_normal") {

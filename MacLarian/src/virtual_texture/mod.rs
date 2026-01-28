@@ -36,31 +36,29 @@
 //! # Ok::<(), maclarian::error::Error>(())
 //! ```
 
-mod types;
-mod gts;
-mod gtp;
-mod extractor;
-mod utils;
 mod batch;
-mod mod_config;
 pub mod builder;
+mod extractor;
+mod gtp;
+mod gts;
+mod mod_config;
+mod types;
+mod utils;
 pub mod writer;
 
 // Re-exports - public types
-pub use types::*;
-pub use gts::GtsFile;
 pub use gtp::GtpFile;
+pub use gts::GtsFile;
+pub use types::*;
 
 // Public extractor
-pub use extractor::{VirtualTextureExtractor, ExtractOptions};
+pub use extractor::{ExtractOptions, VirtualTextureExtractor};
 
 // Utility functions
 pub use utils::{
-    list_gts, gtp_info, get_subfolder_name, find_base_name, find_gts_path, extract_all,
-    GtsInfo, PageFileInfo, GtpInfo, ExtractResult,
+    ExtractResult, GtpInfo, GtsInfo, PageFileInfo, extract_all, find_base_name, find_gts_path,
+    get_subfolder_name, gtp_info, list_gts,
 };
 
 // Batch operations
-pub use batch::{
-    extract_gts_file, extract_batch, GtsExtractResult, BatchExtractResult,
-};
+pub use batch::{BatchExtractResult, GtsExtractResult, extract_batch, extract_gts_file};

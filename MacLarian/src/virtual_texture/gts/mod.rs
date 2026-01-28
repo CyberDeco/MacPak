@@ -19,20 +19,19 @@
     clippy::missing_panics_doc
 )]
 
+mod accessors;
 mod read_header;
 mod read_sections;
-mod accessors;
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek};
 use std::path::Path;
 
-use crate::error::{Error, Result};
 use super::types::{
-    GtsHeader, GtsParameterBlock, GtsPageFileInfo, GtsPackedTileId,
-    GtsFlatTileInfo, GtsLevelInfo,
+    GtsFlatTileInfo, GtsHeader, GtsLevelInfo, GtsPackedTileId, GtsPageFileInfo, GtsParameterBlock,
 };
+use crate::error::{Error, Result};
 
 /// GTS file reader and parser.
 #[derive(Debug)]

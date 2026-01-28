@@ -21,12 +21,12 @@ mod gltf_loader;
 mod gr2_writer;
 mod utils;
 
-pub use gltf_loader::{GltfModel, Vertex, MeshData, Skeleton, Bone, Transform};
+pub use gltf_loader::{Bone, GltfModel, MeshData, Skeleton, Transform, Vertex};
 pub use gr2_writer::Gr2Writer;
-pub use utils::{encode_qtangent, f32_to_half, crc32};
+pub use utils::{crc32, encode_qtangent, f32_to_half};
 
-use std::path::Path;
 use crate::error::Result;
+use std::path::Path;
 
 /// Convert a glTF/GLB file to GR2 format.
 ///
@@ -45,12 +45,22 @@ pub fn convert_gltf_to_gr2_with_progress(
     output_path: &Path,
     progress: crate::converter::gr2_gltf::Gr2ProgressCallback,
 ) -> Result<()> {
-    use crate::converter::gr2_gltf::{Gr2Progress, Gr2Phase};
+    use crate::converter::gr2_gltf::{Gr2Phase, Gr2Progress};
 
-    progress(&Gr2Progress::with_file(Gr2Phase::LoadingFile, 1, 4, input_path.display().to_string()));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::LoadingFile,
+        1,
+        4,
+        input_path.display().to_string(),
+    ));
     let model = GltfModel::load(input_path)?;
 
-    progress(&Gr2Progress::with_file(Gr2Phase::BuildingGr2, 2, 4, format!("{} meshes", model.meshes.len())));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::BuildingGr2,
+        2,
+        4,
+        format!("{} meshes", model.meshes.len()),
+    ));
     let mut writer = Gr2Writer::new();
 
     if let Some(ref skeleton) = model.skeleton {
@@ -61,7 +71,12 @@ pub fn convert_gltf_to_gr2_with_progress(
         writer.add_mesh(mesh);
     }
 
-    progress(&Gr2Progress::with_file(Gr2Phase::WritingFile, 3, 4, output_path.display().to_string()));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::WritingFile,
+        3,
+        4,
+        output_path.display().to_string(),
+    ));
     writer.write(output_path)?;
 
     progress(&Gr2Progress::new(Gr2Phase::Complete, 4, 4));
@@ -84,12 +99,17 @@ pub fn convert_gltf_bytes_to_gr2_with_progress(
     gltf_data: &[u8],
     progress: crate::converter::gr2_gltf::Gr2ProgressCallback,
 ) -> Result<Vec<u8>> {
-    use crate::converter::gr2_gltf::{Gr2Progress, Gr2Phase};
+    use crate::converter::gr2_gltf::{Gr2Phase, Gr2Progress};
 
     progress(&Gr2Progress::new(Gr2Phase::LoadingFile, 1, 4));
     let model = GltfModel::load_from_bytes(gltf_data)?;
 
-    progress(&Gr2Progress::with_file(Gr2Phase::BuildingGr2, 2, 4, format!("{} meshes", model.meshes.len())));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::BuildingGr2,
+        2,
+        4,
+        format!("{} meshes", model.meshes.len()),
+    ));
     let mut writer = Gr2Writer::new();
 
     if let Some(ref skeleton) = model.skeleton {

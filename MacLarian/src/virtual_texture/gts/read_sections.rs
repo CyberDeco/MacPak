@@ -1,13 +1,12 @@
 //! GTS section reading methods.
 
+use super::super::types::{
+    GtsBCParameterBlock, GtsCodec, GtsDataType, GtsFlatTileInfo, GtsHeader, GtsLevelInfo,
+    GtsPackedTileId, GtsPageFileInfo, GtsParameterBlock, GtsUniformParameterBlock,
+};
+use crate::error::Result;
 use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
-use crate::error::Result;
-use super::super::types::{
-    GtsHeader, GtsParameterBlock, GtsPageFileInfo, GtsPackedTileId,
-    GtsFlatTileInfo, GtsCodec, GtsBCParameterBlock, GtsUniformParameterBlock,
-    GtsDataType, GtsLevelInfo,
-};
 
 /// Read parameter blocks from GTS file.
 pub(super) fn read_parameter_blocks<R: Read + Seek>(

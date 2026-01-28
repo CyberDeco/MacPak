@@ -3,7 +3,7 @@
 //! Loads localization strings from BG3's language .pak files on demand
 //! and caches them for efficient lookup.
 
-use maclarian::formats::loca::{read_loca, parse_loca_bytes, LocaResource};
+use maclarian::formats::loca::{LocaResource, parse_loca_bytes, read_loca};
 use maclarian::pak::PakOperations;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -33,7 +33,7 @@ pub struct LocalizationCache {
 
 impl LocalizationCache {
     /// Create a new empty cache
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             strings: HashMap::new(),
@@ -43,7 +43,7 @@ impl LocalizationCache {
     }
 
     /// Create a cache with a specific language
-    #[must_use] 
+    #[must_use]
     pub fn with_language(language: &str) -> Self {
         Self {
             strings: HashMap::new(),
@@ -53,7 +53,7 @@ impl LocalizationCache {
     }
 
     /// Get the current language
-    #[must_use] 
+    #[must_use]
     pub fn language(&self) -> &str {
         &self.language
     }
@@ -67,13 +67,13 @@ impl LocalizationCache {
     }
 
     /// Get the number of cached strings
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.strings.len()
     }
 
     /// Check if cache is empty
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.strings.is_empty()
     }
@@ -96,8 +96,7 @@ impl LocalizationCache {
             return Ok(0);
         }
 
-        let resource = read_loca(path)
-            .map_err(|e| LocalizationError::IoError(e.to_string()))?;
+        let resource = read_loca(path).map_err(|e| LocalizationError::IoError(e.to_string()))?;
 
         let count = self.add_entries(&resource);
         self.loaded_sources.push(path.to_path_buf());
@@ -109,7 +108,11 @@ impl LocalizationCache {
     ///
     /// # Errors
     /// Returns an error if the PAK cannot be read or the .loca file cannot be parsed.
-    pub fn load_from_pak<P: AsRef<Path>>(&mut self, pak_path: P, internal_path: &str) -> Result<usize, LocalizationError> {
+    pub fn load_from_pak<P: AsRef<Path>>(
+        &mut self,
+        pak_path: P,
+        internal_path: &str,
+    ) -> Result<usize, LocalizationError> {
         let pak_path = pak_path.as_ref();
         let source_key = pak_path.join(internal_path);
 
@@ -122,8 +125,8 @@ impl LocalizationCache {
         let data = PakOperations::read_file_bytes(pak_path, internal_path)
             .map_err(|e| LocalizationError::PakError(e.to_string()))?;
 
-        let resource = parse_loca_bytes(&data)
-            .map_err(|e| LocalizationError::IoError(e.to_string()))?;
+        let resource =
+            parse_loca_bytes(&data).map_err(|e| LocalizationError::IoError(e.to_string()))?;
 
         let count = self.add_entries(&resource);
         self.loaded_sources.push(source_key);
@@ -138,7 +141,10 @@ impl LocalizationCache {
     ///
     /// # Errors
     /// Returns an error if the PAK cannot be found or read.
-    pub fn load_language_pak<P: AsRef<Path>>(&mut self, game_data_path: P) -> Result<usize, LocalizationError> {
+    pub fn load_language_pak<P: AsRef<Path>>(
+        &mut self,
+        game_data_path: P,
+    ) -> Result<usize, LocalizationError> {
         let game_data = game_data_path.as_ref();
         let pak_path = game_data
             .join("Localization")
@@ -179,23 +185,32 @@ impl LocalizationCache {
             // Use the handle format that BG3 uses (without the 'h' prefix sometimes)
             let key = entry.key.clone();
 
-            self.strings.insert(key.clone(), LocalizedEntry {
-                text: entry.text.clone(),
-                version: entry.version,
-            });
+            self.strings.insert(
+                key.clone(),
+                LocalizedEntry {
+                    text: entry.text.clone(),
+                    version: entry.version,
+                },
+            );
 
             // Also insert with 'h' prefix if not present, or without if present
             // to handle different handle formats
             if key.starts_with('h') {
-                self.strings.insert(key[1..].to_string(), LocalizedEntry {
-                    text: entry.text.clone(),
-                    version: entry.version,
-                });
+                self.strings.insert(
+                    key[1..].to_string(),
+                    LocalizedEntry {
+                        text: entry.text.clone(),
+                        version: entry.version,
+                    },
+                );
             } else {
-                self.strings.insert(format!("h{key}"), LocalizedEntry {
-                    text: entry.text.clone(),
-                    version: entry.version,
-                });
+                self.strings.insert(
+                    format!("h{key}"),
+                    LocalizedEntry {
+                        text: entry.text.clone(),
+                        version: entry.version,
+                    },
+                );
             }
 
             count += 1;
@@ -204,40 +219,41 @@ impl LocalizationCache {
     }
 
     /// Look up a localized string by handle
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, handle: &str) -> Option<&LocalizedEntry> {
-        self.strings.get(handle)
-            .or_else(|| {
-                // Try with/without 'h' prefix
-                if handle.starts_with('h') {
-                    self.strings.get(&handle[1..])
-                } else {
-                    self.strings.get(&format!("h{handle}"))
-                }
-            })
+        self.strings.get(handle).or_else(|| {
+            // Try with/without 'h' prefix
+            if handle.starts_with('h') {
+                self.strings.get(&handle[1..])
+            } else {
+                self.strings.get(&format!("h{handle}"))
+            }
+        })
     }
 
     /// Get text for a handle, returning a placeholder if not found
-    #[must_use] 
+    #[must_use]
     pub fn get_text(&self, handle: &str) -> String {
-        self.get(handle).map_or_else(|| format!("[{handle}]"), |e| e.text.clone())
+        self.get(handle)
+            .map_or_else(|| format!("[{handle}]"), |e| e.text.clone())
     }
 
     /// Get text or None if not found
-    #[must_use] 
+    #[must_use]
     pub fn get_text_opt(&self, handle: &str) -> Option<String> {
         self.get(handle).map(|e| e.text.clone())
     }
 
     /// Check if a handle exists in the cache
-    #[must_use] 
+    #[must_use]
     pub fn contains(&self, handle: &str) -> bool {
         self.get(handle).is_some()
     }
 
     /// Manually insert a localization entry
     pub fn insert(&mut self, handle: String, text: String, version: u16) {
-        self.strings.insert(handle, LocalizedEntry { text, version });
+        self.strings
+            .insert(handle, LocalizedEntry { text, version });
     }
 }
 
@@ -356,13 +372,14 @@ pub fn get_available_languages<P: AsRef<Path>>(game_data_path: P) -> Vec<String>
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().is_some_and(|e| e == "pak")
-                && let Some(stem) = path.file_stem() {
-                    let name = stem.to_string_lossy().to_string();
-                    // Filter out non-language paks (Voice, VoiceMeta)
-                    if !name.contains("Voice") && !name.contains("Meta") {
-                        languages.push(name);
-                    }
+                && let Some(stem) = path.file_stem()
+            {
+                let name = stem.to_string_lossy().to_string();
+                // Filter out non-language paks (Voice, VoiceMeta)
+                if !name.contains("Voice") && !name.contains("Meta") {
+                    languages.push(name);
                 }
+            }
         }
     }
 
@@ -379,4 +396,3 @@ pub fn get_available_languages<P: AsRef<Path>>(game_data_path: P) -> Vec<String>
 
     languages
 }
-

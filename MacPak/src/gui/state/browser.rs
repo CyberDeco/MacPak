@@ -23,7 +23,7 @@ pub struct RawImageData {
 #[derive(Clone)]
 pub struct BrowserState {
     pub current_path: RwSignal<Option<String>>,
-    pub browser_path: RwSignal<String>,  // Editable path shown in toolbar
+    pub browser_path: RwSignal<String>, // Editable path shown in toolbar
     pub selected_index: RwSignal<Option<usize>>,
     pub files: RwSignal<Vec<FileEntry>>,
     pub all_files: RwSignal<Vec<FileEntry>>,
@@ -32,7 +32,7 @@ pub struct BrowserState {
     pub preview_content: RwSignal<String>,
     pub preview_name: RwSignal<String>,
     pub preview_info: RwSignal<String>,
-    pub preview_image: RwSignal<(u64, Option<RawImageData>)>,  // (version, data) - version forces rebuilds
+    pub preview_image: RwSignal<(u64, Option<RawImageData>)>, // (version, data) - version forces rebuilds
     pub file_count: RwSignal<usize>,
     pub folder_count: RwSignal<usize>,
     pub total_size: RwSignal<String>,
@@ -40,18 +40,18 @@ pub struct BrowserState {
     pub sort_column: RwSignal<SortColumn>,
     pub sort_ascending: RwSignal<bool>,
     // Inline rename state
-    pub renaming_path: RwSignal<Option<String>>,  // Path of file being renamed (None = not renaming)
-    pub rename_text: RwSignal<String>,            // Current text in rename input
+    pub renaming_path: RwSignal<Option<String>>, // Path of file being renamed (None = not renaming)
+    pub rename_text: RwSignal<String>,           // Current text in rename input
     // 3D Preview state
-    pub preview_3d_path: RwSignal<Option<String>>,  // Path to .glb file for 3D preview
+    pub preview_3d_path: RwSignal<Option<String>>, // Path to .glb file for 3D preview
     // Panel layout
-    pub file_list_width: RwSignal<f64>,  // Width of file list panel in pixels
+    pub file_list_width: RwSignal<f64>, // Width of file list panel in pixels
     // Loading overlay state (for conversions)
     pub is_loading: RwSignal<bool>,
     pub loading_message: RwSignal<String>,
     // GR2 conversion dialog state
     pub show_gr2_dialog: RwSignal<bool>,
-    pub gr2_convert_path: RwSignal<Option<String>>,  // Path of GR2 file to convert
+    pub gr2_convert_path: RwSignal<Option<String>>, // Path of GR2 file to convert
     pub gr2_extract_gr2: RwSignal<bool>,
     pub gr2_convert_to_glb: RwSignal<bool>,
     pub gr2_convert_to_gltf: RwSignal<bool>,
@@ -82,7 +82,7 @@ impl BrowserState {
             renaming_path: RwSignal::new(None),
             rename_text: RwSignal::new(String::new()),
             preview_3d_path: RwSignal::new(None),
-            file_list_width: RwSignal::new(600.0),  // Default width in pixels
+            file_list_width: RwSignal::new(600.0), // Default width in pixels
             is_loading: RwSignal::new(false),
             loading_message: RwSignal::new(String::new()),
             // GR2 conversion dialog

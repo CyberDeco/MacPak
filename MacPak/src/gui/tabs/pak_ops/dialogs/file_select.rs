@@ -2,12 +2,12 @@
 
 use floem::prelude::*;
 use floem::text::Weight;
-use floem::views::{text_input, virtual_list, VirtualDirection, VirtualItemSize};
+use floem::views::{VirtualDirection, VirtualItemSize, text_input, virtual_list};
 use im::Vector as ImVector;
 use std::path::Path;
 
-use crate::gui::state::{ActiveDialog, ConfigState, PakOpsState};
 use super::super::operations::execute_individual_extract;
+use crate::gui::state::{ActiveDialog, ConfigState, PakOpsState};
 
 pub fn file_select_content(state: PakOpsState, config_state: ConfigState) -> impl IntoView {
     let files = state.file_select_list;
@@ -41,10 +41,14 @@ pub fn file_select_content(state: PakOpsState, config_state: ConfigState) -> imp
         }
     };
 
-    let pak_name = pak_path_signal.get()
-        .map(|p| Path::new(&p).file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| "PAK".to_string()))
+    let pak_name = pak_path_signal
+        .get()
+        .map(|p| {
+            Path::new(&p)
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "PAK".to_string())
+        })
         .unwrap_or_else(|| "PAK".to_string());
 
     v_stack((
@@ -102,7 +106,9 @@ pub fn file_select_content(state: PakOpsState, config_state: ConfigState) -> imp
                 }),
             button("Deselect All")
                 .action(move || {
-                    state_deselect.file_select_selected.set(std::collections::HashSet::new());
+                    state_deselect
+                        .file_select_selected
+                        .set(std::collections::HashSet::new());
                 })
                 .style(|s| {
                     s.padding_vert(6.0)
@@ -168,7 +174,7 @@ pub fn file_select_content(state: PakOpsState, config_state: ConfigState) -> imp
                     })
                 },
             )
-            .style(|s| s.flex_col())
+            .style(|s| s.flex_col()),
         )
         .scroll_style(|s| s.handle_thickness(8.0))
         .style(|s| {
@@ -196,7 +202,9 @@ pub fn file_select_content(state: PakOpsState, config_state: ConfigState) -> imp
                 .action(move || {
                     state_cancel.file_select_pak.set(None);
                     state_cancel.file_select_list.set(Vec::new());
-                    state_cancel.file_select_selected.set(std::collections::HashSet::new());
+                    state_cancel
+                        .file_select_selected
+                        .set(std::collections::HashSet::new());
                     state_cancel.file_select_filter.set(String::new());
                     state_cancel.clear_results();
                     state_cancel.active_dialog.set(ActiveDialog::None);
@@ -217,10 +225,7 @@ pub fn file_select_content(state: PakOpsState, config_state: ConfigState) -> imp
                 .disabled(move || selected.get().is_empty())
                 .style(move |s| {
                     let disabled = selected.get().is_empty();
-                    let s = s
-                        .padding_vert(8.0)
-                        .padding_horiz(20.0)
-                        .border_radius(4.0);
+                    let s = s.padding_vert(8.0).padding_horiz(20.0).border_radius(4.0);
                     if disabled {
                         s.background(Color::rgb8(200, 200, 200))
                             .color(Color::rgb8(150, 150, 150))
@@ -262,7 +267,10 @@ fn gr2_options_panel(
 
     // Check if selection contains GR2 files
     let has_gr2 = move || {
-        selected.get().iter().any(|f| f.to_lowercase().ends_with(".gr2"))
+        selected
+            .get()
+            .iter()
+            .any(|f| f.to_lowercase().ends_with(".gr2"))
     };
 
     // Show warning only when:
@@ -288,7 +296,8 @@ fn gr2_options_panel(
         }
 
         // Path is configured but doesn't exist - check if PAK is within that path (game PAK)
-        pak_path.get()
+        pak_path
+            .get()
             .map(|p| p.starts_with(&data_path))
             .unwrap_or(false)
     };
@@ -310,23 +319,19 @@ fn gr2_options_panel(
                     convert_to_png.set(checked);
                 })
                 .style(|s| s.margin_right(8.0)),
-            label(|| "Full Bundle")
-                .style(|s| s.font_size(12.0).font_weight(Weight::MEDIUM)),
+            label(|| "Full Bundle").style(|s| s.font_size(12.0).font_weight(Weight::MEDIUM)),
             label(|| " (all options)")
                 .style(|s| s.font_size(11.0).color(Color::rgb8(100, 100, 100))),
         ))
         .style(|s| s.items_center().margin_bottom(10.0)),
-
         // Extract GR2
         h_stack((
             checkbox(move || extract_gr2.get())
                 .on_update(move |checked| extract_gr2.set(checked))
                 .style(|s| s.margin_right(6.0)),
-            label(|| "Extract GR2")
-                .style(|s| s.font_size(12.0)),
+            label(|| "Extract GR2").style(|s| s.font_size(12.0)),
         ))
         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
         // Convert to GLB
         h_stack((
             checkbox(move || convert_to_glb.get())
@@ -337,15 +342,16 @@ fn gr2_options_panel(
                     }
                 })
                 .style(|s| s.margin_right(6.0)),
-            label(|| "Convert to GLB")
-                .style(move |s| {
-                    let disabled = convert_to_gltf.get();
-                    s.font_size(12.0)
-                        .color(if disabled { Color::rgb8(160, 160, 160) } else { Color::BLACK })
-                }),
+            label(|| "Convert to GLB").style(move |s| {
+                let disabled = convert_to_gltf.get();
+                s.font_size(12.0).color(if disabled {
+                    Color::rgb8(160, 160, 160)
+                } else {
+                    Color::BLACK
+                })
+            }),
         ))
         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
         // Convert to glTF
         h_stack((
             checkbox(move || convert_to_gltf.get())
@@ -356,53 +362,47 @@ fn gr2_options_panel(
                     }
                 })
                 .style(|s| s.margin_right(6.0)),
-            label(|| "Convert to glTF")
-                .style(move |s| {
-                    let disabled = convert_to_glb.get();
-                    s.font_size(12.0)
-                        .color(if disabled { Color::rgb8(160, 160, 160) } else { Color::BLACK })
-                }),
+            label(|| "Convert to glTF").style(move |s| {
+                let disabled = convert_to_glb.get();
+                s.font_size(12.0).color(if disabled {
+                    Color::rgb8(160, 160, 160)
+                } else {
+                    Color::BLACK
+                })
+            }),
         ))
         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
         // Extract textures DDS
         h_stack((
             checkbox(move || extract_textures.get())
                 .on_update(move |checked| extract_textures.set(checked))
                 .style(|s| s.margin_right(6.0)),
-            label(|| "Extract textures DDS")
-                .style(|s| s.font_size(12.0)),
+            label(|| "Extract textures DDS").style(|s| s.font_size(12.0)),
         ))
         .style(|s| s.items_center().margin_left(20.0).margin_bottom(4.0)),
-
         // Convert textures DDS to PNG
         h_stack((
             checkbox(move || convert_to_png.get())
                 .on_update(move |checked| convert_to_png.set(checked))
                 .style(|s| s.margin_right(6.0)),
-            label(|| "Convert textures DDS to PNG")
-                .style(|s| s.font_size(12.0)),
+            label(|| "Convert textures DDS to PNG").style(|s| s.font_size(12.0)),
         ))
         .style(|s| s.items_center().margin_left(20.0)),
-
         // Warning when textures enabled but path not configured
-        dyn_container(
-            needs_warning,
-            move |show_warning| {
-                if show_warning {
-                    label(|| "Warning: BG3 game data path not set in Settings")
-                        .style(|s| {
-                            s.font_size(11.0)
-                                .color(Color::rgb8(180, 80, 30))
-                                .margin_top(8.0)
-                                .margin_left(20.0)
-                        })
-                        .into_any()
-                } else {
-                    empty().into_any()
-                }
-            },
-        ),
+        dyn_container(needs_warning, move |show_warning| {
+            if show_warning {
+                label(|| "Warning: BG3 game data path not set in Settings")
+                    .style(|s| {
+                        s.font_size(11.0)
+                            .color(Color::rgb8(180, 80, 30))
+                            .margin_top(8.0)
+                            .margin_left(20.0)
+                    })
+                    .into_any()
+            } else {
+                empty().into_any()
+            }
+        }),
     ))
     .style(move |s| {
         let visible = has_gr2();

@@ -1,18 +1,18 @@
 //! Context menu for search result operations
 
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use crate::dialog::{DifficultyClassCache, FlagCache, LocalizationCache, SpeakerCache};
+use crate::formats::wem::AudioCache;
+use crate::gui::tabs::dialogue::operations::{find_voice_files_path, load_voice_meta};
 use floem::action::show_context_menu;
 use floem::ext_event::create_ext_action;
 use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 use floem_reactive::Scope;
-use crate::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
-use crate::formats::wem::AudioCache;
 use maclarian::pak::PakOperations;
-use crate::gui::tabs::dialogue::operations::{load_voice_meta, find_voice_files_path};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use crate::gui::state::{DialogueState, DialogSource, EditorTabsState, SearchResult, SearchState};
+use crate::gui::state::{DialogSource, DialogueState, EditorTabsState, SearchResult, SearchState};
 
 use super::operations::{copy_to_clipboard, extract_single_result};
 
@@ -35,14 +35,14 @@ pub fn show_search_result_context_menu(
 
     // Open in Editor (text files only)
     let file_type = result.file_type.to_lowercase();
-    if matches!(file_type.as_str(), "lsx" | "lsf" | "lsj" | "xml" | "json" | "txt") {
+    if matches!(
+        file_type.as_str(),
+        "lsx" | "lsf" | "lsj" | "xml" | "json" | "txt"
+    ) {
         let editor_tabs = editor_tabs_state.clone();
-        menu = menu.entry(
-            MenuItem::new("Open in Editor")
-                .action(move || {
-                    open_result_in_editor(&result_for_open, editor_tabs.clone(), active_tab);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Open in Editor").action(move || {
+            open_result_in_editor(&result_for_open, editor_tabs.clone(), active_tab);
+        }));
     }
 
     // Open in Dialogue (LSJ files only)
@@ -50,24 +50,25 @@ pub fn show_search_result_context_menu(
         let dialogue = dialogue_state.clone();
         let pak_path = result_for_dialogue.pak_path.clone();
         let internal_path = result_for_dialogue.path.clone();
-        menu = menu.entry(
-            MenuItem::new("Open in Dialogue")
-                .action(move || {
-                    open_in_dialogue(dialogue.clone(), pak_path.clone(), internal_path.clone(), active_tab);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Open in Dialogue").action(move || {
+            open_in_dialogue(
+                dialogue.clone(),
+                pak_path.clone(),
+                internal_path.clone(),
+                active_tab,
+            );
+        }));
     }
 
     // Show All Matches in File (only if there are content matches)
     let has_content_matches = result.match_count.map_or(false, |n| n > 0);
     if has_content_matches {
-        menu = menu.entry(
-            MenuItem::new("Show All Matches")
-                .action(move || {
-                    state_for_matches.all_matches_file.set(Some(result_for_matches.clone()));
-                    state_for_matches.show_all_matches.set(true);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Show All Matches").action(move || {
+            state_for_matches
+                .all_matches_file
+                .set(Some(result_for_matches.clone()));
+            state_for_matches.show_all_matches.set(true);
+        }));
     }
 
     menu = menu.separator();
@@ -76,22 +77,20 @@ pub fn show_search_result_context_menu(
     let state_for_extract = state.clone();
     let internal_path = result_for_extract.path.clone();
     let pak_path = result_for_extract.pak_path.clone();
-    menu = menu.entry(
-        MenuItem::new("Extract File...")
-            .action(move || {
-                extract_single_result(state_for_extract.clone(), internal_path.clone(), pak_path.clone());
-            })
-    );
+    menu = menu.entry(MenuItem::new("Extract File...").action(move || {
+        extract_single_result(
+            state_for_extract.clone(),
+            internal_path.clone(),
+            pak_path.clone(),
+        );
+    }));
 
     // Copy Path
     {
         let path = result_clone.path.clone();
-        menu = menu.entry(
-            MenuItem::new("Copy Path")
-                .action(move || {
-                    copy_to_clipboard(&path);
-                })
-        );
+        menu = menu.entry(MenuItem::new("Copy Path").action(move || {
+            copy_to_clipboard(&path);
+        }));
     }
 
     show_context_menu(menu, None);
@@ -103,31 +102,34 @@ fn open_result_in_editor(
     editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) {
-    use std::env::temp_dir;
+    use crate::gui::tabs::load_file_in_tab;
     use floem::ext_event::create_ext_action;
     use floem_reactive::Scope;
     use maclarian::pak::PakOperations;
-    use crate::gui::tabs::load_file_in_tab;
+    use std::env::temp_dir;
 
     let result = result.clone();
     let pak_path = result.pak_path.clone();
     let file_path = result.path.clone();
 
     // Run extraction in background thread
-    let send = create_ext_action(Scope::new(), move |extracted_path: Result<std::path::PathBuf, String>| {
-        match extracted_path {
-            Ok(path) => {
-                load_file_in_tab(&path, editor_tabs_state.clone());
-                active_tab.set(1); // Switch to Editor tab
+    let send = create_ext_action(
+        Scope::new(),
+        move |extracted_path: Result<std::path::PathBuf, String>| {
+            match extracted_path {
+                Ok(path) => {
+                    load_file_in_tab(&path, editor_tabs_state.clone());
+                    active_tab.set(1); // Switch to Editor tab
+                }
+                Err(e) => {
+                    rfd::MessageDialog::new()
+                        .set_title("Extraction Failed")
+                        .set_description(&e)
+                        .show();
+                }
             }
-            Err(e) => {
-                rfd::MessageDialog::new()
-                    .set_title("Extraction Failed")
-                    .set_description(&e)
-                    .show();
-            }
-        }
-    });
+        },
+    );
 
     std::thread::spawn(move || {
         // Create temp directory for extracted file
@@ -170,8 +172,16 @@ fn open_in_dialogue(
 ) {
     // Check if caches need initialization
     let needs_init = {
-        let loca_empty = state.localization_cache.read().map(|c| c.is_empty()).unwrap_or(true);
-        let speaker_empty = state.speaker_cache.read().map(|c| !c.is_indexed()).unwrap_or(true);
+        let loca_empty = state
+            .localization_cache
+            .read()
+            .map(|c| c.is_empty())
+            .unwrap_or(true);
+        let speaker_empty = state
+            .speaker_cache
+            .read()
+            .map(|c| !c.is_indexed())
+            .unwrap_or(true);
         loca_empty || speaker_empty
     };
 
@@ -187,7 +197,9 @@ fn open_in_dialogue(
         state.pending_caches_ready.set(false);
 
         // Show loading overlay
-        state.flag_index_message.set("Loading metadata from game files...".to_string());
+        state
+            .flag_index_message
+            .set("Loading metadata from game files...".to_string());
         state.is_building_flag_index.set(true);
 
         // Switch to Dialogue tab to show overlay
@@ -203,14 +215,17 @@ fn open_in_dialogue(
 
         // When done, hide overlay and set ready flag
         let state_for_done = state.clone();
-        let send_done = create_ext_action(Scope::new(), move |(voice_loaded, voice_path): (bool, Option<std::path::PathBuf>)| {
-            state_for_done.is_building_flag_index.set(false);
-            state_for_done.voice_meta_loaded.set(voice_loaded);
-            if let Some(path) = voice_path {
-                state_for_done.voice_files_path.set(Some(path));
-            }
-            state_for_done.pending_caches_ready.set(true);
-        });
+        let send_done = create_ext_action(
+            Scope::new(),
+            move |(voice_loaded, voice_path): (bool, Option<std::path::PathBuf>)| {
+                state_for_done.is_building_flag_index.set(false);
+                state_for_done.voice_meta_loaded.set(voice_loaded);
+                if let Some(path) = voice_path {
+                    state_for_done.voice_files_path.set(Some(path));
+                }
+                state_for_done.pending_caches_ready.set(true);
+            },
+        );
 
         std::thread::spawn(move || {
             if let Some(data_dir) = pak_path.parent() {
@@ -261,7 +276,10 @@ fn init_localization_cache(cache: &Arc<std::sync::RwLock<LocalizationCache>>, da
         Err(_) => return,
     };
 
-    for path in entries.iter().filter(|p| p.to_lowercase().ends_with(".loca")) {
+    for path in entries
+        .iter()
+        .filter(|p| p.to_lowercase().ends_with(".loca"))
+    {
         let _ = cache.load_from_pak(&language_pak, path);
     }
 }

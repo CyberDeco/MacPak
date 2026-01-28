@@ -5,7 +5,7 @@
 
 use std::time::Duration;
 
-use console::{style, Emoji};
+use console::{Emoji, style};
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 
 // =============================================================================

@@ -4,17 +4,28 @@
 //! Core functionality is in maclarian; this module provides re-exports and
 //! any MacPak-specific wrappers.
 
-use std::path::Path;
 use crate::{Error, Result};
+use std::path::Path;
 
 // Re-export types from maclarian for convenience
 pub use maclarian::virtual_texture::{
-    GtsFile, GtpFile, GtsHeader, GtsPageFileInfo, GtpHeader,
+    ExtractResult,
+    GtpFile,
+    GtpHeader,
+    GtpInfo,
+    GtsFile,
+    GtsHeader,
+    GtsInfo,
+    GtsPageFileInfo,
+    PageFileInfo,
     VirtualTextureExtractor,
+    extract_all as maclarian_extract_all,
+    find_base_name,
+    find_gts_path,
+    get_subfolder_name,
+    gtp_info as maclarian_gtp_info,
     // Utility functions and types
-    list_gts as maclarian_list_gts, gtp_info as maclarian_gtp_info,
-    find_gts_path, find_base_name, get_subfolder_name, extract_all as maclarian_extract_all,
-    GtsInfo, PageFileInfo, GtpInfo, ExtractResult,
+    list_gts as maclarian_list_gts,
 };
 
 /// List information about a GTS file

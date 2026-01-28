@@ -6,11 +6,15 @@ use std::path::Path;
 
 use crate::error::{Error, Result};
 
-use super::super::types::{GltfDocument, GltfAsset, GltfScene, GltfBuffer};
+use super::super::types::{GltfAsset, GltfBuffer, GltfDocument, GltfScene};
 use super::GltfBuilder;
 
 impl GltfBuilder {
-    pub(super) fn build_document(self, root_bone_idx: Option<usize>, buffer_uri: Option<String>) -> (GltfDocument, Vec<u8>) {
+    pub(super) fn build_document(
+        self,
+        root_bone_idx: Option<usize>,
+        buffer_uri: Option<String>,
+    ) -> (GltfDocument, Vec<u8>) {
         let mut scene_nodes = Vec::new();
 
         if let Some(root_idx) = root_bone_idx {
@@ -112,7 +116,8 @@ impl GltfBuilder {
     /// Returns an error if serialization or file writing fails.
     pub fn export_gltf(self, path: &Path, root_bone_idx: Option<usize>) -> Result<()> {
         // Determine the .bin file name (same base name, .bin extension)
-        let bin_filename = path.file_stem()
+        let bin_filename = path
+            .file_stem()
             .and_then(|s| s.to_str())
             .map(|s| format!("{s}.bin"))
             .ok_or_else(|| Error::ConversionError("Invalid output path".to_string()))?;

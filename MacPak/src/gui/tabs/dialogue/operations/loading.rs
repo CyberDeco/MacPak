@@ -1,17 +1,22 @@
 //! Dialog loading and parsing operations
 
+use super::display::{
+    build_display_nodes, resolve_difficulty_classes, resolve_flag_names, resolve_localized_text,
+    resolve_speaker_names,
+};
+use crate::dialog::{Dialog, parse_dialog_bytes, parse_dialog_file, parse_dialog_lsf_bytes};
+use crate::gui::state::{DialogEntry, DialogSource, DialogueState, DisplayNode};
+use floem::reactive::{SignalGet, SignalUpdate};
+use maclarian::pak::PakOperations;
 use std::path::PathBuf;
 use std::sync::Arc;
-use floem::reactive::{SignalGet, SignalUpdate};
-use crate::dialog::{parse_dialog_file, parse_dialog_bytes, parse_dialog_lsf_bytes, Dialog};
-use maclarian::pak::PakOperations;
-use crate::gui::state::{DialogueState, DialogSource, DialogEntry, DisplayNode};
-use super::display::{build_display_nodes, resolve_speaker_names, resolve_localized_text, resolve_flag_names, resolve_difficulty_classes};
 
 /// Load a dialog from a PAK file (runs synchronously for UI updates)
 /// Handles both .lsf (binary) and .lsj (JSON) formats
 pub fn load_dialog_from_pak(state: DialogueState, pak_path: PathBuf, internal_path: String) {
-    state.status_message.set("Loading dialog from PAK...".to_string());
+    state
+        .status_message
+        .set("Loading dialog from PAK...".to_string());
     state.is_loading.set(true);
 
     // Store source for reload functionality
@@ -54,7 +59,9 @@ pub fn load_dialog_from_pak(state: DialogueState, pak_path: PathBuf, internal_pa
 /// Load a dialog from a path (runs synchronously for UI updates)
 pub fn load_dialog(state: DialogueState, path: String) {
     // Find the entry
-    let entry = state.available_dialogs.get()
+    let entry = state
+        .available_dialogs
+        .get()
         .into_iter()
         .find(|e| e.path == path);
 
@@ -89,7 +96,10 @@ pub fn load_dialog_entry(state: DialogueState, entry: DialogEntry) {
 
             state.is_loading.set(false);
         }
-        DialogSource::PakFile { pak_path, internal_path } => {
+        DialogSource::PakFile {
+            pak_path,
+            internal_path,
+        } => {
             load_dialog_from_pak(state, pak_path.clone(), internal_path.clone());
         }
     }
@@ -100,7 +110,11 @@ fn calculate_node_content_width(node: &DisplayNode) -> f32 {
     let indent = (node.depth * 20) as f32;
     let expand_icon = 16.0;
     let badge = 30.0;
-    let speaker_width = if node.speaker_name.is_empty() { 0.0 } else { (node.speaker_name.len() as f32 * 8.0) + 20.0 };
+    let speaker_width = if node.speaker_name.is_empty() {
+        0.0
+    } else {
+        (node.speaker_name.len() as f32 * 8.0) + 20.0
+    };
     let text_width = (node.text.len() as f32 * 7.0).max(50.0);
     let end_indicator = if node.is_end_node { 40.0 } else { 0.0 };
     let padding_and_gaps = 60.0;
@@ -126,7 +140,8 @@ fn process_loaded_dialog(state: DialogueState, dialog: Dialog) {
     resolve_difficulty_classes(&state, &mut display_nodes);
 
     // Calculate max content width for horizontal scroll
-    let max_width = display_nodes.iter()
+    let max_width = display_nodes
+        .iter()
         .map(|node| calculate_node_content_width(node))
         .fold(0.0f32, |a, b| a.max(b));
 

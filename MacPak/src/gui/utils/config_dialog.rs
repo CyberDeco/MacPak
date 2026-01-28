@@ -41,9 +41,11 @@ pub fn config_dialog(config_state: ConfigState) -> impl IntoView {
             // Dialog content
             v_stack((
                 // Header
-                label(|| "Preferences")
-                    .style(|s| s.font_size(18.0).font_weight(Weight::BOLD).margin_bottom(16.0)),
-
+                label(|| "Preferences").style(|s| {
+                    s.font_size(18.0)
+                        .font_weight(Weight::BOLD)
+                        .margin_bottom(16.0)
+                }),
                 // Warning message if path is invalid
                 dyn_container(
                     move || path_warning.get(),
@@ -65,9 +67,8 @@ pub fn config_dialog(config_state: ConfigState) -> impl IntoView {
                         } else {
                             empty().into_any()
                         }
-                    }
+                    },
                 ),
-
                 // BG3 Path field
                 v_stack((
                     label(|| "Baldur's Gate 3 Data Path")
@@ -88,17 +89,24 @@ pub fn config_dialog(config_state: ConfigState) -> impl IntoView {
                                         .border(1.0)
                                         .border_color(Color::rgb8(200, 200, 200))
                                         .border_radius(4.0)
-                                        .class(PlaceholderTextClass, |s| s.color(Color::rgb8(120, 120, 120)))
+                                        .class(PlaceholderTextClass, |s| {
+                                            s.color(Color::rgb8(120, 120, 120))
+                                        })
                                 })
                                 .on_event_cont(EventListener::KeyDown, move |e| {
                                     if let Event::KeyDown(key_event) = e {
                                         // ESC closes dialog
-                                        if key_event.key.logical_key == Key::Named(NamedKey::Escape) {
+                                        if key_event.key.logical_key == Key::Named(NamedKey::Escape)
+                                        {
                                             show_for_input.set(false);
                                         }
                                         // CMD+, closes dialog
-                                        let is_cmd = key_event.modifiers.contains(floem::keyboard::Modifiers::META)
-                                            || key_event.modifiers.contains(floem::keyboard::Modifiers::CONTROL);
+                                        let is_cmd = key_event
+                                            .modifiers
+                                            .contains(floem::keyboard::Modifiers::META)
+                                            || key_event
+                                                .modifiers
+                                                .contains(floem::keyboard::Modifiers::CONTROL);
                                         let is_comma = matches!(
                                             &key_event.key.logical_key,
                                             Key::Character(c) if c.as_str() == ","
@@ -126,32 +134,41 @@ pub fn config_dialog(config_state: ConfigState) -> impl IntoView {
                     .style(|s| s.width_full().items_center()),
                 ))
                 .style(|s| s.width_full().gap(4.0)),
-
                 // Help text
-                label(|| "This should point to the Data folder containing .pak files")
-                    .style(|s| {
-                        s.font_size(11.0)
-                            .color(Color::rgb8(128, 128, 128))
-                            .margin_top(4.0)
-                    }),
-
+                label(|| "This should point to the Data folder containing .pak files").style(|s| {
+                    s.font_size(11.0)
+                        .color(Color::rgb8(128, 128, 128))
+                        .margin_top(4.0)
+                }),
                 // Theme selector
                 {
                     let theme_signal = config_state.theme;
                     let config_for_theme = config_state.clone();
                     v_stack((
-                        label(|| "Appearance")
-                            .style(|s| s.font_size(12.0).color(Color::rgb8(100, 100, 100)).margin_top(16.0)),
+                        label(|| "Appearance").style(|s| {
+                            s.font_size(12.0)
+                                .color(Color::rgb8(100, 100, 100))
+                                .margin_top(16.0)
+                        }),
                         h_stack((
-                            theme_button("Light", Theme::Light, theme_signal, config_for_theme.clone()),
-                            theme_button("Dark", Theme::Dark, theme_signal, config_for_theme.clone()),
+                            theme_button(
+                                "Light",
+                                Theme::Light,
+                                theme_signal,
+                                config_for_theme.clone(),
+                            ),
+                            theme_button(
+                                "Dark",
+                                Theme::Dark,
+                                theme_signal,
+                                config_for_theme.clone(),
+                            ),
                             theme_button("System", Theme::System, theme_signal, config_for_theme),
                         ))
                         .style(|s| s.gap(8.0)),
                     ))
                     .style(|s| s.width_full().gap(4.0))
                 },
-
                 // Buttons
                 h_stack((
                     {
@@ -225,8 +242,12 @@ pub fn config_dialog(config_state: ConfigState) -> impl IntoView {
                 show.set(false);
             }
             // CMD+, (Preferences shortcut toggles/closes)
-            let is_cmd = key_event.modifiers.contains(floem::keyboard::Modifiers::META)
-                || key_event.modifiers.contains(floem::keyboard::Modifiers::CONTROL);
+            let is_cmd = key_event
+                .modifiers
+                .contains(floem::keyboard::Modifiers::META)
+                || key_event
+                    .modifiers
+                    .contains(floem::keyboard::Modifiers::CONTROL);
             let is_comma = matches!(
                 &key_event.key.logical_key,
                 Key::Character(c) if c.as_str() == ","

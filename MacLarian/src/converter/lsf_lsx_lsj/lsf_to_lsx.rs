@@ -15,8 +15,8 @@ use crate::error::Result;
 use crate::formats::common::{extract_translated_string, extract_value, get_type_name};
 use crate::formats::lsf::{self, LsfDocument, LsfMetadataFormat};
 
-use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -135,13 +135,13 @@ fn write_version<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument) -
         revision = 9;
         build = 0;
     }
-    
+
     let mut version = BytesStart::new("version");
     version.push_attribute(("major", major.to_string().as_str()));
     version.push_attribute(("minor", minor.to_string().as_str()));
     version.push_attribute(("revision", revision.to_string().as_str()));
     version.push_attribute(("build", build.to_string().as_str()));
-    
+
     // Build metadata (nod to LSLib)
     let mut meta = vec!["v1"];
     if major >= 4 {
@@ -153,7 +153,7 @@ fn write_version<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument) -
         LsfMetadataFormat::None2 => meta.push("lsf_adjacency"),
         LsfMetadataFormat::None => {}
     }
-    
+
     version.push_attribute(("lslib_meta", meta.join(",").as_str()));
     writer.write_event(Event::Empty(version))?;
     Ok(())
@@ -218,25 +218,34 @@ fn write_node<W: std::io::Write>(
     Ok(())
 }
 
-fn write_attribute<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument, attr_idx: usize) -> Result<()> {
-    let attr = doc.attributes.get(attr_idx)
-        .ok_or_else(|| crate::error::Error::InvalidIndex(format!(
-            "Attribute index {} out of bounds (len: {})", attr_idx, doc.attributes.len()
-        )))?;
+fn write_attribute<W: std::io::Write>(
+    writer: &mut Writer<W>,
+    doc: &LsfDocument,
+    attr_idx: usize,
+) -> Result<()> {
+    let attr = doc.attributes.get(attr_idx).ok_or_else(|| {
+        crate::error::Error::InvalidIndex(format!(
+            "Attribute index {} out of bounds (len: {})",
+            attr_idx,
+            doc.attributes.len()
+        ))
+    })?;
     let attr_name = doc.get_name(attr.name_index_outer, attr.name_index_inner)?;
     let type_id = attr.type_info & 0x3F;
     let value_length = (attr.type_info >> 6) as usize;
-    
+
     let type_name = get_type_name(type_id);
     let value_str = extract_value(&doc.values, attr.offset, value_length, type_id)?;
-    
+
     let mut attr_start = BytesStart::new("attribute");
     attr_start.push_attribute(("id", attr_name));
     attr_start.push_attribute(("type", type_name));
-    
+
     // TranslatedString has special format: handle and version instead of value
     if type_id == 28 {
-        if let Ok((handle, version, value)) = extract_translated_string(&doc.values, attr.offset, value_length) {
+        if let Ok((handle, version, value)) =
+            extract_translated_string(&doc.values, attr.offset, value_length)
+        {
             attr_start.push_attribute(("handle", handle.as_str()));
             if let Some(val) = value {
                 attr_start.push_attribute(("value", val.as_str()));
@@ -247,7 +256,7 @@ fn write_attribute<W: std::io::Write>(writer: &mut Writer<W>, doc: &LsfDocument,
     } else {
         attr_start.push_attribute(("value", value_str.as_str()));
     }
-    
+
     writer.write_event(Event::Empty(attr_start))?;
     Ok(())
 }

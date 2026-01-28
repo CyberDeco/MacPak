@@ -438,4 +438,3 @@ fn find_closest_color(pixel: &[u8; 4], palette: &[[u8; 4]; 4]) -> u8 {
 
     best_idx
 }
-

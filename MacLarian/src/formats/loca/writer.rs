@@ -6,7 +6,7 @@
 
 #![allow(clippy::cast_possible_truncation)]
 
-use super::{LocaResource, LOCA_SIGNATURE, KEY_SIZE, ENTRY_SIZE};
+use super::{ENTRY_SIZE, KEY_SIZE, LOCA_SIGNATURE, LocaResource};
 use crate::error::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::fs::File;
@@ -33,7 +33,9 @@ pub fn write_loca<P: AsRef<Path>>(path: P, resource: &LocaResource) -> Result<()
     writer.write_u32::<LittleEndian>(texts_offset)?;
 
     // Pre-calculate text lengths
-    let text_lengths: Vec<u32> = resource.entries.iter()
+    let text_lengths: Vec<u32> = resource
+        .entries
+        .iter()
         .map(|e| {
             if e.text.is_empty() {
                 0

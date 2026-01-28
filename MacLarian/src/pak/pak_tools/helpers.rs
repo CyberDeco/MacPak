@@ -28,7 +28,8 @@ pub fn is_virtual_texture_file(filename: &str) -> bool {
 /// e.g., "`Albedo_Normal_Physical_0.gts`" -> "`Albedo_Normal_Physical_0`"
 /// e.g., "`Albedo_Normal_Physical_0_abc123def.gtp`" -> "`Albedo_Normal_Physical_0`"
 pub fn get_virtual_texture_subfolder(filename: &str) -> Option<String> {
-    let stem = filename.strip_suffix(".gts")
+    let stem = filename
+        .strip_suffix(".gts")
         .or_else(|| filename.strip_suffix(".gtp"))
         .or_else(|| filename.strip_suffix(".GTS"))
         .or_else(|| filename.strip_suffix(".GTP"))?;

@@ -1,11 +1,11 @@
 //! Chunk extraction and decompression.
 
-use std::io::{Read, Seek, SeekFrom};
+use super::super::gts::GtsFile;
+use super::super::types::{GtpChunkHeader, GtsCodec, TileCompression};
+use super::GtpFile;
 use crate::compression::fastlz;
 use crate::error::{Error, Result};
-use super::super::gts::GtsFile;
-use super::super::types::{GtsCodec, GtpChunkHeader, TileCompression};
-use super::GtpFile;
+use std::io::{Read, Seek, SeekFrom};
 
 impl<R: Read + Seek> GtpFile<R> {
     /// Extract and decompress a single chunk.
@@ -52,11 +52,13 @@ impl<R: Read + Seek> GtpFile<R> {
 
                 // Calculate expected output size for BC5/DXT5
                 // BC5: 16 bytes per 4x4 block
-                let main_size = 16 * (self.tile_width as usize).div_ceil(4)
-                                   * (self.tile_height as usize).div_ceil(4);
+                let main_size = 16
+                    * (self.tile_width as usize).div_ceil(4)
+                    * (self.tile_height as usize).div_ceil(4);
                 // Add embedded mipmap size
-                let mip_size = 16 * (self.tile_width as usize / 2).div_ceil(4)
-                                  * (self.tile_height as usize / 2).div_ceil(4);
+                let mip_size = 16
+                    * (self.tile_width as usize / 2).div_ceil(4)
+                    * (self.tile_height as usize / 2).div_ceil(4);
                 let output_size = main_size + mip_size;
 
                 self.decompress_tile(&compressed, output_size, method)
@@ -100,13 +102,9 @@ impl<R: Read + Seek> GtpFile<R> {
     ) -> Result<Vec<u8>> {
         match method {
             TileCompression::Raw => Ok(compressed.to_vec()),
-            TileCompression::Lz4 => {
-                lz4_flex::decompress(compressed, output_size)
-                    .map_err(|e| Error::DecompressionError(format!("LZ4: {e}")))
-            }
-            TileCompression::FastLZ => {
-                fastlz::decompress(compressed, output_size)
-            }
+            TileCompression::Lz4 => lz4_flex::decompress(compressed, output_size)
+                .map_err(|e| Error::DecompressionError(format!("LZ4: {e}"))),
+            TileCompression::FastLZ => fastlz::decompress(compressed, output_size),
         }
     }
 }

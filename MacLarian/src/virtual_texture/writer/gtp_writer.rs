@@ -4,10 +4,10 @@
 //!
 //! SPDX-License-Identifier: MIT
 
-use std::io::{Write, Seek, SeekFrom};
 use crate::error::Result;
 use crate::virtual_texture::types::{GtpHeader, GtsCodec};
 use byteorder::{LittleEndian, WriteBytesExt};
+use std::io::{Seek, SeekFrom, Write};
 
 /// A chunk to be written to a page
 #[derive(Debug, Clone)]
@@ -142,4 +142,3 @@ impl GtpWriter {
         Ok(())
     }
 }
-

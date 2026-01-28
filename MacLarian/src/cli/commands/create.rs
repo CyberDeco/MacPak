@@ -9,9 +9,7 @@ pub fn execute(source: &Path, destination: &Path, compression: &str) -> anyhow::
         "zlib" => CompressionMethod::Zlib,
         "none" => CompressionMethod::None,
         other => {
-            anyhow::bail!(
-                "Unknown compression method: '{other}'. Valid options: lz4, zlib, none"
-            );
+            anyhow::bail!("Unknown compression method: '{other}'. Valid options: lz4, zlib, none");
         }
     };
 

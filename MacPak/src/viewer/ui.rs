@@ -1,7 +1,7 @@
 //! UI overlay for view settings
 
-use bevy::pbr::wireframe::{NoWireframe, Wireframe, WireframeColor};
 use bevy::pbr::StandardMaterial;
+use bevy::pbr::wireframe::{NoWireframe, Wireframe, WireframeColor};
 use bevy::prelude::*;
 
 use crate::viewer::types::{GroundGrid, ViewSettings};
@@ -69,7 +69,12 @@ pub fn setup_ui(mut commands: Commands) {
 }
 
 /// Helper to spawn a checkbox row
-fn spawn_checkbox<T: Component>(parent: &mut ChildSpawnerCommands, label: &str, marker: T, checked: bool) {
+fn spawn_checkbox<T: Component>(
+    parent: &mut ChildSpawnerCommands,
+    label: &str,
+    marker: T,
+    checked: bool,
+) {
     parent
         .spawn((
             Node {
@@ -171,7 +176,10 @@ pub fn sync_view_settings(
     view_settings: Res<ViewSettings>,
     mut grid_query: Query<&mut Visibility, With<GroundGrid>>,
     mut clear_color: ResMut<ClearColor>,
-    mut checkbox_query: Query<(&ChildOf, &mut BackgroundColor, Option<&Children>), With<CheckboxBox>>,
+    mut checkbox_query: Query<
+        (&ChildOf, &mut BackgroundColor, Option<&Children>),
+        With<CheckboxBox>,
+    >,
     parent_query: Query<(
         Option<&CheckboxWireframe>,
         Option<&CheckboxGrid>,
@@ -205,11 +213,20 @@ pub fn sync_view_settings(
                 if materials.get(&material_handle.0).is_some() {
                     // Use a visible green color for wireframe (BG3 models use vertex colors, not materials)
                     let wireframe_color = Color::srgb(0.0, 0.9, 0.4);
-                    commands.entity(entity).insert((Wireframe, WireframeColor { color: wireframe_color }));
+                    commands.entity(entity).insert((
+                        Wireframe,
+                        WireframeColor {
+                            color: wireframe_color,
+                        },
+                    ));
 
                     if processed.insert(id) {
                         if let Some(mat) = materials.get_mut(id) {
-                            wireframe_state.original_materials.push((id, mat.base_color, mat.alpha_mode));
+                            wireframe_state.original_materials.push((
+                                id,
+                                mat.base_color,
+                                mat.alpha_mode,
+                            ));
                             mat.alpha_mode = AlphaMode::Blend;
                             mat.base_color = mat.base_color.with_alpha(0.0);
                         }
@@ -219,7 +236,9 @@ pub fn sync_view_settings(
         } else {
             // Remove wireframe and restore materials
             for (entity, _) in &mesh_query {
-                commands.entity(entity).remove::<(Wireframe, WireframeColor)>();
+                commands
+                    .entity(entity)
+                    .remove::<(Wireframe, WireframeColor)>();
             }
             for (id, color, alpha_mode) in wireframe_state.original_materials.drain(..) {
                 if let Some(mat) = materials.get_mut(id) {

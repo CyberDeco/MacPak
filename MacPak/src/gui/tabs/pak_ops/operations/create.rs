@@ -4,8 +4,10 @@ use floem::prelude::*;
 use std::path::Path;
 use std::thread;
 
+use super::super::types::{
+    PakResult, create_progress_sender, create_result_sender, get_shared_progress,
+};
 use crate::gui::state::{ActiveDialog, PakOpsState};
-use super::super::types::{create_progress_sender, create_result_sender, get_shared_progress, PakResult};
 
 /// Create a PAK file from a folder via file dialog
 pub fn create_pak_file(state: PakOpsState) {
@@ -91,10 +93,9 @@ pub fn create_pak_from_dropped_folder(state: PakOpsState, folder_path: String) {
     };
 
     // Store pending operation and show options dialog
-    state.pending_create.set(Some((
-        folder_path,
-        pak_file.to_string_lossy().to_string(),
-    )));
+    state
+        .pending_create
+        .set(Some((folder_path, pak_file.to_string_lossy().to_string())));
     state.active_dialog.set(ActiveDialog::CreateOptions);
 }
 
@@ -131,10 +132,9 @@ pub fn rebuild_pak_from_dropped_folder(state: PakOpsState, folder_path: String) 
     };
 
     // Store pending operation and show options dialog
-    state.pending_create.set(Some((
-        folder_path,
-        pak_file.to_string_lossy().to_string(),
-    )));
+    state
+        .pending_create
+        .set(Some((folder_path, pak_file.to_string_lossy().to_string())));
     state.active_dialog.set(ActiveDialog::CreateOptions);
 }
 
@@ -245,7 +245,12 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
-            .filter_map(|e| e.path().strip_prefix(source_path).ok().map(|p| p.to_string_lossy().to_string()))
+            .filter_map(|e| {
+                e.path()
+                    .strip_prefix(source_path)
+                    .ok()
+                    .map(|p| p.to_string_lossy().to_string())
+            })
             .collect();
 
         let result = maclarian::pak::PakOperations::create_with_compression_and_progress(
@@ -270,7 +275,7 @@ pub fn execute_create_pak(state: PakOpsState, source: String, dest: String) {
                     files,
                     pak_name: pak_name_clone,
                 }
-            },
+            }
             Err(e) => PakResult::CreateDone {
                 success: false,
                 message: e.to_string(),
@@ -298,7 +303,8 @@ fn generate_info_json_file(source_dir: &str, pak_path: &str) -> String {
 
     // Write info.json next to the PAK file (don't move the PAK - user already chose location)
     let pak_path = Path::new(pak_path);
-    let info_json_path = pak_path.parent()
+    let info_json_path = pak_path
+        .parent()
         .map(|p| p.join("info.json"))
         .unwrap_or_else(|| Path::new("info.json").to_path_buf());
 

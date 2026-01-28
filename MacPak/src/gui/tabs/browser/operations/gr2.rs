@@ -34,7 +34,9 @@ pub fn convert_gr2_file(state: BrowserState, config_state: crate::gui::state::Co
 
     // Check if any conversion is requested
     if !convert_to_glb && !convert_to_gltf && !extract_textures {
-        state.status_message.set("No conversion options selected".to_string());
+        state
+            .status_message
+            .set("No conversion options selected".to_string());
         return;
     }
 
@@ -52,7 +54,9 @@ pub fn convert_gr2_file(state: BrowserState, config_state: crate::gui::state::Co
                 load_directory(&current, state_for_callback.clone());
             }
         } else {
-            state_for_callback.status_message.set(format!("Error: {}", result.message));
+            state_for_callback
+                .status_message
+                .set(format!("Error: {}", result.message));
         }
     });
 
@@ -91,7 +95,8 @@ fn perform_gr2_conversion(
     use std::path::Path;
 
     let gr2_file = Path::new(gr2_path);
-    let file_stem = gr2_file.file_stem()
+    let file_stem = gr2_file
+        .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| "output".to_string());
 
@@ -127,10 +132,12 @@ fn perform_gr2_conversion(
             Ok(()) => {
                 results.push(format!("{}", ext.to_uppercase()));
             }
-            Err(e) => return GR2ConversionResult {
-                success: false,
-                message: format!("Failed to convert to {}: {}", ext.to_uppercase(), e),
-            },
+            Err(e) => {
+                return GR2ConversionResult {
+                    success: false,
+                    message: format!("Failed to convert to {}: {}", ext.to_uppercase(), e),
+                };
+            }
         }
     }
 
@@ -152,12 +159,20 @@ fn perform_gr2_conversion(
             keep_original_dds: true,
         };
 
-        match maclarian::gr2_extraction::process_extracted_gr2_to_dir(gr2_file, &actual_output_dir, &options) {
+        match maclarian::gr2_extraction::process_extracted_gr2_to_dir(
+            gr2_file,
+            &actual_output_dir,
+            &options,
+        ) {
             Ok(tex_result) => {
                 if !tex_result.texture_paths.is_empty() {
                     // Always keep DDS when extract_textures is checked
                     let format = if convert_to_png { "DDS + PNG" } else { "DDS" };
-                    results.push(format!("{} {} textures", tex_result.texture_paths.len(), format));
+                    results.push(format!(
+                        "{} {} textures",
+                        tex_result.texture_paths.len(),
+                        format
+                    ));
                 }
                 for warning in tex_result.warnings {
                     eprintln!("Texture extraction warning: {}", warning);

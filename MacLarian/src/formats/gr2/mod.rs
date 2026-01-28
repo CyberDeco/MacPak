@@ -9,22 +9,22 @@
 
 #![allow(clippy::cast_possible_truncation)]
 
-mod format;
 mod decompress;
+mod format;
 mod inspect;
 
 // Internal format types (used by decompress_gr2 and other internal modules)
-use format::{Gr2File, Compression};
 use decompress::decompress_bitknit;
+use format::{Compression, Gr2File};
 
 // Crate-internal exports for other modules that need these
-pub(crate) use format::PointerSize;
 pub(crate) use decompress::decompress_bitknit as bitknit_decompress;
+pub(crate) use format::PointerSize;
 
 // Public inspection API
 pub use inspect::{
-    inspect_gr2, extract_gr2_info,
-    Gr2Info, SectionInfo, Gr2MeshInfo, Gr2SkeletonInfo, Gr2BoneInfo, Gr2ModelInfo,
+    Gr2BoneInfo, Gr2Info, Gr2MeshInfo, Gr2ModelInfo, Gr2SkeletonInfo, SectionInfo,
+    extract_gr2_info, inspect_gr2,
 };
 
 use crate::error::{Error, Result};
@@ -40,7 +40,9 @@ pub fn decompress_gr2(data: &[u8]) -> Result<Vec<u8>> {
     let gr2 = Gr2File::from_bytes(data)?;
 
     // Calculate total decompressed size
-    let total_size: usize = gr2.sections.iter()
+    let total_size: usize = gr2
+        .sections
+        .iter()
         .map(|s| s.uncompressed_size as usize)
         .sum();
 
@@ -62,9 +64,9 @@ pub fn decompress_gr2(data: &[u8]) -> Result<Vec<u8>> {
             }
             Compression::Oodle0 | Compression::Oodle1 => {
                 let compression = section.compression;
-                return Err(Error::DecompressionError(
-                    format!("Oodle compression not supported (format {compression:?})")
-                ));
+                return Err(Error::DecompressionError(format!(
+                    "Oodle compression not supported (format {compression:?})"
+                )));
             }
         };
 

@@ -6,8 +6,8 @@ use floem_reactive::Scope;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
-use maclarian::pak::PakProgress;
 use crate::gui::state::{ActiveDialog, PakOpsState};
+use maclarian::pak::PakProgress;
 
 /// Result type for background PAK operations
 pub enum PakResult {
@@ -166,7 +166,10 @@ pub fn create_progress_sender(_state: PakOpsState) -> impl Fn(&PakProgress) + Se
     let shared = get_shared_progress().clone();
 
     move |progress: &PakProgress| {
-        let description = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+        let description = progress
+            .current_file
+            .as_deref()
+            .unwrap_or(progress.phase.as_str());
         shared.update(progress.current, progress.total, description);
     }
 }
@@ -186,9 +189,13 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
                 // Clear results and batch add all files
                 state.clear_results();
                 state.add_results_batch(files.clone());
-                state.status_message.set(format!("Loaded {} ({} files)", pak_name, files.len()));
+                state
+                    .status_message
+                    .set(format!("Loaded {} ({} files)", pak_name, files.len()));
             } else {
-                state.status_message.set(format!("Failed: {}", error.unwrap_or_default()));
+                state
+                    .status_message
+                    .set(format!("Failed: {}", error.unwrap_or_default()));
             }
 
             state.is_listing.set(false);
@@ -207,9 +214,13 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
                 // Clear results and batch add extracted files
                 state.clear_results();
                 state.add_results_batch(files.clone());
-                state.status_message.set(format!("Extracted {} files to {}", files.len(), dest));
+                state
+                    .status_message
+                    .set(format!("Extracted {} files to {}", files.len(), dest));
             } else {
-                state.status_message.set(format!("Extraction failed: {}", message));
+                state
+                    .status_message
+                    .set(format!("Extraction failed: {}", message));
             }
 
             state.is_extracting.set(false);
@@ -228,9 +239,13 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
                 // Clear results and batch add source files
                 state.clear_results();
                 state.add_results_batch(files.clone());
-                state.status_message.set(format!("Created {} ({} files)", pak_name, files.len()));
+                state
+                    .status_message
+                    .set(format!("Created {} ({} files)", pak_name, files.len()));
             } else {
-                state.status_message.set(format!("Creation failed: {}", message));
+                state
+                    .status_message
+                    .set(format!("Creation failed: {}", message));
             }
 
             state.is_creating.set(false);
@@ -263,7 +278,8 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
                 }
             }
 
-            results.push("------------------------------------------------------------".to_string());
+            results
+                .push("------------------------------------------------------------".to_string());
             state.add_results_batch(results);
             state.is_validating.set(false);
         }
@@ -277,12 +293,16 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             state.progress.set(1.0);
 
             let mut all_results = vec![
-                format!("Batch extraction complete: {} succeeded, {} failed", success_count, fail_count),
+                format!(
+                    "Batch extraction complete: {} succeeded, {} failed",
+                    success_count, fail_count
+                ),
                 format!("Destination: {}", dest),
                 "------------------------------------------------------------".to_string(),
             ];
             all_results.extend(results);
-            all_results.push("------------------------------------------------------------".to_string());
+            all_results
+                .push("------------------------------------------------------------".to_string());
 
             state.add_results_batch(all_results);
             state.is_extracting.set(false);
@@ -298,12 +318,16 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             state.progress.set(1.0);
 
             let mut all_results = vec![
-                format!("Batch creation complete: {} succeeded, {} failed", success_count, fail_count),
+                format!(
+                    "Batch creation complete: {} succeeded, {} failed",
+                    success_count, fail_count
+                ),
                 format!("Destination: {}", dest),
                 "------------------------------------------------------------".to_string(),
             ];
             all_results.extend(results);
-            all_results.push("------------------------------------------------------------".to_string());
+            all_results
+                .push("------------------------------------------------------------".to_string());
 
             state.add_results_batch(all_results);
             state.is_creating.set(false);
@@ -322,11 +346,15 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             if success {
                 state.file_select_pak.set(Some(pak_path));
                 state.file_select_list.set(files);
-                state.file_select_selected.set(std::collections::HashSet::new());
+                state
+                    .file_select_selected
+                    .set(std::collections::HashSet::new());
                 state.file_select_filter.set(String::new());
                 state.active_dialog.set(ActiveDialog::FileSelect);
             } else {
-                state.status_message.set(format!("Failed to load PAK: {}", error.unwrap_or_default()));
+                state
+                    .status_message
+                    .set(format!("Failed to load PAK: {}", error.unwrap_or_default()));
             }
         }
 
@@ -343,9 +371,13 @@ pub fn handle_pak_result(state: PakOpsState, result: PakResult) {
             if success {
                 state.clear_results();
                 state.add_results_batch(files.clone());
-                state.status_message.set(format!("Extracted {} files to {}", files.len(), dest));
+                state
+                    .status_message
+                    .set(format!("Extracted {} files to {}", files.len(), dest));
             } else {
-                state.status_message.set(format!("Extraction failed: {}", message));
+                state
+                    .status_message
+                    .set(format!("Extraction failed: {}", message));
             }
         }
     }

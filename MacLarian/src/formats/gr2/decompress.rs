@@ -109,7 +109,8 @@ impl DeferredAdaptiveModel {
         let total_sum = 1u16 << frequency_bits;
         let frequency_incr = ((total_sum as usize - vocab_size) / adaptation_interval) as u16;
         let last_frequency_incr =
-            (1 + total_sum as usize - vocab_size - frequency_incr as usize * adaptation_interval) as u16;
+            (1 + total_sum as usize - vocab_size - frequency_incr as usize * adaptation_interval)
+                as u16;
 
         let mut cdf = FrequencyTable::new(frequency_bits, vocab_size, lookup_bits);
 
@@ -166,7 +167,9 @@ struct RANSState {
 
 impl RANSState {
     fn new() -> Self {
-        Self { bits: RANS_THRESHOLD }
+        Self {
+            bits: RANS_THRESHOLD,
+        }
     }
 
     fn with_bits(bits: u32) -> Self {
@@ -324,7 +327,9 @@ impl Bitknit2State {
 
         // Check magic
         if stream.pop() != BITKNIT_MAGIC {
-            return Err(Error::DecompressionError("Invalid BitKnit magic".to_string()));
+            return Err(Error::DecompressionError(
+                "Invalid BitKnit magic".to_string(),
+            ));
         }
 
         while self.index < self.output.len() {
@@ -410,8 +415,7 @@ impl Bitknit2State {
             self.copy_offset_cache.hit(cache_ref)
         } else {
             let copy_offset_length = self.pop_offset_model(stream, state1, state2);
-            let copy_offset_bits =
-                self.pop_bits(stream, copy_offset_length % 16, state1, state2);
+            let copy_offset_bits = self.pop_bits(stream, copy_offset_length % 16, state1, state2);
 
             let copy_offset_bits = if copy_offset_length >= 16 {
                 (copy_offset_bits << 16) | u32::from(stream.pop())
@@ -419,8 +423,8 @@ impl Bitknit2State {
                 copy_offset_bits
             };
 
-            let offset =
-                (32u32 << copy_offset_length) + (copy_offset_bits << 5) - 32 + (cache_ref as u32 - 7);
+            let offset = (32u32 << copy_offset_length) + (copy_offset_bits << 5) - 32
+                + (cache_ref as u32 - 7);
             self.copy_offset_cache.insert(offset);
             offset
         };
@@ -430,9 +434,9 @@ impl Bitknit2State {
         // Validate copy offset
         if copy_offset as usize > self.index {
             let index = self.index;
-            return Err(crate::error::Error::DecompressionError(
-                format!("Copy offset {copy_offset} exceeds current position {index}")
-            ));
+            return Err(crate::error::Error::DecompressionError(format!(
+                "Copy offset {copy_offset} exceeds current position {index}"
+            )));
         }
 
         for _ in 0..copy_length {

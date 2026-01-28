@@ -32,14 +32,19 @@ pub fn extract_dds_textures(
     // On macOS: Textures_1.pak, Textures_2.pak, Textures_3.pak
     // On other platforms: Textures.pak
     let texture_paks = find_texture_paks(game_data);
-    tracing::info!("Found {} texture PAK files: {:?}", texture_paks.len(), texture_paks);
+    tracing::info!(
+        "Found {} texture PAK files: {:?}",
+        texture_paks.len(),
+        texture_paks
+    );
     if texture_paks.is_empty() {
         tracing::warn!("No texture PAK files found in: {}", game_data.display());
         return Ok(extracted_paths);
     }
 
     // Group textures by source pak (if known)
-    let mut by_pak: std::collections::HashMap<&str, Vec<&TextureRef>> = std::collections::HashMap::new();
+    let mut by_pak: std::collections::HashMap<&str, Vec<&TextureRef>> =
+        std::collections::HashMap::new();
     let mut unknown_pak: Vec<&TextureRef> = Vec::new();
 
     for texture in textures {
@@ -62,7 +67,11 @@ pub fn extract_dds_textures(
 
     // Extract textures with unknown source PAK - search across all texture PAKs
     if !unknown_pak.is_empty() {
-        tracing::info!("Searching {} texture PAKs for {} textures", texture_paks.len(), unknown_pak.len());
+        tracing::info!(
+            "Searching {} texture PAKs for {} textures",
+            texture_paks.len(),
+            unknown_pak.len()
+        );
 
         // Try each texture PAK until target file(s) found
         for pak_path in &texture_paks {
@@ -92,13 +101,23 @@ pub fn extract_dds_textures(
                 .collect();
 
             if !textures_in_pak.is_empty() {
-                tracing::info!("Extracting {} textures from {}", textures_in_pak.len(), pak_path.display());
-                extract_textures_from_pak(pak_path, &textures_in_pak, output_dir, &mut extracted_paths);
+                tracing::info!(
+                    "Extracting {} textures from {}",
+                    textures_in_pak.len(),
+                    pak_path.display()
+                );
+                extract_textures_from_pak(
+                    pak_path,
+                    &textures_in_pak,
+                    output_dir,
+                    &mut extracted_paths,
+                );
             }
         }
 
         // Log if any textures weren't found
-        let found_paths: HashSet<&str> = extracted_paths.iter()
+        let found_paths: HashSet<&str> = extracted_paths
+            .iter()
             .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
             .collect();
         for tex in &unknown_pak {
@@ -160,11 +179,8 @@ pub fn extract_textures_from_pak(
                 let full_extracted_path = output_dir.join(&texture.dds_path);
                 if full_extracted_path.exists() {
                     // Move/copy to output_dir with just the filename
-                    let dest_path = output_dir.join(
-                        Path::new(&texture.dds_path)
-                            .file_name()
-                            .unwrap_or_default()
-                    );
+                    let dest_path = output_dir
+                        .join(Path::new(&texture.dds_path).file_name().unwrap_or_default());
                     if let Err(e) = std::fs::rename(&full_extracted_path, &dest_path) {
                         // If rename fails (cross-device), try copy
                         if let Err(e2) = std::fs::copy(&full_extracted_path, &dest_path) {
@@ -186,7 +202,11 @@ pub fn extract_textures_from_pak(
             cleanup_empty_dirs(output_dir);
         }
         Err(e) => {
-            tracing::warn!("Failed to extract textures from {}: {}", pak_path.display(), e);
+            tracing::warn!(
+                "Failed to extract textures from {}: {}",
+                pak_path.display(),
+                e
+            );
         }
     }
 }

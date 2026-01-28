@@ -2,21 +2,21 @@
 
 use floem::peniko::Color as PenikoColor;
 use floem::text::{Attrs, AttrsList, FamilyOwned, Weight};
+use floem::views::editor::EditorStyle;
 use floem::views::editor::id::EditorId;
 use floem::views::editor::text::Styling;
-use floem::views::editor::EditorStyle;
 use std::borrow::Cow;
 
 /// Token types for syntax highlighting
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TokenType {
     // XML tokens
-    XmlTag,        // <tagname>, </tagname>
-    XmlAttribute,  // attribute names
-    XmlString,     // attribute values in quotes
-    XmlComment,    // <!-- comments -->
+    XmlTag,         // <tagname>, </tagname>
+    XmlAttribute,   // attribute names
+    XmlString,      // attribute values in quotes
+    XmlComment,     // <!-- comments -->
     XmlDeclaration, // <?xml ... ?>
-    XmlCData,      // <![CDATA[ ... ]]>
+    XmlCData,       // <![CDATA[ ... ]]>
 
     // JSON tokens
     JsonKey,     // "key":
@@ -238,8 +238,7 @@ pub fn tokenize_xml(text: &str) -> Vec<TokenSpan> {
                 }
 
                 // Skip whitespace and =
-                while pos < len
-                    && (bytes[pos] == b' ' || bytes[pos] == b'\t' || bytes[pos] == b'=')
+                while pos < len && (bytes[pos] == b' ' || bytes[pos] == b'\t' || bytes[pos] == b'=')
                 {
                     pos += 1;
                 }
@@ -556,7 +555,10 @@ impl Styling for SyntaxStyling {
 
             if span_start_in_line < span_end_in_line {
                 let color = SyntaxColors::for_token(span.token_type);
-                attrs.add_span(span_start_in_line..span_end_in_line, Attrs::new().color(color));
+                attrs.add_span(
+                    span_start_in_line..span_end_in_line,
+                    Attrs::new().color(color),
+                );
             }
         }
     }

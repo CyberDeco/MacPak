@@ -4,13 +4,11 @@
 //!
 //! SPDX-License-Identifier: MIT
 
-use std::io::{Write, Seek, SeekFrom};
-use crate::error::Result;
-use crate::virtual_texture::types::{
-    GtsHeader, GtsBCParameterBlock, GtsFlatTileInfo,
-};
 use super::fourcc::FourCCTree;
+use crate::error::Result;
+use crate::virtual_texture::types::{GtsBCParameterBlock, GtsFlatTileInfo, GtsHeader};
 use byteorder::{LittleEndian, WriteBytesExt};
+use std::io::{Seek, SeekFrom, Write};
 
 /// Layer information for GTS file
 #[derive(Debug, Clone)]
@@ -296,7 +294,11 @@ impl GtsWriter {
     }
 
     /// Write a BC parameter block (56 bytes)
-    fn write_bc_parameter_block<W: Write>(&self, writer: &mut W, block: &GtsBCParameterBlock) -> Result<()> {
+    fn write_bc_parameter_block<W: Write>(
+        &self,
+        writer: &mut W,
+        block: &GtsBCParameterBlock,
+    ) -> Result<()> {
         writer.write_u16::<LittleEndian>(block.version)?;
         writer.write_all(&block.compression1)?;
         writer.write_all(&block.compression2)?;

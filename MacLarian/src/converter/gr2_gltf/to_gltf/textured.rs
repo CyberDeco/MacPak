@@ -1,10 +1,10 @@
 //! Textured GLB conversion with embedded textures.
 
-use std::path::Path;
-use crate::error::{Error, Result};
-use super::gr2_reader::Gr2Reader;
 use super::gltf::GltfBuilder;
+use super::gr2_reader::Gr2Reader;
 use super::texture_loading::load_textures_for_gr2;
+use crate::error::{Error, Result};
+use std::path::Path;
 
 /// Result of textured GLB conversion.
 #[derive(Debug)]
@@ -55,7 +55,9 @@ pub fn convert_gr2_bytes_to_glb_with_textures(
     // Add skeleton first
     let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
         let skin_idx = builder.add_skeleton(skel);
-        let root_idx = skel.bones.iter()
+        let root_idx = skel
+            .bones
+            .iter()
             .position(|b| b.parent_index < 0)
             .map(|i| builder.bone_node_offset + i);
         (Some(skin_idx), root_idx)
@@ -64,12 +66,8 @@ pub fn convert_gr2_bytes_to_glb_with_textures(
     };
 
     // Try to load textures
-    let material_idx = load_textures_for_gr2(
-        gr2_filename,
-        textures_pak_path,
-        &mut builder,
-        &mut warnings,
-    );
+    let material_idx =
+        load_textures_for_gr2(gr2_filename, textures_pak_path, &mut builder, &mut warnings);
 
     // Add meshes with material (if present)
     for mesh in &meshes {

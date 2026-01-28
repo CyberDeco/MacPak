@@ -10,8 +10,8 @@ use floem_reactive::Scope;
 use crate::gui::state::EditorTab;
 use crate::gui::utils::show_file_error;
 
-use super::dialogs::{show_large_file_warning, show_large_lsf_warning};
 use super::super::formatting::{format_json, format_xml};
+use super::dialogs::{show_large_file_warning, show_large_lsf_warning};
 use super::types::{
     FileLoadPhase1, FileLoadResult, LARGE_FILE_LINE_THRESHOLD, LARGE_LSF_NODE_THRESHOLD,
 };
@@ -420,7 +420,8 @@ pub fn handle_phase1_result(tab: EditorTab, result: FileLoadPhase1) {
             if show_large_file_warning(&filename, file_result.line_count) {
                 // User confirmed - show loading overlay and format in background
                 tab.is_loading.set(true);
-                tab.loading_message.set(format!("Processing {}...", filename));
+                tab.loading_message
+                    .set(format!("Processing {}...", filename));
 
                 let tab_for_progress = tab.clone();
                 let send = create_ext_action(Scope::new(), move |result: FileLoadResult| {
@@ -428,7 +429,8 @@ pub fn handle_phase1_result(tab: EditorTab, result: FileLoadPhase1) {
                 });
 
                 rayon::spawn(move || {
-                    let result = format_text_with_progress(file_result, &filename, tab_for_progress);
+                    let result =
+                        format_text_with_progress(file_result, &filename, tab_for_progress);
                     send(result);
                 });
             } else {

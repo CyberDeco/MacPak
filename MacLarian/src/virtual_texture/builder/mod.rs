@@ -22,22 +22,22 @@
 //! # Ok::<(), maclarian::error::Error>(())
 //! ```
 
+pub mod compression;
 pub mod config;
+pub mod deduplication;
 pub mod geometry;
 pub mod tile_processor;
-pub mod compression;
-pub mod deduplication;
 
-pub use config::{
-    BcFormat, SourceTexture, TileCompressionPreference, TileSetConfiguration,
-};
+pub use config::{BcFormat, SourceTexture, TileCompressionPreference, TileSetConfiguration};
 
 use crate::error::{Error, Result};
-use crate::virtual_texture::types::{GtsFlatTileInfo, GtsCodec, VTexProgress, VTexPhase};
+use crate::virtual_texture::types::{GtsCodec, GtsFlatTileInfo, VTexPhase, VTexProgress};
 use crate::virtual_texture::writer::{
     fourcc::build_metadata_tree,
-    gts_writer::{GtsWriter, LayerInfo, LevelInfo as GtsLevelInfo, PageFileInfo, create_bc_parameter_block},
-    gtp_writer::{GtpWriter, Chunk},
+    gtp_writer::{Chunk, GtpWriter},
+    gts_writer::{
+        GtsWriter, LayerInfo, LevelInfo as GtsLevelInfo, PageFileInfo, create_bc_parameter_block,
+    },
 };
 use rayon::prelude::*;
 use std::fs::File;
@@ -46,10 +46,10 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use uuid::Uuid;
 
-use self::compression::{compress_tile, CompressedTile};
+use self::compression::{CompressedTile, compress_tile};
 use self::deduplication::build_dedup_map;
 use self::geometry::calculate_geometry;
-use self::tile_processor::{DdsTexture, extract_tiles_from_dds, ProcessedTile};
+use self::tile_processor::{DdsTexture, ProcessedTile, extract_tiles_from_dds};
 
 /// Result of building a virtual texture set
 #[derive(Debug)]
@@ -179,7 +179,9 @@ impl VirtualTextureBuilder {
         self.validate()?;
 
         // Determine output name
-        let name = self.name.as_ref()
+        let name = self
+            .name
+            .as_ref()
             .or_else(|| self.textures.first().map(|t| &t.name))
             .cloned()
             .unwrap_or_else(|| "VirtualTexture".to_string());
@@ -200,20 +202,25 @@ impl VirtualTextureBuilder {
 
         // Load first available layer to get dimensions
         let (first_dds, _first_layer_idx) = self.load_first_layer(texture)?;
-        let tex_info = (
-            texture.name.clone(),
-            first_dds.width,
-            first_dds.height,
-        );
+        let tex_info = (texture.name.clone(), first_dds.width, first_dds.height);
 
         // Limit mip levels to what's actually in the DDS file
-        let geometry = calculate_geometry(&[tex_info], layers_present, &self.config, Some(first_dds.mip_count));
+        let geometry = calculate_geometry(
+            &[tex_info],
+            layers_present,
+            &self.config,
+            Some(first_dds.mip_count),
+        );
 
         // Phase: Load Tiles
         progress(&VTexProgress::new(VTexPhase::LoadingTiles, 0, 3));
 
         // Pre-allocate based on estimated total tiles across all layers
-        let estimated_tiles: usize = geometry.tiles_per_layer.iter().map(std::vec::Vec::len).sum();
+        let estimated_tiles: usize = geometry
+            .tiles_per_layer
+            .iter()
+            .map(std::vec::Vec::len)
+            .sum();
         let mut all_tiles: Vec<ProcessedTile> = Vec::with_capacity(estimated_tiles);
         let layer_paths = texture.layer_paths();
 
@@ -251,7 +258,11 @@ impl VirtualTextureBuilder {
         let total_tile_count = all_tiles.len();
 
         // Phase: Deduplicate (build map only - memory efficient)
-        progress(&VTexProgress::new(VTexPhase::Deduplicating, 1, total_tile_count));
+        progress(&VTexProgress::new(
+            VTexPhase::Deduplicating,
+            1,
+            total_tile_count,
+        ));
 
         let (is_first, unique_idx) = if self.config.deduplicate {
             build_dedup_map(&all_tiles)
@@ -272,7 +283,11 @@ impl VirtualTextureBuilder {
             .collect();
 
         // Phase: Compress (parallelized with rayon, only unique tiles)
-        progress(&VTexProgress::new(VTexPhase::Compressing, 0, unique_tile_count));
+        progress(&VTexProgress::new(
+            VTexPhase::Compressing,
+            0,
+            unique_tile_count,
+        ));
 
         let processed = AtomicUsize::new(0);
         let compression = self.config.compression;
@@ -282,14 +297,22 @@ impl VirtualTextureBuilder {
             .map(|&idx| {
                 let current = processed.fetch_add(1, Ordering::Relaxed) + 1;
                 if current % 100 == 0 {
-                    progress(&VTexProgress::new(VTexPhase::Compressing, current, unique_tile_count));
+                    progress(&VTexProgress::new(
+                        VTexPhase::Compressing,
+                        current,
+                        unique_tile_count,
+                    ));
                 }
                 compress_tile(&all_tiles[idx].full_data(), compression)
             })
             .collect();
 
         let compressed_unique = compressed_unique?;
-        progress(&VTexProgress::new(VTexPhase::Compressing, unique_tile_count, unique_tile_count));
+        progress(&VTexProgress::new(
+            VTexPhase::Compressing,
+            unique_tile_count,
+            unique_tile_count,
+        ));
 
         // Phase: Write GTP (streaming - write chunks and track locations)
         progress(&VTexProgress::new(VTexPhase::WritingGtp, 1, 1));
@@ -323,7 +346,8 @@ impl VirtualTextureBuilder {
 
         // Build flat_tile_infos for ALL tiles (including duplicates)
         // Each tile references the chunk location of its unique counterpart
-        let mut flat_tile_infos: Vec<(GtsFlatTileInfo, usize, u32)> = Vec::with_capacity(total_tile_count);
+        let mut flat_tile_infos: Vec<(GtsFlatTileInfo, usize, u32)> =
+            Vec::with_capacity(total_tile_count);
 
         for (i, tile) in all_tiles.iter().enumerate() {
             let u_idx = unique_idx[i];
@@ -413,13 +437,11 @@ impl VirtualTextureBuilder {
             .iter()
             .enumerate()
             .filter(|(_, present)| **present)
-            .map(|(i, _)| {
-                match i {
-                    0 => ("BaseMap", "BaseColor"),
-                    1 => ("NormalMap", "NormalMap"),
-                    2 => ("PhysicalMap", "PhysicalMap"),
-                    _ => ("Unknown", "Unknown"),
-                }
+            .map(|(i, _)| match i {
+                0 => ("BaseMap", "BaseColor"),
+                1 => ("NormalMap", "NormalMap"),
+                2 => ("PhysicalMap", "PhysicalMap"),
+                _ => ("Unknown", "Unknown"),
             })
             .collect();
 
@@ -464,7 +486,9 @@ impl VirtualTextureBuilder {
                 return Ok((dds, i));
             }
         }
-        Err(Error::VirtualTexture("No layers found in texture".to_string()))
+        Err(Error::VirtualTexture(
+            "No layers found in texture".to_string(),
+        ))
     }
 
     /// Validate the builder configuration and inputs
@@ -474,15 +498,18 @@ impl VirtualTextureBuilder {
 
         // Check if there's at least one texture
         if self.textures.is_empty() {
-            return Err(Error::VirtualTexture("No textures added to builder".to_string()));
+            return Err(Error::VirtualTexture(
+                "No textures added to builder".to_string(),
+            ));
         }
 
         // Check all textures have at least one layer
         for tex in &self.textures {
             if !tex.has_any_layer() {
-                return Err(Error::VirtualTexture(
-                    format!("Texture '{}' has no layers defined", tex.name)
-                ));
+                return Err(Error::VirtualTexture(format!(
+                    "Texture '{}' has no layers defined",
+                    tex.name
+                )));
             }
         }
 
@@ -497,9 +524,12 @@ impl VirtualTextureBuilder {
                             2 => "physical_map",
                             _ => "unknown",
                         };
-                        return Err(Error::VirtualTexture(
-                            format!("Texture '{}' {}: file not found: {}", tex.name, layer_name, p.display())
-                        ));
+                        return Err(Error::VirtualTexture(format!(
+                            "Texture '{}' {}: file not found: {}",
+                            tex.name,
+                            layer_name,
+                            p.display()
+                        )));
                     }
                 }
             }

@@ -1,20 +1,19 @@
 //! Import operations and data loading functions
 
-use std::fs;
-use std::collections::HashMap;
 use floem::prelude::*;
+use std::collections::HashMap;
+use std::fs;
 use walkdir::WalkDir;
 
-use crate::gui::state::DyesState;
 use super::super::shared::{
-    ParsedDyeEntry, parse_object_txt, parse_lsx_dye_presets,
-    parse_root_templates_localization, parse_localization_xml, parse_meta_lsx,
-    reset_colors_to_default, load_colors_from_map,
+    ParsedDyeEntry, load_colors_from_map, parse_localization_xml, parse_lsx_dye_presets,
+    parse_meta_lsx, parse_object_txt, parse_root_templates_localization, reset_colors_to_default,
 };
+use crate::gui::state::DyesState;
 
 // maclarian imports for LSF conversion (via MacPak re-export)
-use crate::maclarian::formats::lsf;
 use crate::maclarian::converter::to_lsx;
+use crate::maclarian::formats::lsf;
 
 /// Import from an extracted mod folder
 /// Automatically discovers _merged.lsf/lsx (colors), Object.txt (metadata), and meta.lsx (mod info)
@@ -25,8 +24,7 @@ pub fn import_from_mod_folder(
     imported_mod_name: RwSignal<String>,
     imported_mod_author: RwSignal<String>,
 ) {
-    let dialog = rfd::FileDialog::new()
-        .set_title("Select Extracted Mod Folder");
+    let dialog = rfd::FileDialog::new().set_title("Select Extracted Mod Folder");
 
     if let Some(folder_path) = dialog.pick_folder() {
         // Clear previous imports
@@ -40,14 +38,15 @@ pub fn import_from_mod_folder(
         imported_mod_name.set(String::new());
         imported_mod_author.set(String::new());
 
-        let folder_name = folder_path.file_name()
+        let folder_name = folder_path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("mod")
             .to_string();
 
         // Search for dye color files
-        let mut color_file: Option<std::path::PathBuf> = None;  // Primary: _merged in [PAK]_DYE_Colors
-        let mut color_files: Vec<std::path::PathBuf> = Vec::new();  // Fallback: individual LSF files
+        let mut color_file: Option<std::path::PathBuf> = None; // Primary: _merged in [PAK]_DYE_Colors
+        let mut color_files: Vec<std::path::PathBuf> = Vec::new(); // Fallback: individual LSF files
         let mut object_file: Option<std::path::PathBuf> = None;
         let mut root_templates_files: Vec<std::path::PathBuf> = Vec::new();
         let mut localization_file: Option<std::path::PathBuf> = None;
@@ -60,7 +59,8 @@ pub fn import_from_mod_folder(
         {
             let path = entry.path();
             let path_str = path.to_string_lossy().to_lowercase();
-            let file_name = path.file_name()
+            let file_name = path
+                .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -70,7 +70,8 @@ pub fn import_from_mod_folder(
             // Pattern 2: Named preset file like GlowDye_Presets.lsf in [PAK]_* folders
             // Pattern 3: Individual UUID.lsf files in [PAK]_* folders (FaerunColors, FearTaylor)
             if file_name.ends_with(".lsf") || file_name.ends_with(".lsx") {
-                let parent_name = path.parent()
+                let parent_name = path
+                    .parent()
                     .and_then(|p| p.file_name())
                     .and_then(|n| n.to_str())
                     .unwrap_or("");
@@ -127,32 +128,33 @@ pub fn import_from_mod_folder(
                     meta_file = Some(path.to_path_buf());
                 }
             }
-
         }
 
         // Parse color files - prefer _merged from [PAK]_DYE_Colors, fallback to individual files
         let mut lsf_entries = Vec::new();
 
         // Helper closure to parse a single LSF/LSX file
-        let parse_color_file = |path: &std::path::PathBuf| -> Vec<crate::gui::state::ImportedDyeEntry> {
-            let ext = path.extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("")
-                .to_lowercase();
+        let parse_color_file =
+            |path: &std::path::PathBuf| -> Vec<crate::gui::state::ImportedDyeEntry> {
+                let ext = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("")
+                    .to_lowercase();
 
-            if ext == "lsf" {
-                if let Ok(lsf_doc) = lsf::read_lsf(path) {
-                    if let Ok(lsx_content) = to_lsx(&lsf_doc) {
+                if ext == "lsf" {
+                    if let Ok(lsf_doc) = lsf::read_lsf(path) {
+                        if let Ok(lsx_content) = to_lsx(&lsf_doc) {
+                            return parse_lsx_dye_presets(&lsx_content);
+                        }
+                    }
+                } else if ext == "lsx" {
+                    if let Ok(lsx_content) = fs::read_to_string(path) {
                         return parse_lsx_dye_presets(&lsx_content);
                     }
                 }
-            } else if ext == "lsx" {
-                if let Ok(lsx_content) = fs::read_to_string(path) {
-                    return parse_lsx_dye_presets(&lsx_content);
-                }
-            }
-            Vec::new()
-        };
+                Vec::new()
+            };
 
         if let Some(ref color_path) = color_file {
             // Primary: single merged file
@@ -185,9 +187,11 @@ pub fn import_from_mod_folder(
         }
 
         // Parse RootTemplates to get localization handles
-        let mut localization_handles: HashMap<String, (Option<String>, Option<String>)> = HashMap::new();
+        let mut localization_handles: HashMap<String, (Option<String>, Option<String>)> =
+            HashMap::new();
         for rt_path in &root_templates_files {
-            let ext = rt_path.extension()
+            let ext = rt_path
+                .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -204,21 +208,22 @@ pub fn import_from_mod_folder(
                 for info in parse_root_templates_localization(&content) {
                     localization_handles.insert(
                         info.name,
-                        (info.display_name_handle, info.description_handle)
+                        (info.display_name_handle, info.description_handle),
                     );
                 }
             }
         }
 
         // Parse localization XML to get actual text
-        let localization_map: HashMap<String, String> = if let Some(ref loc_path) = localization_file {
-            fs::read_to_string(loc_path)
-                .ok()
-                .map(|content| parse_localization_xml(&content))
-                .unwrap_or_default()
-        } else {
-            HashMap::new()
-        };
+        let localization_map: HashMap<String, String> =
+            if let Some(ref loc_path) = localization_file {
+                fs::read_to_string(loc_path)
+                    .ok()
+                    .map(|content| parse_localization_xml(&content))
+                    .unwrap_or_default()
+            } else {
+                HashMap::new()
+            };
 
         // Correlate localization data with dye entries
         for lsf_entry in &mut lsf_entries {
@@ -240,7 +245,8 @@ pub fn import_from_mod_folder(
 
         // Parse meta.lsx to get mod name and author
         if let Some(ref meta_path) = meta_file {
-            let ext = meta_path.extension()
+            let ext = meta_path
+                .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -276,7 +282,9 @@ pub fn import_from_mod_folder(
 
         // Store the path for re-export (use the color file path)
         if let Some(ref color_path) = color_file {
-            state.imported_lsf_path.set(Some(color_path.to_string_lossy().to_string()));
+            state
+                .imported_lsf_path
+                .set(Some(color_path.to_string_lossy().to_string()));
         }
 
         // Populate the LSF entries

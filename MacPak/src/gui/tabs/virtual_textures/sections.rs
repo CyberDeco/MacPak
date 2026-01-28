@@ -5,9 +5,9 @@ use floem::prelude::*;
 use floem::text::Weight;
 use walkdir::WalkDir;
 
+use super::extraction::{extract_batch, extract_single};
 use crate::gui::shared::operation_button;
 use crate::gui::state::{ConfigState, VirtualTexturesState};
-use super::extraction::{extract_batch, extract_single};
 
 /// Main operations row with columns
 pub fn operations_row(state: VirtualTexturesState, config: ConfigState) -> impl IntoView {
@@ -160,11 +160,7 @@ fn layer_toggle_button(
 }
 
 /// Toggle button for source selection (PAK/Files)
-fn source_toggle_button(
-    text: &'static str,
-    value: bool,
-    signal: RwSignal<bool>,
-) -> impl IntoView {
+fn source_toggle_button(text: &'static str, value: bool, signal: RwSignal<bool>) -> impl IntoView {
     button(text)
         .action(move || signal.set(value))
         .style(move |s| {
@@ -272,7 +268,9 @@ fn select_and_extract_single(state: VirtualTexturesState, config: ConfigState) {
 
     if let Some(file) = dialog.pick_file() {
         if let Some(parent) = file.parent() {
-            state.working_dir.set(Some(parent.to_string_lossy().to_string()));
+            state
+                .working_dir
+                .set(Some(parent.to_string_lossy().to_string()));
         }
         state.gts_file.set(Some(file.to_string_lossy().to_string()));
         extract_single(state, game_data);
@@ -283,16 +281,19 @@ fn select_and_extract_single(state: VirtualTexturesState, config: ConfigState) {
 fn select_and_extract_batch(state: VirtualTexturesState, config: ConfigState) {
     let game_data = config.bg3_data_path.get_untracked();
 
-    let mut dialog = rfd::FileDialog::new()
-        .set_title("Select Directory with GTS Files");
+    let mut dialog = rfd::FileDialog::new().set_title("Select Directory with GTS Files");
 
     if let Some(dir) = state.working_dir.get() {
         dialog = dialog.set_directory(&dir);
     }
 
     if let Some(dir) = dialog.pick_folder() {
-        state.working_dir.set(Some(dir.to_string_lossy().to_string()));
-        state.batch_input_dir.set(Some(dir.to_string_lossy().to_string()));
+        state
+            .working_dir
+            .set(Some(dir.to_string_lossy().to_string()));
+        state
+            .batch_input_dir
+            .set(Some(dir.to_string_lossy().to_string()));
 
         // Scan for GTS files only
         let mut files = Vec::new();

@@ -1,7 +1,7 @@
 //! UI styles shared between import and export sections
 
-use floem::prelude::*;
 use super::constants::*;
+use floem::prelude::*;
 
 /// Input field style - fills available width
 pub fn input_style(s: floem::style::Style) -> floem::style::Style {

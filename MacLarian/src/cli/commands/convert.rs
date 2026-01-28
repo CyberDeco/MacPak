@@ -9,7 +9,11 @@ pub fn execute(
     input_format: Option<&str>,
     output_format: Option<&str>,
 ) -> anyhow::Result<()> {
-    println!("Converting {} to {}", source.display(), destination.display());
+    println!(
+        "Converting {} to {}",
+        source.display(),
+        destination.display()
+    );
 
     // Auto-detect or use provided formats
     let input = if let Some(fmt) = input_format {

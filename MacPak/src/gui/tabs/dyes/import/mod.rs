@@ -6,11 +6,11 @@ mod operations;
 use floem::prelude::*;
 use floem::text::Weight;
 
-use crate::gui::state::DyesState;
-use super::shared::secondary_button_style;
 use super::shared::constants::*;
+use super::shared::secondary_button_style;
+use crate::gui::state::DyesState;
 
-use components::{imported_fields_display, txt_import_selector, lsf_import_selector};
+use components::{imported_fields_display, lsf_import_selector, txt_import_selector};
 pub use operations::import_from_mod_folder;
 
 /// Import section UI for loading existing dye definitions
@@ -24,8 +24,7 @@ pub fn import_section(state: DyesState) -> impl IntoView {
     v_stack((
         // Section header
         h_stack((
-            label(|| "Import")
-                .style(|s| s.font_size(FONT_HEADER).font_weight(Weight::SEMIBOLD)),
+            label(|| "Import").style(|s| s.font_size(FONT_HEADER).font_weight(Weight::SEMIBOLD)),
             empty().style(|s| s.flex_grow(1.0)),
             {
                 let state = state.clone();
@@ -36,22 +35,48 @@ pub fn import_section(state: DyesState) -> impl IntoView {
                 label(|| "Mod Folder...")
                     .style(secondary_button_style)
                     .on_click_stop(move |_| {
-                        import_from_mod_folder(state.clone(), imported_dye_name, imported_display_name, imported_mod_name, imported_mod_author);
+                        import_from_mod_folder(
+                            state.clone(),
+                            imported_dye_name,
+                            imported_display_name,
+                            imported_mod_name,
+                            imported_mod_author,
+                        );
                     })
             },
         ))
-        .style(|s| s.width_full().items_center().gap(GAP_STD).margin_bottom(PADDING_STD)),
-
+        .style(|s| {
+            s.width_full()
+                .items_center()
+                .gap(GAP_STD)
+                .margin_bottom(PADDING_STD)
+        }),
         // Inner card with imported data display
         v_stack((
             // TXT Import selector (shows when entries are loaded)
-            txt_import_selector(state.clone(), imported_dye_name, imported_display_name, imported_mod_name, imported_mod_author),
-
+            txt_import_selector(
+                state.clone(),
+                imported_dye_name,
+                imported_display_name,
+                imported_mod_name,
+                imported_mod_author,
+            ),
             // LSF Import selector (shows when LSF entries are loaded)
-            lsf_import_selector(state.clone(), imported_dye_name, imported_display_name, imported_mod_name, imported_mod_author),
-
+            lsf_import_selector(
+                state.clone(),
+                imported_dye_name,
+                imported_display_name,
+                imported_mod_name,
+                imported_mod_author,
+            ),
             // Display imported values (editable name)
-            imported_fields_display(state.clone(), imported_dye_name, imported_display_name, imported_mod_name, imported_mod_author),
+            imported_fields_display(
+                state.clone(),
+                imported_dye_name,
+                imported_display_name,
+                imported_mod_name,
+                imported_mod_author,
+            ),
         ))
         .style(|s| {
             s.width_full()

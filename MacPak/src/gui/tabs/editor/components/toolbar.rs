@@ -5,8 +5,10 @@ use floem::views::checkbox;
 
 use crate::gui::state::EditorTabsState;
 
+use super::super::operations::{
+    convert_file, open_file_dialog, save_file, save_file_as_dialog, validate_content,
+};
 use super::badges::{format_badge, save_status_badge};
-use super::super::operations::{convert_file, open_file_dialog, save_file, save_file_as_dialog, validate_content};
 
 /// Common toolbar button style for consistent height
 fn toolbar_button_style(s: floem::style::Style) -> floem::style::Style {
@@ -65,16 +67,14 @@ pub fn editor_toolbar(tabs_state: EditorTabsState) -> impl IntoView {
         separator(),
         // Edit tools group
         h_stack((
-            button("🔍 Find")
-                .style(toolbar_button_style)
-                .action({
-                    move || {
-                        if let Some(tab) = tabs_state_find.active_tab() {
-                            let visible = tab.search_visible.get();
-                            tab.search_visible.set(!visible);
-                        }
+            button("🔍 Find").style(toolbar_button_style).action({
+                move || {
+                    if let Some(tab) = tabs_state_find.active_tab() {
+                        let visible = tab.search_visible.get();
+                        tab.search_visible.set(!visible);
                     }
-                }),
+                }
+            }),
             button("✓ Validate")
                 .style(toolbar_button_style)
                 .action(move || {
@@ -180,10 +180,8 @@ fn line_number_toggle(show_line_numbers: RwSignal<bool>) -> impl IntoView {
                 show_line_numbers.set(checked);
             })
             .style(move |s| s.margin_right(8.0)),
-        label(|| "Show Line Numbers").style(|s| {
-            s.font_size(12.0)
-                .cursor(floem::style::CursorStyle::Pointer)
-        }),
+        label(|| "Show Line Numbers")
+            .style(|s| s.font_size(12.0).cursor(floem::style::CursorStyle::Pointer)),
     ))
     .on_click_stop(move |_| {
         show_line_numbers.set(!show_line_numbers.get());

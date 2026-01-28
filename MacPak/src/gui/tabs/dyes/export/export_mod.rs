@@ -5,9 +5,9 @@ use std::path::Path;
 
 use floem::prelude::*;
 
-use crate::gui::state::{DyesState, GeneratedDyeEntry};
-use crate::gui::utils::{generate_uuid, generate_meta_lsx, UuidFormat};
 use super::super::shared::{generate_color_nodes, parse_hex_color, required_colors};
+use crate::gui::state::{DyesState, GeneratedDyeEntry};
+use crate::gui::utils::{UuidFormat, generate_meta_lsx, generate_uuid};
 
 /// Base game dye item template that all custom dyes inherit from
 /// This is the "LOOT_Dye_Generic" template from Shared.pak
@@ -15,8 +15,8 @@ const DYE_PARENT_TEMPLATE_ID: &str = "1a750a66-e5c2-40be-9f62-0a4bf3ddb403";
 
 // maclarian imports for LSF and LOCA conversion
 use crate::maclarian::converter::{from_lsx, loca_from_xml};
-use crate::maclarian::formats::lsf::write_lsf;
 use crate::maclarian::formats::loca::write_loca;
+use crate::maclarian::formats::lsf::write_lsf;
 
 /// Write LSX content as LSF binary file
 fn write_lsx_as_lsf<P: AsRef<Path>>(lsx_content: &str, dest: P) -> std::io::Result<()> {
@@ -87,25 +87,40 @@ pub fn export_dye_mod(state: &DyesState, output_dir: &Path, mod_name: &str) -> S
     // Generate and write all files
     let results = vec![
         // Localization (all dyes combined - XML + .loca binary)
-        write_localization_files(output_dir, mod_name, &dyes,
-            &container_name_handle, &container_desc_handle),
-
+        write_localization_files(
+            output_dir,
+            mod_name,
+            &dyes,
+            &container_name_handle,
+            &container_desc_handle,
+        ),
         // Meta
-        write_meta_lsx(output_dir, mod_name, &mod_uuid, &author, &description,
-            version_major, version_minor, version_patch, version_build),
-
+        write_meta_lsx(
+            output_dir,
+            mod_name,
+            &mod_uuid,
+            &author,
+            &description,
+            version_major,
+            version_minor,
+            version_patch,
+            version_build,
+        ),
         // Stats (all dyes combined)
         write_object_txt(output_dir, mod_name, &dyes, &container_template_uuid),
         write_item_combos_txt(output_dir, mod_name, &dyes),
         write_treasure_table_txt(output_dir, mod_name, &dyes, &state.selected_vendors.get()),
-
         // RootTemplates (all dyes combined)
-        write_root_templates_lsx(output_dir, mod_name, &dyes,
-            &container_template_uuid, &container_name_handle, &container_desc_handle),
-
+        write_root_templates_lsx(
+            output_dir,
+            mod_name,
+            &dyes,
+            &container_template_uuid,
+            &container_name_handle,
+            &container_desc_handle,
+        ),
         // Color Presets (all dyes combined)
         write_color_presets_lsx(output_dir, mod_name, &dyes),
-
         // GUI / Icons
         write_texture_atlas_info_lsx(output_dir, mod_name, &dyes),
         write_texture_bank_lsx(output_dir, mod_name),
@@ -120,7 +135,12 @@ pub fn export_dye_mod(state: &DyesState, output_dir: &Path, mod_name: &str) -> S
     }
 
     let count = dyes.len();
-    format!("Exported {} dye{} to {}", count, if count == 1 { "" } else { "s" }, output_dir.display())
+    format!(
+        "Exported {} dye{} to {}",
+        count,
+        if count == 1 { "" } else { "s" },
+        output_dir.display()
+    )
 }
 
 /// Create the mod directory structure
@@ -129,7 +149,10 @@ fn create_mod_structure(output_dir: &Path, mod_name: &str) -> std::io::Result<()
         format!("Localization/English"),
         format!("Mods/{}", mod_name),
         format!("Public/{}/Assets/Textures/Icons", mod_name),
-        format!("Public/{}/Content/Assets/Characters/[PAK]_DYE_Colors", mod_name),
+        format!(
+            "Public/{}/Content/Assets/Characters/[PAK]_DYE_Colors",
+            mod_name
+        ),
         format!("Public/{}/Content/UI/[PAK]_UI", mod_name),
         format!("Public/{}/GUI", mod_name),
         format!("Public/{}/RootTemplates", mod_name),
@@ -169,8 +192,7 @@ fn write_localization_files(
     let container_entries = format!(
         r#"	<content contentuid="{}" version="1">{} Dye Pouch</content>
 	<content contentuid="{}" version="1">A pouch containing all {} dyes. Open it to add them to your inventory.</content>"#,
-        container_name_handle, mod_name,
-        container_desc_handle, mod_name
+        container_name_handle, mod_name, container_desc_handle, mod_name
     );
 
     let mut all_entries = dye_entries;
@@ -343,7 +365,8 @@ object category "I_{mod_name}_DyePouch",1,0,0,0,0,0,0,0
     // Add container to selected vendor tables
     for (idx, vendor) in VENDOR_DEFS.iter().enumerate() {
         // Include if always enabled OR if selected
-        let is_selected = vendor.always_enabled || selected_vendors.get(idx).copied().unwrap_or(false);
+        let is_selected =
+            vendor.always_enabled || selected_vendors.get(idx).copied().unwrap_or(false);
         if is_selected {
             content.push_str(&format!(
                 r#"new treasuretable "{}"
@@ -441,10 +464,7 @@ fn write_root_templates_lsx(
         all_entries.join("\n")
     );
 
-    let path = output_dir.join(format!(
-        "Public/{}/RootTemplates/_merged.lsf",
-        mod_name
-    ));
+    let path = output_dir.join(format!("Public/{}/RootTemplates/_merged.lsf", mod_name));
     write_lsx_as_lsf(&content, path)
 }
 
@@ -652,8 +672,14 @@ fn write_placeholder_dds(
     for dye in dyes {
         let icon_name = format!("{}_Icon", dye.name);
         let paths = [
-            format!("Public/Game/GUI/Assets/Tooltips/ItemIcons/{}.DDS", icon_name),
-            format!("Public/Game/GUI/Assets/ControllerUIIcons/items_png/{}.DDS", icon_name),
+            format!(
+                "Public/Game/GUI/Assets/Tooltips/ItemIcons/{}.DDS",
+                icon_name
+            ),
+            format!(
+                "Public/Game/GUI/Assets/ControllerUIIcons/items_png/{}.DDS",
+                icon_name
+            ),
         ];
         for path in &paths {
             fs::write(output_dir.join(path), &single_icon_dds)?;
@@ -699,7 +725,8 @@ fn create_dds_data(width: u32, height: u32, dyes: &[GeneratedDyeEntry]) -> Vec<u
         .iter()
         .map(|dye| {
             // Use the Cloth_Primary color as the icon color (magenta if missing/invalid)
-            dye.colors.get("Cloth_Primary")
+            dye.colors
+                .get("Cloth_Primary")
                 .and_then(|hex| parse_hex_color(hex))
                 .unwrap_or((255, 0, 255))
         })
@@ -717,9 +744,9 @@ fn create_dds_data(width: u32, height: u32, dyes: &[GeneratedDyeEntry]) -> Vec<u
                 (128, 128, 128) // Gray for empty slots
             };
 
-            dds_data.push(b);   // Blue
-            dds_data.push(g);   // Green
-            dds_data.push(r);   // Red
+            dds_data.push(b); // Blue
+            dds_data.push(g); // Green
+            dds_data.push(r); // Red
             dds_data.push(255); // Alpha
         }
     }

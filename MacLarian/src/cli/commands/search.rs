@@ -3,7 +3,9 @@
 use std::path::Path;
 use std::time::Instant;
 
-use crate::cli::progress::{print_step, print_done, simple_spinner, LOOKING_GLASS, LINK, DISK, SPARKLE};
+use crate::cli::progress::{
+    DISK, LINK, LOOKING_GLASS, SPARKLE, print_done, print_step, simple_spinner,
+};
 use crate::search::{FileType, SearchIndex};
 
 /// Build a search index from a PAK file
@@ -12,13 +14,23 @@ pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow:
     let total_steps = if fulltext { 3 } else { 2 } + usize::from(output.is_some());
     let mut step = 1;
 
-    print_step(step, total_steps, LOOKING_GLASS, &format!("Reading {}...", pak.display()));
+    print_step(
+        step,
+        total_steps,
+        LOOKING_GLASS,
+        &format!("Reading {}...", pak.display()),
+    );
     step += 1;
 
     let mut index = SearchIndex::new();
     index.build_index(&[pak.to_path_buf()])?;
 
-    print_step(step, total_steps, LINK, &format!("Indexed {} files", index.file_count()));
+    print_step(
+        step,
+        total_steps,
+        LINK,
+        &format!("Indexed {} files", index.file_count()),
+    );
     step += 1;
 
     if fulltext {
@@ -27,7 +39,10 @@ pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow:
 
         let pb = simple_spinner("Indexing content...");
         let doc_count = index.build_fulltext_index(&|progress| {
-            let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+            let msg = progress
+                .current_file
+                .as_deref()
+                .unwrap_or(progress.phase.as_str());
             pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
         })?;
         pb.finish_and_clear();
@@ -36,11 +51,19 @@ pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow:
     }
 
     if let Some(out) = output {
-        print_step(step, total_steps, DISK, &format!("Exporting to {}...", out.display()));
+        print_step(
+            step,
+            total_steps,
+            DISK,
+            &format!("Exporting to {}...", out.display()),
+        );
 
         let pb = simple_spinner("Exporting...");
         index.export_index_with_progress(out, &|progress| {
-            let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+            let msg = progress
+                .current_file
+                .as_deref()
+                .unwrap_or(progress.phase.as_str());
             pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
         })?;
         pb.finish_and_clear();
@@ -51,11 +74,7 @@ pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow:
 }
 
 /// Search for files by filename
-pub fn search_filename(
-    pak: &Path,
-    query: &str,
-    type_filter: Option<&str>,
-) -> anyhow::Result<()> {
+pub fn search_filename(pak: &Path, query: &str, type_filter: Option<&str>) -> anyhow::Result<()> {
     let mut index = SearchIndex::new();
 
     let pb = simple_spinner("Building index...");
@@ -96,7 +115,10 @@ pub fn search_path(pak: &Path, query: &str, type_filter: Option<&str>) -> anyhow
     if results.is_empty() {
         println!("No files found with path containing '{query}'");
     } else {
-        println!("Found {} files with path containing '{query}':", results.len());
+        println!(
+            "Found {} files with path containing '{query}':",
+            results.len()
+        );
         for file in results {
             println!(
                 "  {} ({}) - {} bytes",
@@ -142,7 +164,12 @@ pub fn search_content(pak: &Path, query: &str, limit: usize) -> anyhow::Result<(
     let started = std::time::Instant::now();
     let mut index = SearchIndex::new();
 
-    print_step(1, 2, LOOKING_GLASS, &format!("Reading {}...", pak.display()));
+    print_step(
+        1,
+        2,
+        LOOKING_GLASS,
+        &format!("Reading {}...", pak.display()),
+    );
     let pb = simple_spinner("Building index...");
     index.build_index(&[pak.to_path_buf()])?;
     pb.finish_and_clear();
@@ -150,7 +177,10 @@ pub fn search_content(pak: &Path, query: &str, limit: usize) -> anyhow::Result<(
     print_step(2, 2, LINK, "Building full-text index...");
     let pb = simple_spinner("Indexing content...");
     index.build_fulltext_index(&|progress| {
-        let msg = progress.current_file.as_deref().unwrap_or(progress.phase.as_str());
+        let msg = progress
+            .current_file
+            .as_deref()
+            .unwrap_or(progress.phase.as_str());
         pb.set_message(format!("{msg}: {}/{}", progress.current, progress.total));
     })?;
     pb.finish_and_clear();
@@ -163,12 +193,7 @@ pub fn search_content(pak: &Path, query: &str, limit: usize) -> anyhow::Result<(
         } else {
             println!("Found {} results for '{query}':", results.len());
             for (i, result) in results.iter().enumerate() {
-                println!(
-                    "  {}. {} (score: {:.2})",
-                    i + 1,
-                    result.path,
-                    result.score
-                );
+                println!("  {}. {} (score: {:.2})", i + 1, result.path, result.score);
                 if let Some(snippet) = &result.snippet {
                     // Show a truncated snippet
                     let clean_snippet = snippet.replace('\n', " ");
@@ -205,12 +230,7 @@ pub fn search_index(index_dir: &Path, query: &str, limit: usize) -> anyhow::Resu
         } else {
             println!("Found {} results for '{query}':", results.len());
             for (i, result) in results.iter().enumerate() {
-                println!(
-                    "  {}. {} (score: {:.2})",
-                    i + 1,
-                    result.path,
-                    result.score
-                );
+                println!("  {}. {} (score: {:.2})", i + 1, result.path, result.score);
             }
         }
     } else {

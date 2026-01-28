@@ -6,4 +6,4 @@
 //!
 //! Re-exports shared utilities from the parent module.
 
-pub use crate::converter::gr2_gltf::shared::{half_to_f32, decode_qtangent};
+pub use crate::converter::gr2_gltf::shared::{decode_qtangent, half_to_f32};

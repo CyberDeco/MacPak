@@ -6,7 +6,9 @@ use floem::prelude::*;
 
 use crate::gui::state::EditorTab;
 
-use super::super::search::{find_next, find_previous, perform_search, replace_all, replace_current};
+use super::super::search::{
+    find_next, find_previous, perform_search, replace_all, replace_current,
+};
 
 pub fn search_panel(tab: EditorTab) -> impl IntoView {
     let visible = tab.search_visible;
@@ -48,15 +50,13 @@ pub fn search_panel(tab: EditorTab) -> impl IntoView {
                 h_stack((
                     label(|| "Find:").style(|s| s.width(60.0)),
                     {
-                        let input = text_input(search_text)
-                            .placeholder("Search...")
-                            .style(|s| {
-                                s.width(250.0)
-                                    .padding(6.0)
-                                    .border(1.0)
-                                    .border_color(Color::rgb8(200, 200, 200))
-                                    .border_radius(4.0)
-                            });
+                        let input = text_input(search_text).placeholder("Search...").style(|s| {
+                            s.width(250.0)
+                                .padding(6.0)
+                                .border(1.0)
+                                .border_color(Color::rgb8(200, 200, 200))
+                                .border_radius(4.0)
+                        });
                         // Auto-focus the search input when panel opens
                         let input_id = input.id();
                         input_id.request_focus();
@@ -226,8 +226,7 @@ fn search_option_toggle(
                 .font_family("monospace".to_string());
 
             if is_active {
-                s.background(Color::rgb8(33, 150, 243))
-                    .color(Color::WHITE)
+                s.background(Color::rgb8(33, 150, 243)).color(Color::WHITE)
             } else {
                 s.background(Color::rgb8(230, 230, 230))
                     .color(Color::rgb8(80, 80, 80))

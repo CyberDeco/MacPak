@@ -4,10 +4,13 @@ use std::collections::HashMap;
 
 use crate::error::Result;
 
-use super::constants::{MEMBER_REAL32, MEMBER_UINT8, MEMBER_BINORMAL_INT16, MEMBER_REAL16, MEMBER_REF_TO_ARRAY, MEMBER_STRING, MEMBER_INT32, MEMBER_TRANSFORM, MEMBER_REFERENCE, MEMBER_ARRAY_OF_REFS};
+use super::Gr2Writer;
+use super::constants::{
+    MEMBER_ARRAY_OF_REFS, MEMBER_BINORMAL_INT16, MEMBER_INT32, MEMBER_REAL16, MEMBER_REAL32,
+    MEMBER_REF_TO_ARRAY, MEMBER_REFERENCE, MEMBER_STRING, MEMBER_TRANSFORM, MEMBER_UINT8,
+};
 use super::section::Section;
 use super::types::{MemberDef, write_type_def};
-use super::Gr2Writer;
 
 impl Gr2Writer {
     pub(super) fn build_sections(&self) -> Result<(Vec<Section>, u32, u32)> {
@@ -93,7 +96,8 @@ impl Gr2Writer {
         sections[0].align(8);
 
         // Write type definitions
-        let (vertex_type_offset, root_type_offset) = self.write_type_definitions(&mut sections, &string_offsets);
+        let (vertex_type_offset, root_type_offset) =
+            self.write_type_definitions(&mut sections, &string_offsets);
 
         // Track offsets
         let mut mesh_offsets: Vec<u32> = Vec::new();
@@ -102,10 +106,12 @@ impl Gr2Writer {
         let mut skeleton_offsets: Vec<u32> = Vec::new();
 
         // Write vertex and index data
-        let index_offsets = self.write_vertex_and_index_data(&mut sections, &mut vertex_data_offsets);
+        let index_offsets =
+            self.write_vertex_and_index_data(&mut sections, &mut vertex_data_offsets);
 
         // Write skeleton data
-        let _bone_array_offset = self.write_skeleton_data(&mut sections, &string_offsets, &mut skeleton_offsets);
+        let _bone_array_offset =
+            self.write_skeleton_data(&mut sections, &string_offsets, &mut skeleton_offsets);
 
         // Write mesh structures
         self.write_mesh_structures(
@@ -512,7 +518,11 @@ impl Gr2Writer {
         if skeleton_offsets.is_empty() {
             sections[0].write_null_array();
         } else {
-            sections[0].write_array_ref(skeleton_offsets.len() as u32, 0, skeleton_ptr_array_offset);
+            sections[0].write_array_ref(
+                skeleton_offsets.len() as u32,
+                0,
+                skeleton_ptr_array_offset,
+            );
         }
         // VertexDatas
         sections[0].write_array_ref(self.meshes.len() as u32, 0, vd_ptr_array_offset);

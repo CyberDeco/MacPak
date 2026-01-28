@@ -11,7 +11,7 @@ pub mod theme;
 pub use progress::{SharedProgress, progress_overlay};
 pub use results::results_section;
 pub use styles::{card_style, header_section, operation_button};
-pub use theme::{Theme, ThemeColors, EffectiveTheme, init_theme, theme_signal, colors, themed};
+pub use theme::{EffectiveTheme, Theme, ThemeColors, colors, init_theme, theme_signal, themed};
 
 use floem::prelude::*;
 use im::Vector as ImVector;

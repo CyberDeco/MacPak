@@ -16,26 +16,25 @@ pub fn save_file(tab: EditorTab) {
         let format = tab.file_format.get().to_uppercase();
         let converted_from_binary = tab.converted_from_lsf.get();
 
-        let result = if (format == "LSF" || format == "LSFX") && converted_from_binary {
-            // Convert XML back to LSF binary
-            match maclarian::converter::from_lsx(&content) {
-                Ok(lsf_doc) => {
-                    maclarian::formats::lsf::write_lsf(&lsf_doc, path).map_err(|e| e.to_string())
+        let result =
+            if (format == "LSF" || format == "LSFX") && converted_from_binary {
+                // Convert XML back to LSF binary
+                match maclarian::converter::from_lsx(&content) {
+                    Ok(lsf_doc) => maclarian::formats::lsf::write_lsf(&lsf_doc, path)
+                        .map_err(|e| e.to_string()),
+                    Err(e) => Err(format!("Failed to parse LSX: {}", e)),
                 }
-                Err(e) => Err(format!("Failed to parse LSX: {}", e)),
-            }
-        } else if format == "LOCA" && converted_from_binary {
-            // Convert XML back to LOCA binary
-            match maclarian::converter::loca_from_xml(&content) {
-                Ok(resource) => {
-                    maclarian::formats::loca::write_loca(path, &resource).map_err(|e| e.to_string())
+            } else if format == "LOCA" && converted_from_binary {
+                // Convert XML back to LOCA binary
+                match maclarian::converter::loca_from_xml(&content) {
+                    Ok(resource) => maclarian::formats::loca::write_loca(path, &resource)
+                        .map_err(|e| e.to_string()),
+                    Err(e) => Err(format!("Failed to parse LOCA XML: {}", e)),
                 }
-                Err(e) => Err(format!("Failed to parse LOCA XML: {}", e)),
-            }
-        } else {
-            // Write as plain text
-            fs::write(path, &content).map_err(|e| e.to_string())
-        };
+            } else {
+                // Write as plain text
+                fs::write(path, &content).map_err(|e| e.to_string())
+            };
 
         match result {
             Ok(_) => {

@@ -14,21 +14,21 @@ pub mod state;
 pub mod tabs;
 pub mod utils;
 
+use floem::Application;
 use floem::event::{Event, EventListener};
 use floem::keyboard::{Key, Modifiers, NamedKey};
 use floem::prelude::*;
-use floem::Application;
 use floem::window::WindowConfig;
 
-use shared::{init_theme, theme_signal, ThemeColors};
+use shared::{ThemeColors, init_theme, theme_signal};
 use state::*;
-use tabs::*;
-use tabs::editor::{init_config_state, open_file_dialog, save_file};
 use tabs::browser::{cleanup_temp_files, open_folder_dialog};
-use tabs::pak_ops::extract_pak_file;
-use tabs::gr2::open_gr2_file;
-use tabs::virtual_textures::open_gts_file;
 use tabs::dyes::import_from_mod_folder;
+use tabs::editor::{init_config_state, open_file_dialog, save_file};
+use tabs::gr2::open_gr2_file;
+use tabs::pak_ops::extract_pak_file;
+use tabs::virtual_textures::open_gts_file;
+use tabs::*;
 use utils::config_dialog;
 
 /// Run the MacPak GUI application
@@ -56,8 +56,8 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     app_state.active_tab.set(persisted.active_tab);
 
     let config_state = ConfigState::new();
-    init_config_state(config_state.clone());  // For recent files tracking
-    init_theme(config_state.theme.get());     // Initialize global theme signal
+    init_config_state(config_state.clone()); // For recent files tracking
+    init_theme(config_state.theme.get()); // Initialize global theme signal
 
     let editor_tabs_state = EditorTabsState::new();
     editor_tabs_state.apply_persisted(&persisted.editor);
@@ -104,7 +104,6 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     v_stack((
         // Tab bar
         tab_bar(active_tab),
-
         // Tab content
         tab_content(
             active_tab,
@@ -119,11 +118,14 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
             dialogue_state,
             config_state_for_dialogue,
         ),
-
         // Config dialog (overlays when visible)
         config_dialog(config_state.clone()),
     ))
-    .style(|s| s.width_full().height_full().position(floem::style::Position::Relative))
+    .style(|s| {
+        s.width_full()
+            .height_full()
+            .position(floem::style::Position::Relative)
+    })
     .window_title(|| "MacPak".to_string())
     // Signal that app is ready once the view is rendered
     .on_event_cont(EventListener::WindowGotFocus, move |_| {
@@ -199,10 +201,16 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
             if is_cmd_or_ctrl && is_o_key {
                 match current_tab {
                     0 => open_folder_dialog(browser_state_for_keyboard.clone()), // Browser - open folder
-                    1 => open_file_dialog(editor_tabs_for_keyboard.clone()),     // Editor - open file
-                    2 => extract_pak_file(pak_ops_state_for_keyboard.clone()),   // PAK Ops - extract PAK
-                    3 => open_gr2_file(gr2_state_for_keyboard.clone(), config_state_for_gr2_keyboard.clone()),          // GR2 - open GR2 file
-                    4 => open_gts_file(vt_state_for_keyboard.clone(), config_state_for_vt_keyboard.clone()),           // Textures - open GTS file
+                    1 => open_file_dialog(editor_tabs_for_keyboard.clone()), // Editor - open file
+                    2 => extract_pak_file(pak_ops_state_for_keyboard.clone()), // PAK Ops - extract PAK
+                    3 => open_gr2_file(
+                        gr2_state_for_keyboard.clone(),
+                        config_state_for_gr2_keyboard.clone(),
+                    ), // GR2 - open GR2 file
+                    4 => open_gts_file(
+                        vt_state_for_keyboard.clone(),
+                        config_state_for_vt_keyboard.clone(),
+                    ), // Textures - open GTS file
                     5 => {
                         // Dyes - import from mod folder
                         // Create temporary signals for display (actual data stored in state)
@@ -212,7 +220,10 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
                         let temp_author = RwSignal::new(String::new());
                         import_from_mod_folder(
                             dyes_state_for_keyboard.clone(),
-                            temp_name, temp_display, temp_mod_name, temp_author
+                            temp_name,
+                            temp_display,
+                            temp_mod_name,
+                            temp_author,
                         );
                     }
                     // Dialogue tab (7) - no CMD+O action, use toolbar buttons instead
@@ -288,13 +299,12 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
         tab_button("💬 Dialogue", 7, active_tab),
         empty().style(|s| s.flex_grow(1.0)),
         // App info
-        label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION")))
-            .style(move |s| {
-                let colors = theme_signal()
-                    .map(|t| ThemeColors::for_theme(t.get().effective()))
-                    .unwrap_or_else(ThemeColors::dark);
-                s.color(colors.text_muted).font_size(12.0)
-            }),
+        label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION"))).style(move |s| {
+            let colors = theme_signal()
+                .map(|t| ThemeColors::for_theme(t.get().effective()))
+                .unwrap_or_else(ThemeColors::dark);
+            s.color(colors.text_muted).font_size(12.0)
+        }),
     ))
     .style(move |s| {
         let colors = theme_signal()
@@ -309,7 +319,11 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
     })
 }
 
-fn tab_button(label_text: &'static str, index: usize, active_tab: RwSignal<usize>) -> impl IntoView {
+fn tab_button(
+    label_text: &'static str,
+    index: usize,
+    active_tab: RwSignal<usize>,
+) -> impl IntoView {
     button(label_text)
         .style(move |s| {
             let colors = theme_signal()
@@ -323,15 +337,11 @@ fn tab_button(label_text: &'static str, index: usize, active_tab: RwSignal<usize
                 .font_size(13.0);
 
             if is_active {
-                s.background(colors.bg_elevated)
-                    .color(colors.text_primary)
+                s.background(colors.bg_elevated).color(colors.text_primary)
             } else {
                 s.background(Color::TRANSPARENT)
                     .color(colors.text_secondary)
-                    .hover(|s| {
-                        s.background(colors.bg_hover)
-                            .color(colors.text_primary)
-                    })
+                    .hover(|s| s.background(colors.bg_hover).color(colors.text_primary))
             }
         })
         .action(move || {
@@ -354,25 +364,56 @@ fn tab_content(
 ) -> impl IntoView {
     dyn_container(
         move || active_tab.get(),
-        move |tab_index| {
-            match tab_index {
-                0 => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab, config_state.clone()).into_any(),
-                1 => editor_tab(app_state.clone(), editor_tabs_state.clone()).into_any(),
-                2 => pak_ops_tab(app_state.clone(), pak_ops_state.clone(), config_state.clone()).into_any(),
-                3 => gr2_tab(app_state.clone(), gr2_state.clone(), config_state.clone()).into_any(),
-                4 => virtual_textures_tab(app_state.clone(), vt_state.clone(), config_state.clone()).into_any(),
-                5 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
-                6 => search_tab(app_state.clone(), search_state.clone(), config_state.clone(), editor_tabs_state.clone(), dialogue_state.clone(), active_tab).into_any(),
-                7 => dialogue_tab(app_state.clone(), dialogue_state.clone(), config_state.clone()).into_any(),
-                _ => browser_tab(app_state.clone(), browser_state.clone(), editor_tabs_state.clone(), active_tab, config_state.clone()).into_any(),
-            }
+        move |tab_index| match tab_index {
+            0 => browser_tab(
+                app_state.clone(),
+                browser_state.clone(),
+                editor_tabs_state.clone(),
+                active_tab,
+                config_state.clone(),
+            )
+            .into_any(),
+            1 => editor_tab(app_state.clone(), editor_tabs_state.clone()).into_any(),
+            2 => pak_ops_tab(
+                app_state.clone(),
+                pak_ops_state.clone(),
+                config_state.clone(),
+            )
+            .into_any(),
+            3 => gr2_tab(app_state.clone(), gr2_state.clone(), config_state.clone()).into_any(),
+            4 => virtual_textures_tab(app_state.clone(), vt_state.clone(), config_state.clone())
+                .into_any(),
+            5 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
+            6 => search_tab(
+                app_state.clone(),
+                search_state.clone(),
+                config_state.clone(),
+                editor_tabs_state.clone(),
+                dialogue_state.clone(),
+                active_tab,
+            )
+            .into_any(),
+            7 => dialogue_tab(
+                app_state.clone(),
+                dialogue_state.clone(),
+                config_state.clone(),
+            )
+            .into_any(),
+            _ => browser_tab(
+                app_state.clone(),
+                browser_state.clone(),
+                editor_tabs_state.clone(),
+                active_tab,
+                config_state.clone(),
+            )
+            .into_any(),
         },
     )
     .style(|s| {
         s.width_full()
             .flex_grow(1.0)
             .flex_basis(0.0)
-            .min_height(0.0)  // Allow content to shrink for scroll
+            .min_height(0.0) // Allow content to shrink for scroll
             .background(Color::WHITE)
     })
 }

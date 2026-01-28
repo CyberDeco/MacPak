@@ -31,7 +31,9 @@ impl GltfBuilder {
         material_idx: Option<usize>,
     ) -> usize {
         // Extract vertex attributes with X-axis negation for coordinate system conversion
-        let positions: Vec<[f32; 3]> = mesh_data.vertices.iter()
+        let positions: Vec<[f32; 3]> = mesh_data
+            .vertices
+            .iter()
             .map(|v| [-v.position[0], v.position[1], v.position[2]])
             .collect();
         let uvs: Vec<[f32; 2]> = mesh_data.vertices.iter().map(|v| v.uv).collect();
@@ -64,7 +66,9 @@ impl GltfBuilder {
         // Only add joints/weights if mesh has skinning
         if skin_idx.is_some() {
             // Clean joints/weights: glTF requires joint index to be 0 when weight is 0
-            let (joints, weights): (Vec<[u8; 4]>, Vec<[u8; 4]>) = mesh_data.vertices.iter()
+            let (joints, weights): (Vec<[u8; 4]>, Vec<[u8; 4]>) = mesh_data
+                .vertices
+                .iter()
                 .map(|v| {
                     let mut j = v.bone_indices;
                     let w = v.bone_weights;
@@ -87,7 +91,8 @@ impl GltfBuilder {
         let indices_idx = if mesh_data.indices.is_empty() {
             None
         } else {
-            let flipped_indices: Vec<u32> = mesh_data.indices
+            let flipped_indices: Vec<u32> = mesh_data
+                .indices
                 .chunks(3)
                 .flat_map(|tri| {
                     if tri.len() == 3 {

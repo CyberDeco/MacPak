@@ -1,11 +1,13 @@
 //! Tree building logic for constructing the display node tree
 
-use std::collections::{HashMap, HashSet};
-use floem::prelude::RwSignal;
-use crate::dialog::{Dialog, NodeConstructor};
-use crate::gui::state::{DisplayNode, DisplayFlag};
-use super::chain::{follow_chain_for_text, get_jump_effective_children, resolve_passthrough_children};
+use super::chain::{
+    follow_chain_for_text, get_jump_effective_children, resolve_passthrough_children,
+};
 use super::maps::{build_alias_logicalname_map, build_ancestor_sibling_map};
+use crate::dialog::{Dialog, NodeConstructor};
+use crate::gui::state::{DisplayFlag, DisplayNode};
+use floem::prelude::RwSignal;
+use std::collections::{HashMap, HashSet};
 
 /// Build display nodes from a dialog
 pub fn build_display_nodes(dialog: &Dialog) -> Vec<DisplayNode> {
@@ -21,13 +23,35 @@ pub fn build_display_nodes(dialog: &Dialog) -> Vec<DisplayNode> {
 
     // Start from root nodes (parent_expanded = true for root level)
     for root_uuid in &dialog.root_nodes {
-        build_node_tree(dialog, root_uuid, None, 0, true, &mut nodes, &mut visited, &alias_logicalnames, &sibling_map, &HashSet::new());
+        build_node_tree(
+            dialog,
+            root_uuid,
+            None,
+            0,
+            true,
+            &mut nodes,
+            &mut visited,
+            &alias_logicalnames,
+            &sibling_map,
+            &HashSet::new(),
+        );
     }
 
     // Add any orphaned nodes
     for uuid in &dialog.node_order {
         if !visited.contains(uuid) {
-            build_node_tree(dialog, uuid, None, 0, true, &mut nodes, &mut visited, &alias_logicalnames, &sibling_map, &HashSet::new());
+            build_node_tree(
+                dialog,
+                uuid,
+                None,
+                0,
+                true,
+                &mut nodes,
+                &mut visited,
+                &alias_logicalnames,
+                &sibling_map,
+                &HashSet::new(),
+            );
         }
     }
 
@@ -79,7 +103,10 @@ fn build_node_tree(
     let is_visual_state = node.constructor == NodeConstructor::VisualState;
     let is_jump_alias_container = !has_text && !has_flags && node.children.len() == 1 && {
         if let Some(child) = dialog.get_node(&node.children[0]) {
-            matches!(child.constructor, NodeConstructor::Jump | NodeConstructor::Alias | NodeConstructor::VisualState)
+            matches!(
+                child.constructor,
+                NodeConstructor::Jump | NodeConstructor::Alias | NodeConstructor::VisualState
+            )
         } else {
             false
         }
@@ -95,9 +122,27 @@ fn build_node_tree(
 
         for child_uuid in &node.children {
             if visited.contains(child_uuid) {
-                build_link_node(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes);
+                build_link_node(
+                    dialog,
+                    child_uuid,
+                    parent_uuid,
+                    depth,
+                    parent_expanded,
+                    nodes,
+                );
             } else {
-                build_node_tree(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes, visited, alias_logicalnames, sibling_map, ancestor_siblings);
+                build_node_tree(
+                    dialog,
+                    child_uuid,
+                    parent_uuid,
+                    depth,
+                    parent_expanded,
+                    nodes,
+                    visited,
+                    alias_logicalnames,
+                    sibling_map,
+                    ancestor_siblings,
+                );
             }
         }
         return;
@@ -108,31 +153,56 @@ fn build_node_tree(
     // Note: check for actual flags, not just empty FlagGroups (parser may create empty groups)
     let has_actual_flags = node.check_flags.iter().any(|fg| !fg.flags.is_empty())
         || node.set_flags.iter().any(|fg| !fg.flags.is_empty());
-    let is_passthrough_jump = node.constructor == NodeConstructor::Jump
-        && !has_actual_flags
-        && node.children.is_empty();
+    let is_passthrough_jump =
+        node.constructor == NodeConstructor::Jump && !has_actual_flags && node.children.is_empty();
 
     if is_passthrough_jump {
         visited.insert(uuid.to_string());
         if let Some(ref target_uuid) = node.jump_target {
             if let Some(target_node) = dialog.get_node(target_uuid) {
                 // Get effective children: follow through VisualState if needed
-                let effective_children = get_jump_effective_children(dialog, target_node, node.jump_target_point);
+                let effective_children =
+                    get_jump_effective_children(dialog, target_node, node.jump_target_point);
 
                 // If target is already visited AND has children, link to target directly
                 // This prevents cascading into children's children which creates too many links
                 // If target has no children, do nothing (matches old behavior)
                 if visited.contains(target_uuid) {
                     if !effective_children.is_empty() {
-                        build_link_node(dialog, target_uuid, parent_uuid, depth, parent_expanded, nodes);
+                        build_link_node(
+                            dialog,
+                            target_uuid,
+                            parent_uuid,
+                            depth,
+                            parent_expanded,
+                            nodes,
+                        );
                     }
                     // else: target has no children, nothing to show
                 } else {
                     for child_uuid in &effective_children {
                         if visited.contains(child_uuid) {
-                            build_link_node(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes);
+                            build_link_node(
+                                dialog,
+                                child_uuid,
+                                parent_uuid,
+                                depth,
+                                parent_expanded,
+                                nodes,
+                            );
                         } else {
-                            build_node_tree(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes, visited, alias_logicalnames, sibling_map, ancestor_siblings);
+                            build_node_tree(
+                                dialog,
+                                child_uuid,
+                                parent_uuid,
+                                depth,
+                                parent_expanded,
+                                nodes,
+                                visited,
+                                alias_logicalnames,
+                                sibling_map,
+                                ancestor_siblings,
+                            );
                         }
                     }
                 }
@@ -157,16 +227,35 @@ fn build_node_tree(
                             // VisualState is pass-through - follow through to its content children
                             for grandchild_uuid in &child_node.children {
                                 if visited.contains(grandchild_uuid) {
-                                    build_link_node(dialog, grandchild_uuid, parent_uuid, depth, parent_expanded, nodes);
+                                    build_link_node(
+                                        dialog,
+                                        grandchild_uuid,
+                                        parent_uuid,
+                                        depth,
+                                        parent_expanded,
+                                        nodes,
+                                    );
                                 } else {
-                                    build_node_tree(dialog, grandchild_uuid, parent_uuid, depth, parent_expanded, nodes, visited, alias_logicalnames, sibling_map, ancestor_siblings);
+                                    build_node_tree(
+                                        dialog,
+                                        grandchild_uuid,
+                                        parent_uuid,
+                                        depth,
+                                        parent_expanded,
+                                        nodes,
+                                        visited,
+                                        alias_logicalnames,
+                                        sibling_map,
+                                        ancestor_siblings,
+                                    );
                                 }
                             }
                             continue;
                         }
                         // Check for pass-through Jump (no actual flags, no children)
-                        let has_actual_flags = child_node.check_flags.iter().any(|fg| !fg.flags.is_empty())
-                            || child_node.set_flags.iter().any(|fg| !fg.flags.is_empty());
+                        let has_actual_flags =
+                            child_node.check_flags.iter().any(|fg| !fg.flags.is_empty())
+                                || child_node.set_flags.iter().any(|fg| !fg.flags.is_empty());
                         let is_passthrough_jump = child_node.constructor == NodeConstructor::Jump
                             && !has_actual_flags
                             && child_node.children.is_empty();
@@ -176,17 +265,27 @@ fn build_node_tree(
                         }
                     }
                     // Not pass-through, create link
-                    build_link_node(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes);
+                    build_link_node(
+                        dialog,
+                        child_uuid,
+                        parent_uuid,
+                        depth,
+                        parent_expanded,
+                        nodes,
+                    );
                 } else {
                     // Child not visited yet - but if it's a pass-through Jump whose target
                     // content is all visited, skip it. Otherwise, it creates links at the
                     // wrong level (as siblings to the parent's other children).
                     if let Some(child_node) = dialog.get_node(child_uuid) {
                         // Check for actual flags (not just empty FlagGroups)
-                        let has_actual_check_flags = child_node.check_flags.iter().any(|fg| !fg.flags.is_empty());
-                        let has_actual_set_flags = child_node.set_flags.iter().any(|fg| !fg.flags.is_empty());
+                        let has_actual_check_flags =
+                            child_node.check_flags.iter().any(|fg| !fg.flags.is_empty());
+                        let has_actual_set_flags =
+                            child_node.set_flags.iter().any(|fg| !fg.flags.is_empty());
 
-                        let is_child_passthrough_jump = child_node.constructor == NodeConstructor::Jump
+                        let is_child_passthrough_jump = child_node.constructor
+                            == NodeConstructor::Jump
                             && !has_actual_check_flags
                             && !has_actual_set_flags
                             && child_node.children.is_empty();
@@ -194,8 +293,13 @@ fn build_node_tree(
                         if is_child_passthrough_jump {
                             if let Some(ref target_uuid) = child_node.jump_target {
                                 if let Some(target_node) = dialog.get_node(target_uuid) {
-                                    let effective = get_jump_effective_children(dialog, target_node, child_node.jump_target_point);
-                                    let all_visited = !effective.is_empty() && effective.iter().all(|c| visited.contains(c));
+                                    let effective = get_jump_effective_children(
+                                        dialog,
+                                        target_node,
+                                        child_node.jump_target_point,
+                                    );
+                                    let all_visited = !effective.is_empty()
+                                        && effective.iter().all(|c| visited.contains(c));
                                     if all_visited {
                                         // Content already shown elsewhere - skip to avoid duplicate links
                                         continue;
@@ -204,7 +308,18 @@ fn build_node_tree(
                             }
                         }
                     }
-                    build_node_tree(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes, visited, alias_logicalnames, sibling_map, ancestor_siblings);
+                    build_node_tree(
+                        dialog,
+                        child_uuid,
+                        parent_uuid,
+                        depth,
+                        parent_expanded,
+                        nodes,
+                        visited,
+                        alias_logicalnames,
+                        sibling_map,
+                        ancestor_siblings,
+                    );
                 }
             }
             return;
@@ -232,9 +347,27 @@ fn build_node_tree(
                                     // Follow through VisualState to content children
                                     for grandchild_uuid in &child_node.children {
                                         if visited.contains(grandchild_uuid) {
-                                            build_link_node(dialog, grandchild_uuid, parent_uuid, depth, parent_expanded, nodes);
+                                            build_link_node(
+                                                dialog,
+                                                grandchild_uuid,
+                                                parent_uuid,
+                                                depth,
+                                                parent_expanded,
+                                                nodes,
+                                            );
                                         } else {
-                                            build_node_tree(dialog, grandchild_uuid, parent_uuid, depth, parent_expanded, nodes, visited, alias_logicalnames, sibling_map, ancestor_siblings);
+                                            build_node_tree(
+                                                dialog,
+                                                grandchild_uuid,
+                                                parent_uuid,
+                                                depth,
+                                                parent_expanded,
+                                                nodes,
+                                                visited,
+                                                alias_logicalnames,
+                                                sibling_map,
+                                                ancestor_siblings,
+                                            );
                                         }
                                     }
                                     continue;
@@ -242,9 +375,27 @@ fn build_node_tree(
                             }
 
                             if visited.contains(child_uuid) {
-                                build_link_node(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes);
+                                build_link_node(
+                                    dialog,
+                                    child_uuid,
+                                    parent_uuid,
+                                    depth,
+                                    parent_expanded,
+                                    nodes,
+                                );
                             } else {
-                                build_node_tree(dialog, child_uuid, parent_uuid, depth, parent_expanded, nodes, visited, alias_logicalnames, sibling_map, ancestor_siblings);
+                                build_node_tree(
+                                    dialog,
+                                    child_uuid,
+                                    parent_uuid,
+                                    depth,
+                                    parent_expanded,
+                                    nodes,
+                                    visited,
+                                    alias_logicalnames,
+                                    sibling_map,
+                                    ancestor_siblings,
+                                );
                             }
                         }
                         return;
@@ -293,7 +444,10 @@ fn build_node_tree(
         for flag in &flag_group.flags {
             display.check_flags.push(DisplayFlag {
                 // Store UUID for now, will be resolved to name later
-                name: flag.name.clone().unwrap_or_else(|| format!("__UUID__:{}", flag.uuid)),
+                name: flag
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| format!("__UUID__:{}", flag.uuid)),
                 value: flag.value,
                 param_val: flag.param_val,
             });
@@ -304,7 +458,10 @@ fn build_node_tree(
     for flag_group in &node.set_flags {
         for flag in &flag_group.flags {
             display.set_flags.push(DisplayFlag {
-                name: flag.name.clone().unwrap_or_else(|| format!("__UUID__:{}", flag.uuid)),
+                name: flag
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| format!("__UUID__:{}", flag.uuid)),
                 value: flag.value,
                 param_val: flag.param_val,
             });
@@ -317,7 +474,7 @@ fn build_node_tree(
     let own_logicalname = node.editor_data.get("logicalname").and_then(|logicalname| {
         if logicalname.starts_with("Alias (") && logicalname.ends_with(")") {
             // Extract inner name: "Alias (INCLUSION_LAE'ZEL)" -> "INCLUSION_LAE'ZEL"
-            Some(logicalname[7..logicalname.len()-1].to_string())
+            Some(logicalname[7..logicalname.len() - 1].to_string())
         } else if logicalname.starts_with("INCLUSION_") {
             Some(logicalname.clone())
         } else {
@@ -332,11 +489,14 @@ fn build_node_tree(
     let display_name = inherited_logicalname.or(own_logicalname);
 
     if let Some(name) = display_name {
-        display.check_flags.insert(0, DisplayFlag {
-            name,
-            value: true,
-            param_val: None,
-        });
+        display.check_flags.insert(
+            0,
+            DisplayFlag {
+                name,
+                value: true,
+                param_val: None,
+            },
+        );
         display.has_flags = true;
     }
 
@@ -366,7 +526,9 @@ fn build_node_tree(
                 // The speaker_list contains GlobalTemplate UUIDs that map to RootTemplates
                 // Store them as special marker for resolution in resolve_speaker_names()
                 // Filter out invalid entries like "@" or empty strings
-                let valid_uuids: Vec<_> = speaker.speaker_list.iter()
+                let valid_uuids: Vec<_> = speaker
+                    .speaker_list
+                    .iter()
                     .filter(|s| !s.is_empty() && *s != "@" && s.len() > 8)
                     .cloned()
                     .collect();
@@ -433,7 +595,7 @@ fn build_node_tree(
     if !inherited_state_contexts.is_empty() {
         display.editor_data.insert(
             "stateContext".to_string(),
-            inherited_state_contexts.join(" | ")
+            inherited_state_contexts.join(" | "),
         );
     }
 
@@ -476,11 +638,16 @@ fn build_node_tree(
                 let effective_target = if let Some(point) = node.jump_target_point {
                     let child_index = point as usize;
                     if child_index < target_node.children.len() {
-                        if let Some(entry_child) = dialog.get_node(&target_node.children[child_index]) {
+                        if let Some(entry_child) =
+                            dialog.get_node(&target_node.children[child_index])
+                        {
                             // Keep following first children until there's a Jump/Alias
                             let mut entry_node = entry_child;
                             loop {
-                                if matches!(entry_node.constructor, NodeConstructor::Jump | NodeConstructor::Alias) {
+                                if matches!(
+                                    entry_node.constructor,
+                                    NodeConstructor::Jump | NodeConstructor::Alias
+                                ) {
                                     break;
                                 }
                                 if entry_node.children.is_empty() {
@@ -510,17 +677,21 @@ fn build_node_tree(
                             display.speaker_name = "Narrator".to_string();
                         } else if speaker_idx >= 0 {
                             if let Some(speaker) = dialog.get_speaker(speaker_idx) {
-                                let valid_uuids: Vec<_> = speaker.speaker_list.iter()
+                                let valid_uuids: Vec<_> = speaker
+                                    .speaker_list
+                                    .iter()
                                     .filter(|s| !s.is_empty() && *s != "@" && s.len() > 8)
                                     .cloned()
                                     .collect();
                                 if !valid_uuids.is_empty() {
-                                    display.speaker_name = format!("__UUID__:{}", valid_uuids.join(";"));
+                                    display.speaker_name =
+                                        format!("__UUID__:{}", valid_uuids.join(";"));
                                 } else if !speaker.speaker_mapping_id.is_empty()
                                     && speaker.speaker_mapping_id != "@"
                                     && speaker.speaker_mapping_id.len() > 8
                                 {
-                                    display.speaker_name = format!("__UUID__:{}", speaker.speaker_mapping_id);
+                                    display.speaker_name =
+                                        format!("__UUID__:{}", speaker.speaker_mapping_id);
                                 }
                             }
                         }
@@ -567,17 +738,21 @@ fn build_node_tree(
                             display.speaker_name = "Narrator".to_string();
                         } else if speaker_idx >= 0 {
                             if let Some(speaker) = dialog.get_speaker(speaker_idx) {
-                                let valid_uuids: Vec<_> = speaker.speaker_list.iter()
+                                let valid_uuids: Vec<_> = speaker
+                                    .speaker_list
+                                    .iter()
                                     .filter(|s| !s.is_empty() && *s != "@" && s.len() > 8)
                                     .cloned()
                                     .collect();
                                 if !valid_uuids.is_empty() {
-                                    display.speaker_name = format!("__UUID__:{}", valid_uuids.join(";"));
+                                    display.speaker_name =
+                                        format!("__UUID__:{}", valid_uuids.join(";"));
                                 } else if !speaker.speaker_mapping_id.is_empty()
                                     && speaker.speaker_mapping_id != "@"
                                     && speaker.speaker_mapping_id.len() > 8
                                 {
-                                    display.speaker_name = format!("__UUID__:{}", speaker.speaker_mapping_id);
+                                    display.speaker_name =
+                                        format!("__UUID__:{}", speaker.speaker_mapping_id);
                                 }
                             }
                         }
@@ -635,10 +810,28 @@ fn build_node_tree(
 
             // Create links to each content node
             for content_uuid in &content_nodes {
-                build_link_node(dialog, content_uuid, Some(uuid), depth + 1, children_visible, nodes);
+                build_link_node(
+                    dialog,
+                    content_uuid,
+                    Some(uuid),
+                    depth + 1,
+                    children_visible,
+                    nodes,
+                );
             }
         } else {
-            build_node_tree(dialog, child_uuid, Some(uuid), depth + 1, children_visible, nodes, visited, alias_logicalnames, sibling_map, &child_ancestor_siblings);
+            build_node_tree(
+                dialog,
+                child_uuid,
+                Some(uuid),
+                depth + 1,
+                children_visible,
+                nodes,
+                visited,
+                alias_logicalnames,
+                sibling_map,
+                &child_ancestor_siblings,
+            );
         }
     }
 
@@ -658,16 +851,37 @@ fn build_node_tree(
             // If child is pass-through (no text, no flags, leads to VisualState or Jump/Alias)
             if !child_has_text && !child_has_flags {
                 if child_node.constructor == NodeConstructor::VisualState
-                    || (child_node.children.len() == 1 && dialog.get_node(&child_node.children[0]).map_or(false, |gc| gc.constructor == NodeConstructor::VisualState))
+                    || (child_node.children.len() == 1
+                        && dialog
+                            .get_node(&child_node.children[0])
+                            .map_or(false, |gc| gc.constructor == NodeConstructor::VisualState))
                 {
                     // Get content nodes through this pass-through chain
                     let content_nodes = get_content_nodes_for_link(dialog, child_uuid);
                     for content_uuid in &content_nodes {
                         if !effective_children.contains(content_uuid) {
                             if visited.contains(content_uuid) {
-                                build_link_node(dialog, content_uuid, Some(uuid), depth + 1, children_visible, nodes);
+                                build_link_node(
+                                    dialog,
+                                    content_uuid,
+                                    Some(uuid),
+                                    depth + 1,
+                                    children_visible,
+                                    nodes,
+                                );
                             } else {
-                                build_node_tree(dialog, content_uuid, Some(uuid), depth + 1, children_visible, nodes, visited, alias_logicalnames, sibling_map, &child_ancestor_siblings);
+                                build_node_tree(
+                                    dialog,
+                                    content_uuid,
+                                    Some(uuid),
+                                    depth + 1,
+                                    children_visible,
+                                    nodes,
+                                    visited,
+                                    alias_logicalnames,
+                                    sibling_map,
+                                    &child_ancestor_siblings,
+                                );
                             }
                         }
                     }
@@ -701,29 +915,43 @@ fn get_content_nodes_for_link_depth(dialog: &Dialog, uuid: &str, depth: usize) -
         }
         let mut result = Vec::new();
         for child_uuid in &node.children {
-            result.extend(get_content_nodes_for_link_depth(dialog, child_uuid, depth + 1));
+            result.extend(get_content_nodes_for_link_depth(
+                dialog,
+                child_uuid,
+                depth + 1,
+            ));
         }
-        return if result.is_empty() { vec![uuid.to_string()] } else { result };
+        return if result.is_empty() {
+            vec![uuid.to_string()]
+        } else {
+            result
+        };
     }
 
     // Jump without flags and empty children is pass-through
     let has_actual_flags = node.check_flags.iter().any(|fg| !fg.flags.is_empty())
         || node.set_flags.iter().any(|fg| !fg.flags.is_empty());
-    if node.constructor == NodeConstructor::Jump
-        && !has_actual_flags
-        && node.children.is_empty()
-    {
+    if node.constructor == NodeConstructor::Jump && !has_actual_flags && node.children.is_empty() {
         if depth >= MAX_DEPTH {
             return vec![uuid.to_string()];
         }
         if let Some(ref target_uuid) = node.jump_target {
             if let Some(target_node) = dialog.get_node(target_uuid) {
-                let effective = get_jump_effective_children(dialog, target_node, node.jump_target_point);
+                let effective =
+                    get_jump_effective_children(dialog, target_node, node.jump_target_point);
                 let mut result = Vec::new();
                 for child_uuid in &effective {
-                    result.extend(get_content_nodes_for_link_depth(dialog, child_uuid, depth + 1));
+                    result.extend(get_content_nodes_for_link_depth(
+                        dialog,
+                        child_uuid,
+                        depth + 1,
+                    ));
                 }
-                return if result.is_empty() { vec![uuid.to_string()] } else { result };
+                return if result.is_empty() {
+                    vec![uuid.to_string()]
+                } else {
+                    result
+                };
             }
         }
         return vec![uuid.to_string()];
@@ -788,7 +1016,8 @@ fn build_link_node(
     let index = nodes.len();
     // Use a unique UUID for this link node (original UUID + "_link" + index to ensure uniqueness)
     let link_uuid = format!("{}_link_{}", target_uuid, index);
-    let mut display = DisplayNode::new(index, link_uuid, NodeConstructor::Other("Link".to_string()));
+    let mut display =
+        DisplayNode::new(index, link_uuid, NodeConstructor::Other("Link".to_string()));
 
     display.parent_uuid = parent_uuid.map(|s| s.to_string());
     display.depth = depth;
@@ -806,7 +1035,9 @@ fn build_link_node(
             display.speaker_name = "Narrator".to_string();
         } else if speaker_idx >= 0 {
             if let Some(speaker) = dialog.get_speaker(speaker_idx) {
-                let valid_uuids: Vec<_> = speaker.speaker_list.iter()
+                let valid_uuids: Vec<_> = speaker
+                    .speaker_list
+                    .iter()
                     .filter(|s| !s.is_empty() && *s != "@" && s.len() > 8)
                     .cloned()
                     .collect();

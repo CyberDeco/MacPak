@@ -15,7 +15,7 @@ use crate::error::{Error, Result};
 use crate::formats::lsf::parse_lsf_bytes;
 use crate::pak::PakOperations;
 
-use super::{IndexedFile, FileType};
+use super::{FileType, IndexedFile};
 
 /// Default maximum number of cached content entries
 const DEFAULT_MAX_ENTRIES: usize = 50;
@@ -74,7 +74,7 @@ pub struct ContentCache {
 
 impl ContentCache {
     /// Create a new empty cache with default settings
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             entries: HashMap::new(),
@@ -85,7 +85,7 @@ impl ContentCache {
     }
 
     /// Create a cache with custom max entries
-    #[must_use] 
+    #[must_use]
     pub fn with_max_entries(max_entries: usize) -> Self {
         Self {
             entries: HashMap::new(),
@@ -101,7 +101,7 @@ impl ContentCache {
     }
 
     /// Check if content is cached
-    #[must_use] 
+    #[must_use]
     pub fn contains(&self, pak_path: &Path, internal_path: &str) -> bool {
         let key = Self::cache_key(pak_path, internal_path);
         self.entries.contains_key(&key)
@@ -146,7 +146,10 @@ impl ContentCache {
             self.stats.hits += 1;
             self.access_order.retain(|k| k != &key);
             self.access_order.push(key.clone());
-            return Ok(self.entries.get(&key).expect("key exists per contains_key check"));
+            return Ok(self
+                .entries
+                .get(&key)
+                .expect("key exists per contains_key check"));
         }
 
         self.stats.misses += 1;
@@ -268,7 +271,8 @@ impl ContentCache {
     fn evict_oldest(&mut self) {
         if let Some(oldest) = self.access_order.first().cloned() {
             if let Some(entry) = self.entries.remove(&oldest) {
-                self.stats.total_bytes_cached = self.stats
+                self.stats.total_bytes_cached = self
+                    .stats
                     .total_bytes_cached
                     .saturating_sub(entry.size_bytes);
                 self.stats.evictions += 1;
@@ -285,31 +289,31 @@ impl ContentCache {
     }
 
     /// Get the number of cached entries
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Check if the cache is empty
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
     /// Get cache statistics
-    #[must_use] 
+    #[must_use]
     pub fn stats(&self) -> &ContentCacheStats {
         &self.stats
     }
 
     /// Get total cached size in bytes
-    #[must_use] 
+    #[must_use]
     pub fn total_size_bytes(&self) -> usize {
         self.stats.total_bytes_cached
     }
 
     /// Get total cached size in megabytes
-    #[must_use] 
+    #[must_use]
     pub fn total_size_mb(&self) -> f32 {
         self.stats.total_bytes_cached as f32 / (1024.0 * 1024.0)
     }
@@ -320,4 +324,3 @@ impl Default for ContentCache {
         Self::new()
     }
 }
-

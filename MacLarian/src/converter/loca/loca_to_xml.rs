@@ -7,8 +7,8 @@
 use crate::error::Result;
 use crate::formats::loca;
 
-use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use std::borrow::Cow;
 use std::path::Path;
 
@@ -39,17 +39,36 @@ pub fn convert_loca_to_xml_with_progress<P: AsRef<Path>>(
     dest: P,
     progress: crate::converter::ConvertProgressCallback,
 ) -> Result<()> {
-    use crate::converter::{ConvertProgress, ConvertPhase};
+    use crate::converter::{ConvertPhase, ConvertProgress};
 
-    tracing::info!("Converting LOCA→XML: {:?} → {:?}", source.as_ref(), dest.as_ref());
+    tracing::info!(
+        "Converting LOCA→XML: {:?} → {:?}",
+        source.as_ref(),
+        dest.as_ref()
+    );
 
-    progress(&ConvertProgress::with_file(ConvertPhase::ReadingSource, 1, 3, "Reading LOCA file..."));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::ReadingSource,
+        1,
+        3,
+        "Reading LOCA file...",
+    ));
     let resource = loca::read_loca(&source)?;
 
-    progress(&ConvertProgress::with_file(ConvertPhase::Converting, 2, 3, format!("Converting {} entries to XML...", resource.entries.len())));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::Converting,
+        2,
+        3,
+        format!("Converting {} entries to XML...", resource.entries.len()),
+    ));
     let xml = to_xml(&resource)?;
 
-    progress(&ConvertProgress::with_file(ConvertPhase::WritingOutput, 3, 3, "Writing XML file..."));
+    progress(&ConvertProgress::with_file(
+        ConvertPhase::WritingOutput,
+        3,
+        3,
+        "Writing XML file...",
+    ));
     std::fs::write(dest, xml)?;
 
     progress(&ConvertProgress::new(ConvertPhase::Complete, 3, 3));

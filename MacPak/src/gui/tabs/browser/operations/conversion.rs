@@ -28,8 +28,14 @@ pub fn convert_file_quick(source_path: &str, target_format: &str, state: Browser
     // Check if conversion is supported before spawning
     if !matches!(
         (source_ext.as_str(), target_format),
-        ("lsf", "lsx") | ("lsx", "lsf") | ("lsx", "lsj") | ("lsj", "lsx") |
-        ("lsf", "lsj") | ("lsj", "lsf") | ("loca", "xml") | ("xml", "loca")
+        ("lsf", "lsx")
+            | ("lsx", "lsf")
+            | ("lsx", "lsj")
+            | ("lsj", "lsx")
+            | ("lsf", "lsj")
+            | ("lsj", "lsf")
+            | ("loca", "xml")
+            | ("xml", "loca")
     ) {
         state.status_message.set(format!(
             "Unsupported conversion: {} to {}",
@@ -50,7 +56,9 @@ pub fn convert_file_quick(source_path: &str, target_format: &str, state: Browser
 
     // Show loading overlay
     state.is_loading.set(true);
-    state.loading_message.set(format!("Reading {}...", filename));
+    state
+        .loading_message
+        .set(format!("Reading {}...", filename));
 
     // Clone values for the background thread
     let source_path = source_path.to_string();
@@ -111,22 +119,30 @@ fn convert_file_with_progress(
             send_progress(format!("Reading {} binary data...", filename));
             let data = match std::fs::read(source_path) {
                 Ok(d) => d,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                    };
+                }
             };
 
             // Parse LSF
-            send_progress(format!("Parsing {} ({:.1} KB)...", filename, data.len() as f64 / 1024.0));
+            send_progress(format!(
+                "Parsing {} ({:.1} KB)...",
+                filename,
+                data.len() as f64 / 1024.0
+            ));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
             let lsf_doc = match maclarian::formats::lsf::parse_lsf_bytes(&data) {
                 Ok(doc) => doc,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to parse LSF: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to parse LSF: {}", e),
+                    };
+                }
             };
 
             // Convert to XML
@@ -136,14 +152,19 @@ fn convert_file_with_progress(
 
             let xml_content = match maclarian::converter::to_lsx(&lsf_doc) {
                 Ok(xml) => xml,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to convert to XML: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to convert to XML: {}", e),
+                    };
+                }
             };
 
             // Write output
-            send_progress(format!("Writing LSX ({:.1} KB)...", xml_content.len() as f64 / 1024.0));
+            send_progress(format!(
+                "Writing LSX ({:.1} KB)...",
+                xml_content.len() as f64 / 1024.0
+            ));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
             std::fs::write(dest_path, xml_content).map_err(|e| e.to_string())
@@ -153,22 +174,29 @@ fn convert_file_with_progress(
             send_progress(format!("Reading {} XML...", filename));
             let content = match std::fs::read_to_string(source_path) {
                 Ok(c) => c,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                    };
+                }
             };
 
             // Parse XML to LSF document
-            send_progress(format!("Parsing XML ({:.1} KB)...", content.len() as f64 / 1024.0));
+            send_progress(format!(
+                "Parsing XML ({:.1} KB)...",
+                content.len() as f64 / 1024.0
+            ));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
             let lsf_doc = match maclarian::converter::from_lsx(&content) {
                 Ok(doc) => doc,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to parse LSX: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to parse LSX: {}", e),
+                    };
+                }
             };
 
             // Write binary LSF
@@ -184,22 +212,30 @@ fn convert_file_with_progress(
             send_progress(format!("Reading {} binary data...", filename));
             let data = match std::fs::read(source_path) {
                 Ok(d) => d,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                    };
+                }
             };
 
             // Parse LOCA
-            send_progress(format!("Parsing {} ({:.1} KB)...", filename, data.len() as f64 / 1024.0));
+            send_progress(format!(
+                "Parsing {} ({:.1} KB)...",
+                filename,
+                data.len() as f64 / 1024.0
+            ));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
             let resource = match maclarian::formats::loca::parse_loca_bytes(&data) {
                 Ok(res) => res,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to parse LOCA: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to parse LOCA: {}", e),
+                    };
+                }
             };
 
             // Convert to XML
@@ -209,14 +245,19 @@ fn convert_file_with_progress(
 
             let xml_content = match maclarian::converter::loca_to_xml_string(&resource) {
                 Ok(xml) => xml,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to convert to XML: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to convert to XML: {}", e),
+                    };
+                }
             };
 
             // Write output
-            send_progress(format!("Writing XML ({:.1} KB)...", xml_content.len() as f64 / 1024.0));
+            send_progress(format!(
+                "Writing XML ({:.1} KB)...",
+                xml_content.len() as f64 / 1024.0
+            ));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
             std::fs::write(dest_path, xml_content).map_err(|e| e.to_string())
@@ -226,22 +267,29 @@ fn convert_file_with_progress(
             send_progress(format!("Reading {} XML...", filename));
             let content = match std::fs::read_to_string(source_path) {
                 Ok(c) => c,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                    };
+                }
             };
 
             // Parse XML to LOCA resource
-            send_progress(format!("Parsing XML ({:.1} KB)...", content.len() as f64 / 1024.0));
+            send_progress(format!(
+                "Parsing XML ({:.1} KB)...",
+                content.len() as f64 / 1024.0
+            ));
             std::thread::sleep(std::time::Duration::from_millis(50));
 
             let resource = match maclarian::converter::loca_from_xml(&content) {
                 Ok(res) => res,
-                Err(e) => return ConversionResult {
-                    success: false,
-                    message: format!("Failed to parse XML: {}", e),
-                },
+                Err(e) => {
+                    return ConversionResult {
+                        success: false,
+                        message: format!("Failed to parse XML: {}", e),
+                    };
+                }
             };
 
             // Write binary LOCA
@@ -286,7 +334,10 @@ fn convert_file_with_progress(
                 .map_err(|e| e.to_string())
         }
         _ => {
-            unreachable!("Unsupported conversion: {} -> {}", source_ext, target_format)
+            unreachable!(
+                "Unsupported conversion: {} -> {}",
+                source_ext, target_format
+            )
         }
     };
 

@@ -1,19 +1,23 @@
 //! File operations - opening PAKs and folders, scanning for dialogs
 
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use super::voice::{find_voice_files_path, load_voice_meta};
+use crate::dialog::{DifficultyClassCache, FlagCache, LocalizationCache, SpeakerCache};
+use crate::formats::wem::AudioCache;
+use crate::gui::state::{DialogEntry, DialogSource, DialogueState};
 use floem::ext_event::create_ext_action;
 use floem::reactive::SignalUpdate;
 use floem_reactive::Scope;
-use crate::dialog::{LocalizationCache, FlagCache, SpeakerCache, DifficultyClassCache};
-use crate::formats::wem::AudioCache;
 use maclarian::pak::PakOperations;
-use crate::gui::state::{DialogueState, DialogEntry, DialogSource};
-use super::voice::{load_voice_meta, find_voice_files_path};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// Result from background dialog scanning
 enum ScanResult {
-    Success { entries: Vec<DialogEntry>, count: usize, loca_count: usize },
+    Success {
+        entries: Vec<DialogEntry>,
+        count: usize,
+        loca_count: usize,
+    },
     Error(String),
 }
 
@@ -21,8 +25,12 @@ enum ScanResult {
 /// Used by the Gustav.pak and Shared.pak buttons
 pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
     if !pak_path.exists() {
-        state.status_message.set(format!("PAK not found: {}", pak_path.display()));
-        state.error_message.set(Some(format!("File not found: {}", pak_path.display())));
+        state
+            .status_message
+            .set(format!("PAK not found: {}", pak_path.display()));
+        state
+            .error_message
+            .set(Some(format!("File not found: {}", pak_path.display())));
         return;
     }
 
@@ -43,9 +51,15 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
     // Create ext_action to send results back to main thread
     let send = create_ext_action(Scope::new(), move |result: ScanResult| {
         match result {
-            ScanResult::Success { entries, count, loca_count } => {
+            ScanResult::Success {
+                entries,
+                count,
+                loca_count,
+            } => {
                 if count == 0 {
-                    state_for_result.status_message.set(format!("No dialogs found in {}", pak_display));
+                    state_for_result
+                        .status_message
+                        .set(format!("No dialogs found in {}", pak_display));
                 } else {
                     state_for_result.available_dialogs.set(entries);
                     if loca_count > 0 {
@@ -99,15 +113,18 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
 
     // Clone state for voice meta result
     let state_for_voice = state.clone();
-    let send_voice_loaded = create_ext_action(Scope::new(), move |(count, voice_path): (usize, Option<PathBuf>)| {
-        state_for_voice.voice_meta_loaded.set(count > 0);
-        if let Some(path) = voice_path {
-            state_for_voice.voice_files_path.set(Some(path));
-        }
-        if count > 0 {
-            tracing::info!("Voice meta ready: {} entries", count);
-        }
-    });
+    let send_voice_loaded = create_ext_action(
+        Scope::new(),
+        move |(count, voice_path): (usize, Option<PathBuf>)| {
+            state_for_voice.voice_meta_loaded.set(count > 0);
+            if let Some(path) = voice_path {
+                state_for_voice.voice_files_path.set(Some(path));
+            }
+            if count > 0 {
+                tracing::info!("Voice meta ready: {} entries", count);
+            }
+        },
+    );
 
     // Spawn thread for loading
     std::thread::spawn(move || {
@@ -154,7 +171,11 @@ pub fn load_pak_directly(state: DialogueState, pak_path: PathBuf) {
             Ok(_) => {
                 let count = entries.len();
                 entries.sort_by(|a, b| a.path.cmp(&b.path));
-                send(ScanResult::Success { entries, count, loca_count });
+                send(ScanResult::Success {
+                    entries,
+                    count,
+                    loca_count,
+                });
             }
             Err(e) => {
                 send(ScanResult::Error(e));
@@ -211,7 +232,10 @@ fn load_localization(cache: &Arc<std::sync::RwLock<LocalizationCache>>, pak_path
 }
 
 /// Load localization from a folder that may contain PAK files or a Localization subfolder
-fn load_localization_from_folder(cache: &Arc<std::sync::RwLock<LocalizationCache>>, folder: &Path) -> usize {
+fn load_localization_from_folder(
+    cache: &Arc<std::sync::RwLock<LocalizationCache>>,
+    folder: &Path,
+) -> usize {
     // Check for Localization subfolder with English.pak
     let localization_dir = folder.join("Localization");
     if localization_dir.exists() {
@@ -236,7 +260,10 @@ fn load_localization_from_folder(cache: &Arc<std::sync::RwLock<LocalizationCache
 }
 
 /// Load localization directly from a language PAK file
-fn load_localization_from_pak(cache: &Arc<std::sync::RwLock<LocalizationCache>>, language_pak: &Path) -> usize {
+fn load_localization_from_pak(
+    cache: &Arc<std::sync::RwLock<LocalizationCache>>,
+    language_pak: &Path,
+) -> usize {
     let Ok(mut cache) = cache.write() else {
         return 0;
     };
@@ -352,7 +379,10 @@ fn configure_speakers(cache: &Arc<std::sync::RwLock<SpeakerCache>>, pak_path: &P
 
 /// Configure speaker cache from a folder that may contain PAK files
 /// Returns the number of speakers indexed
-fn configure_speakers_from_folder(cache: &Arc<std::sync::RwLock<SpeakerCache>>, folder: &Path) -> usize {
+fn configure_speakers_from_folder(
+    cache: &Arc<std::sync::RwLock<SpeakerCache>>,
+    folder: &Path,
+) -> usize {
     let Ok(mut cache) = cache.write() else {
         return 0;
     };
@@ -382,7 +412,10 @@ fn configure_speakers_from_folder(cache: &Arc<std::sync::RwLock<SpeakerCache>>, 
 
 /// Configure difficulty class cache and build index from PAK sources
 /// Returns the number of DCs indexed
-fn configure_difficulty_classes(cache: &Arc<std::sync::RwLock<DifficultyClassCache>>, pak_path: &Path) -> usize {
+fn configure_difficulty_classes(
+    cache: &Arc<std::sync::RwLock<DifficultyClassCache>>,
+    pak_path: &Path,
+) -> usize {
     let Some(data_dir) = pak_path.parent() else {
         return 0;
     };
@@ -453,15 +486,22 @@ pub fn open_dialog_folder(state: DialogueState) {
         // Create ext_action to send results back to main thread
         let send = create_ext_action(Scope::new(), move |result: ScanResult| {
             match result {
-                ScanResult::Success { entries, count, loca_count } => {
+                ScanResult::Success {
+                    entries,
+                    count,
+                    loca_count,
+                } => {
                     if count == 0 {
-                        state_for_result.status_message.set(format!("No dialogs found in {}", path_display));
+                        state_for_result
+                            .status_message
+                            .set(format!("No dialogs found in {}", path_display));
                     } else {
                         state_for_result.available_dialogs.set(entries);
                         if loca_count > 0 {
                             state_for_result.localization_loaded.set(true);
                         }
-                        let status = format!("Found {} dialogs, {} loca strings", count, loca_count);
+                        let status =
+                            format!("Found {} dialogs, {} loca strings", count, loca_count);
                         state_for_result.status_message.set(status);
                     }
                 }
@@ -509,15 +549,18 @@ pub fn open_dialog_folder(state: DialogueState) {
 
         // Clone state for voice meta result
         let state_for_voice = state.clone();
-        let send_voice_loaded = create_ext_action(Scope::new(), move |(count, voice_path): (usize, Option<PathBuf>)| {
-            state_for_voice.voice_meta_loaded.set(count > 0);
-            if let Some(p) = voice_path {
-                state_for_voice.voice_files_path.set(Some(p));
-            }
-            if count > 0 {
-                tracing::info!("Voice meta ready: {} entries", count);
-            }
-        });
+        let send_voice_loaded = create_ext_action(
+            Scope::new(),
+            move |(count, voice_path): (usize, Option<PathBuf>)| {
+                state_for_voice.voice_meta_loaded.set(count > 0);
+                if let Some(p) = voice_path {
+                    state_for_voice.voice_files_path.set(Some(p));
+                }
+                if count > 0 {
+                    tracing::info!("Voice meta ready: {} entries", count);
+                }
+            },
+        );
 
         // Spawn thread for the actual scanning work
         std::thread::spawn(move || {
@@ -555,7 +598,11 @@ pub fn open_dialog_folder(state: DialogueState) {
             match scan_dialog_folder(&path) {
                 Ok(entries) => {
                     let count = entries.len();
-                    send(ScanResult::Success { entries, count, loca_count });
+                    send(ScanResult::Success {
+                        entries,
+                        count,
+                        loca_count,
+                    });
                 }
                 Err(e) => {
                     send(ScanResult::Error(e));
@@ -623,18 +670,36 @@ fn find_pak_files(path: &Path) -> Vec<PathBuf> {
 
     // Sort to ensure consistent order (Gustav first, then Shared, then Patches)
     paks.sort_by(|a, b| {
-        let a_name = a.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
-        let b_name = b.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+        let a_name = a
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase();
+        let b_name = b
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase();
 
         // Priority order: Gustav > Shared > Patch* > others
-        let a_priority = if a_name.starts_with("gustav") { 0 }
-            else if a_name.starts_with("shared") { 1 }
-            else if a_name.starts_with("patch") { 2 }
-            else { 3 };
-        let b_priority = if b_name.starts_with("gustav") { 0 }
-            else if b_name.starts_with("shared") { 1 }
-            else if b_name.starts_with("patch") { 2 }
-            else { 3 };
+        let a_priority = if a_name.starts_with("gustav") {
+            0
+        } else if a_name.starts_with("shared") {
+            1
+        } else if a_name.starts_with("patch") {
+            2
+        } else {
+            3
+        };
+        let b_priority = if b_name.starts_with("gustav") {
+            0
+        } else if b_name.starts_with("shared") {
+            1
+        } else if b_name.starts_with("patch") {
+            2
+        } else {
+            3
+        };
 
         a_priority.cmp(&b_priority).then(a_name.cmp(&b_name))
     });
@@ -644,11 +709,15 @@ fn find_pak_files(path: &Path) -> Vec<PathBuf> {
 
 /// Scan inside a PAK file for dialog files
 /// Prefers .lsj files (has editorData with NodeContext/dev notes) over .lsf files
-pub(super) fn scan_pak_for_dialogs(pak_path: &Path, entries: &mut Vec<DialogEntry>) -> Result<(), String> {
-    let file_list = PakOperations::list(pak_path)
-        .map_err(|e| format!("Failed to list PAK: {}", e))?;
+pub(super) fn scan_pak_for_dialogs(
+    pak_path: &Path,
+    entries: &mut Vec<DialogEntry>,
+) -> Result<(), String> {
+    let file_list =
+        PakOperations::list(pak_path).map_err(|e| format!("Failed to list PAK: {}", e))?;
 
-    let pak_name = pak_path.file_name()
+    let pak_name = pak_path
+        .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "PAK".to_string());
 
@@ -660,7 +729,9 @@ pub(super) fn scan_pak_for_dialogs(pak_path: &Path, entries: &mut Vec<DialogEntr
     for internal_path in &file_list {
         let lower_path = internal_path.to_lowercase();
         if lower_path.contains("story/dialogs/") && lower_path.ends_with(".lsj") {
-            let name = internal_path.split('/').last()
+            let name = internal_path
+                .split('/')
+                .last()
                 .unwrap_or(internal_path)
                 .to_string();
 
@@ -686,7 +757,9 @@ pub(super) fn scan_pak_for_dialogs(pak_path: &Path, entries: &mut Vec<DialogEntr
     for internal_path in &file_list {
         let lower_path = internal_path.to_lowercase();
         if lower_path.contains("story/dialogsbinary/") && lower_path.ends_with(".lsf") {
-            let name = internal_path.split('/').last()
+            let name = internal_path
+                .split('/')
+                .last()
                 .unwrap_or(internal_path)
                 .to_string();
 
@@ -714,16 +787,21 @@ pub(super) fn scan_pak_for_dialogs(pak_path: &Path, entries: &mut Vec<DialogEntr
 }
 
 /// Scan for extracted dialog files (.lsj, .lsf) in a folder
-fn scan_extracted_dialogs(dir: &Path, base: &Path, entries: &mut Vec<DialogEntry>) -> Result<(), String> {
-    let read_dir = std::fs::read_dir(dir)
-        .map_err(|e| format!("Failed to read directory: {}", e))?;
+fn scan_extracted_dialogs(
+    dir: &Path,
+    base: &Path,
+    entries: &mut Vec<DialogEntry>,
+) -> Result<(), String> {
+    let read_dir =
+        std::fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))?;
 
     for entry in read_dir.flatten() {
         let path = entry.path();
 
         if path.is_dir() {
             // Skip common non-dialog directories to speed up scanning
-            let dir_name = path.file_name()
+            let dir_name = path
+                .file_name()
                 .map(|n| n.to_string_lossy().to_lowercase())
                 .unwrap_or_default();
 
@@ -738,11 +816,13 @@ fn scan_extracted_dialogs(dir: &Path, base: &Path, entries: &mut Vec<DialogEntry
                 let path_str = path.to_string_lossy().to_lowercase();
                 // Accept if it's in a Dialogs folder OR if it just has any .lsj
                 if path_str.contains("dialogs") || path_str.contains("dialog") {
-                    let name = path.file_name()
+                    let name = path
+                        .file_name()
                         .map(|n| n.to_string_lossy().to_string())
                         .unwrap_or_default();
 
-                    let relative = path.strip_prefix(base)
+                    let relative = path
+                        .strip_prefix(base)
                         .map(|p| p.to_string_lossy().to_string())
                         .unwrap_or_else(|_| path.to_string_lossy().to_string());
 

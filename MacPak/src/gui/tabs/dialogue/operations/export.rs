@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 use std::fmt::Write;
 
-use floem::reactive::{SignalGet, SignalUpdate};
 use crate::dialog::{Dialog, NodeConstructor};
+use floem::reactive::{SignalGet, SignalUpdate};
 
 use crate::gui::state::DialogueState;
 
@@ -24,16 +24,16 @@ pub fn export_html(state: DialogueState) {
             state.status_message.set("Exporting to HTML...".to_string());
 
             match generate_html(&dialog) {
-                Ok(html) => {
-                    match std::fs::write(&path, html) {
-                        Ok(()) => {
-                            state.status_message.set(format!("Exported to {}", path.display()));
-                        }
-                        Err(e) => {
-                            state.status_message.set(format!("Write error: {e}"));
-                        }
+                Ok(html) => match std::fs::write(&path, html) {
+                    Ok(()) => {
+                        state
+                            .status_message
+                            .set(format!("Exported to {}", path.display()));
                     }
-                }
+                    Err(e) => {
+                        state.status_message.set(format!("Write error: {e}"));
+                    }
+                },
                 Err(e) => {
                     state.status_message.set(format!("Export error: {e}"));
                 }
@@ -58,7 +58,9 @@ pub fn export_de2(state: DialogueState) {
             state.status_message.set("Exporting to DE2...".to_string());
 
             // TODO: Implement DE2 export
-            state.status_message.set("DE2 export not yet implemented".to_string());
+            state
+                .status_message
+                .set("DE2 export not yet implemented".to_string());
         }
     });
 }
@@ -85,7 +87,9 @@ fn generate_html(dialog: &Dialog) -> Result<String, String> {
     html.push_str(".speaker { color: #4f46e5; font-weight: 500; }\n");
     html.push_str(".text { margin-left: 8px; }\n");
     html.push_str(".meta { color: #9ca3af; font-size: 12px; margin-top: 4px; }\n");
-    html.push_str(".children { margin-left: 20px; border-left: 1px solid #e5e7eb; padding-left: 12px; }\n");
+    html.push_str(
+        ".children { margin-left: 20px; border-left: 1px solid #e5e7eb; padding-left: 12px; }\n",
+    );
     html.push_str("</style>\n</head>\n<body>\n");
 
     // Dialog info
@@ -125,20 +129,28 @@ fn render_node_html(dialog: &Dialog, uuid: &str, html: &mut String, visited: &mu
     let _ = writeln!(html, "<div class=\"{class}\">");
 
     // Type badge
-    let _ = write!(html, "<strong>[{}]</strong> ", node.constructor.display_name());
+    let _ = write!(
+        html,
+        "<strong>[{}]</strong> ",
+        node.constructor.display_name()
+    );
 
     // Speaker
     if let Some(speaker_idx) = node.speaker
-        && speaker_idx >= 0 {
-            let _ = write!(html, "<span class=\"speaker\">Speaker {speaker_idx}</span>: ");
-        }
+        && speaker_idx >= 0
+    {
+        let _ = write!(
+            html,
+            "<span class=\"speaker\">Speaker {speaker_idx}</span>: "
+        );
+    }
 
     // Text
     if let Some(text_entry) = dialog.get_node_text(node) {
-        let text = text_entry.value.as_ref().map_or_else(
-            || format!("[{}]", text_entry.handle),
-            |s| html_escape(s),
-        );
+        let text = text_entry
+            .value
+            .as_ref()
+            .map_or_else(|| format!("[{}]", text_entry.handle), |s| html_escape(s));
         let _ = writeln!(html, "<span class=\"text\">{text}</span>");
     }
 

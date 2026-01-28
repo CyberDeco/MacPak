@@ -1,9 +1,9 @@
 //! Basic GR2 to glTF/GLB conversion functions.
 
-use std::path::Path;
-use crate::error::{Error, Result};
-use super::gr2_reader::Gr2Reader;
 use super::gltf::GltfBuilder;
+use super::gr2_reader::Gr2Reader;
+use crate::error::{Error, Result};
+use std::path::Path;
 
 /// Convert a GR2 file to glTF format (separate .gltf and .bin files).
 ///
@@ -22,9 +22,14 @@ pub fn convert_gr2_to_gltf_with_progress(
     output_path: &Path,
     progress: crate::converter::gr2_gltf::Gr2ProgressCallback,
 ) -> Result<()> {
-    use crate::converter::gr2_gltf::{Gr2Progress, Gr2Phase};
+    use crate::converter::gr2_gltf::{Gr2Phase, Gr2Progress};
 
-    progress(&Gr2Progress::with_file(Gr2Phase::ReadingFile, 1, 5, input_path.display().to_string()));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::ReadingFile,
+        1,
+        5,
+        input_path.display().to_string(),
+    ));
     let file_data = std::fs::read(input_path)?;
     let reader = Gr2Reader::new(&file_data)?;
 
@@ -42,12 +47,19 @@ pub fn convert_gr2_to_gltf_with_progress(
         )));
     }
 
-    progress(&Gr2Progress::with_file(Gr2Phase::BuildingDocument, 4, 5, format!("{} meshes", meshes.len())));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::BuildingDocument,
+        4,
+        5,
+        format!("{} meshes", meshes.len()),
+    ));
     let mut builder = GltfBuilder::new();
 
     let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
         let skin_idx = builder.add_skeleton(skel);
-        let root_idx = skel.bones.iter()
+        let root_idx = skel
+            .bones
+            .iter()
             .position(|b| b.parent_index < 0)
             .map(|i| builder.bone_node_offset + i);
         (Some(skin_idx), root_idx)
@@ -59,7 +71,12 @@ pub fn convert_gr2_to_gltf_with_progress(
         builder.add_mesh(mesh, skin_idx);
     }
 
-    progress(&Gr2Progress::with_file(Gr2Phase::WritingOutput, 5, 5, output_path.display().to_string()));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::WritingOutput,
+        5,
+        5,
+        output_path.display().to_string(),
+    ));
     builder.export_gltf(output_path, root_bone_idx)?;
 
     progress(&Gr2Progress::new(Gr2Phase::Complete, 5, 5));
@@ -83,9 +100,14 @@ pub fn convert_gr2_to_glb_with_progress(
     output_path: &Path,
     progress: crate::converter::gr2_gltf::Gr2ProgressCallback,
 ) -> Result<()> {
-    use crate::converter::gr2_gltf::{Gr2Progress, Gr2Phase};
+    use crate::converter::gr2_gltf::{Gr2Phase, Gr2Progress};
 
-    progress(&Gr2Progress::with_file(Gr2Phase::ReadingFile, 1, 5, input_path.display().to_string()));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::ReadingFile,
+        1,
+        5,
+        input_path.display().to_string(),
+    ));
     let file_data = std::fs::read(input_path)?;
     let reader = Gr2Reader::new(&file_data)?;
 
@@ -103,12 +125,19 @@ pub fn convert_gr2_to_glb_with_progress(
         )));
     }
 
-    progress(&Gr2Progress::with_file(Gr2Phase::BuildingDocument, 4, 5, format!("{} meshes", meshes.len())));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::BuildingDocument,
+        4,
+        5,
+        format!("{} meshes", meshes.len()),
+    ));
     let mut builder = GltfBuilder::new();
 
     let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
         let skin_idx = builder.add_skeleton(skel);
-        let root_idx = skel.bones.iter()
+        let root_idx = skel
+            .bones
+            .iter()
             .position(|b| b.parent_index < 0)
             .map(|i| builder.bone_node_offset + i);
         (Some(skin_idx), root_idx)
@@ -120,7 +149,12 @@ pub fn convert_gr2_to_glb_with_progress(
         builder.add_mesh(mesh, skin_idx);
     }
 
-    progress(&Gr2Progress::with_file(Gr2Phase::WritingOutput, 5, 5, output_path.display().to_string()));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::WritingOutput,
+        5,
+        5,
+        output_path.display().to_string(),
+    ));
     builder.export_glb(output_path, root_bone_idx)?;
 
     progress(&Gr2Progress::new(Gr2Phase::Complete, 5, 5));
@@ -143,7 +177,7 @@ pub fn convert_gr2_bytes_to_glb_with_progress(
     gr2_data: &[u8],
     progress: crate::converter::gr2_gltf::Gr2ProgressCallback,
 ) -> Result<Vec<u8>> {
-    use crate::converter::gr2_gltf::{Gr2Progress, Gr2Phase};
+    use crate::converter::gr2_gltf::{Gr2Phase, Gr2Progress};
 
     progress(&Gr2Progress::new(Gr2Phase::ReadingFile, 1, 5));
     let reader = Gr2Reader::new(gr2_data)?;
@@ -162,12 +196,19 @@ pub fn convert_gr2_bytes_to_glb_with_progress(
         )));
     }
 
-    progress(&Gr2Progress::with_file(Gr2Phase::BuildingDocument, 4, 5, format!("{} meshes", meshes.len())));
+    progress(&Gr2Progress::with_file(
+        Gr2Phase::BuildingDocument,
+        4,
+        5,
+        format!("{} meshes", meshes.len()),
+    ));
     let mut builder = GltfBuilder::new();
 
     let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
         let skin_idx = builder.add_skeleton(skel);
-        let root_idx = skel.bones.iter()
+        let root_idx = skel
+            .bones
+            .iter()
             .position(|b| b.parent_index < 0)
             .map(|i| builder.bone_node_offset + i);
         (Some(skin_idx), root_idx)

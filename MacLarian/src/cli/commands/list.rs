@@ -90,10 +90,7 @@ pub fn execute(
         }
 
         // Print header
-        println!(
-            "{:>10}  {:>10}  {:>6}  PATH",
-            "SIZE", "COMPRESSED", "RATIO"
-        );
+        println!("{:>10}  {:>10}  {:>6}  PATH", "SIZE", "COMPRESSED", "RATIO");
 
         // Print entries
         for entry in &filtered {
