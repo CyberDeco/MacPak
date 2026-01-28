@@ -1,9 +1,13 @@
 # MacLarian
 
+<div align="center">
+
 ![Rust](https://img.shields.io/badge/rust-1.85+-orange?logo=rust)
-[![Crates.io](https://img.shields.io/crates/v/maclarian.svg)](https://crates.io/crates/maclarian)
+[![Crates.io](https://img.shields.io/crates/v/maclarian.svg?color=68fdff)](https://crates.io/crates/maclarian)
 [![Documentation](https://docs.rs/maclarian/badge.svg)](https://docs.rs/maclarian)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
+
+</div>
 
 A pure-Rust implementation of a ***[M]ac***OS-focused ***Larian*** file format library and toolkit for Baldur's Gate 3 file handling and modding.
 
