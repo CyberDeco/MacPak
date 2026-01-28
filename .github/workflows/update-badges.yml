@@ -1,0 +1,35 @@
+name: Update Version Badges
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+      - 'MacLarian/Cargo.toml'
+
+jobs:
+  update-badges:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract versions and update README
+        run: |
+          # Extract MacPak version from workspace
+          MACPAK_VERSION=$(grep -A5 '^\[workspace\.package\]' Cargo.toml | grep '^version' | head -1 | sed 's/.*"\(.*\)".*/\1/')
+
+          # Extract MacLarian version
+          MACLARIAN_VERSION=$(grep '^version' MacLarian/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+
+          echo "MacPak version: $MACPAK_VERSION"
+          echo "MacLarian version: $MACLARIAN_VERSION"
+
+          # Update badges in README.md
+          sed -i "s|MacPak-v[0-9]*\.[0-9]*\.[0-9]*|MacPak-v${MACPAK_VERSION}|g" README.md
+          sed -i "s|MacLarian-v[0-9]*\.[0-9]*\.[0-9]*|MacLarian-v${MACLARIAN_VERSION}|g" README.md
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet README.md || (git add README.md && git commit -m "Update version badges" && git push)
