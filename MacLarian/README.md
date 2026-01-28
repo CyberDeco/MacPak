@@ -1,5 +1,6 @@
 # MacLarian
 
+![Rust](https://img.shields.io/badge/rust-1.85+-orange?logo=rust)
 [![Crates.io](https://img.shields.io/crates/v/maclarian.svg)](https://crates.io/crates/maclarian)
 [![Documentation](https://docs.rs/maclarian/badge.svg)](https://docs.rs/maclarian)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
