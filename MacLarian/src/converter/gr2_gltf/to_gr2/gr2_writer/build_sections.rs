@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::error::Result;
 
-use super::constants::*;
+use super::constants::{MEMBER_REAL32, MEMBER_UINT8, MEMBER_BINORMAL_INT16, MEMBER_REAL16, MEMBER_REF_TO_ARRAY, MEMBER_STRING, MEMBER_INT32, MEMBER_TRANSFORM, MEMBER_REFERENCE, MEMBER_ARRAY_OF_REFS};
 use super::section::Section;
 use super::types::{MemberDef, write_type_def};
 use super::Gr2Writer;
@@ -367,7 +367,7 @@ impl Gr2Writer {
         sections: &mut [Section],
         string_offsets: &HashMap<&str, u32>,
         vertex_type_offset: u32,
-        vertex_data_offsets: &mut Vec<u32>,
+        vertex_data_offsets: &mut [u32],
         index_offsets: &[u32],
         topology_offsets: &mut Vec<u32>,
         mesh_offsets: &mut Vec<u32>,

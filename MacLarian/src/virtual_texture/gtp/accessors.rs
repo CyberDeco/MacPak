@@ -1,4 +1,4 @@
-//! Public accessor methods for GtpFile.
+//! Public accessor methods for `GtpFile`.
 
 use std::io::{Read, Seek};
 use super::GtpFile;

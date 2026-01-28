@@ -42,7 +42,7 @@ pub fn extract(
     input_path: &Path,
     output_dir: &Path,
     _texture_name: Option<&str>,
-    layers: Vec<usize>,
+    layers: &[usize],
     _all_layers: bool,
 ) -> Result<()> {
     let ext = input_path
@@ -53,7 +53,7 @@ pub fn extract(
     let is_gtp = ext == "gtp";
 
     if !layers.is_empty() {
-        println!("Layer filter: {:?}", layers);
+        println!("Layer filter: {layers:?}");
     }
 
     // Create progress bar - use spinner for single GTP, bar for GTS with multiple GTPs
@@ -98,7 +98,7 @@ pub fn extract(
 pub fn batch(
     input_dir: &Path,
     output_dir: &Path,
-    layers: Vec<usize>,
+    layers: &[usize],
     recursive: bool,
 ) -> Result<()> {
     // Find all GTS files
@@ -117,7 +117,7 @@ pub fn batch(
         .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
 
     if !layers.is_empty() {
-        println!("Layer filter: {:?}", layers);
+        println!("Layer filter: {layers:?}");
     }
 
     // Create progress bar
@@ -147,7 +147,7 @@ pub fn batch(
         println!("Errors:");
         for msg in &result.results {
             if msg.starts_with("Failed") {
-                println!("  {}", msg);
+                println!("  {msg}");
             }
         }
     }
@@ -182,23 +182,20 @@ fn find_gts_files(dir: &Path, files: &mut Vec<PathBuf>, recursive: bool) -> Resu
 /// Info about a GTP file
 pub fn gtp_info(gtp_path: &Path, gts_path: Option<&Path>) -> Result<()> {
     // We need a GTS file to properly parse the GTP
-    let gts_path = match gts_path {
-        Some(p) => p.to_path_buf(),
-        None => {
-            // Try to find GTS in same directory
-            let gtp_dir = gtp_path.parent().unwrap_or(Path::new("."));
-            let mut found = None;
-            if let Ok(entries) = fs::read_dir(gtp_dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.extension().and_then(|e| e.to_str()) == Some("gts") {
-                        found = Some(path);
-                        break;
-                    }
+    let gts_path = if let Some(p) = gts_path { p.to_path_buf() } else {
+        // Try to find GTS in same directory
+        let gtp_dir = gtp_path.parent().unwrap_or(Path::new("."));
+        let mut found = None;
+        if let Ok(entries) = fs::read_dir(gtp_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) == Some("gts") {
+                    found = Some(path);
+                    break;
                 }
             }
-            found.ok_or_else(|| anyhow::anyhow!("No GTS file found. Provide one with --gts"))?
         }
+        found.ok_or_else(|| anyhow::anyhow!("No GTS file found. Provide one with --gts"))?
     };
 
     let info = virtual_texture::gtp_info(gtp_path, &gts_path)
@@ -210,7 +207,7 @@ pub fn gtp_info(gtp_path: &Path, gts_path: Option<&Path>) -> Result<()> {
     println!("Pages: {}", info.num_pages);
 
     for (page, chunks) in info.chunks_per_page.iter().enumerate() {
-        println!("  Page {}: {} chunks", page, chunks);
+        println!("  Page {page}: {chunks} chunks");
     }
 
     Ok(())
@@ -253,7 +250,7 @@ pub fn create(
         let pref = match comp.to_lowercase().as_str() {
             "raw" => TileCompressionPreference::Raw,
             "fastlz" => TileCompressionPreference::FastLZ,
-            _ => anyhow::bail!("Unknown compression: {}. Use: raw or fastlz (default)", comp),
+            _ => anyhow::bail!("Unknown compression: {comp}. Use: raw or fastlz (default)"),
         };
         builder = builder.compression(pref);
     }
@@ -263,7 +260,7 @@ pub fn create(
         builder = builder.embed_mip(false);
     }
 
-    println!("Creating virtual texture '{}'...", name);
+    println!("Creating virtual texture '{name}'...");
     println!("Output: {}", output_dir.display());
 
     // Create output directory
@@ -289,7 +286,7 @@ pub fn create(
                 pb.set_length(progress.total as u64);
             }
             pb.set_position(progress.current as u64);
-            pb.set_message(format!("Compressing tiles"));
+            pb.set_message("Compressing tiles".to_string());
         } else {
             // Other phases use spinner
             if prev_phase == VTexPhase::Compressing as usize && phase_num != prev_phase {

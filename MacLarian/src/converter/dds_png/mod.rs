@@ -146,7 +146,7 @@ pub fn convert_png_to_dds_with_format_and_progress<P: AsRef<Path>, Q: AsRef<Path
     let height = rgba.height();
     let pixels = rgba.as_raw();
 
-    progress(&ImageProgress::with_file(ImagePhase::Encoding, 3, 4, format!("{:?}", format)));
+    progress(&ImageProgress::with_file(ImagePhase::Encoding, 3, 4, format!("{format:?}")));
     let dds_data = encode::encode_to_dds(pixels, width, height, format)?;
 
     progress(&ImageProgress::with_file(ImagePhase::WritingFile, 4, 4, dds_path.as_ref().display().to_string()));

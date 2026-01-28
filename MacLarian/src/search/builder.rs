@@ -1,4 +1,4 @@
-//! Index building functionality for SearchIndex
+//! Index building functionality for `SearchIndex`
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

@@ -1,4 +1,4 @@
-//! MacLarian CLI - Command-line interface for Larian file format tools
+//! `MacLarian` CLI - Command-line interface for Larian file format tools
 
 pub mod commands;
 pub mod progress;
@@ -14,7 +14,7 @@ struct Cli {
     command: Commands,
 }
 
-/// Run the MacLarian CLI
+/// Run the `MacLarian` CLI
 pub fn run_cli() -> anyhow::Result<()> {
     // Setup logging
     tracing_subscriber::fmt::init();

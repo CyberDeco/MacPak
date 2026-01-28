@@ -14,7 +14,7 @@ pub const VERSION: u32 = 7;
 
 /// Section count (7 sections for BG3 GR2 files)
 /// Section 0: Main (root object, strings, misc data)
-/// Section 1: TrackGroups (animations) - empty for static meshes
+/// Section 1: `TrackGroups` (animations) - empty for static meshes
 /// Section 2: Skeleton data
 /// Section 3: Mesh structs
 /// Section 4: Type definitions

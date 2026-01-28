@@ -70,15 +70,15 @@ impl DdsTexture {
 
         // Determine block size from format
         let block_size = match dds.get_dxgi_format() {
-            Some(ddsfile::DxgiFormat::BC1_UNorm) | Some(ddsfile::DxgiFormat::BC1_UNorm_sRGB) => 8,
-            Some(ddsfile::DxgiFormat::BC3_UNorm) | Some(ddsfile::DxgiFormat::BC3_UNorm_sRGB) => 16,
-            Some(ddsfile::DxgiFormat::BC5_UNorm) | Some(ddsfile::DxgiFormat::BC5_SNorm) => 16,
-            Some(ddsfile::DxgiFormat::BC7_UNorm) | Some(ddsfile::DxgiFormat::BC7_UNorm_sRGB) => 16,
+            Some(ddsfile::DxgiFormat::BC1_UNorm | ddsfile::DxgiFormat::BC1_UNorm_sRGB) => 8,
+            Some(ddsfile::DxgiFormat::BC3_UNorm | ddsfile::DxgiFormat::BC3_UNorm_sRGB) => 16,
+            Some(ddsfile::DxgiFormat::BC5_UNorm | ddsfile::DxgiFormat::BC5_SNorm) => 16,
+            Some(ddsfile::DxgiFormat::BC7_UNorm | ddsfile::DxgiFormat::BC7_UNorm_sRGB) => 16,
             _ => {
                 // Try to infer from D3D format
                 match dds.get_d3d_format() {
                     Some(ddsfile::D3DFormat::DXT1) => 8,
-                    Some(ddsfile::D3DFormat::DXT3) | Some(ddsfile::D3DFormat::DXT5) => 16,
+                    Some(ddsfile::D3DFormat::DXT3 | ddsfile::D3DFormat::DXT5) => 16,
                     _ => return Err(Error::DdsError("Unsupported DDS format".to_string())),
                 }
             }
@@ -93,8 +93,8 @@ impl DdsTexture {
         for _ in 0..mip_count {
             mip_offsets.push(offset);
 
-            let blocks_wide = (mip_width + 3) / 4;
-            let blocks_high = (mip_height + 3) / 4;
+            let blocks_wide = mip_width.div_ceil(4);
+            let blocks_high = mip_height.div_ceil(4);
             let mip_size = (blocks_wide * blocks_high) as usize * block_size;
             offset += mip_size;
 
@@ -122,8 +122,8 @@ impl DdsTexture {
         let mip_width = (self.width >> level).max(1);
         let mip_height = (self.height >> level).max(1);
 
-        let blocks_wide = (mip_width + 3) / 4;
-        let blocks_high = (mip_height + 3) / 4;
+        let blocks_wide = mip_width.div_ceil(4);
+        let blocks_high = mip_height.div_ceil(4);
         let mip_size = (blocks_wide * blocks_high) as usize * self.block_size;
 
         let end = start + mip_size;
@@ -137,7 +137,7 @@ impl DdsTexture {
 
 /// Extract a tile from BC-compressed source with proper border handling
 ///
-/// This extracts a tile where the content starts at (content_x, content_y) and
+/// This extracts a tile where the content starts at (`content_x`, `content_y`) and
 /// borders sample from adjacent pixels (or clamp at texture edges).
 ///
 /// # Arguments
@@ -164,10 +164,10 @@ fn extract_tile_with_borders(
     let padded_width = content_width + 2 * border;
     let padded_height = content_height + 2 * border;
 
-    let src_blocks_wide = (src_width + 3) / 4;
-    let src_blocks_high = (src_height + 3) / 4;
-    let tile_blocks_wide = (padded_width + 3) / 4;
-    let tile_blocks_high = (padded_height + 3) / 4;
+    let src_blocks_wide = src_width.div_ceil(4);
+    let src_blocks_high = src_height.div_ceil(4);
+    let tile_blocks_wide = padded_width.div_ceil(4);
+    let tile_blocks_high = padded_height.div_ceil(4);
     let border_blocks = border / 4;
 
     let mut tile = Vec::with_capacity((tile_blocks_wide * tile_blocks_high) as usize * block_size);
@@ -224,10 +224,10 @@ pub fn extract_bc_tile_with_clamp(
     tile_height: u32,
     block_size: usize,
 ) -> Vec<u8> {
-    let src_blocks_wide = (src_width + 3) / 4;
-    let src_blocks_high = (src_height + 3) / 4;
-    let tile_blocks_wide = (tile_width + 3) / 4;
-    let tile_blocks_high = (tile_height + 3) / 4;
+    let src_blocks_wide = src_width.div_ceil(4);
+    let src_blocks_high = src_height.div_ceil(4);
+    let tile_blocks_wide = tile_width.div_ceil(4);
+    let tile_blocks_high = tile_height.div_ceil(4);
 
     // Tile position in blocks
     let tile_block_x = tile_x / 4;
@@ -274,9 +274,9 @@ pub fn extract_bc_tile(
     tile_height: u32,
     block_size: usize,
 ) -> Vec<u8> {
-    let src_blocks_wide = (src_width + 3) / 4;
-    let tile_blocks_wide = (tile_width + 3) / 4;
-    let tile_blocks_high = (tile_height + 3) / 4;
+    let src_blocks_wide = src_width.div_ceil(4);
+    let tile_blocks_wide = tile_width.div_ceil(4);
+    let tile_blocks_high = tile_height.div_ceil(4);
 
     // Tile position in blocks
     let tile_block_x = tile_x / 4;
@@ -289,7 +289,7 @@ pub fn extract_bc_tile(
         let src_block_col = tile_block_x;
 
         // Check bounds
-        if src_block_row >= (src_width + 3) / 4 {
+        if src_block_row >= src_width.div_ceil(4) {
             // Out of bounds, fill with zeros
             tile.resize(tile.len() + (tile_blocks_wide as usize * block_size), 0);
             continue;
@@ -331,7 +331,7 @@ pub fn extract_tiles_from_dds(
         // Get mip level data
         let (mip_data, mip_width, mip_height) = dds.get_mip_data(level)
             .ok_or_else(|| Error::VirtualTexture(
-                format!("Mip level {} not available in texture", level)
+                format!("Mip level {level} not available in texture")
             ))?;
 
         // Calculate tile content position in the source texture

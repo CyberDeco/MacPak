@@ -1,4 +1,4 @@
-//! Vertex attribute methods for GltfBuilder
+//! Vertex attribute methods for `GltfBuilder`
 
 use super::super::types::{GltfBufferView, GltfAccessor};
 use super::GltfBuilder;

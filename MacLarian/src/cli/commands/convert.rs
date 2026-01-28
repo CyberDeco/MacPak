@@ -9,7 +9,7 @@ pub fn execute(
     input_format: Option<&str>,
     output_format: Option<&str>,
 ) -> anyhow::Result<()> {
-    println!("Converting {:?} to {:?}", source, destination);
+    println!("Converting {} to {}", source.display(), destination.display());
 
     // Auto-detect or use provided formats
     let input = if let Some(fmt) = input_format {
@@ -18,7 +18,7 @@ pub fn execute(
         source
             .extension()
             .and_then(|s| s.to_str())
-            .map(|s| s.to_lowercase())
+            .map(str::to_lowercase)
             .ok_or_else(|| {
                 anyhow::anyhow!("Cannot detect input format from source file extension")
             })?
@@ -30,7 +30,7 @@ pub fn execute(
         destination
             .extension()
             .and_then(|s| s.to_str())
-            .map(|s| s.to_lowercase())
+            .map(str::to_lowercase)
             .ok_or_else(|| {
                 anyhow::anyhow!("Cannot detect output format from destination file extension")
             })?
@@ -190,7 +190,7 @@ pub fn execute(
         // Unsupported
         _ => {
             anyhow::bail!(
-                "Unsupported conversion: {} -> {}\n\
+                "Unsupported conversion: {input} -> {output}\n\
                  Supported conversions:\n\
                  - LSF <-> LSX\n\
                  - LSF <-> LSJ (via intermediary LSX)\n\
@@ -198,8 +198,7 @@ pub fn execute(
                  - GR2 -> GLB/glTF\n\
                  - GLB/glTF -> GR2\n\
                  - LOCA <-> XML\n\
-                 - DDS <-> PNG",
-                input, output
+                 - DDS <-> PNG"
             );
         }
     }

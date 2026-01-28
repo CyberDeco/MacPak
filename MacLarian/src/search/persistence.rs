@@ -1,4 +1,4 @@
-//! Index export and import functionality for SearchIndex
+//! Index export and import functionality for `SearchIndex`
 
 use std::collections::HashMap;
 use std::path::Path;

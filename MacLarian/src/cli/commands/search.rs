@@ -9,7 +9,7 @@ use crate::search::{FileType, SearchIndex};
 /// Build a search index from a PAK file
 pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow::Result<()> {
     let started = Instant::now();
-    let total_steps = if fulltext { 3 } else { 2 } + if output.is_some() { 1 } else { 0 };
+    let total_steps = if fulltext { 3 } else { 2 } + usize::from(output.is_some());
     let mut step = 1;
 
     print_step(step, total_steps, LOOKING_GLASS, &format!("Reading {}...", pak.display()));
@@ -32,7 +32,7 @@ pub fn build_index(pak: &Path, output: Option<&Path>, fulltext: bool) -> anyhow:
         })?;
         pb.finish_and_clear();
 
-        println!("  {} Indexed {} documents for full-text search", SPARKLE, doc_count);
+        println!("  {SPARKLE} Indexed {doc_count} documents for full-text search");
     }
 
     if let Some(out) = output {

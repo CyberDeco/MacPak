@@ -4,10 +4,10 @@
 //!
 //! SPDX-License-Identifier: MIT
 //!
-//! This module handles parsing mod configuration files that map GTex hashes
+//! This module handles parsing mod configuration files that map `GTex` hashes
 //! to GTS paths:
-//! - `VirtualTextures.json` (Script Extender) - has GTex hash → GTS path mapping
-//! - `VTexConfig.xml` - has TileSet name and texture definitions
+//! - `VirtualTextures.json` (Script Extender) - has `GTex` hash → GTS path mapping
+//! - `VTexConfig.xml` - has `TileSet` name and texture definitions
 
 use std::path::{Path, PathBuf};
 use serde::Deserialize;
@@ -20,7 +20,7 @@ pub struct VirtualTexturesJson {
     pub mappings: Vec<VTexMapping>,
 }
 
-/// A single GTex → GTS mapping
+/// A single `GTex` → GTS mapping
 #[derive(Debug, Deserialize)]
 pub struct VTexMapping {
     #[serde(rename = "GTexName")]
@@ -64,18 +64,18 @@ pub struct ModConfig {
     pub mod_root: PathBuf,
     /// Mod name (from directory structure, used to locate config files)
     pub mod_name: String,
-    /// TileSet name from VTexConfig.xml
+    /// `TileSet` name from `VTexConfig.xml`
     pub tileset_name: Option<String>,
-    /// GTex hashes from VTexConfig.xml textures
+    /// `GTex` hashes from `VTexConfig.xml` textures
     pub gtex_hashes: Vec<String>,
-    /// GTex → GTS mappings from VirtualTextures.json
+    /// `GTex` → GTS mappings from `VirtualTextures.json`
     pub mappings: Vec<VTexMapping>,
 }
 
 /// Find the mod root directory by traversing up from the GTP path
 ///
 /// Looks for the pattern: `ModRoot/Public/<ModName>/Assets/VirtualTextures/`
-/// Returns the ModRoot path and mod name if found.
+/// Returns the `ModRoot` path and mod name if found.
 #[must_use]
 pub fn find_mod_root(gtp_path: &Path) -> Option<(PathBuf, String)> {
     let mut current = gtp_path.parent()?;
@@ -135,8 +135,8 @@ pub fn load_vtex_config_xml(mod_root: &Path, mod_name: &str) -> Option<VTexConfi
 ///
 /// This function:
 /// 1. Finds the mod root directory
-/// 2. Loads VTexConfig.xml for TileSet name and GTex hashes
-/// 3. Loads VirtualTextures.json for GTex → GTS mappings
+/// 2. Loads VTexConfig.xml for `TileSet` name and `GTex` hashes
+/// 3. Loads VirtualTextures.json for `GTex` → GTS mappings
 /// 4. Returns the parsed configuration
 #[must_use]
 pub fn load_mod_config(gtp_path: &Path) -> Option<ModConfig> {
@@ -164,7 +164,7 @@ pub fn load_mod_config(gtp_path: &Path) -> Option<ModConfig> {
     })
 }
 
-/// Find GTS path for a GTex hash using mod config (for future use)
+/// Find GTS path for a `GTex` hash using mod config (for future use)
 #[must_use]
 #[allow(dead_code)]
 pub fn find_gts_for_gtex(config: &ModConfig, gtex_hash: &str) -> Option<PathBuf> {

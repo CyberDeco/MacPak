@@ -126,7 +126,7 @@ impl GtsWriter {
         }
     }
 
-    /// Set the FourCC metadata tree
+    /// Set the `FourCC` metadata tree
     pub fn set_fourcc_tree(&mut self, tree: FourCCTree) {
         self.fourcc_tree = tree;
     }
@@ -366,7 +366,7 @@ pub fn create_bc_parameter_block(
         d: 0,
         fourcc,
         e1: 0,
-        save_mip: if embed_mip { 1 } else { 0 },
+        save_mip: u8::from(embed_mip),
         e3: 0,
         e4: 0,
         f: 0,

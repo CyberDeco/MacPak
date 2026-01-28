@@ -1,4 +1,4 @@
-//! Mesh methods for GltfBuilder
+//! Mesh methods for `GltfBuilder`
 
 use std::collections::HashMap;
 

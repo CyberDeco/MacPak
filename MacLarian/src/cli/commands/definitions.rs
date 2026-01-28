@@ -15,7 +15,7 @@ pub enum ModCommands {
         source: PathBuf,
     },
 
-    /// Generate info.json for BaldursModManager
+    /// Generate info.json for `BaldursModManager`
     InfoJson {
         /// Path to PAK file (for MD5 calculation)
         #[arg(long)]
@@ -49,7 +49,7 @@ pub enum Gr2Commands {
         output: PathBuf,
     },
 
-    /// Decompress a GR2 file (all BitKnit sections)
+    /// Decompress a GR2 file (all `BitKnit` sections)
     Decompress {
         /// Source GR2 file
         path: PathBuf,

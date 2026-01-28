@@ -213,7 +213,7 @@ impl VirtualTextureBuilder {
         progress(&VTexProgress::new(VTexPhase::LoadingTiles, 0, 3));
 
         // Pre-allocate based on estimated total tiles across all layers
-        let estimated_tiles: usize = geometry.tiles_per_layer.iter().map(|t| t.len()).sum();
+        let estimated_tiles: usize = geometry.tiles_per_layer.iter().map(std::vec::Vec::len).sum();
         let mut all_tiles: Vec<ProcessedTile> = Vec::with_capacity(estimated_tiles);
         let layer_paths = texture.layer_paths();
 
@@ -225,7 +225,7 @@ impl VirtualTextureBuilder {
                     VTexPhase::LoadingTiles,
                     i + 1,
                     3,
-                    format!("Loading layer {}", i),
+                    format!("Loading layer {i}"),
                 ));
                 dds_textures[i] = Some(DdsTexture::load(p)?);
             }
@@ -295,7 +295,10 @@ impl VirtualTextureBuilder {
         progress(&VTexProgress::new(VTexPhase::WritingGtp, 1, 1));
 
         // Generate hash from GUID for filename (extractor expects Name_HASH.gtp format)
-        let gtp_hash: String = self.guid.iter().map(|b| format!("{b:02x}")).collect();
+        let gtp_hash = self.guid.iter().fold(String::new(), |mut acc, b| {
+            let _ = std::fmt::Write::write_fmt(&mut acc, format_args!("{b:02x}"));
+            acc
+        });
         let gtp_filename = format!("{name}_{gtp_hash}.gtp");
         let gtp_path = output_dir.join(&gtp_filename);
 
@@ -467,7 +470,7 @@ impl VirtualTextureBuilder {
     /// Validate the builder configuration and inputs
     fn validate(&self) -> Result<()> {
         // Validate configuration
-        self.config.validate().map_err(|e| Error::VirtualTexture(e))?;
+        self.config.validate().map_err(Error::VirtualTexture)?;
 
         // Check if there's at least one texture
         if self.textures.is_empty() {

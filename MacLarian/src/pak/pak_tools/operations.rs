@@ -88,12 +88,9 @@ impl PakOperations {
                 });
 
                 // Get the correct part file path for this entry
-                let part_path = match get_part_path(pak_path, entry.archive_part) {
-                    Some(p) => p,
-                    None => {
-                        error_count.fetch_add(1, Ordering::SeqCst);
-                        return Some((entry.path.clone(), format!("Cannot determine path for archive part {}", entry.archive_part)));
-                    }
+                let part_path = if let Some(p) = get_part_path(pak_path, entry.archive_part) { p } else {
+                    error_count.fetch_add(1, Ordering::SeqCst);
+                    return Some((entry.path.clone(), format!("Cannot determine path for archive part {}", entry.archive_part)));
                 };
 
                 // Open file handle for this thread, seek, and read

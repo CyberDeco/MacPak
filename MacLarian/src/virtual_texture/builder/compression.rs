@@ -1,6 +1,6 @@
 //! Tile compression utilities
 //!
-//! SPDX-FileCopyrightText: 2025 CyberDeco
+//! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 use crate::compression::fastlz;
@@ -35,7 +35,7 @@ pub fn compress_tile(data: &[u8], preference: TileCompressionPreference) -> Resu
     }
 }
 
-/// Compress data using FastLZ
+/// Compress data using `FastLZ`
 fn compress_fastlz(data: &[u8]) -> Result<Vec<u8>> {
     fastlz::compress(data)
 }

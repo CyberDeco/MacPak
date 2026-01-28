@@ -34,7 +34,7 @@ fn matches_glob_recursive(pattern: &[char], text: &[char], pi: usize, ti: usize)
             }
         }
         c => {
-            if ti < text.len() && text[ti].to_ascii_lowercase() == c.to_ascii_lowercase() {
+            if ti < text.len() && text[ti].eq_ignore_ascii_case(&c) {
                 matches_glob_recursive(pattern, text, pi + 1, ti + 1)
             } else {
                 false
@@ -91,8 +91,8 @@ pub fn execute(
 
         // Print header
         println!(
-            "{:>10}  {:>10}  {:>6}  {}",
-            "SIZE", "COMPRESSED", "RATIO", "PATH"
+            "{:>10}  {:>10}  {:>6}  PATH",
+            "SIZE", "COMPRESSED", "RATIO"
         );
 
         // Print entries

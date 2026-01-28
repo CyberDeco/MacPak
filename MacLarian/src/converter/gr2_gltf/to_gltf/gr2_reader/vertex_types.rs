@@ -37,7 +37,7 @@ impl MemberType {
         }
     }
 
-    pub(super) fn element_size(&self) -> usize {
+    pub(super) fn element_size(self) -> usize {
         match self {
             Self::Real32 => 4,
             Self::Real16 | Self::BinormalInt16 => 2,

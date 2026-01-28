@@ -1,4 +1,4 @@
-//! Image, texture, and material methods for GltfBuilder
+//! Image, texture, and material methods for `GltfBuilder`
 
 use super::super::types::GltfBufferView;
 use super::super::materials::{

@@ -1,4 +1,4 @@
-//! Skeleton methods for GltfBuilder
+//! Skeleton methods for `GltfBuilder`
 
 use crate::converter::gr2_gltf::to_gltf::gr2_reader::Skeleton;
 

@@ -365,7 +365,7 @@ impl VirtualTextureExtractor {
 
             // Write DDS file: {mod_name}_{gtex_hash}_{Layer}.dds
             let filename = if options.all_layers {
-                format!("{}_{}_{}.dds", mod_name, gtex_hash, layer_idx)
+                format!("{mod_name}_{gtex_hash}_{layer_idx}.dds")
             } else {
                 format!("{}_{}_{}.dds", mod_name, gtex_hash, layer.as_str())
             };

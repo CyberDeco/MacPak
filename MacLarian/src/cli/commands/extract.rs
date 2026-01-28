@@ -95,7 +95,7 @@ fn matches_glob_recursive(pattern: &[char], text: &[char], pi: usize, ti: usize)
         }
         c => {
             // Match literal character (case-insensitive for paths)
-            if ti < text.len() && text[ti].to_ascii_lowercase() == c.to_ascii_lowercase() {
+            if ti < text.len() && text[ti].eq_ignore_ascii_case(&c) {
                 matches_glob_recursive(pattern, text, pi + 1, ti + 1)
             } else {
                 false
@@ -111,7 +111,7 @@ pub fn execute(
     filter: Option<&str>,
     file: Option<&str>,
     progress: bool,
-    gr2_options: Gr2CliOptions,
+    gr2_options: &Gr2CliOptions,
 ) -> anyhow::Result<()> {
     use crate::pak::{PakOperations, extract_files_smart};
 
@@ -166,7 +166,7 @@ pub fn execute(
         println!("Found {} matching files", matching.len());
 
         if use_smart_extract {
-            execute_smart_extraction(source, destination, &matching, &gr2_options, progress)?;
+            execute_smart_extraction(source, destination, &matching, gr2_options, progress)?;
         } else if progress {
             let pb = simple_bar(matching.len() as u64, "Extracting");
             let count = AtomicUsize::new(0);
@@ -204,12 +204,12 @@ pub fn execute(
     if use_smart_extract {
         // List all files for smart extraction
         let all_files = PakOperations::list(source)?;
-        execute_smart_extraction(source, destination, &all_files, &gr2_options, progress)?;
+        execute_smart_extraction(source, destination, &all_files, gr2_options, progress)?;
     } else if progress {
         let files = PakOperations::list(source)?;
         let total = files.len() as u64;
 
-        println!("Extracting {} files from {:?}", total, source);
+        println!("Extracting {total} files from {}", source.display());
 
         let pb = simple_bar(total, "Extracting");
         let count = AtomicUsize::new(0);
@@ -229,7 +229,7 @@ pub fn execute(
         pb.finish_with_message("done");
         println!("Extraction complete");
     } else {
-        println!("Extracting {:?} to {:?}", source, destination);
+        println!("Extracting {} to {}", source.display(), destination.display());
         PakOperations::extract(source, destination)?;
         println!("Extraction complete");
     }
@@ -252,7 +252,7 @@ fn execute_smart_extraction(
     // Count GR2 files for progress reporting
     let gr2_count = files.iter().filter(|f| f.to_lowercase().ends_with(".gr2")).count();
     if gr2_count > 0 {
-        println!("Found {} GR2 files to process", gr2_count);
+        println!("Found {gr2_count} GR2 files to process");
     }
 
     if progress {
@@ -315,7 +315,7 @@ fn print_smart_extraction_result(result: &crate::pak::SmartExtractionResult) {
     if !result.warnings.is_empty() {
         println!("\nWarnings:");
         for warning in &result.warnings {
-            println!("  {}", warning);
+            println!("  {warning}");
         }
     }
 }

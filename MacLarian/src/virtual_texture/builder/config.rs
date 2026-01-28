@@ -11,7 +11,7 @@ use std::path::PathBuf;
 pub enum TileCompressionPreference {
     /// Raw (uncompressed)
     Raw,
-    /// FastLZ compression (what BG3 uses)
+    /// `FastLZ` compression (what BG3 uses)
     #[default]
     FastLZ,
 }
@@ -48,7 +48,7 @@ pub enum BcFormat {
 }
 
 impl BcFormat {
-    /// Get the FourCC code for this format
+    /// Get the `FourCC` code for this format
     #[must_use]
     pub const fn fourcc(&self) -> u32 {
         match self {
@@ -146,8 +146,7 @@ impl TileSetConfiguration {
         }
         if content_width % 4 != 0 || content_height % 4 != 0 {
             return Err(format!(
-                "Content area must be divisible by 4, got {}x{}",
-                content_width, content_height
+                "Content area must be divisible by 4, got {content_width}x{content_height}"
             ));
         }
 
@@ -187,7 +186,7 @@ impl TileSetConfiguration {
 /// A source texture to be included in the virtual texture set
 #[derive(Debug, Clone)]
 pub struct SourceTexture {
-    /// Name/identifier for this texture (used in FourCC metadata)
+    /// Name/identifier for this texture (used in `FourCC` metadata)
     pub name: String,
     /// Path to the base map DDS (color/albedo) - optional
     pub base_map: Option<PathBuf>,

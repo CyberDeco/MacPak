@@ -31,7 +31,7 @@ impl Commands {
                 filter.as_deref(),
                 file.as_deref(),
                 !*quiet,
-                extract::Gr2CliOptions {
+                &extract::Gr2CliOptions {
                     bundle: *bundle,
                     convert_gr2: *convert_gr2,
                     extract_textures: *extract_textures,
@@ -120,11 +120,12 @@ impl VirtualTextureCommands {
                 virtual_texture::list(path)
             }
             VirtualTextureCommands::Extract { path, output, texture, layer, all_layers } => {
+                let layers: Vec<usize> = layer.iter().map(|l| l.0).collect();
                 virtual_texture::extract(
                     path,
                     output,
                     texture.as_deref(),
-                    layer.iter().map(|l| l.0).collect(),
+                    &layers,
                     *all_layers,
                 )
             }
@@ -140,7 +141,8 @@ impl VirtualTextureCommands {
                 )
             }
             VirtualTextureCommands::Batch { input, output, layer, recursive } => {
-                virtual_texture::batch(input, output, layer.iter().map(|l| l.0).collect(), *recursive)
+                let layers: Vec<usize> = layer.iter().map(|l| l.0).collect();
+                virtual_texture::batch(input, output, &layers, *recursive)
             }
             VirtualTextureCommands::GtpInfo { path, gts } => {
                 virtual_texture::gtp_info(path, gts.as_deref())

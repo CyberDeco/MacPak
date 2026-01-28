@@ -1,10 +1,10 @@
-//! FourCC metadata tree builder and serializer
+//! `FourCC` metadata tree builder and serializer
 //!
 //! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
 //!
-//! The FourCC metadata in GTS files uses a hierarchical tree structure
+//! The `FourCC` metadata in GTS files uses a hierarchical tree structure
 //! with format codes indicating node types:
 //! - 1: Container node (has children)
 //! - 2: String (UTF-16LE, null-terminated)
@@ -16,7 +16,7 @@ use std::io::{Write, Seek, SeekFrom};
 use crate::error::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
 
-/// Format codes for FourCC nodes
+/// Format codes for `FourCC` nodes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum FourCCFormat {
@@ -32,7 +32,7 @@ pub enum FourCCFormat {
     Guid = 0x0D,
 }
 
-/// A node in the FourCC metadata tree
+/// A node in the `FourCC` metadata tree
 #[derive(Debug, Clone)]
 pub enum FourCCNode {
     /// Container node with children
@@ -115,7 +115,7 @@ impl FourCCNode {
         }
     }
 
-    /// Get the FourCC code
+    /// Get the `FourCC` code
     #[must_use]
     pub fn fourcc(&self) -> &[u8; 4] {
         match self {
@@ -128,7 +128,7 @@ impl FourCCNode {
     }
 }
 
-/// FourCC metadata tree
+/// `FourCC` metadata tree
 #[derive(Debug, Clone, Default)]
 pub struct FourCCTree {
     root: Option<FourCCNode>,
@@ -258,7 +258,7 @@ impl FourCCTree {
     }
 }
 
-/// Build the standard FourCC metadata tree for a virtual texture
+/// Build the standard `FourCC` metadata tree for a virtual texture
 pub fn build_metadata_tree(
     texture_name: &str,
     width: u32,

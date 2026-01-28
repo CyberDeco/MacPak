@@ -21,9 +21,9 @@ pub fn info(path: &Path) -> anyhow::Result<()> {
     println!("Array layers: {}", dds.get_num_array_layers());
 
     if let Some(dxgi) = dds.get_dxgi_format() {
-        println!("Format: {:?} (DXGI)", dxgi);
+        println!("Format: {dxgi:?} (DXGI)");
     } else if let Some(d3d) = dds.get_d3d_format() {
-        println!("Format: {:?} (D3D)", d3d);
+        println!("Format: {d3d:?} (D3D)");
     } else {
         println!("Format: Unknown");
     }
@@ -64,9 +64,7 @@ pub fn convert(input: &Path, output: &Path, format: Option<&str>) -> anyhow::Res
         }
         _ => {
             anyhow::bail!(
-                "Unsupported conversion: {:?} -> {:?}. Supported: DDS<->PNG",
-                input_ext,
-                output_ext
+                "Unsupported conversion: {input_ext:?} -> {output_ext:?}. Supported: DDS<->PNG"
             );
         }
     }
@@ -84,7 +82,7 @@ pub fn batch_convert(
     let (source_ext, target_ext) = match to_format.to_lowercase().as_str() {
         "png" => ("dds", "png"),
         "dds" => ("png", "dds"),
-        other => anyhow::bail!("Unknown format: {}. Use 'png' or 'dds'", other),
+        other => anyhow::bail!("Unknown format: {other}. Use 'png' or 'dds'"),
     };
 
     // Find all files with source extension
@@ -176,8 +174,7 @@ fn parse_dds_format(s: &str) -> anyhow::Result<DdsFormat> {
         "bc3" | "dxt5" => Ok(DdsFormat::BC3),
         "rgba" | "uncompressed" => Ok(DdsFormat::Rgba),
         other => anyhow::bail!(
-            "Unknown DDS format: '{}'. Valid options: bc1, bc2, bc3, rgba",
-            other
+            "Unknown DDS format: '{other}'. Valid options: bc1, bc2, bc3, rgba"
         ),
     }
 }

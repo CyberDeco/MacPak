@@ -49,7 +49,7 @@ pub fn validate(source: &Path) -> anyhow::Result<()> {
     }
 }
 
-/// Generate info.json for BaldursModManager
+/// Generate info.json for `BaldursModManager`
 pub fn info_json(pak: &Path, extracted: &Path, output: Option<&Path>) -> anyhow::Result<()> {
     let pak_str = pak.to_string_lossy();
     let extracted_str = extracted.to_string_lossy();

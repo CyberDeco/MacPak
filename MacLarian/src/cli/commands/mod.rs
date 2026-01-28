@@ -16,8 +16,7 @@ impl FromStr for LayerArg {
             "1" | "normalmap" | "nm" | "normal" => Ok(LayerArg(1)),
             "2" | "physicalmap" | "pm" | "physical" => Ok(LayerArg(2)),
             _ => Err(format!(
-                "Invalid layer '{}'. Valid values: 0/BaseMap/BM/Base, 1/NormalMap/NM/Normal, 2/PhysicalMap/PM/Physical",
-                s
+                "Invalid layer '{s}'. Valid values: 0/BaseMap/BM/Base, 1/NormalMap/NM/Normal, 2/PhysicalMap/PM/Physical"
             )),
         }
     }

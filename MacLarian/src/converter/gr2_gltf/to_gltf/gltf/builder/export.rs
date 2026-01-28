@@ -1,4 +1,4 @@
-//! Export methods for GltfBuilder
+//! Export methods for `GltfBuilder`
 
 use std::fs::File;
 use std::io::Write;

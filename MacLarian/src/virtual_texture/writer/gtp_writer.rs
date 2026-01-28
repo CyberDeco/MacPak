@@ -48,7 +48,7 @@ impl GtpWriter {
         }
     }
 
-    /// Add a tile chunk and return (page_index, chunk_index)
+    /// Add a tile chunk and return (`page_index`, `chunk_index`)
     pub fn add_chunk(&mut self, chunk: Chunk) -> (u16, u16) {
         // Calculate space needed for this chunk
         // Chunk header (12 bytes) + data

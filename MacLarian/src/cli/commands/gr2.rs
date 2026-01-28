@@ -25,9 +25,7 @@ pub fn inspect(path: &Path) -> anyhow::Result<()> {
     println!("Sections:");
     println!("---------");
     for section in &info.sections {
-        let ratio = section.compression_ratio
-            .map(|r| format!("{:.2}x", r))
-            .unwrap_or_else(|| "N/A".to_string());
+        let ratio = section.compression_ratio.map_or_else(|| "N/A".to_string(), |r| format!("{r:.2}x"));
         println!(
             "  [{:2}] {:8} | {:>8} -> {:>8} bytes ({})",
             section.index,
@@ -57,7 +55,7 @@ pub fn inspect(path: &Path) -> anyhow::Result<()> {
             }
         }
         Err(e) => {
-            println!("(Could not parse mesh data: {})", e);
+            println!("(Could not parse mesh data: {e})");
         }
     }
 
@@ -87,7 +85,7 @@ pub fn decompress(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
         let ext = path.extension()
             .and_then(|s| s.to_str())
             .unwrap_or("gr2");
-        path.with_file_name(format!("{}_decompressed.{}", stem, ext))
+        path.with_file_name(format!("{stem}_decompressed.{ext}"))
     };
 
     println!("Decompressing GR2 file...");
@@ -104,8 +102,8 @@ pub fn decompress(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
 
     println!();
     println!("Decompression complete!");
-    println!("  Original size:     {} bytes", original_size);
-    println!("  Decompressed size: {} bytes", decompressed_size);
+    println!("  Original size:     {original_size} bytes");
+    println!("  Decompressed size: {decompressed_size} bytes");
 
     Ok(())
 }
@@ -142,7 +140,7 @@ pub fn convert_to_glb(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     let output_size = std::fs::metadata(&output_path)?.len();
     println!();
     print_done(start.elapsed());
-    println!("  Output size: {} bytes", output_size);
+    println!("  Output size: {output_size} bytes");
 
     Ok(())
 }
@@ -181,7 +179,7 @@ pub fn convert_to_gr2(path: &Path, output: Option<&Path>) -> anyhow::Result<()> 
     let output_size = std::fs::metadata(&output_path)?.len();
     println!();
     print_done(start.elapsed());
-    println!("  Output size: {} bytes", output_size);
+    println!("  Output size: {output_size} bytes");
 
     Ok(())
 }
@@ -210,7 +208,7 @@ pub fn convert_to_glb_textured(
         .and_then(|s| s.to_str())
         .unwrap_or("unknown.GR2");
 
-    println!("  GR2 filename for lookup: {}", gr2_filename);
+    println!("  GR2 filename for lookup: {gr2_filename}");
 
     // Convert with textures
     let result = convert_gr2_bytes_to_glb_with_textures(&gr2_data, gr2_filename, textures_pak)?;
@@ -226,7 +224,7 @@ pub fn convert_to_glb_textured(
         println!();
         println!("Warnings:");
         for warning in &result.warnings {
-            println!("  - {}", warning);
+            println!("  - {warning}");
         }
     }
 
@@ -252,9 +250,7 @@ pub fn bundle(
     let base_output_dir = if let Some(out) = output {
         out.to_path_buf()
     } else {
-        path.parent()
-            .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+        path.parent().map_or_else(|| std::env::current_dir().unwrap_or_default(), std::path::Path::to_path_buf)
     };
 
     let stem = path.file_stem()
@@ -271,14 +267,14 @@ pub fn bundle(
     println!("Bundling GR2 file with textures...");
     println!("  Source:     {}", path.display());
     println!("  Output dir: {}", output_dir.display());
-    println!("  Format:     {}", format_name);
+    println!("  Format:     {format_name}");
 
     // Build options
     let mut options = Gr2ExtractionOptions::default();
 
     if no_glb {
         options = options.no_conversion();
-        println!("  {} conversion: disabled", format_name);
+        println!("  {format_name} conversion: disabled");
     } else if use_gltf {
         options.convert_to_glb = false; // We'll handle glTF conversion separately
     }
@@ -288,13 +284,13 @@ pub fn bundle(
         println!("  Texture extraction: disabled");
     }
 
-    if let Some(ref gd) = game_data {
-        options = options.with_game_data_path(game_data.clone());
+    if let Some(gd) = game_data {
+        options = options.with_game_data_path(game_data);
         println!("  Game data: {}", gd.display());
     }
 
-    if let Some(ref vt) = virtual_textures {
-        options = options.with_virtual_textures_path(virtual_textures.clone());
+    if let Some(vt) = virtual_textures {
+        options = options.with_virtual_textures_path(virtual_textures);
         println!("  Virtual textures: {}", vt.display());
     }
 
@@ -320,35 +316,33 @@ pub fn bundle(
     }
 
     // Handle conversion based on format
-    let glb_path = if !no_glb {
-        if use_gltf {
-            use crate::cli::progress::{print_step, CUBE, LOOKING_GLASS, GEAR, DISK};
-            use crate::converter::{Gr2Phase, convert_gr2_to_gltf_with_progress};
-
-            // Convert to glTF
-            let gltf_path = output_dir.join(format!("{}.gltf", stem));
-            println!("Converting to glTF...");
-            convert_gr2_to_gltf_with_progress(path, &gltf_path, &|progress| {
-                if progress.phase != Gr2Phase::Complete {
-                    let emoji = match progress.phase {
-                        Gr2Phase::ReadingFile => LOOKING_GLASS,
-                        Gr2Phase::ParsingSkeleton | Gr2Phase::ParsingMeshes => CUBE,
-                        Gr2Phase::BuildingDocument => GEAR,
-                        Gr2Phase::WritingOutput => DISK,
-                        _ => GEAR,
-                    };
-                    print_step(progress.current, progress.total, emoji, progress.phase.as_str());
-                }
-            })?;
-            println!();
-            // Don't run the normal GLB conversion in process_extracted_gr2
-            options = options.no_conversion();
-            Some(gltf_path)
-        } else {
-            None // Let process_extracted_gr2 handle GLB conversion
-        }
-    } else {
+    let glb_path = if no_glb {
         None
+    } else if use_gltf {
+        use crate::cli::progress::{print_step, CUBE, LOOKING_GLASS, GEAR, DISK};
+        use crate::converter::{Gr2Phase, convert_gr2_to_gltf_with_progress};
+
+        // Convert to glTF
+        let gltf_path = output_dir.join(format!("{stem}.gltf"));
+        println!("Converting to glTF...");
+        convert_gr2_to_gltf_with_progress(path, &gltf_path, &|progress| {
+            if progress.phase != Gr2Phase::Complete {
+                let emoji = match progress.phase {
+                    Gr2Phase::ReadingFile => LOOKING_GLASS,
+                    Gr2Phase::ParsingSkeleton | Gr2Phase::ParsingMeshes => CUBE,
+                    Gr2Phase::BuildingDocument => GEAR,
+                    Gr2Phase::WritingOutput => DISK,
+                    _ => GEAR,
+                };
+                print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+            }
+        })?;
+        println!();
+        // Don't run the normal GLB conversion in process_extracted_gr2
+        options = options.no_conversion();
+        Some(gltf_path)
+    } else {
+        None // Let process_extracted_gr2 handle GLB conversion
     };
 
     // Process the GR2 (texture extraction, and GLB conversion if not glTF)
@@ -380,7 +374,7 @@ pub fn bundle(
         println!();
         println!("Warnings:");
         for warning in &result.warnings {
-            println!("  - {}", warning);
+            println!("  - {warning}");
         }
     }
 

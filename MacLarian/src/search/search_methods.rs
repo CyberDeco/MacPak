@@ -1,4 +1,4 @@
-//! Search methods for SearchIndex
+//! Search methods for `SearchIndex`
 
 use super::fulltext::FullTextResult;
 use super::types::{FileType, IndexedFile, SearchProgressCallback};

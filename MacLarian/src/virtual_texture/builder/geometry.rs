@@ -208,6 +208,6 @@ pub fn calculate_mip_levels(width: u32, height: u32, min_size: u32) -> u32 {
 /// Calculate the number of tiles needed for a given dimension
 #[must_use]
 pub fn tiles_for_dimension(pixels: u32, tile_size: u32) -> u32 {
-    (pixels + tile_size - 1) / tile_size
+    pixels.div_ceil(tile_size)
 }
 
