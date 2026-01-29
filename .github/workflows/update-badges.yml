@@ -27,7 +27,9 @@ jobs:
           # Update badges in README.md
           sed -i "s|MacPak-v[0-9]*\.[0-9]*\.[0-9]*|MacPak-v${MACPAK_VERSION}|g" README.md
           sed -i "s|MacLarian-v[0-9]*\.[0-9]*\.[0-9]*|MacLarian-v${MACLARIAN_VERSION}|g" README.md
-
+          sed -i "s|maclarian = \".*\"|maclarian = \"${MACLARIAN_VERSION}\"|g" README.md
+          sed -i "s|maclarian = \".*\"|maclarian = \"${MACLARIAN_VERSION}\"|g" MacLarian/README.md
+          sed -i "s|MacLarian-v[0-9]*\.[0-9]*\.[0-9]*|MacLarian-v${MACLARIAN_VERSION}|g" MacLarian/README.md	
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"

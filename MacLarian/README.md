@@ -2,16 +2,17 @@
 
 <div align="center">
 
-![Rust](https://img.shields.io/badge/rust-1.85+-orange?logo=rust)
+[![Custom](https://img.shields.io/badge/MacLarian-v0.1.0-68fdff?logo=data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48IS0tIFVwbG9hZGVkIHRvOiBTVkcgUmVwbywgd3d3LnN2Z3JlcG8uY29tLCBHZW5lcmF0b3I6IFNWRyBSZXBvIE1peGVyIFRvb2xzIC0tPgo8c3ZnIGZpbGw9IiNGRkZGRkYiIHdpZHRoPSI4MDBweCIgaGVpZ2h0PSI4MDBweCIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPmlvbmljb25zLXY1LWg8L3RpdGxlPjxwYXRoIGQ9Ik00OTQuMjYsMjc2LjIyYy0zLjYtNDAuNDEtOS41My00OC4yOC0xMS43Ny01MS4yNC01LjE1LTYuODQtMTMuMzktMTEuMzEtMjIuMTEtMTZsMCwwYTMuNiwzLjYsMCwwLDEtLjkxLTUuNjhBMTUuOTMsMTUuOTMsMCwwLDAsNDY0LDE5MC43NywxNi4yNywxNi4yNywwLDAsMCw0NDcuNjUsMTc2aC0xNS42YTE3LDE3LDAsMCwwLTIsLjEzLDguNSw4LjUsMCwwLDAtMS40MS0uNDdsMCwwYy05LjI0LTE5LjUzLTIxLjg5LTQ2LjI3LTQ4LjExLTU5LjMyQzM0MS42NCw5NywyNzAsOTYsMjU2LDk2cy04NS42NCwxLTEyNC40OCwyMC4zMWMtMjYuMjIsMTMuMDUtMzguODcsMzkuNzktNDguMTEsNTkuMzJsLS4wOC4xNmE2LjUyLDYuNTIsMCwwLDAtMS4zNS4zNCwxNywxNywwLDAsMC0yLS4xM0g2NC4zNUExNi4yNywxNi4yNywwLDAsMCw0OCwxOTAuNzdhMTUuOTMsMTUuOTMsMCwwLDAsNC41OSwxMi40NywzLjYsMy42LDAsMCwxLS45MSw1LjY4bDAsMGMtOC43Miw0LjcyLTE3LDkuMTktMjIuMTEsMTYtMi4yNCwzLTguMTYsMTAuODMtMTEuNzcsNTEuMjQtMiwyMi43NC0yLjMsNDYuMjgtLjczLDYxLjQ0LDMuMjksMzEuNSw5LjQ2LDUwLjU0LDkuNzIsNTEuMzNhMTYsMTYsMCwwLDAsMTMuMiwxMC44N2gwVjQwMGExNiwxNiwwLDAsMCwxNiwxNmg1NmExNiwxNiwwLDAsMCwxNi0xNmgwYzguNjEsMCwxNC42LTEuNTQsMjAuOTUtMy4xOGExNTguODMsMTU4LjgzLDAsMCwxLDI4LTQuOTFDMjA3LjQ1LDM4OSwyMzcuNzksMzg4LDI1NiwzODhjMTcuODQsMCw0OS41MiwxLDgwLjA4LDMuOTFhMTU5LjE2LDE1OS4xNiwwLDAsMSwyOC4xMSw0LjkzYzYuMDgsMS41NiwxMS44NSwzLDE5Ljg0LDMuMTVoMGExNiwxNiwwLDAsMCwxNiwxNmg1NmExNiwxNiwwLDAsMCwxNi0xNnYtLjEyaDBBMTYsMTYsMCwwLDAsNDg1LjI3LDM4OWMuMjYtLjc5LDYuNDMtMTkuODMsOS43Mi01MS4zM0M0OTYuNTYsMzIyLjUsNDk2LjI4LDI5OSw0OTQuMjYsMjc2LjIyWk0xMTIuMzMsMTg5LjMxYzgtMTcsMTcuMTUtMzYuMjQsMzMuNDQtNDQuMzUsMjMuNTQtMTEuNzIsNzIuMzMtMTcsMTEwLjIzLTE3czg2LjY5LDUuMjQsMTEwLjIzLDE3YzE2LjI5LDguMTEsMjUuNCwyNy4zNiwzMy40NCw0NC4zNWwxLDIuMTdhOCw4LDAsMCwxLTcuNDQsMTEuNDJDMzYwLDIwMiwyOTAsMTk5LjEyLDI1NiwxOTkuMTJzLTEwNCwyLjk1LTEzNy4yOCwzLjg1YTgsOCwwLDAsMS03LjQ0LTExLjQyQzExMS42MywxOTAuODEsMTEyLDE5MC4wNiwxMTIuMzMsMTg5LjMxWm0xMS45Myw3OS42M0E0MjcuMTcsNDI3LjE3LDAsMCwxLDcyLjQyLDI3MmMtMTAuNiwwLTIxLjUzLTMtMjMuNTYtMTIuNDQtMS4zOS02LjM1LTEuMjQtOS45Mi0uNDktMTMuNTFDNDksMjQzLDUwLDI0MC43OCw1NSwyNDBjMTMtMiwyMC4yNy41MSw0MS41NSw2Ljc4LDE0LjExLDQuMTUsMjQuMjksOS42OCwzMC4wOSwxNC4wNkMxMjkuNTUsMjYzLDEyOCwyNjguNjQsMTI0LjI2LDI2OC45NFptMjIxLjM4LDgyYy0xMy4xNiwxLjUtMzkuNDguOTUtODkuMzQuOTVzLTc2LjE3LjU1LTg5LjMzLS45NWMtMTMuNTgtMS41MS0zMC44OS0xNC4zNS0xOS4wNy0yNS43OSw3Ljg3LTcuNTQsMjYuMjMtMTMuMTgsNTAuNjgtMTYuMzVTMjMzLjM4LDMwNCwyNTYuMiwzMDRzMzIuMTIsMSw1Ny42Miw0LjgxLDQ0Ljc3LDkuNTIsNTAuNjgsMTYuMzVDMzc1LjI4LDMzNy40LDM1OS4yMSwzNDkuMzUsMzQ1LjY0LDM1MVptMTE3LjUtOTEuMzljLTIsOS40OC0xMywxMi40NC0yMy41NiwxMi40NGE0NTUuOTEsNDU1LjkxLDAsMCwxLTUyLjg0LTMuMDZjLTMuMDYtLjI5LTQuNDgtNS42Ni0xLjM4LTguMSw1LjcxLTQuNDksMTYtOS45MSwzMC4wOS0xNC4wNiwyMS4yOC02LjI3LDMzLjU1LTguNzgsNDQuMDktNi42OSwyLjU3LjUxLDMuOTMsMy4yNyw0LjA5LDVBNDAuNjQsNDAuNjQsMCwwLDEsNDYzLjE0LDI1OS41NloiLz48L3N2Zz4K)](https://github.com/CyberDeco/MacPak/tree/main/MacLarian)
 [![Crates.io](https://img.shields.io/crates/v/maclarian.svg?color=68fdff)](https://crates.io/crates/maclarian)
 [![Documentation](https://docs.rs/maclarian/badge.svg)](https://docs.rs/maclarian)
-[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
+![Rust](https://img.shields.io/badge/rust-1.85+-orange?logo=rust)
 
 </div>
 
 A pure-Rust implementation of a ***[M]ac***OS-focused ***Larian*** file format library and toolkit for Baldur's Gate 3 file handling and modding.
 
-> **Note:** This crate is in active development (0.x). The API may change between releases.
+> [!NOTE]
+> This crate is in active development (0.x). The API may change between releases.
 
 ## Supported Formats
 
@@ -25,7 +26,8 @@ A pure-Rust implementation of a ***[M]ac***OS-focused ***Larian*** file format l
 | **DDS/PNG** | Yes | Yes | Texture conversion |
 | **GTS/GTP** | Yes | Yes | GTS/GTP streaming virtual texture extraction/creation |
 
-*Note: creating custom virtual textures (.gts/.gtp files) is not recommended for macOS because they need to be injected into the game using the [BG3 Script Extender](https://github.com/Norbyte/bg3se/blob/main/Docs/VirtualTextures.md), which is Windows-only. [BG3SE-macOS](https://github.com/tdimino/bg3se-macos) is a macOS port of the original Windows version, but it's in active development and custom virtual textures may not be fully supported yet.*
+> [!CAUTION]
+> Creating custom virtual textures (.gts/.gtp files) is not recommended for macOS because they need to be injected into the game using the [BG3 Script Extender](https://github.com/Norbyte/bg3se/blob/main/Docs/VirtualTextures.md), which is Windows-only. [BG3SE-macOS](https://github.com/tdimino/bg3se-macos) is a macOS port of the original Windows version, but it's in active development and custom virtual textures may not be fully supported yet.
 
 ## Installation
 
