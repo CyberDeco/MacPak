@@ -91,7 +91,7 @@ pub fn process_extracted_gr2(
     // Step 2: Extract associated textures
     if options.extract_textures {
         // Build resolver from game data path or auto-detect
-        let resolver = if let Some(ref game_data) = options.game_data_path {
+        let resolver = if let Some(ref game_data) = options.bg3_path {
             GameDataResolver::new(game_data).ok()
         } else {
             GameDataResolver::auto_detect().ok()
@@ -157,7 +157,7 @@ pub fn process_extracted_gr2_to_dir(
     // Step 2: Extract associated textures
     if options.extract_textures {
         // Build resolver from game data path or auto-detect
-        let resolver = if let Some(ref game_data) = options.game_data_path {
+        let resolver = if let Some(ref game_data) = options.bg3_path {
             GameDataResolver::new(game_data).ok()
         } else {
             GameDataResolver::auto_detect().ok()
@@ -244,7 +244,7 @@ fn extract_textures_for_gr2(
 
     // Get game data path
     let game_data = options
-        .game_data_path
+        .bg3_path
         .clone()
         .or_else(bg3_data_path)
         .ok_or_else(|| {

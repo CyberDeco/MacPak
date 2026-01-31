@@ -8,10 +8,11 @@
 
 use super::{GtpFile, GtsFile};
 use crate::error::{Error, Result};
+use serde::Serialize;
 use std::path::Path;
 
 /// Information about a GTS file
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GtsInfo {
     pub version: u32,
     pub guid: [u8; 16],
@@ -24,7 +25,7 @@ pub struct GtsInfo {
 }
 
 /// Information about a page file
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PageFileInfo {
     pub filename: String,
     pub num_pages: u32,

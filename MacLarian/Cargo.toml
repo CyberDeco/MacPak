@@ -54,7 +54,9 @@ uuid = { version = "1.0", features = ["v4"] }
 
 # File system
 walkdir = "2.4"             # Recursive directory traversal
+dirs = "5.0"                # Platform-specific directories (cache, data)
 tempfile = "3.14"           # Temp directories for LSF→LSX conversion
+shellexpand = "3.1"         # Tilde expansion for paths
 
 # Parallelism
 rayon = "1.10"
@@ -131,6 +133,9 @@ must-use-candidate = { level = "allow", priority = 1 }
 fn-params-excessive-bools = { level = "allow", priority = 1 }
 struct-excessive-bools = { level = "allow", priority = 1 }
 too-many-lines = { level = "allow", priority = 1 }
+# CLI progress patterns commonly use if !quiet { progress } else { simple }
+if-not-else = { level = "allow", priority = 1 }
+map-unwrap-or = { level = "allow", priority = 1 }
 
 [lints.rust]
 unsafe_code = "forbid"

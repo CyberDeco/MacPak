@@ -4,48 +4,42 @@ use std::path::Path;
 
 use crate::formats::loca::read_loca;
 
-/// List all entries in a LOCA file
-pub fn list(path: &Path, limit: Option<usize>) -> anyhow::Result<()> {
+/// Search for entries in a LOCA file
+///
+/// If `search_handle` is true, searches handle/key names instead of text content.
+pub fn search(
+    path: &Path,
+    query: &str,
+    search_handle: bool,
+    limit: usize,
+    quiet: bool,
+) -> anyhow::Result<()> {
     let resource = read_loca(path)?;
+    let query_lower = query.to_lowercase();
 
-    println!("LOCA file: {}", path.display());
-    println!("Total entries: {}", resource.entries.len());
-    println!();
-
-    let display_limit = limit.unwrap_or(resource.entries.len());
-    for (i, entry) in resource.entries.iter().take(display_limit).enumerate() {
-        // Truncate long text for display
-        let text_preview = if entry.text.len() > 80 {
-            format!("{}...", &entry.text[..77])
-        } else {
-            entry.text.clone()
-        };
-        let text_preview = text_preview.replace('\n', "\\n");
-
-        println!("{:>5}. {} (v{})", i + 1, entry.key, entry.version);
-        println!("       {text_preview}");
+    if search_handle {
+        // Search by handle/key
+        search_by_handle(&resource, &query_lower, limit, quiet)
+    } else {
+        // Search by text content
+        search_by_text(&resource, &query_lower, limit, quiet)
     }
-
-    if display_limit < resource.entries.len() {
-        println!();
-        println!(
-            "... and {} more entries (use --limit to see more)",
-            resource.entries.len() - display_limit
-        );
-    }
-
-    Ok(())
 }
 
-/// Get a specific entry by handle
-pub fn get(path: &Path, handle: &str) -> anyhow::Result<()> {
-    let resource = read_loca(path)?;
-
-    // Try to find by exact key match first
-    if let Some(entry) = resource.entries.iter().find(|e| e.key == handle) {
-        println!("Key: {}", entry.key);
-        println!("Version: {}", entry.version);
-        println!("Text:");
+/// Search entries by handle/key name
+fn search_by_handle(
+    resource: &crate::formats::loca::LocaResource,
+    query_lower: &str,
+    limit: usize,
+    quiet: bool,
+) -> anyhow::Result<()> {
+    // Try exact match first
+    if let Some(entry) = resource.entries.iter().find(|e| e.key.to_lowercase() == *query_lower) {
+        if !quiet {
+            println!("Key: {}", entry.key);
+            println!("Version: {}", entry.version);
+            println!("Text:");
+        }
         println!("{}", entry.text);
         return Ok(());
     }
@@ -54,47 +48,69 @@ pub fn get(path: &Path, handle: &str) -> anyhow::Result<()> {
     let matches: Vec<_> = resource
         .entries
         .iter()
-        .filter(|e| e.key.contains(handle))
+        .filter(|e| e.key.to_lowercase().contains(query_lower))
+        .take(limit)
         .collect();
 
     if matches.is_empty() {
-        println!("No entry found matching '{handle}'");
+        if !quiet {
+            println!("No entries found matching handle '{query_lower}'");
+        }
     } else if matches.len() == 1 {
         let entry = matches[0];
-        println!("Key: {}", entry.key);
-        println!("Version: {}", entry.version);
-        println!("Text:");
+        if !quiet {
+            println!("Key: {}", entry.key);
+            println!("Version: {}", entry.version);
+            println!("Text:");
+        }
         println!("{}", entry.text);
     } else {
-        println!("Multiple entries match '{handle}':");
-        for entry in matches.iter().take(10) {
-            println!("  {}", entry.key);
+        if !quiet {
+            println!("Found {} entries matching '{}':", matches.len(), query_lower);
+            println!();
         }
-        if matches.len() > 10 {
-            println!("  ... and {} more", matches.len() - 10);
+        for entry in &matches {
+            // Truncate long text for display
+            let text_preview = if entry.text.len() > 80 {
+                format!("{}...", &entry.text[..77])
+            } else {
+                entry.text.clone()
+            };
+            let text_preview = text_preview.replace('\n', "\\n");
+
+            println!("{}", entry.key);
+            if !quiet {
+                println!("  {text_preview}");
+            }
         }
     }
 
     Ok(())
 }
 
-/// Search for entries containing text
-pub fn search(path: &Path, query: &str, limit: usize) -> anyhow::Result<()> {
-    let resource = read_loca(path)?;
-    let query_lower = query.to_lowercase();
-
+/// Search entries by text content
+fn search_by_text(
+    resource: &crate::formats::loca::LocaResource,
+    query_lower: &str,
+    limit: usize,
+    quiet: bool,
+) -> anyhow::Result<()> {
     let matches: Vec<_> = resource
         .entries
         .iter()
-        .filter(|e| e.text.to_lowercase().contains(&query_lower))
+        .filter(|e| e.text.to_lowercase().contains(query_lower))
         .take(limit)
         .collect();
 
     if matches.is_empty() {
-        println!("No entries found containing '{query}'");
+        if !quiet {
+            println!("No entries found containing '{query_lower}'");
+        }
     } else {
-        println!("Found {} entries containing '{query}':", matches.len());
-        println!();
+        if !quiet {
+            println!("Found {} entries containing '{}':", matches.len(), query_lower);
+            println!();
+        }
         for entry in &matches {
             // Truncate long text for display
             let text_preview = if entry.text.len() > 100 {
@@ -105,18 +121,11 @@ pub fn search(path: &Path, query: &str, limit: usize) -> anyhow::Result<()> {
             let text_preview = text_preview.replace('\n', "\\n");
 
             println!("{}", entry.key);
-            println!("  {text_preview}");
+            if !quiet {
+                println!("  {text_preview}");
+            }
         }
     }
 
-    Ok(())
-}
-
-/// Export LOCA to XML format
-pub fn export_xml(path: &Path, output: &Path) -> anyhow::Result<()> {
-    use crate::converter::loca::convert_loca_to_xml;
-
-    convert_loca_to_xml(path, output)?;
-    println!("Exported to: {}", output.display());
     Ok(())
 }

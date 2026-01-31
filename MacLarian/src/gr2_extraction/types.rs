@@ -124,7 +124,7 @@ pub struct Gr2ExtractionOptions {
     pub extract_virtual_textures: bool,
     /// Path to BG3 install folder (for finding Textures.pak, etc.)
     /// If None, auto-detects using GameDataResolver
-    pub game_data_path: Option<PathBuf>,
+    pub bg3_path: Option<PathBuf>,
     /// Path to pre-extracted virtual textures (GTP/GTS files)
     /// If None, virtual textures will be skipped
     pub virtual_textures_path: Option<PathBuf>,
@@ -142,7 +142,7 @@ impl Default for Gr2ExtractionOptions {
             convert_to_glb: true,
             extract_textures: true,
             extract_virtual_textures: false,
-            game_data_path: None,
+            bg3_path: None,
             virtual_textures_path: None,
             keep_original_gr2: true,
             convert_to_png: false,
@@ -159,7 +159,7 @@ impl Gr2ExtractionOptions {
             convert_to_glb: false,
             extract_textures: false,
             extract_virtual_textures: false,
-            game_data_path: None,
+            bg3_path: None,
             virtual_textures_path: None,
             keep_original_gr2: true,
             convert_to_png: false,
@@ -176,7 +176,7 @@ impl Gr2ExtractionOptions {
             convert_to_glb: true,
             extract_textures: true,
             extract_virtual_textures: true,
-            game_data_path: None,
+            bg3_path: None,
             virtual_textures_path: None,
             keep_original_gr2: true,
             convert_to_png: false,
@@ -192,8 +192,8 @@ impl Gr2ExtractionOptions {
 
     /// Create options with custom game data path
     #[must_use]
-    pub fn with_game_data_path<P: Into<PathBuf>>(mut self, path: Option<P>) -> Self {
-        self.game_data_path = path.map(Into::into);
+    pub fn with_bg3_path<P: Into<PathBuf>>(mut self, path: Option<P>) -> Self {
+        self.bg3_path = path.map(Into::into);
         self
     }
 

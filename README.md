@@ -49,12 +49,8 @@
 1. **Download the MacPak macOS app from [Releases](https://github.com/CyberDeco/MacPak/releases/latest)** (Coming Soon)
 2. That's it.
 
-### For Developers
-
 <details>
-    
-<summary>Standalone MacLarian Install</summary>
-
+  <summary><h3>Standalone MacLarian Install</h3></summary>
 To install the MacLarian library as a dependency crate, add this to your `Cargo.toml`:
 
 ```toml
@@ -62,20 +58,19 @@ To install the MacLarian library as a dependency crate, add this to your `Cargo.
 maclarian = "0.1.0"
 ```
 
-To use MacLarian as a CLI tool:
+To use MacLarian as a CLI tool (need to have Rust installed first):
 
 ```
 cargo install maclarian
 
 # Extract entire PAK
-maclarian extract -s Shared.pak -d ./extracted
+maclarian pak extract -s Shared.pak -d ./extracted
 
 # Extract only LSF files
-maclarian extract -s Shared.pak -d ./extracted --filter "*.lsf"
+maclarian pak extract -s Shared.pak -d ./extracted --filter "*.lsf"
 ```
 
-See the [MacLarian README](MacLarian/README.md) and CLI section of the wiki for more examples and/or browse [docs.rs](https://docs.rs/maclarian) for the library API.
-
+See the [MacLarian README](MacLarian/README.md) and [CLI section of the wiki](https://github.com/CyberDeco/MacPak/wiki/MacLarian-CLI-Commands) for more examples and/or browse [docs.rs](https://docs.rs/maclarian) for the library API.
 </details>
 
 ---

@@ -15,10 +15,19 @@ use crate::virtual_texture::builder::{
 use crate::virtual_texture::{VTexPhase, VTexProgress};
 
 /// List textures in a GTS file
-pub fn list(gts_path: &Path) -> Result<()> {
+pub fn list(gts_path: &Path, detailed: bool, output: Option<&Path>) -> Result<()> {
     let info = virtual_texture::list_gts(gts_path)
         .with_context(|| format!("Failed to parse GTS file: {}", gts_path.display()))?;
 
+    if let Some(out_path) = output {
+        // Output to JSON file
+        let json = serde_json::to_string_pretty(&info)?;
+        std::fs::write(out_path, json)?;
+        println!("Written to: {}", out_path.display());
+        return Ok(());
+    }
+
+    // Print to CLI
     println!("Virtual Texture Set: {}", gts_path.display());
     println!("GUID: {:02x?}", info.guid);
     println!("Version: {}", info.version);
@@ -31,9 +40,16 @@ pub fn list(gts_path: &Path) -> Result<()> {
     println!("Page files: {}", info.page_files.len());
     println!();
 
-    println!("Page files:");
-    for (i, pf) in info.page_files.iter().enumerate() {
-        println!("  [{}] {} ({} pages)", i, pf.filename, pf.num_pages);
+    if detailed {
+        println!("Page files:");
+        for (i, pf) in info.page_files.iter().enumerate() {
+            println!("  [{}] {} ({} pages)", i, pf.filename, pf.num_pages);
+        }
+    } else {
+        println!(
+            "Page files: {} (use -d for full list)",
+            info.page_files.len()
+        );
     }
 
     Ok(())
@@ -41,12 +57,18 @@ pub fn list(gts_path: &Path) -> Result<()> {
 
 /// Extract textures from GTS/GTP files
 pub fn extract(
-    input_path: &Path,
+    sources: &[PathBuf],
     output_dir: &Path,
-    _texture_name: Option<&str>,
+    gtex_filter: Option<&str>,
     layers: &[usize],
-    _all_layers: bool,
+    quiet: bool,
 ) -> Result<()> {
+    // Handle multiple sources (batch extraction)
+    if sources.len() > 1 {
+        return extract_batch(sources, output_dir, layers, quiet);
+    }
+
+    let input_path = &sources[0];
     let ext = input_path
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
@@ -54,73 +76,82 @@ pub fn extract(
 
     let is_gtp = ext == "gtp";
 
-    if !layers.is_empty() {
-        println!("Layer filter: {layers:?}");
+    if !quiet {
+        if let Some(gtex) = gtex_filter {
+            println!("Texture filter: {gtex}");
+        }
+        if !layers.is_empty() {
+            println!("Layer filter: {layers:?}");
+        }
     }
 
     // Create progress bar - use spinner for single GTP, bar for GTS with multiple GTPs
-    let pb = if is_gtp {
+    let pb = if quiet {
+        None
+    } else if is_gtp {
         let pb = ProgressBar::new_spinner();
         pb.set_style(spinner_style());
-        pb
+        Some(pb)
     } else {
         let pb = ProgressBar::new(1);
         pb.set_style(bar_style());
-        pb
+        Some(pb)
     };
 
     let result = virtual_texture::extract_gts_file(
         input_path,
         Some(output_dir),
         |progress: &VTexProgress| {
-            let desc = progress
-                .current_file
-                .as_deref()
-                .unwrap_or(progress.phase.as_str());
-            if is_gtp {
-                pb.set_message(desc.to_string());
-                pb.tick();
-            } else {
-                pb.set_length(progress.total as u64);
-                pb.set_position(progress.current as u64);
-                pb.set_message(desc.to_string());
+            if let Some(ref pb) = pb {
+                let desc = progress
+                    .current_file
+                    .as_deref()
+                    .unwrap_or(progress.phase.as_str());
+                if is_gtp {
+                    pb.set_message(desc.to_string());
+                    pb.tick();
+                } else {
+                    pb.set_length(progress.total as u64);
+                    pb.set_position(progress.current as u64);
+                    pb.set_message(desc.to_string());
+                }
             }
         },
     )
     .with_context(|| format!("Failed to extract {}", input_path.display()))?;
 
-    pb.finish_and_clear();
+    if let Some(ref pb) = pb {
+        pb.finish_and_clear();
+    }
 
-    if is_gtp {
-        println!(
-            "Extracted {} textures to {}",
-            result.texture_count,
-            output_dir.display()
-        );
-    } else {
-        println!(
-            "Extracted {}/{} GTP files to {}",
-            result.texture_count,
-            result.gtp_count,
-            output_dir.display()
-        );
+    if !quiet {
+        if is_gtp {
+            println!(
+                "Extracted {} textures to {}",
+                result.texture_count,
+                output_dir.display()
+            );
+        } else {
+            println!(
+                "Extracted {}/{} GTP files to {}",
+                result.texture_count,
+                result.gtp_count,
+                output_dir.display()
+            );
+        }
     }
 
     Ok(())
 }
 
-/// Batch extract multiple GTS files in parallel
-pub fn batch(input_dir: &Path, output_dir: &Path, layers: &[usize], recursive: bool) -> Result<()> {
-    // Find all GTS files
-    let mut gts_files = Vec::new();
-    find_gts_files(input_dir, &mut gts_files, recursive)?;
-
-    if gts_files.is_empty() {
-        println!("No GTS files found in {}", input_dir.display());
-        return Ok(());
+/// Batch extract multiple GTS files
+fn extract_batch(sources: &[PathBuf], output_dir: &Path, layers: &[usize], quiet: bool) -> Result<()> {
+    if !quiet {
+        println!("Batch extracting {} files", sources.len());
+        if !layers.is_empty() {
+            println!("Layer filter: {layers:?}");
+        }
     }
-
-    println!("Found {} GTS files", gts_files.len());
 
     // Create output directory
     fs::create_dir_all(output_dir).with_context(|| {
@@ -130,100 +161,47 @@ pub fn batch(input_dir: &Path, output_dir: &Path, layers: &[usize], recursive: b
         )
     })?;
 
-    if !layers.is_empty() {
-        println!("Layer filter: {layers:?}");
-    }
-
     // Create progress bar
-    let pb = ProgressBar::new(gts_files.len() as u64);
-    pb.set_style(bar_style());
-
-    let result =
-        virtual_texture::extract_batch(&gts_files, Some(output_dir), |progress: &VTexProgress| {
-            let desc = progress
-                .current_file
-                .as_deref()
-                .unwrap_or(progress.phase.as_str());
-            pb.set_position(progress.current as u64);
-            pb.set_message(desc.to_string());
-        });
-
-    pb.finish_and_clear();
-
-    println!();
-    println!("Batch extraction complete:");
-    println!("  Succeeded: {}", result.success_count);
-    println!("  Failed: {}", result.error_count);
-    println!("  Total textures: {}", result.texture_count);
-
-    if result.error_count > 0 {
-        println!();
-        println!("Errors:");
-        for msg in &result.results {
-            if msg.starts_with("Failed") {
-                println!("  {msg}");
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Recursively find all GTS files in a directory
-fn find_gts_files(dir: &Path, files: &mut Vec<PathBuf>, recursive: bool) -> Result<()> {
-    if !dir.is_dir() {
-        return Ok(());
-    }
-
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_dir() && recursive {
-            find_gts_files(&path, files, recursive)?;
-        } else if path.is_file() {
-            if let Some(ext) = path.extension() {
-                if ext.to_string_lossy().to_lowercase() == "gts" {
-                    files.push(path);
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Info about a GTP file
-pub fn gtp_info(gtp_path: &Path, gts_path: Option<&Path>) -> Result<()> {
-    // We need a GTS file to properly parse the GTP
-    let gts_path = if let Some(p) = gts_path {
-        p.to_path_buf()
+    let pb = if quiet {
+        None
     } else {
-        // Try to find GTS in same directory
-        let gtp_dir = gtp_path.parent().unwrap_or(Path::new("."));
-        let mut found = None;
-        if let Ok(entries) = fs::read_dir(gtp_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().and_then(|e| e.to_str()) == Some("gts") {
-                    found = Some(path);
-                    break;
-                }
-            }
-        }
-        found.ok_or_else(|| anyhow::anyhow!("No GTS file found. Provide one with --gts"))?
+        let pb = ProgressBar::new(sources.len() as u64);
+        pb.set_style(bar_style());
+        Some(pb)
     };
 
-    let info = virtual_texture::gtp_info(gtp_path, &gts_path)
-        .with_context(|| format!("Failed to parse GTP file: {}", gtp_path.display()))?;
+    let result =
+        virtual_texture::extract_batch(sources, Some(output_dir), |progress: &VTexProgress| {
+            if let Some(ref pb) = pb {
+                let desc = progress
+                    .current_file
+                    .as_deref()
+                    .unwrap_or(progress.phase.as_str());
+                pb.set_position(progress.current as u64);
+                pb.set_message(desc.to_string());
+            }
+        });
 
-    println!("GTP File: {}", gtp_path.display());
-    println!("GUID: {:02x?}", info.guid);
-    println!("Version: {}", info.version);
-    println!("Pages: {}", info.num_pages);
+    if let Some(ref pb) = pb {
+        pb.finish_and_clear();
+    }
 
-    for (page, chunks) in info.chunks_per_page.iter().enumerate() {
-        println!("  Page {page}: {chunks} chunks");
+    if !quiet {
+        println!();
+        println!("Batch extraction complete:");
+        println!("  Succeeded: {}", result.success_count);
+        println!("  Failed: {}", result.error_count);
+        println!("  Total textures: {}", result.texture_count);
+
+        if result.error_count > 0 {
+            println!();
+            println!("Errors:");
+            for msg in &result.results {
+                if msg.starts_with("Failed") {
+                    println!("  {msg}");
+                }
+            }
+        }
     }
 
     Ok(())
@@ -231,51 +209,90 @@ pub fn gtp_info(gtp_path: &Path, gts_path: Option<&Path>) -> Result<()> {
 
 /// Create a virtual texture set from DDS source textures
 pub fn create(
-    name: &str,
+    source_dir: &Path,
+    output_dir: &Path,
+    gtex_name: Option<&str>,
     base_map: Option<&Path>,
     normal_map: Option<&Path>,
     physical_map: Option<&Path>,
-    output_dir: &Path,
-    compression: Option<&str>,
+    compression: &str,
     no_embed_mip: bool,
+    quiet: bool,
 ) -> Result<()> {
-    // Build source texture
+    // Determine texture name
+    let name = gtex_name.unwrap_or_else(|| {
+        source_dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("texture")
+    });
+
+    // Build source texture - either from explicit paths or auto-detect
     let mut texture = SourceTexture::new(name);
 
     if let Some(p) = base_map {
         texture = texture.with_base_map(p);
+    } else {
+        // Auto-detect base map
+        if let Some(path) = find_layer_file(source_dir, &["_BaseMap", "_BM", "_Base", "_Diffuse", "_Albedo"]) {
+            texture = texture.with_base_map(&path);
+            if !quiet {
+                println!("Auto-detected base map: {}", path.display());
+            }
+        }
     }
+
     if let Some(p) = normal_map {
         texture = texture.with_normal_map(p);
+    } else {
+        // Auto-detect normal map
+        if let Some(path) = find_layer_file(source_dir, &["_NormalMap", "_NM", "_Normal"]) {
+            texture = texture.with_normal_map(&path);
+            if !quiet {
+                println!("Auto-detected normal map: {}", path.display());
+            }
+        }
     }
+
     if let Some(p) = physical_map {
         texture = texture.with_physical_map(p);
+    } else {
+        // Auto-detect physical map
+        if let Some(path) = find_layer_file(source_dir, &["_PhysicalMap", "_PM", "_Physical"]) {
+            texture = texture.with_physical_map(&path);
+            if !quiet {
+                println!("Auto-detected physical map: {}", path.display());
+            }
+        }
     }
 
     if !texture.has_any_layer() {
-        anyhow::bail!("At least one layer (--base, --normal, or --physical) must be specified");
+        anyhow::bail!(
+            "No texture layers found. Provide --base, --normal, or --physical, or ensure\n\
+             DDS files are named with suffixes like _BaseMap, _NormalMap, _PhysicalMap"
+        );
     }
 
     // Build the virtual texture
     let mut builder = VirtualTextureBuilder::new().name(name).add_texture(texture);
 
     // Set compression preference
-    if let Some(comp) = compression {
-        let pref = match comp.to_lowercase().as_str() {
-            "raw" => TileCompressionPreference::Raw,
-            "fastlz" => TileCompressionPreference::FastLZ,
-            _ => anyhow::bail!("Unknown compression: {comp}. Use: raw or fastlz (default)"),
-        };
-        builder = builder.compression(pref);
-    }
+    let pref = match compression.to_lowercase().as_str() {
+        "raw" => TileCompressionPreference::Raw,
+        "fastlz" => TileCompressionPreference::FastLZ,
+        _ => anyhow::bail!("Unknown compression: {compression}. Use: raw or fastlz (default)"),
+    };
+    builder = builder.compression(pref);
 
     // Disable mip embedding if requested
     if no_embed_mip {
         builder = builder.embed_mip(false);
     }
 
-    println!("Creating virtual texture '{name}'...");
-    println!("Output: {}", output_dir.display());
+    if !quiet {
+        println!("Creating virtual texture '{name}'...");
+        println!("Output: {}", output_dir.display());
+    }
 
     // Create output directory
     fs::create_dir_all(output_dir).with_context(|| {
@@ -286,55 +303,92 @@ pub fn create(
     })?;
 
     // Create progress bar - starts as spinner, switches to bar for compression
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(spinner_style());
+    let pb = if quiet {
+        None
+    } else {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(spinner_style());
+        Some(pb)
+    };
 
     // Track current phase to detect transitions
     let last_phase = AtomicUsize::new(0);
 
     let result = builder
         .build_with_progress(output_dir, |progress: &VTexProgress| {
-            let phase_num = progress.phase as usize;
-            let prev_phase = last_phase.swap(phase_num, Ordering::SeqCst);
+            if let Some(ref pb) = pb {
+                let phase_num = progress.phase as usize;
+                let prev_phase = last_phase.swap(phase_num, Ordering::SeqCst);
 
-            // Switch to progress bar mode for compression phase
-            if progress.phase == VTexPhase::Compressing {
-                if prev_phase != phase_num {
-                    // Phase just changed to compressing - switch to bar style
-                    pb.set_style(bar_style());
-                    pb.set_length(progress.total as u64);
+                // Switch to progress bar mode for compression phase
+                if progress.phase == VTexPhase::Compressing {
+                    if prev_phase != phase_num {
+                        // Phase just changed to compressing - switch to bar style
+                        pb.set_style(bar_style());
+                        pb.set_length(progress.total as u64);
+                    }
+                    pb.set_position(progress.current as u64);
+                    pb.set_message("Compressing tiles".to_string());
+                } else {
+                    // Other phases use spinner
+                    if prev_phase == VTexPhase::Compressing as usize && phase_num != prev_phase {
+                        // Just finished compression - switch back to spinner
+                        pb.set_style(spinner_style());
+                    }
+                    let desc = progress
+                        .current_file
+                        .as_deref()
+                        .unwrap_or(progress.phase.as_str());
+                    pb.set_message(desc.to_string());
+                    pb.tick();
                 }
-                pb.set_position(progress.current as u64);
-                pb.set_message("Compressing tiles".to_string());
-            } else {
-                // Other phases use spinner
-                if prev_phase == VTexPhase::Compressing as usize && phase_num != prev_phase {
-                    // Just finished compression - switch back to spinner
-                    pb.set_style(spinner_style());
-                }
-                let desc = progress
-                    .current_file
-                    .as_deref()
-                    .unwrap_or(progress.phase.as_str());
-                pb.set_message(desc.to_string());
-                pb.tick();
             }
         })
         .with_context(|| "Failed to create virtual texture")?;
 
-    pb.finish_and_clear();
-
-    println!();
-    println!("Virtual texture created successfully!");
-    println!("  GTS: {}", result.gts_path.display());
-    for gtp in &result.gtp_paths {
-        println!("  GTP: {}", gtp.display());
+    if let Some(ref pb) = pb {
+        pb.finish_and_clear();
     }
-    println!(
-        "  Tiles: {} ({} unique after deduplication)",
-        result.tile_count, result.unique_tile_count
-    );
-    println!("  Total size: {} bytes", result.total_size_bytes);
+
+    if !quiet {
+        println!();
+        println!("Virtual texture created successfully!");
+        println!("  GTS: {}", result.gts_path.display());
+        for gtp in &result.gtp_paths {
+            println!("  GTP: {}", gtp.display());
+        }
+        println!(
+            "  Tiles: {} ({} unique after deduplication)",
+            result.tile_count, result.unique_tile_count
+        );
+        println!("  Total size: {} bytes", result.total_size_bytes);
+    }
 
     Ok(())
+}
+
+/// Find a DDS file with one of the given suffixes in a directory
+fn find_layer_file(dir: &Path, suffixes: &[&str]) -> Option<PathBuf> {
+    if !dir.is_dir() {
+        return None;
+    }
+
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(ext) = path.extension() {
+                    if ext.eq_ignore_ascii_case("dds") {
+                        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+                        for suffix in suffixes {
+                            if stem.to_lowercase().ends_with(&suffix.to_lowercase()) {
+                                return Some(path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
 }

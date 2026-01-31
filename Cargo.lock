@@ -4561,6 +4561,7 @@ dependencies = [
  "console",
  "crc32fast",
  "ddsfile",
+ "dirs",
  "fastlz-rs",
  "flate2",
  "glam 0.27.0",
@@ -4576,6 +4577,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "shellexpand",
  "tantivy",
  "tempfile",
  "thiserror 1.0.69",
@@ -6383,6 +6385,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "shellexpand"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b1fdf65dd6331831494dd616b30351c38e96e45921a27745cf98490458b90bb"
+dependencies = [
+ "dirs",
 ]
 
 [[package]]
