@@ -16,6 +16,8 @@ A pure-Rust implementation of a ***[M]ac***OS-focused ***Larian*** file format l
 
 ## Supported Formats
 
+<div align="center">
+    
 | Format | Read | Write | Description |
 |--------|:----:|:-----:|-----------|
 | **PAK** | Yes | Yes | Extract, create, and list game asset packages |
@@ -26,11 +28,15 @@ A pure-Rust implementation of a ***[M]ac***OS-focused ***Larian*** file format l
 | **DDS/PNG** | Yes | Yes | Texture conversion |
 | **GTS/GTP** | Yes | Yes | GTS/GTP streaming virtual texture extraction/creation |
 
+</div>
+
 > [!CAUTION]
 > Creating custom virtual textures (.gts/.gtp files) is not recommended for macOS because they need to be injected into the game using the [BG3 Script Extender](https://github.com/Norbyte/bg3se/blob/main/Docs/VirtualTextures.md), which is Windows-only. [BG3SE-macOS](https://github.com/tdimino/bg3se-macos) is a macOS port of the original Windows version, but it's in active development and custom virtual textures may not be fully supported yet.
 
 ## Platform Support
 
+<div align="center">
+    
 | OS | Compatibility | 
 |----------|:--------------:|
 | **macOS (Apple Silicon)** | Yes (Built with M2 Max) |
@@ -38,6 +44,8 @@ A pure-Rust implementation of a ***[M]ac***OS-focused ***Larian*** file format l
 | **Windows 10 (Boot Camp)** | Currently Testing (Intel iMac) | 
 | **Windows 11** | Currently Testing | 
 | **Linux** | Unknown | 
+
+</div>
 
 The following are assumed to be the default BG3 install locations:
   - macOS: `~/Library/Application Support/Steam/steamapps/common/Baldurs Gate 3/Baldur's Gate 3.app/Contents/Data`
@@ -144,6 +152,8 @@ maclarian <command>
 
 ### Commands Overview
 
+<div align="center">
+
 | Command | Description |
 |---------|-------------|
 | `pak` | List, extract, and create PAK files |
@@ -152,6 +162,8 @@ maclarian <command>
 | `vt` | Virtual texture (GTS/GTP) extraction and creation |
 | `mods` | Mod utilities (validation, info.json) |
 | `loca` | Search within LOCA localization files |
+
+</div>
 
 > [!IMPORTANT]
 > [The full list of CLI commands is in the wiki →](https://github.com/CyberDeco/MacPak/wiki/MacLarian-CLI-Commands)

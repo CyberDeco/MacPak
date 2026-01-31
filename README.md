@@ -28,6 +28,8 @@
 
 ## Features
 
+<div align="center">
+
 | MacPak Tab | General Purpose |
 |:----------:|--------------|
 | **Browser** | In-app file browser and previewer for text, image, and model files |
@@ -38,6 +40,8 @@
 | **Dye Lab** | Import/export clothing and armor dye mods and create custom color palettes |
 | **Search** | Search across PAK contents (file name + contents both supported) |
 | **Dialogue** | Search and view character dialogue trees and play linked audio |
+
+</div>
 
 > [!IMPORTANT]
 > [Full documentation is in the wiki →](https://github.com/CyberDeco/MacPak/wiki) (Coming Soon)
@@ -77,6 +81,8 @@ See the [MacLarian README](MacLarian/README.md) and [CLI section of the wiki](ht
                                                                                                                     
 ## Technical Notes
 
+<div align="center">
+
 | OS | Compatibility |
 |----------|:--------------:|
 | **macOS (Apple Silicon)** | Yes (Built with M2 Max) |
@@ -84,6 +90,8 @@ See the [MacLarian README](MacLarian/README.md) and [CLI section of the wiki](ht
 | **Windows 10 (Boot Camp)** | Currently Testing (Intel iMac) | 
 | **Windows 11** | Currently Testing | 
 | **Linux** | Unknown | 
+
+</div>
 
 > [!CAUTION]
 > In case it's not abundantly clear, even though Rust is largely OS-agnostic, this is a macOS-focused project. Any cross-platform support (Windows, Linux) is incidental and will not be actively maintained.
