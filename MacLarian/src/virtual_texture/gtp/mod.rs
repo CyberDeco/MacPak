@@ -24,9 +24,9 @@ use crate::error::{Error, Result};
 /// GTP file reader.
 pub struct GtpFile<R: Read + Seek> {
     reader: BufReader<R>,
-    pub header: GtpHeader,
+    pub(crate) header: GtpHeader,
     /// Chunk offsets for each page, indexed by page then chunk.
-    pub chunk_offsets: Vec<Vec<u32>>,
+    pub(crate) chunk_offsets: Vec<Vec<u32>>,
     page_size: u32,
     tile_width: i32,
     tile_height: i32,

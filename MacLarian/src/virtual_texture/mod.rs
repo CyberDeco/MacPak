@@ -44,12 +44,17 @@ mod gts;
 mod mod_config;
 mod types;
 mod utils;
-pub mod writer;
+pub(crate) mod writer;
 
 // Re-exports - public types
 pub use gtp::GtpFile;
 pub use gts::GtsFile;
-pub use types::*;
+
+// Re-export only public types from types module (not internal format structs)
+pub use types::{
+    GtsCodec, TileCompression, VTexPhase, VTexProgress, VTexProgressCallback,
+    VirtualTextureLayer, VirtualTextureOutput,
+};
 
 // Public extractor
 pub use extractor::{ExtractOptions, VirtualTextureExtractor};

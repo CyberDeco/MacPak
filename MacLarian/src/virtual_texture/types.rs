@@ -246,7 +246,7 @@ pub enum TileCompression {
 
 /// GTS file header (156 bytes)
 #[derive(Debug, Clone)]
-pub struct GtsHeader {
+pub(crate) struct GtsHeader {
     pub magic: u32,
     pub version: u32,
     pub unused: u32,
@@ -292,7 +292,7 @@ impl GtsHeader {
 
 /// BC codec parameter block (56 bytes)
 #[derive(Debug, Clone)]
-pub struct GtsBCParameterBlock {
+pub(crate) struct GtsBCParameterBlock {
     pub version: u16,
     pub compression1: [u8; 16],
     pub compression2: [u8; 16],
@@ -363,7 +363,7 @@ pub(crate) enum GtsParameterBlock {
 
 /// Level info from GTS file
 #[derive(Debug, Clone)]
-pub struct GtsLevelInfo {
+pub(crate) struct GtsLevelInfo {
     /// Width in tiles
     pub width_tiles: u32,
     /// Height in tiles
@@ -378,14 +378,14 @@ pub struct GtsLevelInfo {
 
 /// Page file metadata
 #[derive(Debug, Clone)]
-pub struct GtsPageFileInfo {
+pub(crate) struct GtsPageFileInfo {
     pub filename: String,
     pub num_pages: u32,
 }
 
 /// Flat tile info (12 bytes)
 #[derive(Debug, Clone)]
-pub struct GtsFlatTileInfo {
+pub(crate) struct GtsFlatTileInfo {
     pub page_file_index: u16,
     pub page_index: u16,
     pub chunk_index: u16,
@@ -395,7 +395,7 @@ pub struct GtsFlatTileInfo {
 
 /// Packed tile ID (decoded from 32-bit value)
 #[derive(Debug, Clone)]
-pub struct GtsPackedTileId {
+pub(crate) struct GtsPackedTileId {
     pub layer: u8,
     pub level: u8,
     pub x: u16,
@@ -425,7 +425,7 @@ impl GtsPackedTileId {
 
 /// GTP file header (24 bytes)
 #[derive(Debug, Clone)]
-pub struct GtpHeader {
+pub(crate) struct GtpHeader {
     pub magic: u32,
     pub version: u32,
     pub guid: [u8; 16],
@@ -437,7 +437,7 @@ impl GtpHeader {
 
 /// GTP chunk header (12 bytes)
 #[derive(Debug, Clone)]
-pub struct GtpChunkHeader {
+pub(crate) struct GtpChunkHeader {
     pub codec: GtsCodec,
     pub parameter_block_id: u32,
     pub size: u32,
@@ -445,7 +445,7 @@ pub struct GtpChunkHeader {
 
 /// Tile location info for combining
 #[derive(Debug, Clone)]
-pub struct TileLocation {
+pub(crate) struct TileLocation {
     pub page: u16,
     pub chunk: u16,
     pub x: u16,

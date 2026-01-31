@@ -23,9 +23,9 @@
 //! # Path Detection
 //!
 //! The resolver searches for game data in platform-specific Steam paths:
-//! - macOS: `~/Library/Application Support/Steam/steamapps/common/Baldurs Gate 3/...`
+//! - macOS: `~/Library/Application Support/Steam/steamapps/common/Baldurs Gate 3/Baldur's Gate 3.app/Contents/Data`
 //! - Windows: `C:\Program Files (x86)\Steam\steamapps\common\Baldurs Gate 3\Data`
-//! - Linux: Not supported (don't know the install path)
+//! - Linux: `~/.steam/steam/steamapps/common/Baldurs Gate 3/Data`
 //!
 //! # Performance
 //!
@@ -115,8 +115,9 @@ impl GameDataResolver {
     /// Auto-detect game installation path.
     ///
     /// Searches platform-specific Steam installation paths:
-    /// - macOS: `~/Library/Application Support/Steam/steamapps/common/Baldurs Gate 3/...`
+    /// - macOS: `~/Library/Application Support/Steam/steamapps/common/Baldurs Gate 3/Baldur's Gate 3.app/Contents/Data`
     /// - Windows: `C:\Program Files (x86)\Steam\steamapps\common\Baldurs Gate 3\Data`
+    /// - Linux: `~/.steam/steam/steamapps/common/Baldurs Gate 3/Data`
     ///
     /// # Errors
     ///

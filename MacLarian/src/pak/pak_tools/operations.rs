@@ -283,7 +283,7 @@ impl PakOperations {
     ///
     /// # Errors
     /// Returns an error if the PAK file cannot be read.
-    pub fn list_detailed<P: AsRef<Path>>(pak_path: P) -> Result<Vec<FileTableEntry>> {
+    pub(crate) fn list_detailed<P: AsRef<Path>>(pak_path: P) -> Result<Vec<FileTableEntry>> {
         let file = File::open(pak_path.as_ref())?;
         let mut reader = LspkReader::with_path(file, pak_path.as_ref());
         reader.list_files()

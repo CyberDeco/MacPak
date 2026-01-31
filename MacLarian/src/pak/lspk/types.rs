@@ -41,7 +41,7 @@ impl CompressionMethod {
 
 /// Header of an LSPK PAK file
 #[derive(Debug, Clone)]
-pub struct LspkHeader {
+pub(crate) struct LspkHeader {
     /// Magic bytes (should be "LSPK")
     ///
     /// Validated during parsing but retained for format completeness.
@@ -55,7 +55,7 @@ pub struct LspkHeader {
 
 /// Footer/metadata of an LSPK PAK file
 #[derive(Debug, Clone)]
-pub struct LspkFooter {
+pub(crate) struct LspkFooter {
     /// Number of files in the archive
     pub num_files: u32,
     /// Size of the compressed file table
@@ -64,7 +64,7 @@ pub struct LspkFooter {
 
 /// Entry in the file table describing a file in the PAK
 #[derive(Debug, Clone)]
-pub struct FileTableEntry {
+pub(crate) struct FileTableEntry {
     /// Path of the file within the archive
     pub path: PathBuf,
     /// Offset of the compressed data from the start of the archive part
@@ -87,7 +87,7 @@ pub struct FileTableEntry {
 /// documentation and potential backwards compatibility.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct LspkHeaderV16 {
+pub(crate) struct LspkHeaderV16 {
     /// Version number
     pub version: u32,
     /// Offset to file list

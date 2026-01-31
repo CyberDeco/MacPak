@@ -43,7 +43,7 @@ impl GtsFile {
     /// if a layer doesn't have level 0 tiles (e.g., PhysicalMap is often stored
     /// at lower resolution).
     #[must_use]
-    pub fn get_tiles_for_page_file(&self, page_file_index: u16) -> [Vec<TileLocation>; 3] {
+    pub(crate) fn get_tiles_for_page_file(&self, page_file_index: u16) -> [Vec<TileLocation>; 3] {
         // First pass: collect all tiles by layer and level
         let mut tiles_by_layer_level: [std::collections::HashMap<u8, Vec<TileLocation>>; 3] = [
             std::collections::HashMap::new(),

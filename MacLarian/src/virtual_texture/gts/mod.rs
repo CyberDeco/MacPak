@@ -36,12 +36,12 @@ use crate::error::{Error, Result};
 /// GTS file reader and parser.
 #[derive(Debug)]
 pub struct GtsFile {
-    pub header: GtsHeader,
+    pub(crate) header: GtsHeader,
     pub(crate) parameter_blocks: HashMap<u32, GtsParameterBlock>,
-    pub levels: Vec<GtsLevelInfo>,
-    pub page_files: Vec<GtsPageFileInfo>,
-    pub packed_tiles: Vec<GtsPackedTileId>,
-    pub flat_tile_infos: Vec<GtsFlatTileInfo>,
+    pub(crate) levels: Vec<GtsLevelInfo>,
+    pub(crate) page_files: Vec<GtsPageFileInfo>,
+    pub(crate) packed_tiles: Vec<GtsPackedTileId>,
+    pub(crate) flat_tile_infos: Vec<GtsFlatTileInfo>,
 }
 
 impl GtsFile {

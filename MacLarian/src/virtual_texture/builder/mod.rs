@@ -24,9 +24,9 @@
 
 pub mod compression;
 pub mod config;
-pub mod deduplication;
-pub mod geometry;
-pub mod tile_processor;
+pub(crate) mod deduplication;
+pub(crate) mod geometry;
+pub(crate) mod tile_processor;
 
 pub use config::{BcFormat, SourceTexture, TileCompressionPreference, TileSetConfiguration};
 

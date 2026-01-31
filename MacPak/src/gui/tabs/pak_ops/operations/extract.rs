@@ -232,7 +232,7 @@ pub fn execute_individual_extract(state: PakOpsState) {
                 .with_keep_original(extract_gr2)
                 .with_png_conversion(convert_to_png)
                 .with_keep_original_dds(extract_textures) // Keep DDS if "Extract textures DDS" is checked
-                .with_game_data_path(game_data.map(std::path::PathBuf::from))
+                .with_bg3_path(game_data.map(std::path::PathBuf::from))
                 .with_virtual_textures_path(None::<std::path::PathBuf>); // Uses game data path for VT lookup
 
             let result = maclarian::pak::extract_files_smart(

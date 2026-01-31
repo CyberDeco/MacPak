@@ -147,7 +147,7 @@ fn perform_gr2_conversion(
             convert_to_glb: false, // Already converted above if needed
             extract_textures: true,
             extract_virtual_textures: false,
-            game_data_path: if game_data_path.is_empty() {
+            bg3_path: if game_data_path.is_empty() {
                 None
             } else {
                 Some(std::path::PathBuf::from(game_data_path))

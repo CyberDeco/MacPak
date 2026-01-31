@@ -4,10 +4,6 @@
 //!
 //! SPDX-License-Identifier: MIT
 
-pub mod fourcc;
-pub mod gtp_writer;
-pub mod gts_writer;
-
-pub use fourcc::FourCCTree;
-pub use gtp_writer::GtpWriter;
-pub use gts_writer::GtsWriter;
+pub(crate) mod fourcc;
+pub(crate) mod gtp_writer;
+pub(crate) mod gts_writer;

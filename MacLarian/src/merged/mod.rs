@@ -31,8 +31,11 @@ mod paths;
 mod resolver;
 mod types;
 
-// Re-export types
-pub use types::*;
+// Re-export public types (explicit to avoid leaking internal types)
+pub use types::{
+    DatabaseStats, GtpMatch, MergedDatabase, MergedPhase, MergedProgress,
+    MergedProgressCallback, TextureParam, TextureRef, VirtualTextureRef, VisualAsset,
+};
 
 // Re-export resolver
 pub use resolver::MergedResolver;
@@ -42,5 +45,6 @@ pub use game_data::{BG3_DATA_PATH_WINDOWS, GameDataResolver};
 
 // Re-export path helpers
 pub use paths::{
-    BG3_DATA_PATH_MACOS, bg3_data_path, expand_tilde, path_with_tilde, virtual_textures_pak_path,
+    BG3_DATA_PATH_LINUX, BG3_DATA_PATH_MACOS, bg3_data_path, expand_tilde, path_with_tilde,
+    virtual_textures_pak_path,
 };

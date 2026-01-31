@@ -11,12 +11,9 @@ use std::path::Path;
 pub use maclarian::virtual_texture::{
     ExtractResult,
     GtpFile,
-    GtpHeader,
     GtpInfo,
     GtsFile,
-    GtsHeader,
     GtsInfo,
-    GtsPageFileInfo,
     PageFileInfo,
     VirtualTextureExtractor,
     extract_all as maclarian_extract_all,

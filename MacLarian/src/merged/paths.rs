@@ -5,11 +5,29 @@ use std::path::{Path, PathBuf};
 /// Default BG3 data path on macOS
 pub const BG3_DATA_PATH_MACOS: &str = "~/Library/Application Support/Steam/steamapps/common/Baldurs Gate 3/Baldur's Gate 3.app/Contents/Data";
 
-/// Get the expanded BG3 data path (resolves ~)
+/// Default BG3 data path on Linux
+pub const BG3_DATA_PATH_LINUX: &str =
+    "~/.steam/steam/steamapps/common/Baldurs Gate 3/Data";
+
+/// Get the expanded BG3 data path for the current platform (resolves ~)
 #[must_use]
 pub fn bg3_data_path() -> Option<PathBuf> {
     let home = std::env::var("HOME").ok()?;
-    Some(PathBuf::from(BG3_DATA_PATH_MACOS.replace('~', &home)))
+
+    #[cfg(target_os = "macos")]
+    {
+        Some(PathBuf::from(BG3_DATA_PATH_MACOS.replace('~', &home)))
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Some(PathBuf::from(BG3_DATA_PATH_LINUX.replace('~', &home)))
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        None
+    }
 }
 
 /// Get the path to VirtualTextures.pak
