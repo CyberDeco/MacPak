@@ -145,7 +145,12 @@ pub fn extract(
 }
 
 /// Batch extract multiple GTS files
-fn extract_batch(sources: &[PathBuf], output_dir: &Path, layers: &[usize], quiet: bool) -> Result<()> {
+fn extract_batch(
+    sources: &[PathBuf],
+    output_dir: &Path,
+    layers: &[usize],
+    quiet: bool,
+) -> Result<()> {
     if !quiet {
         println!("Batch extracting {} files", sources.len());
         if !layers.is_empty() {
@@ -234,7 +239,10 @@ pub fn create(
         texture = texture.with_base_map(p);
     } else {
         // Auto-detect base map
-        if let Some(path) = find_layer_file(source_dir, &["_BaseMap", "_BM", "_Base", "_Diffuse", "_Albedo"]) {
+        if let Some(path) = find_layer_file(
+            source_dir,
+            &["_BaseMap", "_BM", "_Base", "_Diffuse", "_Albedo"],
+        ) {
             texture = texture.with_base_map(&path);
             if !quiet {
                 println!("Auto-detected base map: {}", path.display());

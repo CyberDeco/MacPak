@@ -154,7 +154,11 @@ pub fn extract(
     // Single file extraction
     if let Some(file_paths) = file {
         let paths: Vec<&str> = file_paths.split(',').map(str::trim).collect();
-        println!("Extracting {} file(s) from {}", paths.len(), source.display());
+        println!(
+            "Extracting {} file(s) from {}",
+            paths.len(),
+            source.display()
+        );
         let dest = destination.to_path_buf();
         PakOperations::extract_files(source, &dest, &paths)?;
         println!("Extraction complete");
@@ -191,17 +195,22 @@ pub fn extract(
             let count = AtomicUsize::new(0);
             let matching_refs: Vec<&str> = matching.iter().map(String::as_str).collect();
 
-            PakOperations::extract_files_with_progress(source, &dest, &matching_refs, &|progress| {
-                let n = count.fetch_add(1, Ordering::SeqCst) + 1;
-                pb.set_position(n as u64);
-                if let Some(name) = &progress.current_file {
-                    let short_name = Path::new(name)
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or(name);
-                    pb.set_message(short_name.to_string());
-                }
-            })?;
+            PakOperations::extract_files_with_progress(
+                source,
+                &dest,
+                &matching_refs,
+                &|progress| {
+                    let n = count.fetch_add(1, Ordering::SeqCst) + 1;
+                    pb.set_position(n as u64);
+                    if let Some(name) = &progress.current_file {
+                        let short_name = Path::new(name)
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or(name);
+                        pb.set_message(short_name.to_string());
+                    }
+                },
+            )?;
             pb.finish_with_message("done");
         } else {
             let matching_refs: Vec<&str> = matching.iter().map(String::as_str).collect();
@@ -235,7 +244,11 @@ pub fn extract(
         })?;
         pb.finish_with_message("done");
     } else {
-        println!("Extracting {} to {}", source.display(), destination.display());
+        println!(
+            "Extracting {} to {}",
+            source.display(),
+            destination.display()
+        );
         PakOperations::extract(source, &dest)?;
     }
 
@@ -365,9 +378,14 @@ fn create_batch(
 
         if !quiet {
             let pb = simple_bar(100, "Creating");
-            match PakOperations::create_with_compression_and_progress(source, &pak_dest, method, &|p| {
-                pb.set_position((p.percentage() * 100.0) as u64);
-            }) {
+            match PakOperations::create_with_compression_and_progress(
+                source,
+                &pak_dest,
+                method,
+                &|p| {
+                    pb.set_position((p.percentage() * 100.0) as u64);
+                },
+            ) {
                 Ok(()) => {
                     pb.finish_and_clear();
                     success += 1;
@@ -464,7 +482,10 @@ pub fn list(
         }
 
         // Print summary
-        let total_decompressed: u64 = filtered.iter().map(|e| u64::from(e.size_decompressed)).sum();
+        let total_decompressed: u64 = filtered
+            .iter()
+            .map(|e| u64::from(e.size_decompressed))
+            .sum();
         let total_compressed: u64 = filtered.iter().map(|e| u64::from(e.size_compressed)).sum();
         let overall_ratio = if total_decompressed > 0 {
             (total_compressed as f64 / total_decompressed as f64) * 100.0

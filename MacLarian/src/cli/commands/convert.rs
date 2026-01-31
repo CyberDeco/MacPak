@@ -40,9 +40,7 @@ fn convert_single(
         .extension()
         .and_then(|s| s.to_str())
         .map(str::to_lowercase)
-        .ok_or_else(|| {
-            anyhow::anyhow!("Cannot detect input format from source file extension")
-        })?;
+        .ok_or_else(|| anyhow::anyhow!("Cannot detect input format from source file extension"))?;
 
     // Use provided output format or auto-detect
     let output = if let Some(fmt) = output_format {
@@ -298,7 +296,10 @@ fn convert_batch(
 
     for source in sources {
         // Determine output filename
-        let stem = source.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+        let stem = source
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("output");
 
         // Determine output extension
         let out_ext = if let Some(fmt) = output_format {

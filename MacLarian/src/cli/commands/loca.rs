@@ -34,7 +34,11 @@ fn search_by_handle(
     quiet: bool,
 ) -> anyhow::Result<()> {
     // Try exact match first
-    if let Some(entry) = resource.entries.iter().find(|e| e.key.to_lowercase() == *query_lower) {
+    if let Some(entry) = resource
+        .entries
+        .iter()
+        .find(|e| e.key.to_lowercase() == *query_lower)
+    {
         if !quiet {
             println!("Key: {}", entry.key);
             println!("Version: {}", entry.version);
@@ -66,7 +70,11 @@ fn search_by_handle(
         println!("{}", entry.text);
     } else {
         if !quiet {
-            println!("Found {} entries matching '{}':", matches.len(), query_lower);
+            println!(
+                "Found {} entries matching '{}':",
+                matches.len(),
+                query_lower
+            );
             println!();
         }
         for entry in &matches {
@@ -108,7 +116,11 @@ fn search_by_text(
         }
     } else {
         if !quiet {
-            println!("Found {} entries containing '{}':", matches.len(), query_lower);
+            println!(
+                "Found {} entries containing '{}':",
+                matches.len(),
+                query_lower
+            );
             println!();
         }
         for entry in &matches {

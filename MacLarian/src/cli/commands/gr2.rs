@@ -4,8 +4,13 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::cli::progress::{CUBE, DISK, GEAR, LOOKING_GLASS, print_done, print_step, simple_spinner};
-use crate::converter::{Gr2Phase, convert_gr2_to_glb_with_progress, convert_gr2_to_gltf_with_progress, convert_gltf_to_gr2_with_progress};
+use crate::cli::progress::{
+    CUBE, DISK, GEAR, LOOKING_GLASS, print_done, print_step, simple_spinner,
+};
+use crate::converter::{
+    Gr2Phase, convert_gltf_to_gr2_with_progress, convert_gr2_to_glb_with_progress,
+    convert_gr2_to_gltf_with_progress,
+};
 use crate::formats::gr2::{extract_gr2_info, inspect_gr2};
 
 /// Default BG3 installation paths
@@ -135,7 +140,9 @@ fn from_gr2_single(
             }
             Some(TextureMode::Embedded)
         }
-        Some(other) => anyhow::bail!("Invalid --textures value: '{other}'. Use 'extract' or 'embedded'"),
+        Some(other) => {
+            anyhow::bail!("Invalid --textures value: '{other}'. Use 'extract' or 'embedded'")
+        }
         None => None,
     };
 
@@ -166,10 +173,13 @@ fn from_gr2_single(
         println!("  Source:      {}", source.display());
         println!("  Destination: {}", destination.display());
         if let Some(mode) = &texture_mode {
-            println!("  Textures:    {}", match mode {
-                TextureMode::Extract => "extract (separate files)",
-                TextureMode::Embedded => "embedded (in GLB)",
-            });
+            println!(
+                "  Textures:    {}",
+                match mode {
+                    TextureMode::Extract => "extract (separate files)",
+                    TextureMode::Embedded => "embedded (in GLB)",
+                }
+            );
         }
         println!();
     }
@@ -241,7 +251,8 @@ fn from_gr2_single(
 
             if !quiet {
                 let pb = simple_spinner("Processing GR2 with textures...");
-                let result = crate::gr2_extraction::process_extracted_gr2(&gr2_in_output, &options)?;
+                let result =
+                    crate::gr2_extraction::process_extracted_gr2(&gr2_in_output, &options)?;
                 pb.finish_and_clear();
 
                 println!();
@@ -255,7 +266,10 @@ fn from_gr2_single(
                 if !result.texture_paths.is_empty() {
                     println!("  Textures extracted: {}", result.texture_paths.len());
                     for tex_path in &result.texture_paths {
-                        println!("    - {}", tex_path.file_name().unwrap_or_default().to_string_lossy());
+                        println!(
+                            "    - {}",
+                            tex_path.file_name().unwrap_or_default().to_string_lossy()
+                        );
                     }
                 }
 
@@ -281,7 +295,12 @@ fn from_gr2_single(
                             Gr2Phase::WritingOutput => DISK,
                             _ => GEAR,
                         };
-                        print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+                        print_step(
+                            progress.current,
+                            progress.total,
+                            emoji,
+                            progress.phase.as_str(),
+                        );
                     })?;
                 } else {
                     crate::converter::convert_gr2_to_gltf(source, destination)?;
@@ -295,7 +314,12 @@ fn from_gr2_single(
                         Gr2Phase::WritingOutput => DISK,
                         _ => GEAR,
                     };
-                    print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+                    print_step(
+                        progress.current,
+                        progress.total,
+                        emoji,
+                        progress.phase.as_str(),
+                    );
                 })?;
             } else {
                 crate::converter::convert_gr2_to_glb(source, destination)?;
@@ -328,13 +352,20 @@ fn from_gr2_batch(
     // Ensure destination directory exists
     std::fs::create_dir_all(destination)?;
 
-    println!("Batch converting {} GR2 files to {}", sources.len(), out_ext.to_uppercase());
+    println!(
+        "Batch converting {} GR2 files to {}",
+        sources.len(),
+        out_ext.to_uppercase()
+    );
 
     let mut success = 0;
     let mut failed = 0;
 
     for source in sources {
-        let stem = source.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+        let stem = source
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("output");
         let dest_file = destination.join(format!("{stem}.{out_ext}"));
 
         if !quiet {
@@ -395,7 +426,12 @@ fn to_gr2_single(source: &Path, destination: &Path, quiet: bool) -> anyhow::Resu
                 Gr2Phase::WritingFile => DISK,
                 _ => GEAR,
             };
-            print_step(progress.current, progress.total, emoji, progress.phase.as_str());
+            print_step(
+                progress.current,
+                progress.total,
+                emoji,
+                progress.phase.as_str(),
+            );
         })?;
 
         let output_size = std::fs::metadata(destination)?.len();
@@ -423,7 +459,10 @@ fn to_gr2_batch(sources: &[PathBuf], destination: &Path, quiet: bool) -> anyhow:
     let mut failed = 0;
 
     for source in sources {
-        let stem = source.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+        let stem = source
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("output");
         let dest_file = destination.join(format!("{stem}.GR2"));
 
         if !quiet {
