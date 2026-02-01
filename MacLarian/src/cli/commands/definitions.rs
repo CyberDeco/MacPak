@@ -246,22 +246,68 @@ pub enum ModCommands {
     /// Validate mod directory structure
     Validate {
         /// Path to mod directory (extracted PAK contents)
-        #[arg(short, long)]
         source: PathBuf,
     },
 
-    /// Generate info.json for `BaldursModManager`
-    InfoJson {
-        /// Path to PAK file (for MD5 calculation)
-        #[arg(long)]
-        pak: PathBuf,
+    /// Package mod for BaldursModManager (generates info.json alongside PAK)
+    Package {
+        /// Path to .pak file or mod directory
+        source: PathBuf,
 
-        /// Path to extracted mod directory (for meta.lsx)
-        #[arg(long)]
-        extracted: PathBuf,
+        /// Output directory (creates <destination>/ModName/ModName.pak + info.json)
+        destination: PathBuf,
 
-        /// Output file (prints to stdout if not specified)
+        /// Compress output as zip or 7z
+        #[arg(short, long, value_parser = ["zip", "7z"])]
+        compress: Option<String>,
+
+        /// Suppress progress output
+        #[arg(short, long)]
+        quiet: bool,
+    },
+
+    /// Generate meta.lsx metadata file for a mod
+    Meta {
+        /// Mod source directory (creates <source>/Mods/<Folder>/meta.lsx)
+        source: PathBuf,
+
+        /// Mod display name
+        #[arg(short, long)]
+        name: String,
+
+        /// Author name
+        #[arg(short, long)]
+        author: String,
+
+        /// Mod description
+        #[arg(short, long, default_value = "")]
+        description: String,
+
+        /// Folder name (defaults to sanitized mod name)
+        #[arg(short, long)]
+        folder: Option<String>,
+
+        /// UUID (auto-generated if not provided)
+        #[arg(short, long)]
+        uuid: Option<String>,
+
+        /// Version in format "major.minor.patch.build" (default: 1.0.0.0)
+        #[arg(short, long, default_value = "1.0.0.0")]
+        version: String,
+    },
+
+    /// Discover virtual textures defined in mod config files
+    Vtex {
+        /// Mod directory(ies) to scan (can be mod roots or folders containing mods)
+        #[arg(required = true)]
+        source: Vec<PathBuf>,
+
+        /// Output to JSON file
         #[arg(short, long)]
         output: Option<PathBuf>,
+
+        /// Suppress extra output
+        #[arg(short, long)]
+        quiet: bool,
     },
 }

@@ -6,8 +6,7 @@ use std::path::{Path, PathBuf};
 pub const BG3_DATA_PATH_MACOS: &str = "~/Library/Application Support/Steam/steamapps/common/Baldurs Gate 3/Baldur's Gate 3.app/Contents/Data";
 
 /// Default BG3 data path on Linux
-pub const BG3_DATA_PATH_LINUX: &str =
-    "~/.steam/steam/steamapps/common/Baldurs Gate 3/Data";
+pub const BG3_DATA_PATH_LINUX: &str = "~/.steam/steam/steamapps/common/Baldurs Gate 3/Data";
 
 /// Get the expanded BG3 data path for the current platform (resolves ~)
 #[must_use]

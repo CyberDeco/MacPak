@@ -162,11 +162,34 @@ impl ModCommands {
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             ModCommands::Validate { source } => mod_cmd::validate(source),
-            ModCommands::InfoJson {
-                pak,
-                extracted,
+            ModCommands::Package {
+                source,
+                destination,
+                compress,
+                quiet,
+            } => mod_cmd::package(source, destination, compress.as_deref(), *quiet),
+            ModCommands::Meta {
+                source,
+                name,
+                author,
+                description,
+                folder,
+                uuid,
+                version,
+            } => mod_cmd::meta(
+                source,
+                name,
+                author,
+                description,
+                folder.as_deref(),
+                uuid.as_deref(),
+                version,
+            ),
+            ModCommands::Vtex {
+                source,
                 output,
-            } => mod_cmd::info_json(pak, extracted, output.as_deref()),
+                quiet,
+            } => virtual_texture::discover(source, output.as_deref(), *quiet),
         }
     }
 }

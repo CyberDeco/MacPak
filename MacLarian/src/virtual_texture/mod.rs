@@ -41,7 +41,7 @@ pub mod builder;
 mod extractor;
 mod gtp;
 mod gts;
-mod mod_config;
+pub mod mod_config;
 mod types;
 mod utils;
 pub(crate) mod writer;
@@ -52,8 +52,8 @@ pub use gts::GtsFile;
 
 // Re-export only public types from types module (not internal format structs)
 pub use types::{
-    GtsCodec, TileCompression, VTexPhase, VTexProgress, VTexProgressCallback,
-    VirtualTextureLayer, VirtualTextureOutput,
+    GtsCodec, TileCompression, VTexPhase, VTexProgress, VTexProgressCallback, VirtualTextureLayer,
+    VirtualTextureOutput,
 };
 
 // Public extractor
@@ -67,3 +67,9 @@ pub use utils::{
 
 // Batch operations
 pub use batch::{BatchExtractResult, GtsExtractResult, extract_batch, extract_gts_file};
+
+// Mod config discovery and lookup
+pub use mod_config::{
+    DiscoveredVirtualTexture, DiscoverySource, discover_mod_virtual_textures,
+    discover_virtual_textures, extract_by_gtex, find_gts_for_gtex, find_virtual_texture,
+};

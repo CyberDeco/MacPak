@@ -5,6 +5,7 @@ use std::io::Read;
 use std::path::Path;
 
 use crate::formats::ModMetadata;
+use crate::pak::PakOperations;
 
 use super::types::{ModPhase, ModProgress, ModProgressCallback};
 
@@ -60,7 +61,7 @@ pub fn generate_info_json_with_progress(
         return InfoJsonResult {
             success: false,
             content: None,
-            message: "No meta.lsx found".to_string(),
+            message: "No meta.lsx found. Use 'maclarian mods meta' to generate one first.".to_string(),
         };
     };
 
@@ -202,4 +203,189 @@ fn escape_json_string(s: &str) -> String {
         .replace('\n', "\\n")
         .replace('\r', "\\r")
         .replace('\t', "\\t")
+}
+
+/// Generate info.json from a single source (PAK file or mod directory)
+///
+/// # Arguments
+/// * `source` - Path to either a .pak file or a mod directory
+/// * `progress` - Progress callback
+///
+/// # Returns
+/// `InfoJsonResult` with the generated JSON and status
+#[must_use]
+pub fn generate_info_json_from_source(
+    source: &Path,
+    progress: ModProgressCallback,
+) -> InfoJsonResult {
+    let is_pak = source
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("pak"));
+
+    if is_pak {
+        generate_info_json_from_pak(source, progress)
+    } else {
+        generate_info_json_from_directory(source, progress)
+    }
+}
+
+/// Generate info.json from a PAK file (reads meta.lsx from within)
+fn generate_info_json_from_pak(pak_path: &Path, progress: ModProgressCallback) -> InfoJsonResult {
+    progress(&ModProgress::with_file(
+        ModPhase::Validating,
+        0,
+        3,
+        "Reading meta.lsx from PAK",
+    ));
+
+    // Find and read meta.lsx from the PAK
+    let meta_lsx_content = match find_and_read_meta_lsx_from_pak(pak_path) {
+        Some(content) => content,
+        None => {
+            return InfoJsonResult {
+                success: false,
+                content: None,
+                message: "No meta.lsx found in PAK file. Use 'maclarian mods meta' to generate one first, then recreate the .pak with 'maclarian pak create'.".to_string(),
+            };
+        }
+    };
+
+    // Parse the metadata
+    let metadata = crate::formats::parse_meta_lsx(&meta_lsx_content);
+
+    if metadata.uuid.is_empty() {
+        return InfoJsonResult {
+            success: false,
+            content: None,
+            message: "meta.lsx missing UUID".to_string(),
+        };
+    }
+
+    progress(&ModProgress::with_file(
+        ModPhase::CalculatingHash,
+        1,
+        3,
+        "Calculating PAK MD5",
+    ));
+
+    // Calculate MD5 of the PAK file
+    let pak_md5 = calculate_file_md5(&pak_path.to_string_lossy()).unwrap_or_default();
+
+    progress(&ModProgress::with_file(
+        ModPhase::GeneratingJson,
+        2,
+        3,
+        "Generating info.json",
+    ));
+
+    let json = generate_info_json_content(&metadata, &pak_md5);
+
+    progress(&ModProgress::new(ModPhase::Complete, 3, 3));
+
+    InfoJsonResult {
+        success: true,
+        content: Some(json),
+        message: "Generated successfully".to_string(),
+    }
+}
+
+/// Generate info.json from a mod directory (finds PAK file for MD5)
+fn generate_info_json_from_directory(
+    dir_path: &Path,
+    progress: ModProgressCallback,
+) -> InfoJsonResult {
+    progress(&ModProgress::with_file(
+        ModPhase::Validating,
+        0,
+        3,
+        "Finding meta.lsx",
+    ));
+
+    // Find meta.lsx in the directory
+    let meta_lsx_content = find_and_read_meta_lsx(&dir_path.to_string_lossy());
+
+    let Some(lsx_content) = meta_lsx_content else {
+        return InfoJsonResult {
+            success: false,
+            content: None,
+            message: "No meta.lsx found in directory. Use 'maclarian mods meta' to generate one first.".to_string(),
+        };
+    };
+
+    // Parse the metadata
+    let metadata = crate::formats::parse_meta_lsx(&lsx_content);
+
+    if metadata.uuid.is_empty() {
+        return InfoJsonResult {
+            success: false,
+            content: None,
+            message: "meta.lsx missing UUID".to_string(),
+        };
+    }
+
+    progress(&ModProgress::with_file(
+        ModPhase::CalculatingHash,
+        1,
+        3,
+        "Finding and hashing PAK file",
+    ));
+
+    // Find .pak file in directory
+    let pak_md5 = find_pak_and_calculate_md5(dir_path).unwrap_or_default();
+
+    if pak_md5.is_empty() {
+        return InfoJsonResult {
+            success: false,
+            content: None,
+            message: "No .pak file found in directory".to_string(),
+        };
+    }
+
+    progress(&ModProgress::with_file(
+        ModPhase::GeneratingJson,
+        2,
+        3,
+        "Generating info.json",
+    ));
+
+    let json = generate_info_json_content(&metadata, &pak_md5);
+
+    progress(&ModProgress::new(ModPhase::Complete, 3, 3));
+
+    InfoJsonResult {
+        success: true,
+        content: Some(json),
+        message: "Generated successfully".to_string(),
+    }
+}
+
+/// Find and read meta.lsx from within a PAK file
+fn find_and_read_meta_lsx_from_pak(pak_path: &Path) -> Option<String> {
+    // List files in PAK and find meta.lsx
+    let files = PakOperations::list(pak_path).ok()?;
+
+    let meta_path = files
+        .iter()
+        .find(|f| f.to_lowercase().ends_with("meta.lsx"))?;
+
+    let bytes = PakOperations::read_file_bytes(pak_path, meta_path).ok()?;
+    String::from_utf8(bytes).ok()
+}
+
+/// Find a .pak file in a directory and calculate its MD5
+fn find_pak_and_calculate_md5(dir_path: &Path) -> Option<String> {
+    let entries = std::fs::read_dir(dir_path).ok()?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file()
+            && path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("pak"))
+        {
+            return calculate_file_md5(&path.to_string_lossy());
+        }
+    }
+
+    None
 }

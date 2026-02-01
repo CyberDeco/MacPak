@@ -33,8 +33,8 @@ mod types;
 
 // Re-export public types (explicit to avoid leaking internal types)
 pub use types::{
-    DatabaseStats, GtpMatch, MergedDatabase, MergedPhase, MergedProgress,
-    MergedProgressCallback, TextureParam, TextureRef, VirtualTextureRef, VisualAsset,
+    DatabaseStats, GtpMatch, MergedDatabase, MergedPhase, MergedProgress, MergedProgressCallback,
+    TextureParam, TextureRef, VirtualTextureRef, VisualAsset,
 };
 
 // Re-export resolver

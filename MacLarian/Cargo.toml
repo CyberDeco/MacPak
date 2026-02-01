@@ -29,6 +29,8 @@ thiserror = "1.0"
 flate2 = "1.0"              # ZLIB/GZIP compression
 lz4_flex = "0.11"           # LZ4 compression (reading/writing LSF)
 fastlz-rs = "0.0.3"         # FastLZ compression (virtual textures)
+zip = "2.1"                 # ZIP archive creation (mod packaging)
+sevenz-rust = "0.6"         # 7z archive creation (mod packaging)
 
 # Binary I/O
 byteorder = "1.5"           # Reading/writing little-endian data

@@ -3,7 +3,10 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use console::style;
+
 use crate::cli::progress::simple_bar;
+use crate::mods::validate_mod_structure;
 use crate::pak::{CompressionMethod, PakOperations};
 
 /// Default BG3 installation paths
@@ -324,6 +327,15 @@ pub fn create(
 
     let source = &sources[0];
 
+    // Validate mod structure (checks for meta.lsx)
+    let validation = validate_mod_structure(source);
+    if !validation.valid {
+        anyhow::bail!(
+            "No meta.lsx found in '{}'. Use 'maclarian mods meta' to generate one first.",
+            source.display()
+        );
+    }
+
     // For single source, destination is the PAK filename
     println!(
         "Creating PAK from {} to {} (compression: {:?})",
@@ -366,6 +378,18 @@ fn create_batch(
     let mut failed = 0;
 
     for source in sources {
+        // Validate mod structure (checks for meta.lsx)
+        let validation = validate_mod_structure(source);
+        if !validation.valid {
+            println!(
+                "{} {}: No meta.lsx found. Use 'maclarian mods meta' to generate one first.",
+                style("Skipping").yellow().bold(),
+                style(source.display()).dim()
+            );
+            failed += 1;
+            continue;
+        }
+
         let pak_name = source
             .file_name()
             .and_then(|s| s.to_str())
