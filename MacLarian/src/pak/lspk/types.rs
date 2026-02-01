@@ -37,6 +37,17 @@ impl CompressionMethod {
             // CompressionMethod::Zstd => "zstd",
         }
     }
+
+    /// Convert compression method to flags byte for writing
+    #[must_use]
+    pub fn to_flags(self) -> u8 {
+        match self {
+            CompressionMethod::None => 0,
+            CompressionMethod::Zlib => 1,
+            CompressionMethod::Lz4 => 2,
+            // CompressionMethod::Zstd => 3,
+        }
+    }
 }
 
 /// Header of an LSPK PAK file

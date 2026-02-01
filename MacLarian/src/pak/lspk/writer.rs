@@ -41,6 +41,7 @@ struct WrittenEntry {
     offset: u64,
     size_compressed: u32,
     size_decompressed: u32,
+    compression: CompressionMethod,
 }
 
 /// Compressed file ready for writing
@@ -277,6 +278,7 @@ impl LspkWriter {
                 offset,
                 size_compressed,
                 size_decompressed: entry.size_decompressed,
+                compression: self.compression,
             });
         }
 
@@ -308,8 +310,15 @@ impl LspkWriter {
             table_data.extend_from_slice(path_bytes);
             table_data.resize(entry_start + PATH_LENGTH, 0);
 
-            // Offset (8 bytes)
-            table_data.extend_from_slice(&entry.offset.to_le_bytes());
+            // Offset: lower 6 bytes (48 bits) of the 64-bit offset
+            let offset_bytes = entry.offset.to_le_bytes();
+            table_data.extend_from_slice(&offset_bytes[0..6]);
+
+            // Archive part (1 byte) - always 0 for single-file PAKs
+            table_data.push(0);
+
+            // Flags (1 byte) - compression method in lower nibble
+            table_data.push(entry.compression.to_flags());
 
             // Compressed size (4 bytes)
             table_data.extend_from_slice(&entry.size_compressed.to_le_bytes());
