@@ -49,6 +49,7 @@ pub fn discover(sources: &[PathBuf], output: Option<&Path>, quiet: bool) -> Resu
             source: match vt.source {
                 DiscoverySource::VTexConfigXml => "VTexConfig.xml".to_string(),
                 DiscoverySource::VirtualTexturesJson => "VirtualTextures.json".to_string(),
+                DiscoverySource::GtsFileScan => "GTS file scan".to_string(),
             },
         })
         .collect();
@@ -76,6 +77,7 @@ pub fn discover(sources: &[PathBuf], output: Option<&Path>, quiet: bool) -> Resu
         let source_str = match vt.source {
             DiscoverySource::VTexConfigXml => "VTexConfig.xml",
             DiscoverySource::VirtualTexturesJson => "VirtualTextures.json",
+            DiscoverySource::GtsFileScan => "GTS file scan",
         };
 
         println!("Mod: {}", vt.mod_name);
