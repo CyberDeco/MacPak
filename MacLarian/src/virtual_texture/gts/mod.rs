@@ -38,6 +38,8 @@ use crate::error::{Error, Result};
 pub struct GtsFile {
     pub(crate) header: GtsHeader,
     pub(crate) parameter_blocks: HashMap<u32, GtsParameterBlock>,
+    /// Level info parsed from file. Currently tile lookup uses packed tile IDs directly.
+    #[allow(dead_code)]
     pub(crate) levels: Vec<GtsLevelInfo>,
     pub(crate) page_files: Vec<GtsPageFileInfo>,
     pub(crate) packed_tiles: Vec<GtsPackedTileId>,

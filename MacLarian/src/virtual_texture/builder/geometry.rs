@@ -6,25 +6,6 @@
 
 use super::config::TileSetConfiguration;
 
-/// Calculated texture layout in virtual space
-#[derive(Debug, Clone)]
-pub struct TextureLayout {
-    /// Texture index in the source list
-    pub texture_idx: usize,
-    /// Texture name
-    pub name: String,
-    /// Width in pixels
-    pub width: u32,
-    /// Height in pixels
-    pub height: u32,
-    /// X position in virtual texture space (in pixels)
-    pub x: u32,
-    /// Y position in virtual texture space (in pixels)
-    pub y: u32,
-    /// Number of mip levels
-    pub mip_levels: u32,
-}
-
 /// Calculated tile coordinate
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileCoord {
@@ -58,8 +39,6 @@ impl TileCoord {
 /// Level information for the tile set
 #[derive(Debug, Clone)]
 pub struct LevelInfo {
-    /// Mip level index
-    pub level: u8,
     /// Width in tiles
     pub width_tiles: u32,
     /// Height in tiles
@@ -77,8 +56,6 @@ pub struct GeometryResult {
     pub total_width: u32,
     /// Total virtual texture height in pixels
     pub total_height: u32,
-    /// Texture layouts
-    pub textures: Vec<TextureLayout>,
     /// Level information for each mip level
     pub levels: Vec<LevelInfo>,
     /// All tile coordinates that need to be generated (per layer)
@@ -102,7 +79,6 @@ pub fn calculate_geometry(
         return GeometryResult {
             total_width: 0,
             total_height: 0,
-            textures: Vec::new(),
             levels: Vec::new(),
             tiles_per_layer: [Vec::new(), Vec::new(), Vec::new()],
         };
@@ -112,8 +88,7 @@ pub fn calculate_geometry(
     let raw_tile_height = config.raw_tile_height();
 
     // For simplicity, use the first texture's dimensions as the virtual texture size
-    // A more sophisticated implementation would pack multiple textures
-    let (name, tex_width, tex_height) = &textures[0];
+    let (_name, tex_width, tex_height) = &textures[0];
 
     // Use actual texture dimensions (don't pad) - tiles will cover partial edges
     let total_width = *tex_width;
@@ -127,17 +102,6 @@ pub fn calculate_geometry(
     );
     let mip_levels = max_mip_levels.map_or(calculated_mips, |max| max.min(calculated_mips));
 
-    // Create texture layout
-    let layout = TextureLayout {
-        texture_idx: 0,
-        name: name.clone(),
-        width: *tex_width,
-        height: *tex_height,
-        x: 0,
-        y: 0,
-        mip_levels,
-    };
-
     // Calculate levels and tiles
     let mut levels = Vec::with_capacity(mip_levels as usize);
     let mut tiles_per_layer: [Vec<TileCoord>; 3] = [Vec::new(), Vec::new(), Vec::new()];
@@ -150,7 +114,6 @@ pub fn calculate_geometry(
         let height_tiles = tiles_for_dimension(level_height, raw_tile_height);
 
         levels.push(LevelInfo {
-            level: level as u8,
             width_tiles,
             height_tiles,
             width_pixels: level_width,
@@ -186,7 +149,6 @@ pub fn calculate_geometry(
     GeometryResult {
         total_width,
         total_height,
-        textures: vec![layout],
         levels,
         tiles_per_layer,
     }

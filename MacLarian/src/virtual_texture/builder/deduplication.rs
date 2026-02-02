@@ -6,17 +6,6 @@
 use super::tile_processor::ProcessedTile;
 use std::collections::HashMap;
 
-/// Result of tile deduplication
-#[derive(Debug)]
-pub struct DeduplicationResult {
-    /// Unique tiles (one per unique hash)
-    pub unique_tiles: Vec<ProcessedTile>,
-    /// Mapping from original tile index to unique tile index
-    pub tile_mapping: Vec<usize>,
-    /// Number of duplicate tiles removed
-    pub duplicates_removed: usize,
-}
-
 /// Build deduplication map by hashing tiles (memory-efficient)
 ///
 /// Returns a tuple of:
@@ -46,36 +35,6 @@ pub fn build_dedup_map(tiles: &[ProcessedTile]) -> (Vec<bool>, Vec<usize>) {
     }
 
     (is_first, unique_idx)
-}
-
-/// Deduplicate tiles based on their content hash
-pub fn deduplicate_tiles(tiles: Vec<ProcessedTile>) -> DeduplicationResult {
-    let mut hash_to_index: HashMap<[u8; 16], usize> = HashMap::new();
-    let mut unique_tiles: Vec<ProcessedTile> = Vec::new();
-    let mut tile_mapping: Vec<usize> = Vec::with_capacity(tiles.len());
-    let mut duplicates_removed = 0;
-
-    for tile in tiles {
-        let hash = compute_md5(&tile.full_data());
-
-        if let Some(&existing_idx) = hash_to_index.get(&hash) {
-            // Duplicate found, map to existing tile
-            tile_mapping.push(existing_idx);
-            duplicates_removed += 1;
-        } else {
-            // New unique tile
-            let new_idx = unique_tiles.len();
-            hash_to_index.insert(hash, new_idx);
-            tile_mapping.push(new_idx);
-            unique_tiles.push(tile);
-        }
-    }
-
-    DeduplicationResult {
-        unique_tiles,
-        tile_mapping,
-        duplicates_removed,
-    }
 }
 
 /// Compute MD5 hash of data

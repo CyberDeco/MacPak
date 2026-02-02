@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-// use ruzstd::StreamingDecoder;
 
 use super::{
     CompressionMethod, FileTableEntry, LspkFooter, LspkHeader, MAGIC, MAX_VERSION, MIN_VERSION,
@@ -294,9 +293,7 @@ impl<R: Read + Seek> LspkReader<R> {
 
             CompressionMethod::Zlib => {
                 self.decompress_zlib(&compressed, entry.size_decompressed as usize, &entry.path)
-            } // CompressionMethod::Zstd => {
-              //     self.decompress_zstd(&compressed, entry.size_decompressed as usize, &entry.path)
-              // }
+            }
         }
     }
 
@@ -358,16 +355,6 @@ impl<R: Read + Seek> LspkReader<R> {
 
         Ok(decompressed)
     }
-
-    // Decompress Zstd data
-    // fn decompress_zstd(&self, compressed: &[u8], expected_size: usize, path: &PathBuf) -> Result<Vec<u8>> {
-    //     zstd::decode_all(compressed)
-    //         .map_err(|e| Error::DecompressionError(format!(
-    //             "Failed to decompress Zstd data for {}: {}",
-    //             path.display(),
-    //             e
-    //         )))
-    // }
 
     /// Read the entire PAK file with progress callbacks and error recovery
     ///
@@ -465,17 +452,5 @@ impl<R: Read + Seek> LspkReader<R> {
         }
 
         Ok(self.file_table.clone())
-    }
-
-    /// Get the PAK version (after header has been read).
-    #[allow(dead_code)] // Library API for quick metadata access
-    pub fn version(&self) -> Option<u32> {
-        self.header.as_ref().map(|h| h.version)
-    }
-
-    /// Get the number of files in the PAK (after footer has been read).
-    #[allow(dead_code)] // Library API for quick metadata access
-    pub fn file_count(&self) -> Option<u32> {
-        self.footer.as_ref().map(|f| f.num_files)
     }
 }

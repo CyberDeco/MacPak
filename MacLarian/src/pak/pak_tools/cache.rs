@@ -64,72 +64,9 @@ impl PakReaderCache {
         self.access_order.push(pak_path.to_path_buf());
     }
 
-    /// Read a single file's bytes using the cached file table.
-    ///
-    /// This is faster than [`crate::pak::PakOperations::read_file_bytes`] when reading multiple
-    /// files from the same PAK, as it caches the decompressed file table in memory.
-    /// The first call loads and caches the table; subsequent calls reuse it.
-    ///
-    /// For reading many files at once, prefer [`read_files_bulk`](Self::read_files_bulk)
-    /// which optimizes I/O by sorting reads by disk offset.
-    ///
-    /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`).
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// // PakReaderCache is internal API (pub(crate))
-    /// use std::path::Path;
-    /// use maclarian::pak::PakReaderCache;
-    ///
-    /// let mut cache = PakReaderCache::new(4); // Cache up to 4 PAKs
-    /// let pak = Path::new("Shared.pak");
-    ///
-    /// // First read loads the file table
-    /// let meta = cache.read_file_bytes(pak, "Public/Shared/meta.lsx")?;
-    ///
-    /// // Subsequent reads reuse the cached table (fast)
-    /// let other = cache.read_file_bytes(pak, "Public/Shared/other.lsf")?;
-    /// # Ok::<(), maclarian::Error>(())
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the PAK cannot be read or the file is not found.
-    #[allow(dead_code)] // Library API for on-demand cached file reading
-    pub fn read_file_bytes(&mut self, pak_path: &Path, file_path: &str) -> Result<Vec<u8>> {
-        self.ensure_loaded(pak_path)?;
-
-        // Find the entry in the cached table
-        let entry = self
-            .tables
-            .get(pak_path)
-            .and_then(|t| t.iter().find(|e| e.path.to_string_lossy() == file_path))
-            .ok_or_else(|| Error::FileNotFoundInPak(file_path.to_string()))?
-            .clone();
-
-        // Get the correct part file for this entry
-        let part_path = get_part_path(pak_path, entry.archive_part).ok_or_else(|| {
-            Error::ConversionError(format!(
-                "Cannot determine path for archive part {}",
-                entry.archive_part
-            ))
-        })?;
-
-        // Read compressed data from the correct part file
-        let mut file = File::open(&part_path)?;
-        file.seek(SeekFrom::Start(entry.offset))?;
-
-        let mut compressed_data = vec![0u8; entry.size_compressed as usize];
-        file.read_exact(&mut compressed_data)?;
-
-        // Decompress and return
-        decompress_data(&compressed_data, entry.compression, entry.size_decompressed)
-    }
-
     /// Read multiple files' bytes in bulk with optimized I/O
     ///
-    /// This is MUCH faster than calling `read_file_bytes` in a loop because:
+    /// This is optimized for reading many files because:
     /// 1. Files are grouped by archive part, then sorted by offset for sequential I/O
     /// 2. All compressed data is read in one pass per part file
     /// 3. Decompression happens in parallel

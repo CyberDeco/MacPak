@@ -12,7 +12,6 @@ pub enum CompressionMethod {
     None,
     Zlib,
     Lz4,
-    // Zstd,
 }
 
 impl CompressionMethod {
@@ -23,7 +22,6 @@ impl CompressionMethod {
             0 => CompressionMethod::None,
             1 => CompressionMethod::Zlib,
             2 => CompressionMethod::Lz4,
-            // 3 => CompressionMethod::Zstd,
             _ => CompressionMethod::None, // Unknown, treat as uncompressed
         }
     }
@@ -34,7 +32,6 @@ impl CompressionMethod {
             CompressionMethod::None => "none",
             CompressionMethod::Zlib => "zlib",
             CompressionMethod::Lz4 => "lz4",
-            // CompressionMethod::Zstd => "zstd",
         }
     }
 
@@ -45,7 +42,6 @@ impl CompressionMethod {
             CompressionMethod::None => 0,
             CompressionMethod::Zlib => 1,
             CompressionMethod::Lz4 => 2,
-            // CompressionMethod::Zstd => 3,
         }
     }
 }
@@ -86,33 +82,11 @@ pub(crate) struct FileTableEntry {
     pub size_decompressed: u32,
     /// Compression method
     pub compression: CompressionMethod,
-    /// Raw flags byte (for debugging)
+    /// Raw flags byte from PAK format (parsed for completeness, useful for debugging)
+    #[allow(dead_code)]
     pub flags: u8,
     /// Archive part number (0 = main .pak, 1+ = _1.pak, _2.pak, etc.)
     pub archive_part: u8,
-}
-
-/// Header of an LSPK v16/v18 PAK file (extended format)
-///
-/// This format was used in BG3 Early Access (Patch 4). Retained for format
-/// documentation and potential backwards compatibility.
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub(crate) struct LspkHeaderV16 {
-    /// Version number
-    pub version: u32,
-    /// Offset to file list
-    pub file_list_offset: u64,
-    /// Size of file list
-    pub file_list_size: u32,
-    /// Package flags
-    pub flags: u8,
-    /// Priority
-    pub priority: u8,
-    /// MD5 hash
-    pub md5: [u8; 16],
-    /// Number of archive parts
-    pub num_parts: u16,
 }
 
 /// A decompressed file from the PAK archive

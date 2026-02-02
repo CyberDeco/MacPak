@@ -52,10 +52,7 @@ struct CompressedEntry {
 }
 
 /// LSPK PAK file writer
-#[allow(dead_code)] // Library API - root_path kept for future use
 pub struct LspkWriter {
-    /// Root path of the mod directory
-    root_path: PathBuf,
     /// Files to include in the PAK
     files: Vec<FileEntry>,
     /// PAK version to write
@@ -74,19 +71,10 @@ impl LspkWriter {
         let files = Self::collect_files(&root_path)?;
 
         Ok(Self {
-            root_path,
             files,
             version: MAX_VERSION,                // Use latest supported version
             compression: CompressionMethod::Lz4, // Default to LZ4
         })
-    }
-
-    /// Set the PAK version to write
-    #[must_use]
-    #[allow(dead_code)] // Library API
-    pub fn with_version(mut self, version: u32) -> Self {
-        self.version = version;
-        self
     }
 
     /// Set the compression method to use
@@ -141,11 +129,11 @@ impl LspkWriter {
         Ok(files)
     }
 
-    /// Write the PAK file
+    /// Write the PAK file without progress reporting
     ///
     /// # Errors
     /// Returns an error if the file cannot be written.
-    #[allow(dead_code)] // Library API
+    #[allow(dead_code)] // Convenience wrapper for callers who don't need progress
     pub fn write(self, output_path: impl AsRef<Path>) -> Result<()> {
         self.write_with_progress(output_path, &|_| {})
     }
@@ -349,19 +337,5 @@ impl LspkWriter {
         });
 
         Ok(())
-    }
-
-    /// Get the number of files that will be written
-    #[allow(dead_code)] // Public API for callers to inspect writer state
-    #[must_use]
-    pub fn file_count(&self) -> usize {
-        self.files.len()
-    }
-
-    /// Get the root path
-    #[allow(dead_code)] // Public API for callers to inspect writer state
-    #[must_use]
-    pub fn root_path(&self) -> &Path {
-        &self.root_path
     }
 }

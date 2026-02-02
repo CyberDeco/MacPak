@@ -103,17 +103,6 @@ impl FourCCNode {
         }
     }
 
-    /// Get the `FourCC` code
-    #[must_use]
-    pub fn fourcc(&self) -> &[u8; 4] {
-        match self {
-            Self::Container { fourcc, .. }
-            | Self::String { fourcc, .. }
-            | Self::Int { fourcc, .. }
-            | Self::Binary { fourcc, .. }
-            | Self::Guid { fourcc, .. } => fourcc,
-        }
-    }
 }
 
 /// `FourCC` metadata tree

@@ -245,7 +245,13 @@ pub enum TileCompression {
 }
 
 /// GTS file header (156 bytes)
+///
+/// Many fields are parsed for binary format completeness but not currently used.
+/// Fields like `i2`, `i6`, `i7`, `m-s`, `xjj-xmm` are reserved/unknown in BG3 files.
+/// Fields like `layers_offset`, `fourcc_list_*`, `thumbnails_offset` contain valid
+/// data that could support future features (layer info, metadata, thumbnails).
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub(crate) struct GtsHeader {
     pub magic: u32,
     pub version: u32,
@@ -362,7 +368,11 @@ pub(crate) enum GtsParameterBlock {
 }
 
 /// Level info from GTS file
+///
+/// Parsed for format completeness. Currently tile lookup uses packed tile IDs
+/// directly rather than level offsets.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub(crate) struct GtsLevelInfo {
     /// Width in tiles
     pub width_tiles: u32,
@@ -411,15 +421,6 @@ impl GtsPackedTileId {
             y: ((value >> 8) & 0xFFF) as u16,
             x: (value >> 20) as u16,
         }
-    }
-
-    /// Encode tile ID into a 32-bit packed value
-    #[must_use]
-    pub fn to_u32(&self) -> u32 {
-        ((self.x as u32) << 20)
-            | ((self.y as u32) << 8)
-            | ((self.level as u32) << 4)
-            | (self.layer as u32)
     }
 }
 

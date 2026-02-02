@@ -72,11 +72,6 @@ impl Section {
         self.data.extend_from_slice(&f32_to_half(v).to_le_bytes());
     }
 
-    #[allow(dead_code)]
-    pub fn write_bytes(&mut self, bytes: &[u8]) {
-        self.data.extend_from_slice(bytes);
-    }
-
     /// Write a pointer (64-bit) and record a fixup.
     pub fn write_ptr(&mut self, target_section: u32, target_offset: u32) {
         let offset = self.pos();
