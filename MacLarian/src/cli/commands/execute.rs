@@ -146,6 +146,41 @@ impl LocaCommands {
                 limit,
                 quiet,
             } => loca::search(path, query, *handle, *limit, *quiet),
+            LocaCommands::Get { path, key } => loca::get(path, key),
+            LocaCommands::Set {
+                path,
+                key,
+                text,
+                create,
+            } => loca::set(path, key, text, *create),
+            LocaCommands::Delete { path, key } => loca::delete(path, key),
+            LocaCommands::Replace {
+                path,
+                find,
+                replace,
+                case_sensitive,
+                key_pattern,
+                dry_run,
+            } => loca::replace(
+                path,
+                find,
+                replace,
+                *case_sensitive,
+                key_pattern.as_deref(),
+                *dry_run,
+            ),
+            LocaCommands::Export {
+                path,
+                output,
+                format,
+            } => loca::export(path, output.as_deref(), format),
+            LocaCommands::Import {
+                path,
+                translations,
+                format,
+                backup,
+            } => loca::import(path, translations, format, *backup),
+            LocaCommands::Stats { paths } => loca::stats(paths),
         }
     }
 }
@@ -161,7 +196,23 @@ impl TextureCommands {
 impl ModCommands {
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
-            ModCommands::Validate { source } => mod_cmd::validate(source),
+            ModCommands::Validate {
+                source,
+                recursive,
+                check_integrity,
+                paks_only,
+                dirs_only,
+                quiet,
+            } => mod_cmd::validate_batch(
+                source,
+                *recursive,
+                *check_integrity,
+                *paks_only,
+                *dirs_only,
+                *quiet,
+            ),
+            ModCommands::DryRun { source, quiet } => mod_cmd::dry_run(source, *quiet),
+            ModCommands::Integrity { source, quiet } => mod_cmd::integrity(source, *quiet),
             ModCommands::Package {
                 source,
                 destination,

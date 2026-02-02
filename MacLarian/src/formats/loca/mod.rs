@@ -3,14 +3,41 @@
 //! Binary format for Baldur's Gate 3 localization strings.
 //! Can be converted to/from XML format.
 //!
+//! # Editing LOCA files
+//!
+//! ```no_run
+//! use maclarian::formats::loca::{LocaResource, read_loca, write_loca};
+//!
+//! // Load a LOCA file
+//! let mut resource = read_loca("game.loca")?;
+//!
+//! // Add or update an entry
+//! resource.add_entry("h12345", "New text");
+//!
+//! // Bulk replace text
+//! let result = resource.replace_all("old text", "new text", false);
+//! println!("Modified {} entries", result.entries_modified);
+//!
+//! // Save changes
+//! write_loca("game_modified.loca", &resource)?;
+//! # Ok::<(), maclarian::Error>(())
+//! ```
+//!
 //! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
 //! SPDX-License-Identifier: MIT
 
+mod editor;
 mod reader;
+pub mod translation;
 mod writer;
 
+pub use editor::{EditResult, ReplaceResult};
 pub use reader::{parse_loca_bytes, read_loca};
+pub use translation::{
+    ExportFormat, ImportResult, create_from_translations, export_for_translation,
+    export_with_existing, generate_review_report, import_translations,
+};
 pub use writer::write_loca;
 
 /// "LOCA" magic signature (little-endian)

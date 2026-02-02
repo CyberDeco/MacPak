@@ -11,28 +11,142 @@ use zip::write::SimpleFileOptions;
 
 use crate::cli::progress::simple_spinner;
 use crate::mods::{
-    generate_meta_lsx, parse_version_string, to_folder_name, validate_mod_structure,
-    validate_pak_mod_structure,
+    BatchValidationOptions, generate_meta_lsx, parse_version_string, to_folder_name,
+    validate_mod_structure, validate_pak_mod_structure,
 };
 
-/// Validate mod structure (folder or PAK file)
-pub fn validate(source: &Path) -> Result<()> {
-    // Detect if source is a PAK file or folder
+/// Validate mod structure with batch support
+pub fn validate_batch(
+    source: &Path,
+    recursive: bool,
+    check_integrity: bool,
+    paks_only: bool,
+    dirs_only: bool,
+    quiet: bool,
+) -> Result<()> {
+    // If not recursive, use single-mod validation
+    if !recursive {
+        return validate_single(source, check_integrity, quiet);
+    }
+
+    // Batch validation
+    let options = BatchValidationOptions {
+        include_paks: !dirs_only,
+        include_directories: !paks_only,
+        check_integrity,
+        max_depth: None,
+    };
+
+    let pb = if quiet {
+        None
+    } else {
+        Some(simple_spinner("Scanning for mods..."))
+    };
+
+    let result = crate::mods::validate_directory_recursive_with_progress(source, &options, &|p| {
+        if let Some(ref pb) = pb {
+            if let Some(ref file) = p.current_file {
+                pb.set_message(format!("[{}/{}] {}", p.current, p.total, file));
+            } else {
+                pb.set_message(p.phase.as_str().to_string());
+            }
+        }
+    })?;
+
+    if let Some(pb) = pb {
+        pb.finish_and_clear();
+    }
+
+    if result.total == 0 {
+        println!("No mods found in {}", source.display());
+        return Ok(());
+    }
+
+    // Print results for each mod
+    for entry in &result.entries {
+        let status = if entry.result.valid { "✓" } else { "✗" };
+        let type_str = if entry.is_pak { "PAK" } else { "DIR" };
+        println!("{status} [{type_str}] {}", entry.name);
+
+        if !quiet {
+            // Print structure
+            for item in &entry.result.structure {
+                println!("    {item}");
+            }
+
+            // Print warnings
+            for warning in &entry.result.warnings {
+                println!("    ⚠ {warning}");
+            }
+
+            // Print integrity issues
+            if let Some(ref integrity) = entry.integrity {
+                if !integrity.valid {
+                    for issue in &integrity.issues {
+                        println!("    ⚠ {issue}");
+                    }
+                } else if !quiet {
+                    println!(
+                        "    Integrity: OK ({} files, {} bytes)",
+                        integrity.file_count, integrity.total_size
+                    );
+                }
+            }
+        }
+    }
+
+    // Print summary
+    println!("\n{}", result.summary());
+
+    if result.all_valid() {
+        Ok(())
+    } else {
+        std::process::exit(1);
+    }
+}
+
+/// Validate a single mod (helper for non-recursive validation)
+fn validate_single(source: &Path, check_integrity: bool, quiet: bool) -> Result<()> {
     let is_pak = source
         .extension()
         .is_some_and(|ext| ext.eq_ignore_ascii_case("pak"));
 
-    let pb = simple_spinner("Validating mod structure...");
+    let pb = if quiet {
+        None
+    } else {
+        Some(simple_spinner("Validating mod structure..."))
+    };
+
     let result = if is_pak {
         crate::mods::validate_pak_mod_structure_with_progress(source, &|p| {
-            pb.set_message(p.phase.as_str().to_string());
+            if let Some(ref pb) = pb {
+                pb.set_message(p.phase.as_str().to_string());
+            }
         })?
     } else {
         crate::mods::validate_mod_structure_with_progress(source, &|p| {
-            pb.set_message(p.phase.as_str().to_string());
+            if let Some(ref pb) = pb {
+                pb.set_message(p.phase.as_str().to_string());
+            }
         })
     };
-    pb.finish_and_clear();
+
+    // Check integrity if requested and it's a PAK
+    let integrity_result = if check_integrity && is_pak {
+        Some(crate::mods::check_pak_integrity_with_progress(source, &|p| {
+            if let Some(ref pb) = pb {
+                if let Some(ref file) = p.current_file {
+                    pb.set_message(file.clone());
+                }
+            }
+        })?)
+    } else {
+        None
+    };
+
+    if let Some(ref pb) = pb {
+        pb.finish_and_clear();
+    }
 
     // Print structure elements
     if !result.structure.is_empty() {
@@ -50,12 +164,122 @@ pub fn validate(source: &Path) -> Result<()> {
         }
     }
 
+    // Print integrity results
+    if let Some(ref integrity) = integrity_result {
+        println!("\nIntegrity:");
+        println!("  Files: {}", integrity.file_count);
+        println!("  Size: {} bytes", integrity.total_size);
+        if !integrity.issues.is_empty() {
+            println!("  Issues:");
+            for issue in &integrity.issues {
+                println!("    - {issue}");
+            }
+        }
+    }
+
     // Print result
-    if result.valid {
+    let valid = result.valid && integrity_result.as_ref().map_or(true, |i| i.valid);
+    if valid {
         println!("\nValidation: PASSED");
         Ok(())
     } else {
         println!("\nValidation: FAILED");
+        std::process::exit(1);
+    }
+}
+
+/// Dry-run PAK creation validation
+pub fn dry_run(source: &Path, quiet: bool) -> Result<()> {
+    let pb = if quiet {
+        None
+    } else {
+        Some(simple_spinner("Validating directory for PAK creation..."))
+    };
+
+    let result = crate::mods::validate_for_pak_creation_with_progress(source, &|p| {
+        if let Some(ref pb) = pb {
+            if let Some(ref file) = p.current_file {
+                pb.set_message(file.clone());
+            }
+        }
+    })?;
+
+    if let Some(pb) = pb {
+        pb.finish_and_clear();
+    }
+
+    // Print results
+    println!("Files: {}", result.file_count);
+    println!("Total size: {} bytes ({:.2} MB)", result.total_size, result.total_size as f64 / 1024.0 / 1024.0);
+
+    if !result.errors.is_empty() {
+        println!("\nErrors:");
+        for error in &result.errors {
+            println!("  ✗ {error}");
+        }
+    }
+
+    if !result.warnings.is_empty() {
+        println!("\nWarnings:");
+        for warning in &result.warnings {
+            println!("  ⚠ {warning}");
+        }
+    }
+
+    if result.valid {
+        println!("\nDry run: PAK creation would succeed");
+        Ok(())
+    } else {
+        println!("\nDry run: PAK creation would FAIL");
+        std::process::exit(1);
+    }
+}
+
+/// Check PAK file integrity
+pub fn integrity(sources: &[std::path::PathBuf], quiet: bool) -> Result<()> {
+    let mut all_valid = true;
+
+    for source in sources {
+        let pb = if quiet {
+            None
+        } else {
+            Some(simple_spinner("Checking PAK integrity..."))
+        };
+
+        let result = crate::mods::check_pak_integrity_with_progress(source, &|p| {
+            if let Some(ref pb) = pb {
+                if let Some(ref file) = p.current_file {
+                    pb.set_message(file.clone());
+                }
+            }
+        })?;
+
+        if let Some(pb) = pb {
+            pb.finish_and_clear();
+        }
+
+        let status = if result.valid { "✓" } else { "✗" };
+        println!(
+            "{status} {} ({} files, {} bytes)",
+            source.display(),
+            result.file_count,
+            result.total_size
+        );
+
+        if !result.issues.is_empty() {
+            for issue in &result.issues {
+                println!("    ⚠ {issue}");
+            }
+        }
+
+        if !result.valid {
+            all_valid = false;
+        }
+    }
+
+    if all_valid {
+        Ok(())
+    } else {
         std::process::exit(1);
     }
 }

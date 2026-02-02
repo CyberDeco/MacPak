@@ -228,6 +228,102 @@ pub enum LocaCommands {
         #[arg(short, long)]
         quiet: bool,
     },
+
+    /// Get a specific entry by key
+    Get {
+        /// LOCA file
+        path: PathBuf,
+
+        /// Entry key/handle
+        key: String,
+    },
+
+    /// Add or update an entry
+    Set {
+        /// LOCA file to modify
+        path: PathBuf,
+
+        /// Entry key/handle
+        key: String,
+
+        /// Text content
+        text: String,
+
+        /// Create file if it doesn't exist
+        #[arg(short, long)]
+        create: bool,
+    },
+
+    /// Delete an entry
+    Delete {
+        /// LOCA file to modify
+        path: PathBuf,
+
+        /// Entry key/handle to delete
+        key: String,
+    },
+
+    /// Find and replace text across all entries
+    Replace {
+        /// LOCA file to modify
+        path: PathBuf,
+
+        /// Text to find
+        find: String,
+
+        /// Text to replace with
+        replace: String,
+
+        /// Case-sensitive matching
+        #[arg(short = 's', long)]
+        case_sensitive: bool,
+
+        /// Only replace in entries matching this key pattern
+        #[arg(short, long)]
+        key_pattern: Option<String>,
+
+        /// Dry run - show what would be changed without modifying
+        #[arg(short, long)]
+        dry_run: bool,
+    },
+
+    /// Export LOCA to TSV for translation
+    Export {
+        /// LOCA file to export
+        path: PathBuf,
+
+        /// Output file (default: <input>.tsv)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Export format
+        #[arg(short, long, value_parser = ["tsv", "csv"], default_value = "tsv")]
+        format: String,
+    },
+
+    /// Import translations from TSV/CSV
+    Import {
+        /// LOCA file to update
+        path: PathBuf,
+
+        /// Translation file (TSV/CSV)
+        translations: PathBuf,
+
+        /// Import format
+        #[arg(short, long, value_parser = ["tsv", "csv"], default_value = "tsv")]
+        format: String,
+
+        /// Create backup before modifying
+        #[arg(short, long)]
+        backup: bool,
+    },
+
+    /// Show LOCA file statistics
+    Stats {
+        /// LOCA file(s) to analyze
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
+    },
 }
 
 /// Texture operation commands
@@ -243,10 +339,51 @@ pub enum TextureCommands {
 /// Mod utility commands
 #[derive(Subcommand)]
 pub enum ModCommands {
-    /// Validate mod directory structure
+    /// Validate mod directory or PAK file structure
     Validate {
-        /// Path to mod directory (extracted PAK contents)
+        /// Path to mod directory, PAK file, or folder containing mods
         source: PathBuf,
+
+        /// Recursively scan directory for all mods
+        #[arg(short, long)]
+        recursive: bool,
+
+        /// Check PAK file integrity (verify files can be read)
+        #[arg(short = 'i', long)]
+        check_integrity: bool,
+
+        /// Only check PAK files (skip directories)
+        #[arg(long)]
+        paks_only: bool,
+
+        /// Only check directories (skip PAK files)
+        #[arg(long)]
+        dirs_only: bool,
+
+        /// Suppress progress output
+        #[arg(short, long)]
+        quiet: bool,
+    },
+
+    /// Validate directory can be packed into a PAK (dry run)
+    DryRun {
+        /// Directory to validate for PAK creation
+        source: PathBuf,
+
+        /// Suppress progress output
+        #[arg(short, long)]
+        quiet: bool,
+    },
+
+    /// Check PAK file integrity
+    Integrity {
+        /// PAK file(s) to check
+        #[arg(required = true)]
+        source: Vec<PathBuf>,
+
+        /// Suppress progress output
+        #[arg(short, long)]
+        quiet: bool,
     },
 
     /// Package mod for BaldursModManager (generates info.json alongside PAK)
