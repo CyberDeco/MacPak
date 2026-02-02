@@ -6,7 +6,7 @@
 //!
 //! Re-exports shared utilities from the parent module, plus GR2-specific functions.
 
-pub use crate::converter::gr2_gltf::shared::{encode_qtangent, f32_to_half};
+pub(crate) use crate::converter::gr2_gltf::shared::{encode_qtangent, f32_to_half};
 
 /// Calculate CRC32 checksum (GR2 uses standard CRC-32)
 #[must_use]

@@ -22,9 +22,8 @@ mod texture_loading;
 mod textured;
 mod utils;
 
-pub use gltf::GltfBuilder;
-pub use gr2_reader::{Bone, Gr2ContentInfo, Gr2Reader, MeshData, Skeleton, Transform, Vertex};
-pub use utils::{decode_qtangent, half_to_f32};
+// Crate-internal re-exports for GR2 inspection
+pub(crate) use gr2_reader::Gr2Reader;
 
 // Re-export conversion functions
 pub use convert::{

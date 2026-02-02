@@ -22,7 +22,7 @@
 //! # Ok::<(), maclarian::error::Error>(())
 //! ```
 
-pub mod compression;
+pub(crate) mod compression;
 pub mod config;
 pub(crate) mod deduplication;
 pub(crate) mod geometry;

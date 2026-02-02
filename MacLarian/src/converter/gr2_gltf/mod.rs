@@ -8,13 +8,10 @@
 //! - GR2 → glTF/GLB: Export game models for use in Blender
 //! - glTF → GR2: Import back into the game
 
-pub mod shared;
+pub(crate) mod shared;
 pub mod to_gltf;
 pub mod to_gr2;
 pub mod types;
-
-// Re-export shared utilities
-pub use shared::{decode_qtangent, encode_qtangent, f32_to_half, half_to_f32};
 
 // Re-export progress types
 pub use types::{Gr2Phase, Gr2Progress, Gr2ProgressCallback};

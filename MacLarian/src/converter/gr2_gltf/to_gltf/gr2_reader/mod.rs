@@ -9,7 +9,7 @@ mod types;
 mod vertex_types;
 
 pub use reader::Gr2Reader;
-pub use types::{Bone, Gr2ContentInfo, MeshData, Skeleton, Transform, Vertex};
+pub use types::{MeshData, Skeleton};
 
 // ============================================================================
 // Constants

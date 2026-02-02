@@ -21,11 +21,9 @@ mod gltf_loader;
 mod gr2_writer;
 mod utils;
 
-pub use gltf_loader::{Bone, GltfModel, MeshData, Skeleton, Transform, Vertex};
-pub use gr2_writer::Gr2Writer;
-pub use utils::{crc32, encode_qtangent, f32_to_half};
-
 use crate::error::Result;
+use gltf_loader::GltfModel;
+use gr2_writer::Gr2Writer;
 use std::path::Path;
 
 /// Convert a glTF/GLB file to GR2 format.
