@@ -92,7 +92,7 @@ impl GtsFile {
             tiles_by_layer[layer_idx] = level_map.get(&best_level).cloned().unwrap_or_default();
 
             if best_level != 0 {
-                tracing::info!(
+                tracing::debug!(
                     "Layer {layer_idx} using level {best_level} (level 0 not available)"
                 );
             }
