@@ -20,8 +20,8 @@ pub use types::{
 
 // Re-export loaders
 pub use loaders::{
-    find_mod_name_from_mods_dir, find_mod_root, load_mod_config, load_virtual_textures_json,
-    load_vtex_config_xml, parse_vtex_config_from_lsf, LsfVTexConfig,
+    LsfVTexConfig, find_mod_name_from_mods_dir, find_mod_root, load_mod_config,
+    load_virtual_textures_json, load_vtex_config_xml, parse_vtex_config_from_lsf,
 };
 
 // Re-export discovery functions
@@ -31,4 +31,3 @@ pub use discovery::{
 
 // Re-export lookup functions
 pub use lookup::{extract_by_gtex, find_gts_for_gtex, find_virtual_texture};
-

@@ -2,8 +2,7 @@
 
 use super::Commands;
 use super::definitions::{
-    Gr2Commands, LocaCommands, ModCommands, PakCommands, TextureCommands,
-    VirtualTextureCommands,
+    Gr2Commands, LocaCommands, ModCommands, PakCommands, TextureCommands, VirtualTextureCommands,
 };
 use super::{convert, gr2, loca, mod_cmd, pak, texture, virtual_texture};
 

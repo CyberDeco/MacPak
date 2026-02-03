@@ -147,9 +147,9 @@ impl SearchIndex {
             total_docs,
             "Committing index...",
         ));
-        writer
-            .commit()
-            .map_err(|e| maclarian::error::Error::SearchError(format!("Export commit failed: {e}")))?;
+        writer.commit().map_err(|e| {
+            maclarian::error::Error::SearchError(format!("Export commit failed: {e}"))
+        })?;
 
         progress(&SearchProgress::new(
             SearchPhase::Complete,

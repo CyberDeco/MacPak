@@ -75,8 +75,7 @@ mod execute;
 
 // Re-export subcommand enums
 pub use definitions::{
-    Gr2Commands, LocaCommands, ModCommands, PakCommands, TextureCommands,
-    VirtualTextureCommands,
+    Gr2Commands, LocaCommands, ModCommands, PakCommands, TextureCommands, VirtualTextureCommands,
 };
 
 /// Top-level CLI commands.
@@ -100,7 +99,8 @@ Examples:
     },
 
     /// Convert file formats (LSF/LSX/LSJ, GR2/GLB, LOCA/XML, DDS/PNG)
-    #[command(long_about = "Convert file formats (LSF/LSX/LSJ, GR2/GLB, LOCA/XML, DDS/PNG)
+    #[command(
+        long_about = "Convert file formats (LSF/LSX/LSJ, GR2/GLB, LOCA/XML, DDS/PNG)
 
 Auto-detects input/output formats from file extensions. Supports batch conversion
 with glob patterns. Output format can be overridden with -o/--output-format.
@@ -119,7 +119,8 @@ Examples:
   maclarian convert meta.lsx meta.lsj
   maclarian convert \"*.lsf\" ./output/
   maclarian convert texture.dds texture.png
-  maclarian convert texture.png texture.dds --texture-format bc3")]
+  maclarian convert texture.png texture.dds --texture-format bc3"
+    )]
     Convert {
         /// Source file(s) or wildcard pattern
         #[arg(required = true)]

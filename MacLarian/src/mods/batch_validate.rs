@@ -117,9 +117,7 @@ pub fn check_pak_integrity_with_progress(
     }
 
     // Get file size from disk
-    let total_size = std::fs::metadata(pak_path)
-        .map(|m| m.len())
-        .unwrap_or(0);
+    let total_size = std::fs::metadata(pak_path).map(|m| m.len()).unwrap_or(0);
 
     progress(&ModProgress::new(ModPhase::Complete, 2, 2));
 

@@ -144,10 +144,7 @@ impl<R: Read + Seek> LspkReader<R> {
     /// # Panics
     /// This function does not panic under normal conditions.
     pub(crate) fn read_footer(&mut self) -> Result<&LspkFooter> {
-        let header = self
-            .header
-            .as_ref()
-            .ok_or(Error::PakHeaderNotRead)?;
+        let header = self.header.as_ref().ok_or(Error::PakHeaderNotRead)?;
 
         // Footer offset in header is absolute position from start of file
         self.reader.seek(SeekFrom::Start(header.footer_offset))?;
@@ -176,14 +173,8 @@ impl<R: Read + Seek> LspkReader<R> {
     /// # Panics
     /// This function does not panic under normal conditions.
     pub fn read_file_table(&mut self) -> Result<&[FileTableEntry]> {
-        let footer = self
-            .footer
-            .as_ref()
-            .ok_or(Error::PakFooterNotRead)?;
-        let header = self
-            .header
-            .as_ref()
-            .ok_or(Error::PakHeaderNotRead)?;
+        let footer = self.footer.as_ref().ok_or(Error::PakFooterNotRead)?;
+        let header = self.header.as_ref().ok_or(Error::PakHeaderNotRead)?;
 
         let num_files = footer.num_files as usize;
         let table_size_compressed = footer.table_size_compressed as usize;
@@ -384,11 +375,7 @@ impl<R: Read + Seek> LspkReader<R> {
         });
         self.read_file_table()?;
 
-        let version = self
-            .header
-            .as_ref()
-            .ok_or(Error::PakHeaderNotRead)?
-            .version;
+        let version = self.header.as_ref().ok_or(Error::PakHeaderNotRead)?.version;
         let mut contents = PakContents::new(version);
         let total_files = self.file_table.len();
 

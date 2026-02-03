@@ -72,28 +72,19 @@ impl FourCCNode {
     /// Create an integer node
     #[must_use]
     pub fn int(fourcc: [u8; 4], value: u32) -> Self {
-        Self::Int {
-            fourcc,
-            value,
-        }
+        Self::Int { fourcc, value }
     }
 
     /// Create a binary node
     #[must_use]
     pub fn binary(fourcc: [u8; 4], data: Vec<u8>) -> Self {
-        Self::Binary {
-            fourcc,
-            data,
-        }
+        Self::Binary { fourcc, data }
     }
 
     /// Create a GUID node
     #[must_use]
     pub fn guid(fourcc: [u8; 4], guid: [u8; 16]) -> Self {
-        Self::Guid {
-            fourcc,
-            guid,
-        }
+        Self::Guid { fourcc, guid }
     }
 
     /// Add a child to a container node
@@ -102,7 +93,6 @@ impl FourCCNode {
             children.push(child);
         }
     }
-
 }
 
 /// `FourCC` metadata tree

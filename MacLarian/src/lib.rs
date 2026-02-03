@@ -109,7 +109,6 @@ pub mod prelude {
     pub use crate::mods::{
         InfoJsonResult, ModValidationResult, generate_info_json, validate_mod_structure,
     };
-
 }
 
 /// The version of the `maclarian` crate.

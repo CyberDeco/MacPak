@@ -221,70 +221,69 @@ impl VirtualTextureExtractor {
 
         // Find page file index and gather naming info
         // Format: {mod_name}_{gtex_hash}_[Layer].dds
-        let (page_file_idx, mod_name, gtex_hash): (u16, String, String) = if let Some(hash) =
-            Self::extract_hash_from_filename(gtp_name)
-        {
-            // BG3 vanilla: hash in filename (e.g., "Name_<32hexhash>.gtp")
-            let idx = gts
-                .find_page_file_index(hash)
-                .ok_or_else(|| Error::GtsHashNotFound {
-                    hash: hash.to_string(),
-                })?;
-            // Extract base name before the hash
-            let base_name = gtp_name
-                .strip_suffix(".gtp")
-                .and_then(|n| n.rfind('_').map(|pos| &n[..pos]))
-                .unwrap_or("BG3")
-                .to_string();
-            (idx, base_name, hash.to_string())
-        } else {
-            // Mod: read config files and match by filename
-            let config = mod_config::load_mod_config(gtp_path);
-            let idx = gts
-                .find_page_file_index_by_name(gtp_name)
-                .ok_or_else(|| Error::GtpNotInGtsMetadata {
-                    gtp_name: gtp_name.to_string(),
-                })?;
-
-            // Get name and GTex hash from config files
-            let (name, gtex_hash) = if let Some(ref cfg) = config {
-                // Use TileSet name from VTexConfig.xml, or mod_name as fallback
-                let name = cfg
-                    .tileset_name
-                    .clone()
-                    .unwrap_or_else(|| cfg.mod_name.clone());
-
-                // Get GTex hash: first from VTexConfig.xml, then from VirtualTextures.json
-                let hash = cfg
-                    .gtex_hashes
-                    .first()
-                    .cloned()
-                    .or_else(|| {
-                        // Fallback: find in VirtualTextures.json by GTS path
-                        let gts_filename =
-                            gts_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                        cfg.mappings
-                            .iter()
-                            .find(|m| m.gts_path.ends_with(gts_filename))
-                            .map(|m| m.gtex_name.clone())
-                    })
-                    .unwrap_or_else(|| "unknown".to_string());
-
-                tracing::debug!(
-                    "Loaded mod config: tileset='{}', mod='{}', gtex_hash='{}'",
-                    cfg.tileset_name.as_deref().unwrap_or("none"),
-                    cfg.mod_name,
-                    hash
-                );
-                (name, hash)
+        let (page_file_idx, mod_name, gtex_hash): (u16, String, String) =
+            if let Some(hash) = Self::extract_hash_from_filename(gtp_name) {
+                // BG3 vanilla: hash in filename (e.g., "Name_<32hexhash>.gtp")
+                let idx = gts
+                    .find_page_file_index(hash)
+                    .ok_or_else(|| Error::GtsHashNotFound {
+                        hash: hash.to_string(),
+                    })?;
+                // Extract base name before the hash
+                let base_name = gtp_name
+                    .strip_suffix(".gtp")
+                    .and_then(|n| n.rfind('_').map(|pos| &n[..pos]))
+                    .unwrap_or("BG3")
+                    .to_string();
+                (idx, base_name, hash.to_string())
             } else {
-                // Fallback: use GTP stem as name
-                let stem = gtp_name.strip_suffix(".gtp").unwrap_or(gtp_name);
-                (stem.to_string(), "unknown".to_string())
-            };
+                // Mod: read config files and match by filename
+                let config = mod_config::load_mod_config(gtp_path);
+                let idx = gts.find_page_file_index_by_name(gtp_name).ok_or_else(|| {
+                    Error::GtpNotInGtsMetadata {
+                        gtp_name: gtp_name.to_string(),
+                    }
+                })?;
 
-            (idx, name, gtex_hash)
-        };
+                // Get name and GTex hash from config files
+                let (name, gtex_hash) = if let Some(ref cfg) = config {
+                    // Use TileSet name from VTexConfig.xml, or mod_name as fallback
+                    let name = cfg
+                        .tileset_name
+                        .clone()
+                        .unwrap_or_else(|| cfg.mod_name.clone());
+
+                    // Get GTex hash: first from VTexConfig.xml, then from VirtualTextures.json
+                    let hash = cfg
+                        .gtex_hashes
+                        .first()
+                        .cloned()
+                        .or_else(|| {
+                            // Fallback: find in VirtualTextures.json by GTS path
+                            let gts_filename =
+                                gts_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                            cfg.mappings
+                                .iter()
+                                .find(|m| m.gts_path.ends_with(gts_filename))
+                                .map(|m| m.gtex_name.clone())
+                        })
+                        .unwrap_or_else(|| "unknown".to_string());
+
+                    tracing::debug!(
+                        "Loaded mod config: tileset='{}', mod='{}', gtex_hash='{}'",
+                        cfg.tileset_name.as_deref().unwrap_or("none"),
+                        cfg.mod_name,
+                        hash
+                    );
+                    (name, hash)
+                } else {
+                    // Fallback: use GTP stem as name
+                    let stem = gtp_name.strip_suffix(".gtp").unwrap_or(gtp_name);
+                    (stem.to_string(), "unknown".to_string())
+                };
+
+                (idx, name, gtex_hash)
+            };
 
         // Get tile locations for each layer
         let tiles_by_layer = gts.get_tiles_for_page_file(page_file_idx);

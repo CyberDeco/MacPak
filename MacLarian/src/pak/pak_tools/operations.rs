@@ -627,8 +627,8 @@ impl PakOperations {
         let mut compressed_files: Vec<(String, CompressedFile)> = Vec::new();
 
         for (part, part_entries) in &entries_by_part {
-            let part_path = get_part_path(pak_path, *part)
-                .ok_or(Error::ArchivePartNotFound { part: *part })?;
+            let part_path =
+                get_part_path(pak_path, *part).ok_or(Error::ArchivePartNotFound { part: *part })?;
 
             if !part_path.exists() {
                 tracing::warn!("Archive part file not found: {}", part_path.display());

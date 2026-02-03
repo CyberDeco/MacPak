@@ -80,13 +80,16 @@ fn validate_single(source: &Path, quiet: bool) -> Result<()> {
 
     // Always check integrity for PAK files
     let integrity_result = if is_pak {
-        Some(crate::mods::check_pak_integrity_with_progress(source, &|p| {
-            if let Some(ref pb) = pb {
-                if let Some(ref file) = p.current_file {
-                    pb.set_message(file.clone());
+        Some(crate::mods::check_pak_integrity_with_progress(
+            source,
+            &|p| {
+                if let Some(ref pb) = pb {
+                    if let Some(ref file) = p.current_file {
+                        pb.set_message(file.clone());
+                    }
                 }
-            }
-        })?)
+            },
+        )?)
     } else {
         None
     };
@@ -381,8 +384,11 @@ pub fn meta(
     version: &str,
 ) -> Result<()> {
     // Parse version string
-    let (major, minor, patch, build) = parse_version_string(version)
-        .with_context(|| format!("Invalid version format: {version}. Expected: major.minor.patch.build (e.g., 1.0.0.0)"))?;
+    let (major, minor, patch, build) = parse_version_string(version).with_context(|| {
+        format!(
+            "Invalid version format: {version}. Expected: major.minor.patch.build (e.g., 1.0.0.0)"
+        )
+    })?;
 
     // Generate folder name from mod name if not provided, always sanitized
     let folder = to_folder_name(folder.unwrap_or(name));
@@ -391,7 +397,17 @@ pub fn meta(
     let uuid = uuid.map_or_else(|| uuid::Uuid::new_v4().to_string(), String::from);
 
     // Generate the meta.lsx content
-    let content = generate_meta_lsx(name, &folder, author, description, &uuid, major, minor, patch, build);
+    let content = generate_meta_lsx(
+        name,
+        &folder,
+        author,
+        description,
+        &uuid,
+        major,
+        minor,
+        patch,
+        build,
+    );
 
     // Create output directory: <source>/Mods/<Folder>/
     let output_dir = source.join("Mods").join(&folder);
@@ -439,9 +455,10 @@ pub fn conflicts(sources: &[PathBuf], quiet: bool) -> Result<()> {
             pb.set_message(format!("Scanning {}...", source.display()));
         }
 
-        let name = source
-            .file_name()
-            .map_or_else(|| source.display().to_string(), |n| n.to_string_lossy().to_string());
+        let name = source.file_name().map_or_else(
+            || source.display().to_string(),
+            |n| n.to_string_lossy().to_string(),
+        );
 
         let files = if source.is_dir() {
             collect_mod_files(source)?

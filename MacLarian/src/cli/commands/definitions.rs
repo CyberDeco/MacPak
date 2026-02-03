@@ -383,7 +383,8 @@ Examples:
     },
 
     /// Package mod for `BaldursModManager` (generates info.json alongside PAK)
-    #[command(long_about = "Package mod for BaldursModManager (generates info.json alongside PAK)
+    #[command(
+        long_about = "Package mod for BaldursModManager (generates info.json alongside PAK)
 
 Creates a distribution-ready mod package with proper folder structure and
 info.json for mod managers. Optionally compresses to zip or 7z archive.
@@ -396,7 +397,8 @@ Output structure:
 Examples:
   maclarian mods package ./MyMod ./dist/
   maclarian mods package MyMod.pak ./dist/ -c zip
-  maclarian mods package ./MyMod ./dist/ -c 7z")]
+  maclarian mods package ./MyMod ./dist/ -c 7z"
+    )]
     Package {
         /// Path to .pak file or mod directory
         source: PathBuf,
@@ -453,7 +455,8 @@ Examples:
     },
 
     /// Find files modified by multiple mods (potential conflicts)
-    #[command(long_about = "Find files modified by multiple mods (potential conflicts)
+    #[command(
+        long_about = "Find files modified by multiple mods (potential conflicts)
 
 Compares two or more mods and identifies files that are modified by multiple mods,
 which may cause conflicts when loaded together. Useful for troubleshooting load order.
@@ -461,7 +464,8 @@ which may cause conflicts when loaded together. Useful for troubleshooting load 
 Examples:
   maclarian mods conflicts Mod1.pak Mod2.pak
   maclarian mods conflicts Mod1.pak Mod2.pak Mod3.pak
-  maclarian mods conflicts ./Mod1/ ./Mod2/")]
+  maclarian mods conflicts ./Mod1/ ./Mod2/"
+    )]
     Conflicts {
         /// PAK files or mod directories to compare (2 or more)
         #[arg(required = true, num_args = 2..)]

@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 
-use floem::prelude::*;
 use crate::search::{ContentCache, FileType, IndexedFile, SearchIndex};
+use floem::prelude::*;
 
 /// Index status for UI display
 #[derive(Clone, Debug, PartialEq)]

@@ -135,10 +135,7 @@ fn discover_gts_files(
             continue;
         }
         // Also check if a GTS with the same stem was already discovered
-        let gts_stem = gts_path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
+        let gts_stem = gts_path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
         let is_duplicate = seen_gts_paths
             .iter()
             .any(|p| p.file_stem().and_then(|s| s.to_str()) == Some(gts_stem));
@@ -464,7 +461,9 @@ fn extract_mod_name_from_pak_path(path: &str) -> String {
 ///
 /// # Errors
 /// Returns an error if directory traversal fails or PAK files cannot be read.
-pub fn discover_virtual_textures(search_paths: &[PathBuf]) -> Result<Vec<DiscoveredVirtualTexture>> {
+pub fn discover_virtual_textures(
+    search_paths: &[PathBuf],
+) -> Result<Vec<DiscoveredVirtualTexture>> {
     let mut all_discovered = Vec::new();
 
     for search_path in search_paths {

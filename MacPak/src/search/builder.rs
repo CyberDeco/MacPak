@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use rayon::prelude::*;
 
 use maclarian::error::Result;
-use maclarian::pak::lspk::LspkReader;
 use maclarian::pak::PakReaderCache;
+use maclarian::pak::lspk::LspkReader;
 
 use super::SearchIndex;
 use super::extract;

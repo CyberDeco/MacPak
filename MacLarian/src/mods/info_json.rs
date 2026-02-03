@@ -61,7 +61,8 @@ pub fn generate_info_json_with_progress(
         return InfoJsonResult {
             success: false,
             content: None,
-            message: "No meta.lsx found. Use 'maclarian mods meta' to generate one first.".to_string(),
+            message: "No meta.lsx found. Use 'maclarian mods meta' to generate one first."
+                .to_string(),
         };
     };
 
@@ -305,7 +306,9 @@ fn generate_info_json_from_directory(
         return InfoJsonResult {
             success: false,
             content: None,
-            message: "No meta.lsx found in directory. Use 'maclarian mods meta' to generate one first.".to_string(),
+            message:
+                "No meta.lsx found in directory. Use 'maclarian mods meta' to generate one first."
+                    .to_string(),
         };
     };
 

@@ -1,11 +1,11 @@
 //! Search results display components
 
+use crate::search::FileType;
 use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::text::Weight;
 use floem::views::{VirtualDirection, VirtualItemSize};
 use im::Vector as ImVector;
-use crate::search::FileType;
 
 use crate::gui::state::{DialogueState, EditorTabsState, IndexStatus, SearchResult, SearchState};
 

@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
-use crate::virtual_texture::utils::{extract_all, ExtractResult};
+use crate::virtual_texture::utils::{ExtractResult, extract_all};
 
 use super::discovery::discover_virtual_textures;
 use super::types::DiscoveredVirtualTexture;

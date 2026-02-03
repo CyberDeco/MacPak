@@ -2,10 +2,10 @@
 
 use std::path::PathBuf;
 
+use crate::search::FileType;
 use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::views::PlaceholderTextClass;
-use crate::search::FileType;
 
 use crate::gui::state::{ConfigState, IndexStatus, SearchState};
 

@@ -96,13 +96,11 @@ impl<R: Read + Seek> GtpFile<R> {
     ) -> Result<Vec<u8>> {
         match method {
             TileCompression::Raw => Ok(compressed.to_vec()),
-            TileCompression::Lz4 => {
-                lz4_flex::decompress(compressed, output_size).map_err(|e| {
-                    Error::Lz4DecompressionFailed {
-                        message: e.to_string(),
-                    }
-                })
-            }
+            TileCompression::Lz4 => lz4_flex::decompress(compressed, output_size).map_err(|e| {
+                Error::Lz4DecompressionFailed {
+                    message: e.to_string(),
+                }
+            }),
             TileCompression::FastLZ => fastlz::decompress(compressed, output_size),
         }
     }

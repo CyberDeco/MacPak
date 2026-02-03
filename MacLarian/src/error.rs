@@ -368,7 +368,6 @@ pub enum Error {
 
     // ==================== Generic/Fallback Errors ====================
     // These are kept for edge cases but should be used sparingly.
-
     /// Generic decompression error (use specific variants when possible).
     #[error("decompression failed: {0}")]
     DecompressionError(String),

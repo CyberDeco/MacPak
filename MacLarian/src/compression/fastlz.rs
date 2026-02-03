@@ -13,10 +13,11 @@ pub fn decompress(compressed: &[u8], output_size: usize) -> Result<Vec<u8>> {
         return Ok(vec![0u8; output_size]);
     }
 
-    fastlz_rs::decompress_to_vec(compressed, Some(output_size))
-        .map_err(|e| Error::FastLzDecompressionFailed {
+    fastlz_rs::decompress_to_vec(compressed, Some(output_size)).map_err(|e| {
+        Error::FastLzDecompressionFailed {
             message: format!("{e:?}"),
-        })
+        }
+    })
 }
 
 /// Compress data using `FastLZ`.
