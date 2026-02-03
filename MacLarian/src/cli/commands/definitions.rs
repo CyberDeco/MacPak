@@ -9,6 +9,16 @@ use super::LayerArg;
 #[derive(Subcommand)]
 pub enum PakCommands {
     /// Extract files from PAK archive(s)
+    #[command(long_about = "Extract files from PAK archive(s)
+
+Extracts files from one or more PAK archives. Supports glob patterns for batch
+extraction and filtering by internal file paths.
+
+Examples:
+  maclarian pak extract Shared.pak ./output/
+  maclarian pak extract \"*.pak\" ./output/
+  maclarian pak extract Shared.pak ./output/ -f \"*.lsf\"
+  maclarian pak extract Shared.pak ./output/ --file \"Public/Shared/meta.lsx\"")]
     Extract {
         /// Source PAK file(s) or wildcard pattern
         #[arg(required = true)]
@@ -31,6 +41,20 @@ pub enum PakCommands {
     },
 
     /// Create PAK file(s) from directory(ies)
+    #[command(long_about = "Create PAK file(s) from directory(ies)
+
+Packages a directory into a PAK archive. Supports batch creation with glob patterns
+and configurable compression.
+
+Compression methods:
+  lz4   - Fast compression, good ratio (default)
+  zlib  - Better ratio, slower
+  none  - No compression
+
+Examples:
+  maclarian pak create ./MyMod MyMod.pak
+  maclarian pak create ./MyMod MyMod.pak -c lz4
+  maclarian pak create \"./Mods/*\" ./output/")]
     Create {
         /// Source directory(ies) to pack (supports wildcards)
         #[arg(required = true)]
@@ -49,6 +73,16 @@ pub enum PakCommands {
     },
 
     /// List contents of a PAK file
+    #[command(long_about = "List contents of a PAK file
+
+Shows files contained in a PAK archive. Use -d for detailed size and compression
+info, -f to filter by glob pattern, -c for count only.
+
+Examples:
+  maclarian pak list Shared.pak
+  maclarian pak list Shared.pak -d
+  maclarian pak list Shared.pak -f \"*.lsf\"
+  maclarian pak list Shared.pak -f \"Public/**/*\" -c")]
     List {
         /// PAK file
         source: PathBuf,
@@ -75,6 +109,14 @@ pub enum PakCommands {
 #[derive(Subcommand)]
 pub enum Gr2Commands {
     /// Inspect a GR2 file and display its structure
+    #[command(long_about = "Inspect a GR2 file and display its structure
+
+Displays metadata about a GR2 mesh file including meshes, bones, materials,
+and texture references. Output can be saved to JSON for further processing.
+
+Examples:
+  maclarian gr2 inspect model.GR2
+  maclarian gr2 inspect model.GR2 -o info.json")]
     Inspect {
         /// GR2 file to inspect
         path: PathBuf,
@@ -86,6 +128,21 @@ pub enum Gr2Commands {
 
     /// Convert GR2 to glTF/GLB format
     #[command(name = "from-gr2")]
+    #[command(long_about = "Convert GR2 to glTF/GLB format
+
+Converts Granny2 mesh files to glTF/GLB for editing in Blender or other 3D tools.
+Optionally extracts or embeds textures from the game files.
+
+Texture modes:
+  extract   - Save textures as separate PNG files alongside the model
+  embedded  - Embed textures directly in GLB (GLB format only)
+
+Examples:
+  maclarian gr2 from-gr2 model.GR2 model.glb
+  maclarian gr2 from-gr2 model.GR2 model.gltf -f gltf
+  maclarian gr2 from-gr2 model.GR2 ./output/ --textures extract
+  maclarian gr2 from-gr2 \"*.GR2\" ./output/
+  maclarian gr2 from-gr2 model.GR2 model.glb --bg3-path /path/to/BG3/Data")]
     FromGr2 {
         /// Source GR2 file(s) or wildcard pattern
         #[arg(required = true)]
@@ -113,6 +170,15 @@ pub enum Gr2Commands {
 
     /// Convert glTF/GLB to GR2 format
     #[command(name = "to-gr2")]
+    #[command(long_about = "Convert glTF/GLB to GR2 format
+
+Converts glTF/GLB models back to Granny2 format for use in BG3 mods.
+Note: Output is currently uncompressed (Oodle compression not yet implemented).
+
+Examples:
+  maclarian gr2 to-gr2 model.glb model.GR2
+  maclarian gr2 to-gr2 model.gltf model.GR2
+  maclarian gr2 to-gr2 \"*.glb\" ./output/")]
     ToGr2 {
         /// Source GLB or glTF file(s) or wildcard pattern
         #[arg(required = true)]
@@ -131,6 +197,15 @@ pub enum Gr2Commands {
 #[derive(Subcommand)]
 pub enum VirtualTextureCommands {
     /// List metadata from a GTS file
+    #[command(long_about = "List metadata from a GTS file
+
+Displays information about a virtual texture set including texture names,
+dimensions, layer count, and page file references.
+
+Examples:
+  maclarian vt list Textures.gts
+  maclarian vt list Textures.gts -d
+  maclarian vt list Textures.gts -o metadata.json")]
     List {
         /// Path to .gts file
         path: PathBuf,
@@ -145,6 +220,21 @@ pub enum VirtualTextureCommands {
     },
 
     /// Extract textures from GTS/GTP files to DDS
+    #[command(long_about = "Extract textures from GTS/GTP files to DDS
+
+Extracts virtual textures to DDS files. Can filter by texture name and layer.
+
+Layer names (case-insensitive):
+  0, BaseMap, BM, Base       - Albedo/diffuse texture
+  1, NormalMap, NM, Normal   - Normal map
+  2, PhysicalMap, PM, Physical - PBR physical properties
+
+Examples:
+  maclarian vt extract Textures.gts ./output/
+  maclarian vt extract Textures.gts ./output/ -t MyTexture
+  maclarian vt extract Textures.gts ./output/ --layer BM
+  maclarian vt extract Textures.gts ./output/ --layer BM,NM,PM
+  maclarian vt extract \"*.gts\" ./output/")]
     Extract {
         /// Source GTS/GTP file(s) or wildcard pattern
         #[arg(required = true)]
@@ -168,6 +258,19 @@ pub enum VirtualTextureCommands {
     },
 
     /// Create a virtual texture set from DDS source textures
+    #[command(long_about = "Create a virtual texture set from DDS source textures
+
+Creates GTS/GTP virtual texture files from DDS source textures. Auto-detects
+layer types from common suffixes (_BM, _NM, _PM) or specify paths manually.
+
+Note: Virtual texture injection requires BG3 Script Extender (Windows-only).
+macOS users should be aware of this limitation before creating custom textures.
+
+Examples:
+  maclarian vt create ./textures/ ./output/
+  maclarian vt create ./textures/ ./output/ -t MyTexture
+  maclarian vt create ./textures/ ./output/ --base albedo.dds --normal normal.dds
+  maclarian vt create ./textures/ ./output/ -c raw")]
     Create {
         /// Source directory containing DDS files
         source: PathBuf,
@@ -209,6 +312,15 @@ pub enum VirtualTextureCommands {
 #[derive(Subcommand)]
 pub enum LocaCommands {
     /// Search for entries in a LOCA file
+    #[command(long_about = "Search for entries in a LOCA file
+
+Searches localization files for text content or handles. LOCA files contain
+game text strings indexed by UUID handles.
+
+Examples:
+  maclarian loca search English.loca \"Shadowheart\"
+  maclarian loca search English.loca \"hello\" -l 100
+  maclarian loca search English.loca \"h7a8b9c0\" --handle")]
     Search {
         /// LOCA file to search
         path: PathBuf,
@@ -234,6 +346,13 @@ pub enum LocaCommands {
 #[derive(Subcommand)]
 pub enum TextureCommands {
     /// Show info about a DDS texture file
+    #[command(long_about = "Show info about a DDS texture file
+
+Displays metadata about a DDS texture including dimensions, format,
+mip levels, and compression type.
+
+Examples:
+  maclarian texture info albedo.dds")]
     Info {
         /// DDS file to analyze
         path: PathBuf,
@@ -244,6 +363,15 @@ pub enum TextureCommands {
 #[derive(Subcommand)]
 pub enum ModCommands {
     /// Validate mod structure and PAK integrity
+    #[command(long_about = "Validate mod structure and PAK integrity
+
+Checks that a mod has the correct directory structure, valid meta.lsx,
+and that PAK files are not corrupted. Supports glob patterns for batch validation.
+
+Examples:
+  maclarian mods validate MyMod.pak
+  maclarian mods validate ./MyModFolder/
+  maclarian mods validate \"*.pak\"")]
     Validate {
         /// Path(s) to mod directory or PAK file(s) - supports glob patterns
         #[arg(required = true)]
@@ -255,6 +383,20 @@ pub enum ModCommands {
     },
 
     /// Package mod for `BaldursModManager` (generates info.json alongside PAK)
+    #[command(long_about = "Package mod for BaldursModManager (generates info.json alongside PAK)
+
+Creates a distribution-ready mod package with proper folder structure and
+info.json for mod managers. Optionally compresses to zip or 7z archive.
+
+Output structure:
+  <destination>/ModName/
+    ├── ModName.pak
+    └── info.json
+
+Examples:
+  maclarian mods package ./MyMod ./dist/
+  maclarian mods package MyMod.pak ./dist/ -c zip
+  maclarian mods package ./MyMod ./dist/ -c 7z")]
     Package {
         /// Path to .pak file or mod directory
         source: PathBuf,
@@ -272,6 +414,15 @@ pub enum ModCommands {
     },
 
     /// Generate meta.lsx metadata file for a mod
+    #[command(long_about = "Generate meta.lsx metadata file for a mod
+
+Creates the required meta.lsx file for a BG3 mod with proper UUID, version,
+and mod info. The file is placed in the correct location within the mod structure.
+
+Examples:
+  maclarian mods meta ./MyMod -n \"My Cool Mod\" -a \"Author Name\"
+  maclarian mods meta ./MyMod -n \"My Mod\" -a \"Author\" -d \"A description\"
+  maclarian mods meta ./MyMod -n \"My Mod\" -a \"Author\" -v 1.2.0.0")]
     Meta {
         /// Mod source directory (creates `<source>/Mods/<Folder>/meta.lsx`)
         source: PathBuf,
@@ -302,6 +453,15 @@ pub enum ModCommands {
     },
 
     /// Find files modified by multiple mods (potential conflicts)
+    #[command(long_about = "Find files modified by multiple mods (potential conflicts)
+
+Compares two or more mods and identifies files that are modified by multiple mods,
+which may cause conflicts when loaded together. Useful for troubleshooting load order.
+
+Examples:
+  maclarian mods conflicts Mod1.pak Mod2.pak
+  maclarian mods conflicts Mod1.pak Mod2.pak Mod3.pak
+  maclarian mods conflicts ./Mod1/ ./Mod2/")]
     Conflicts {
         /// PAK files or mod directories to compare (2 or more)
         #[arg(required = true, num_args = 2..)]
