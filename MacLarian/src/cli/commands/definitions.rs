@@ -431,69 +431,16 @@ pub enum ModCommands {
         #[arg(short, long)]
         quiet: bool,
     },
-}
 
-/// Diff and merge commands
-#[derive(Subcommand)]
-pub enum DiffCommands {
-    /// Compare two LSF/LSX files
-    Compare {
-        /// First file (old/base)
-        old: PathBuf,
-
-        /// Second file (new)
-        new: PathBuf,
-
-        /// Ignore whitespace differences
-        #[arg(short = 'w', long)]
-        ignore_whitespace: bool,
-
-        /// Ignore version header differences
-        #[arg(long)]
-        ignore_version: bool,
-
-        /// Match nodes by key attribute when available
-        #[arg(short = 'k', long)]
-        match_by_key: bool,
-
-        /// Output format (text or json)
-        #[arg(short, long, default_value = "text")]
-        format: String,
-
-        /// Suppress summary output
-        #[arg(short, long)]
-        quiet: bool,
-    },
-
-    /// Three-way merge of LSF/LSX files
-    Merge {
-        /// Base file (common ancestor)
-        base: PathBuf,
-
-        /// Our changes
-        ours: PathBuf,
-
-        /// Their changes
-        theirs: PathBuf,
-
-        /// Output file for merged result
-        #[arg(short, long)]
-        output: PathBuf,
-
-        /// Prefer our changes on conflict
-        #[arg(long)]
-        prefer_ours: bool,
-
-        /// Prefer their changes on conflict
-        #[arg(long)]
-        prefer_theirs: bool,
-
-        /// Match nodes by key attribute when available
-        #[arg(short = 'k', long)]
-        match_by_key: bool,
+    /// Find files modified by multiple mods (potential conflicts)
+    Conflicts {
+        /// PAK files or mod directories to compare (2 or more)
+        #[arg(required = true, num_args = 2..)]
+        sources: Vec<PathBuf>,
 
         /// Suppress progress output
         #[arg(short, long)]
         quiet: bool,
     },
 }
+

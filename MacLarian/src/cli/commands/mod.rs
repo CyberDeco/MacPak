@@ -24,7 +24,6 @@ impl FromStr for LayerArg {
 
 // Command implementation modules
 pub mod convert;
-pub mod diff;
 pub mod gr2;
 pub mod loca;
 pub mod mod_cmd;
@@ -38,7 +37,7 @@ mod execute;
 
 // Re-export subcommand enums
 pub use definitions::{
-    DiffCommands, Gr2Commands, LocaCommands, ModCommands, PakCommands, TextureCommands,
+    Gr2Commands, LocaCommands, ModCommands, PakCommands, TextureCommands,
     VirtualTextureCommands,
 };
 
@@ -102,11 +101,5 @@ pub enum Commands {
     Texture {
         #[command(subcommand)]
         command: TextureCommands,
-    },
-
-    /// Diff and merge LSF/LSX files
-    Diff {
-        #[command(subcommand)]
-        command: DiffCommands,
     },
 }

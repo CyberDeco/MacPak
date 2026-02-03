@@ -1,5 +1,6 @@
 //! CLI commands for mod utilities
 
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
@@ -14,6 +15,7 @@ use crate::mods::{
     BatchValidationOptions, generate_meta_lsx, parse_version_string, to_folder_name,
     validate_mod_structure, validate_pak_mod_structure,
 };
+use crate::pak::PakOperations;
 
 /// Unified validation command: mod structure, PAK integrity, and dry-run for PAK creation
 pub fn validate(
@@ -623,6 +625,122 @@ pub fn meta(
     println!("  Author:  {author}");
     println!("  UUID:    {uuid}");
     println!("  Version: {version}");
+
+    Ok(())
+}
+
+/// Find files modified by multiple mods (potential conflicts)
+pub fn conflicts(sources: &[std::path::PathBuf], quiet: bool) -> Result<()> {
+    if sources.len() < 2 {
+        anyhow::bail!("At least 2 sources are required to check for conflicts");
+    }
+
+    let pb = if quiet {
+        None
+    } else {
+        Some(simple_spinner("Scanning mods for conflicts..."))
+    };
+
+    // Build map: file_path -> Vec<source_name>
+    let mut file_sources: HashMap<String, Vec<String>> = HashMap::new();
+
+    for source in sources {
+        if let Some(ref pb) = pb {
+            pb.set_message(format!("Scanning {}...", source.display()));
+        }
+
+        let name = source
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| source.display().to_string());
+
+        let files = if source.is_dir() {
+            collect_mod_files(source)?
+        } else {
+            // PAK file
+            PakOperations::list(source)
+                .with_context(|| format!("Failed to list PAK: {}", source.display()))?
+        };
+
+        for file in files {
+            file_sources.entry(file).or_default().push(name.clone());
+        }
+    }
+
+    if let Some(pb) = pb {
+        pb.finish_and_clear();
+    }
+
+    // Filter to conflicts (files with 2+ sources)
+    let mut conflicts: Vec<_> = file_sources
+        .into_iter()
+        .filter(|(_, sources)| sources.len() > 1)
+        .collect();
+
+    if conflicts.is_empty() {
+        println!("No conflicts found across {} mods.", sources.len());
+        return Ok(());
+    }
+
+    // Sort by file path for consistent output
+    conflicts.sort_by(|a, b| a.0.cmp(&b.0));
+
+    println!("Files modified by multiple mods:\n");
+
+    for (file_path, mod_names) in &conflicts {
+        println!("{file_path}");
+        for (i, mod_name) in mod_names.iter().enumerate() {
+            let prefix = if i == mod_names.len() - 1 {
+                "└─"
+            } else {
+                "├─"
+            };
+            println!("  {prefix} {mod_name}");
+        }
+        println!();
+    }
+
+    // Count unique mods involved in conflicts
+    let mut mods_with_conflicts: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    for (_, mod_names) in &conflicts {
+        for name in mod_names {
+            mods_with_conflicts.insert(name);
+        }
+    }
+
+    println!(
+        "Summary: {} conflicting file(s) across {} mod(s)",
+        conflicts.len(),
+        mods_with_conflicts.len()
+    );
+
+    Ok(())
+}
+
+/// Collect all file paths from a mod directory (relative paths)
+fn collect_mod_files(dir: &Path) -> Result<Vec<String>> {
+    let mut files = Vec::new();
+    collect_files_recursive(dir, dir, &mut files)?;
+    Ok(files)
+}
+
+fn collect_files_recursive(base: &Path, current: &Path, files: &mut Vec<String>) -> Result<()> {
+    let entries = fs::read_dir(current)
+        .with_context(|| format!("Failed to read directory: {}", current.display()))?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_files_recursive(base, &path, files)?;
+        } else if path.is_file() {
+            // Get relative path from base
+            if let Ok(rel) = path.strip_prefix(base) {
+                // Normalize to forward slashes
+                let rel_str = rel.to_string_lossy().replace('\\', "/");
+                files.push(rel_str);
+            }
+        }
+    }
 
     Ok(())
 }
