@@ -165,20 +165,10 @@ impl ModCommands {
             ModCommands::Validate {
                 source,
                 recursive,
-                check_integrity,
-                dry_run,
                 paks_only,
                 dirs_only,
                 quiet,
-            } => mod_cmd::validate(
-                source,
-                *recursive,
-                *check_integrity,
-                *dry_run,
-                *paks_only,
-                *dirs_only,
-                *quiet,
-            ),
+            } => mod_cmd::validate(source, *recursive, *paks_only, *dirs_only, *quiet),
             ModCommands::Package {
                 source,
                 destination,

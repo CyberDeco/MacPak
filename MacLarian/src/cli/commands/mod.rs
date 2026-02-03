@@ -1,6 +1,41 @@
+use anyhow::{Context, Result};
 use clap::Subcommand;
+use glob::glob;
 use std::path::PathBuf;
 use std::str::FromStr;
+
+/// Expand glob patterns in paths (cross-platform)
+///
+/// If a path contains glob characters (*, ?, [), expands it.
+/// Otherwise returns the path as-is (with tilde expansion).
+pub fn expand_globs(paths: &[PathBuf]) -> Result<Vec<PathBuf>> {
+    let mut expanded = Vec::new();
+
+    for path in paths {
+        let path_str = path.to_string_lossy();
+
+        // Expand tilde first
+        let path_str = shellexpand::tilde(&path_str);
+
+        // Check if path contains glob characters
+        if path_str.contains('*') || path_str.contains('?') || path_str.contains('[') {
+            let matches: Vec<_> = glob(&path_str)
+                .with_context(|| format!("Invalid glob pattern: {path_str}"))?
+                .filter_map(|r| r.ok())
+                .collect();
+
+            if matches.is_empty() {
+                anyhow::bail!("No files matched pattern: {path_str}");
+            }
+
+            expanded.extend(matches);
+        } else {
+            expanded.push(PathBuf::from(path_str.as_ref()));
+        }
+    }
+
+    Ok(expanded)
+}
 
 /// Layer specification for virtual texture extraction
 #[derive(Debug, Clone, Copy)]

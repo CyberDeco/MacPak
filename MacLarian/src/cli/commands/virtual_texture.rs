@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use indicatif::ProgressBar;
 use serde::Serialize;
 
+use super::expand_globs;
 use crate::cli::progress::{bar_style, spinner_style};
 use crate::virtual_texture;
 use crate::virtual_texture::builder::{
@@ -28,7 +29,10 @@ struct DiscoveredTextureJson {
 
 /// Discover virtual textures in mod directories
 pub fn discover(sources: &[PathBuf], output: Option<&Path>, quiet: bool) -> Result<()> {
-    let discovered = discover_virtual_textures(sources)
+    // Expand glob patterns
+    let sources = expand_globs(sources)?;
+
+    let discovered = discover_virtual_textures(&sources)
         .with_context(|| "Failed to discover virtual textures")?;
 
     if discovered.is_empty() {
@@ -142,9 +146,12 @@ pub fn extract(
     layers: &[usize],
     quiet: bool,
 ) -> Result<()> {
+    // Expand glob patterns
+    let sources = expand_globs(sources)?;
+
     // Handle multiple sources (batch extraction)
     if sources.len() > 1 {
-        return extract_batch(sources, output_dir, layers, quiet);
+        return extract_batch(&sources, output_dir, layers, quiet);
     }
 
     let input_path = &sources[0];

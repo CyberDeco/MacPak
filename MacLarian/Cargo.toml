@@ -59,6 +59,7 @@ walkdir = "2.4"             # Recursive directory traversal
 dirs = "5.0"                # Platform-specific directories (cache, data)
 tempfile = "3.14"           # Temp directories for LSF→LSX conversion
 shellexpand = "3.1"         # Tilde expansion for paths
+glob = "0.3"                # Cross-platform glob pattern expansion
 
 # Parallelism
 rayon = "1.10"

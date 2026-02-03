@@ -4631,6 +4631,7 @@ dependencies = [
  "fastlz-rs",
  "flate2",
  "glam 0.27.0",
+ "glob",
  "gltf",
  "half",
  "image",

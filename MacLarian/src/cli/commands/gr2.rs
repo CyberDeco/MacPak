@@ -4,6 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
+use super::expand_globs;
 use crate::cli::progress::{
     CUBE, DISK, GEAR, LOOKING_GLASS, print_done, print_step, simple_spinner,
 };
@@ -110,9 +111,12 @@ pub fn from_gr2(
     bg3_path: Option<&Path>,
     quiet: bool,
 ) -> anyhow::Result<()> {
+    // Expand glob patterns
+    let sources = expand_globs(sources)?;
+
     // Handle batch conversion
     if sources.len() > 1 {
-        return from_gr2_batch(sources, destination, format, textures, bg3_path, quiet);
+        return from_gr2_batch(&sources, destination, format, textures, bg3_path, quiet);
     }
 
     let source = &sources[0];
@@ -395,9 +399,12 @@ fn from_gr2_batch(
 
 /// Convert glTF/GLB to GR2 format.
 pub fn to_gr2(sources: &[PathBuf], destination: &Path, quiet: bool) -> anyhow::Result<()> {
+    // Expand glob patterns
+    let sources = expand_globs(sources)?;
+
     // Handle batch conversion
     if sources.len() > 1 {
-        return to_gr2_batch(sources, destination, quiet);
+        return to_gr2_batch(&sources, destination, quiet);
     }
 
     let source = &sources[0];

@@ -243,7 +243,7 @@ pub enum TextureCommands {
 /// Mod utility commands
 #[derive(Subcommand)]
 pub enum ModCommands {
-    /// Validate mod structure, PAK integrity, or directory for PAK creation
+    /// Validate mod structure and PAK integrity
     Validate {
         /// Path(s) to mod directory, PAK file(s), or folder containing mods
         #[arg(required = true)]
@@ -252,14 +252,6 @@ pub enum ModCommands {
         /// Recursively scan directory for all mods
         #[arg(short, long)]
         recursive: bool,
-
-        /// Check PAK file integrity (verify all files can be read/decompressed)
-        #[arg(short = 'i', long)]
-        check_integrity: bool,
-
-        /// Validate directory can be packed into a PAK
-        #[arg(short = 'd', long)]
-        dry_run: bool,
 
         /// Only check PAK files (skip directories)
         #[arg(long)]

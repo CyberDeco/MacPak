@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use console::style;
 
+use super::expand_globs;
 use crate::cli::progress::simple_bar;
 use crate::mods::validate_mod_structure;
 use crate::pak::{CompressionMethod, PakOperations};
@@ -144,12 +145,15 @@ pub fn extract(
     file: Option<&str>,
     quiet: bool,
 ) -> anyhow::Result<()> {
+    // Expand glob patterns
+    let sources = expand_globs(sources)?;
+
     // Warn if destination is BG3 install path
     warn_if_bg3_path(destination);
 
     // Handle multiple sources (batch extraction)
     if sources.len() > 1 {
-        return extract_batch(sources, destination, filter, quiet);
+        return extract_batch(&sources, destination, filter, quiet);
     }
 
     let source = &sources[0];
@@ -308,6 +312,9 @@ pub fn create(
     compression: &str,
     quiet: bool,
 ) -> anyhow::Result<()> {
+    // Expand glob patterns
+    let sources = expand_globs(sources)?;
+
     // Warn if destination is BG3 install path
     warn_if_bg3_path(destination);
 
@@ -322,7 +329,7 @@ pub fn create(
 
     // Handle multiple sources (batch creation)
     if sources.len() > 1 {
-        return create_batch(sources, destination, method, quiet);
+        return create_batch(&sources, destination, method, quiet);
     }
 
     let source = &sources[0];

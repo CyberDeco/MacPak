@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
+use super::expand_globs;
 use crate::cli::progress::simple_spinner;
 
 pub fn execute(
@@ -11,9 +12,12 @@ pub fn execute(
     texture_format: &str,
     quiet: bool,
 ) -> anyhow::Result<()> {
+    // Expand glob patterns
+    let sources = expand_globs(sources)?;
+
     // Handle multiple sources (batch conversion)
     if sources.len() > 1 {
-        return convert_batch(sources, destination, output_format, texture_format, quiet);
+        return convert_batch(&sources, destination, output_format, texture_format, quiet);
     }
 
     let source = &sources[0];
