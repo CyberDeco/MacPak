@@ -70,15 +70,14 @@ impl<R: Read + Seek> LspkReader<R> {
 
         // Checks if this part is already open
         if !self.part_readers.contains_key(&part) {
-            let part_path = self.get_part_path(part).ok_or_else(|| {
-                Error::ConversionError(format!("Cannot determine path for archive part {part}"))
-            })?;
+            let part_path = self
+                .get_part_path(part)
+                .ok_or(Error::ArchivePartNotFound { part })?;
 
             if !part_path.exists() {
-                let path_display = part_path.display();
-                return Err(Error::ConversionError(format!(
-                    "Archive part file not found: {path_display}"
-                )));
+                return Err(Error::ArchivePartMissing {
+                    path: part_path.clone(),
+                });
             }
 
             let file = File::open(&part_path)?;
@@ -119,8 +118,8 @@ impl<R: Read + Seek> LspkReader<R> {
         let version = u32::from_le_bytes(version_bytes);
 
         if !(MIN_VERSION..=MAX_VERSION).contains(&version) {
-            return Err(Error::ConversionError(format!(
-                "Unsupported PAK version: {version} (supported: {MIN_VERSION}-{MAX_VERSION})"
+            return Err(Error::InvalidFormat(format!(
+                "unsupported PAK version: {version} (supported: {MIN_VERSION}-{MAX_VERSION})"
             )));
         }
 
@@ -148,7 +147,7 @@ impl<R: Read + Seek> LspkReader<R> {
         let header = self
             .header
             .as_ref()
-            .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?;
+            .ok_or(Error::PakHeaderNotRead)?;
 
         // Footer offset in header is absolute position from start of file
         self.reader.seek(SeekFrom::Start(header.footer_offset))?;
@@ -180,11 +179,11 @@ impl<R: Read + Seek> LspkReader<R> {
         let footer = self
             .footer
             .as_ref()
-            .ok_or_else(|| Error::ConversionError("Footer not read yet".to_string()))?;
+            .ok_or(Error::PakFooterNotRead)?;
         let header = self
             .header
             .as_ref()
-            .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?;
+            .ok_or(Error::PakHeaderNotRead)?;
 
         let num_files = footer.num_files as usize;
         let table_size_compressed = footer.table_size_compressed as usize;
@@ -388,7 +387,7 @@ impl<R: Read + Seek> LspkReader<R> {
         let version = self
             .header
             .as_ref()
-            .ok_or_else(|| Error::ConversionError("Header not read yet".to_string()))?
+            .ok_or(Error::PakHeaderNotRead)?
             .version;
         let mut contents = PakContents::new(version);
         let total_files = self.file_table.len();

@@ -31,7 +31,16 @@ const LSF_VER_BG3_NODE_KEYS: u32 = 6;
 /// Read an LSF file from disk
 ///
 /// # Errors
-/// Returns an error if the file cannot be read or has an invalid format.
+///
+/// Returns [`Error::Io`] if the file cannot be opened or read.
+/// Returns [`Error::InvalidLsfMagic`] if the file does not have a valid LSF header.
+/// Returns [`Error::UnsupportedLsfVersion`] if the LSF version is not in the range 1-7.
+/// Returns [`Error::DecompressionError`] if LZ4 decompression of sections fails.
+///
+/// [`Error::Io`]: crate::Error::Io
+/// [`Error::InvalidLsfMagic`]: crate::Error::InvalidLsfMagic
+/// [`Error::UnsupportedLsfVersion`]: crate::Error::UnsupportedLsfVersion
+/// [`Error::DecompressionError`]: crate::Error::DecompressionError
 pub fn read_lsf<P: AsRef<Path>>(path: P) -> Result<LsfDocument> {
     let mut file = File::open(path)?;
     let mut buffer = Vec::new();
@@ -42,7 +51,16 @@ pub fn read_lsf<P: AsRef<Path>>(path: P) -> Result<LsfDocument> {
 /// Parse LSF data from bytes
 ///
 /// # Errors
-/// Returns an error if the data has an invalid LSF format.
+///
+/// Returns [`Error::InvalidLsfMagic`] if the data does not have a valid LSF header.
+/// Returns [`Error::UnsupportedLsfVersion`] if the LSF version is not in the range 1-7.
+/// Returns [`Error::DecompressionError`] if LZ4 decompression of sections fails.
+/// Returns [`Error::UnexpectedEof`] if the data is truncated.
+///
+/// [`Error::InvalidLsfMagic`]: crate::Error::InvalidLsfMagic
+/// [`Error::UnsupportedLsfVersion`]: crate::Error::UnsupportedLsfVersion
+/// [`Error::DecompressionError`]: crate::Error::DecompressionError
+/// [`Error::UnexpectedEof`]: crate::Error::UnexpectedEof
 pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
     let mut cursor = Cursor::new(data);
 
@@ -55,7 +73,7 @@ pub fn parse_lsf_bytes(data: &[u8]) -> Result<LsfDocument> {
 
     let version = cursor.read_u32::<LittleEndian>()?;
     if !(LSF_VER_INITIAL..=7).contains(&version) {
-        return Err(Error::UnsupportedLsfVersion(version));
+        return Err(Error::UnsupportedLsfVersion { version });
     }
 
     let engine_version = cursor.read_u64::<LittleEndian>()?;

@@ -57,11 +57,7 @@ impl<R: Read + Seek> GtpFile<R> {
         let header = read_header::read_header(&mut reader)?;
 
         if header.magic != GtpHeader::MAGIC {
-            let magic = header.magic;
-            let expected = GtpHeader::MAGIC;
-            return Err(Error::ConversionError(format!(
-                "Invalid GTP magic: 0x{magic:08X}, expected 0x{expected:08X}"
-            )));
+            return Err(Error::InvalidGtpMagic);
         }
 
         let page_size = gts.header.page_size;

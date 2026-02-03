@@ -14,7 +14,9 @@ pub fn decompress(compressed: &[u8], output_size: usize) -> Result<Vec<u8>> {
     }
 
     fastlz_rs::decompress_to_vec(compressed, Some(output_size))
-        .map_err(|e| Error::DecompressionError(format!("FastLZ: {e:?}")))
+        .map_err(|e| Error::FastLzDecompressionFailed {
+            message: format!("{e:?}"),
+        })
 }
 
 /// Compress data using `FastLZ`.
@@ -27,5 +29,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     let mut state = CompressState::new();
     state
         .compress_to_vec(data, CompressionLevel::Level1)
-        .map_err(|e| Error::CompressionError(format!("FastLZ: {e}")))
+        .map_err(|e| Error::FastLzCompressionFailed {
+            message: e.to_string(),
+        })
 }

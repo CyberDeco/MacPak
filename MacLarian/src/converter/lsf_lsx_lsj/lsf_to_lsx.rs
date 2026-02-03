@@ -21,7 +21,18 @@ use std::path::Path;
 /// Convert LSF file to LSX format
 ///
 /// # Errors
-/// Returns an error if reading or conversion fails.
+///
+/// Returns [`Error::Io`] if the source file cannot be read or destination cannot be written.
+/// Returns [`Error::InvalidLsfMagic`] if the source is not a valid LSF file.
+/// Returns [`Error::UnsupportedLsfVersion`] if the LSF version is not supported.
+/// Returns [`Error::DecompressionError`] if LSF decompression fails.
+/// Returns [`Error::XmlError`] if XML serialization fails.
+///
+/// [`Error::Io`]: crate::Error::Io
+/// [`Error::InvalidLsfMagic`]: crate::Error::InvalidLsfMagic
+/// [`Error::UnsupportedLsfVersion`]: crate::Error::UnsupportedLsfVersion
+/// [`Error::DecompressionError`]: crate::Error::DecompressionError
+/// [`Error::XmlError`]: crate::Error::XmlError
 pub fn convert_lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
     convert_lsf_to_lsx_with_progress(source, dest, &|_| {})
 }
@@ -29,7 +40,18 @@ pub fn convert_lsf_to_lsx<P: AsRef<Path>>(source: P, dest: P) -> Result<()> {
 /// Convert LSF file to LSX format with progress callback
 ///
 /// # Errors
-/// Returns an error if reading or conversion fails.
+///
+/// Returns [`Error::Io`] if the source file cannot be read or destination cannot be written.
+/// Returns [`Error::InvalidLsfMagic`] if the source is not a valid LSF file.
+/// Returns [`Error::UnsupportedLsfVersion`] if the LSF version is not supported.
+/// Returns [`Error::DecompressionError`] if LSF decompression fails.
+/// Returns [`Error::XmlError`] if XML serialization fails.
+///
+/// [`Error::Io`]: crate::Error::Io
+/// [`Error::InvalidLsfMagic`]: crate::Error::InvalidLsfMagic
+/// [`Error::UnsupportedLsfVersion`]: crate::Error::UnsupportedLsfVersion
+/// [`Error::DecompressionError`]: crate::Error::DecompressionError
+/// [`Error::XmlError`]: crate::Error::XmlError
 pub fn convert_lsf_to_lsx_with_progress<P: AsRef<Path>>(
     source: P,
     dest: P,
@@ -72,7 +94,14 @@ pub fn convert_lsf_to_lsx_with_progress<P: AsRef<Path>>(
 /// Convert LSF document to LSX XML string
 ///
 /// # Errors
-/// Returns an error if XML serialization fails.
+///
+/// Returns [`Error::XmlError`] if XML serialization fails.
+/// Returns [`Error::Utf8Error`] if the XML output contains invalid UTF-8.
+/// Returns [`Error::InvalidStringIndex`] if node/attribute name lookup fails.
+///
+/// [`Error::XmlError`]: crate::Error::XmlError
+/// [`Error::Utf8Error`]: crate::Error::Utf8Error
+/// [`Error::InvalidStringIndex`]: crate::Error::InvalidStringIndex
 pub fn to_lsx(doc: &LsfDocument) -> Result<String> {
     let mut output = Vec::new();
     let mut writer = Writer::new_with_indent(&mut output, b'\t', 1);

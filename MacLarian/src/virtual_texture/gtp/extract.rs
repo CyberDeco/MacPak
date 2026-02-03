@@ -19,17 +19,11 @@ impl<R: Read + Seek> GtpFile<R> {
         gts: &GtsFile,
     ) -> Result<Vec<u8>> {
         if page_index >= self.chunk_offsets.len() {
-            let max = self.chunk_offsets.len();
-            return Err(Error::ConversionError(format!(
-                "Page index {page_index} out of range (max {max})"
-            )));
+            return Err(Error::InvalidPageIndex { index: page_index });
         }
 
         if chunk_index >= self.chunk_offsets[page_index].len() {
-            let max = self.chunk_offsets[page_index].len();
-            return Err(Error::ConversionError(format!(
-                "Chunk index {chunk_index} out of range for page {page_index} (max {max})"
-            )));
+            return Err(Error::InvalidChunkIndex { index: chunk_index });
         }
 
         let page_start = (page_index as u64) * u64::from(self.page_size);
@@ -102,8 +96,13 @@ impl<R: Read + Seek> GtpFile<R> {
     ) -> Result<Vec<u8>> {
         match method {
             TileCompression::Raw => Ok(compressed.to_vec()),
-            TileCompression::Lz4 => lz4_flex::decompress(compressed, output_size)
-                .map_err(|e| Error::DecompressionError(format!("LZ4: {e}"))),
+            TileCompression::Lz4 => {
+                lz4_flex::decompress(compressed, output_size).map_err(|e| {
+                    Error::Lz4DecompressionFailed {
+                        message: e.to_string(),
+                    }
+                })
+            }
             TileCompression::FastLZ => fastlz::decompress(compressed, output_size),
         }
     }

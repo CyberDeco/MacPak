@@ -19,8 +19,9 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
 /// # Errors
 /// Returns an error if decompression fails.
 pub fn decompress(data: &[u8], decompressed_size: usize) -> Result<Vec<u8>> {
-    lz4_flex::decompress(data, decompressed_size)
-        .map_err(|e| Error::DecompressionError(format!("LZ4: {e}")))
+    lz4_flex::decompress(data, decompressed_size).map_err(|e| Error::Lz4DecompressionFailed {
+        message: e.to_string(),
+    })
 }
 
 /// Decompress LZ4 data with size prepended
@@ -28,6 +29,7 @@ pub fn decompress(data: &[u8], decompressed_size: usize) -> Result<Vec<u8>> {
 /// # Errors
 /// Returns an error if decompression fails.
 pub fn decompress_with_size(data: &[u8]) -> Result<Vec<u8>> {
-    lz4_flex::decompress_size_prepended(data)
-        .map_err(|e| Error::DecompressionError(format!("LZ4: {e}")))
+    lz4_flex::decompress_size_prepended(data).map_err(|e| Error::Lz4DecompressionFailed {
+        message: e.to_string(),
+    })
 }

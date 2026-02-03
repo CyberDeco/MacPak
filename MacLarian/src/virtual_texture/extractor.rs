@@ -40,7 +40,10 @@ impl DdsWriter {
     /// Write BC/DXT5 texture data to a DDS file
     ///
     /// # Errors
-    /// Returns an error if the file cannot be created or written.
+    ///
+    /// Returns [`Error::Io`] if the file cannot be created or written.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
     pub fn write<P: AsRef<Path>>(path: P, data: &[u8], width: u32, height: u32) -> Result<()> {
         let file = File::create(path.as_ref())?;
         let mut writer = BufWriter::new(file);
@@ -138,7 +141,17 @@ impl VirtualTextureExtractor {
     /// Progress should be managed by the caller at the per-file level.
     ///
     /// # Errors
-    /// Returns an error if the GTS file cannot be found or extraction fails.
+    ///
+    /// Returns [`Error::Io`] if the GTP/GTS files cannot be read or output cannot be written.
+    /// Returns [`Error::GtsNotFoundForGtp`] if the corresponding GTS file cannot be found.
+    /// Returns [`Error::InvalidGtsMagic`] or [`Error::InvalidGtpMagic`] if files have invalid headers.
+    /// Returns [`Error::GtsHashNotFound`] if the hash is not in the GTS metadata.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::GtsNotFoundForGtp`]: crate::Error::GtsNotFoundForGtp
+    /// [`Error::InvalidGtsMagic`]: crate::Error::InvalidGtsMagic
+    /// [`Error::InvalidGtpMagic`]: crate::Error::InvalidGtpMagic
+    /// [`Error::GtsHashNotFound`]: crate::Error::GtsHashNotFound
     pub fn extract<P: AsRef<Path>>(gtp_path: P, output_dir: P) -> Result<()> {
         let gtp_path = gtp_path.as_ref();
         let output_dir = output_dir.as_ref();
@@ -154,10 +167,14 @@ impl VirtualTextureExtractor {
     /// Progress should be managed by the caller at the per-file level.
     ///
     /// # Errors
-    /// Returns an error if the files cannot be read or extraction fails.
     ///
-    /// # Panics
-    /// This function does not panic under normal conditions.
+    /// Returns [`Error::Io`] if the GTP/GTS files cannot be read or output cannot be written.
+    /// Returns [`Error::GtpNotInGtsMetadata`] if the GTP file is not found in GTS metadata.
+    /// Returns [`Error::InvalidLayerIndex`] if an invalid layer index is specified.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::GtpNotInGtsMetadata`]: crate::Error::GtpNotInGtsMetadata
+    /// [`Error::InvalidLayerIndex`]: crate::Error::InvalidLayerIndex
     pub fn extract_with_gts<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
         gtp_path: P1,
         gts_path: P2,
@@ -169,7 +186,17 @@ impl VirtualTextureExtractor {
     /// Extract a GTP file with specific options (layer filtering, etc.)
     ///
     /// # Errors
-    /// Returns an error if the files cannot be read or extraction fails.
+    ///
+    /// Returns [`Error::Io`] if the GTP/GTS files cannot be read or output cannot be written.
+    /// Returns [`Error::GtpNotInGtsMetadata`] if the GTP file is not found in GTS metadata.
+    /// Returns [`Error::InvalidLayerIndex`] if an invalid layer index is specified.
+    /// Returns [`Error::InvalidPageIndex`] or [`Error::InvalidChunkIndex`] if tile data is invalid.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::GtpNotInGtsMetadata`]: crate::Error::GtpNotInGtsMetadata
+    /// [`Error::InvalidLayerIndex`]: crate::Error::InvalidLayerIndex
+    /// [`Error::InvalidPageIndex`]: crate::Error::InvalidPageIndex
+    /// [`Error::InvalidChunkIndex`]: crate::Error::InvalidChunkIndex
     pub fn extract_with_options<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
         gtp_path: P1,
         gts_path: P2,
@@ -190,7 +217,7 @@ impl VirtualTextureExtractor {
         let gtp_name = gtp_path
             .file_name()
             .and_then(|n| n.to_str())
-            .ok_or_else(|| Error::ConversionError("Invalid GTP filename".to_string()))?;
+            .ok_or_else(|| Error::InvalidPath("invalid GTP filename".to_string()))?;
 
         // Find page file index and gather naming info
         // Format: {mod_name}_{gtex_hash}_[Layer].dds
@@ -198,9 +225,11 @@ impl VirtualTextureExtractor {
             Self::extract_hash_from_filename(gtp_name)
         {
             // BG3 vanilla: hash in filename (e.g., "Name_<32hexhash>.gtp")
-            let idx = gts.find_page_file_index(hash).ok_or_else(|| {
-                Error::ConversionError(format!("Hash '{hash}' not found in GTS metadata"))
-            })?;
+            let idx = gts
+                .find_page_file_index(hash)
+                .ok_or_else(|| Error::GtsHashNotFound {
+                    hash: hash.to_string(),
+                })?;
             // Extract base name before the hash
             let base_name = gtp_name
                 .strip_suffix(".gtp")
@@ -211,9 +240,11 @@ impl VirtualTextureExtractor {
         } else {
             // Mod: read config files and match by filename
             let config = mod_config::load_mod_config(gtp_path);
-            let idx = gts.find_page_file_index_by_name(gtp_name).ok_or_else(|| {
-                Error::ConversionError(format!("GTP file '{gtp_name}' not found in GTS metadata"))
-            })?;
+            let idx = gts
+                .find_page_file_index_by_name(gtp_name)
+                .ok_or_else(|| Error::GtpNotInGtsMetadata {
+                    gtp_name: gtp_name.to_string(),
+                })?;
 
             // Get name and GTex hash from config files
             let (name, gtex_hash) = if let Some(ref cfg) = config {
@@ -287,9 +318,7 @@ impl VirtualTextureExtractor {
             layers.dedup();
             for &layer in &layers {
                 if layer >= 3 {
-                    return Err(Error::ConversionError(format!(
-                        "Invalid layer index: {layer}. Must be 0 (BaseMap), 1 (NormalMap), or 2 (PhysicalMap)"
-                    )));
+                    return Err(Error::InvalidLayerIndex { index: layer });
                 }
             }
             layers
@@ -298,7 +327,7 @@ impl VirtualTextureExtractor {
         // Process selected layers
         for layer_idx in layers_to_extract {
             let layer = VirtualTextureLayer::from_index(layer_idx as u8)
-                .ok_or_else(|| Error::ConversionError("Invalid layer index".to_string()))?;
+                .ok_or(Error::InvalidLayerIndex { index: layer_idx })?;
 
             let tiles = &tiles_by_layer[layer_idx];
 
@@ -407,11 +436,11 @@ impl VirtualTextureExtractor {
         let gtp_name = gtp_path
             .file_name()
             .and_then(|n| n.to_str())
-            .ok_or_else(|| Error::ConversionError("Invalid GTP filename".to_string()))?;
+            .ok_or_else(|| Error::InvalidPath("invalid GTP filename".to_string()))?;
 
         let gtp_dir = gtp_path
             .parent()
-            .ok_or_else(|| Error::ConversionError("No parent directory".to_string()))?;
+            .ok_or_else(|| Error::InvalidPath("GTP file has no parent directory".to_string()))?;
 
         // Extract base name (e.g., "Albedo_Normal_Physical_1" from "Albedo_Normal_Physical_1_xxx.gtp")
         let base_name = if let Some(pos) = gtp_name.rfind('_') {
@@ -441,8 +470,8 @@ impl VirtualTextureExtractor {
             }
         }
 
-        Err(Error::ConversionError(format!(
-            "Could not find GTS file for {gtp_name}"
-        )))
+        Err(Error::GtsNotFoundForGtp {
+            gtp_name: gtp_name.to_string(),
+        })
     }
 }

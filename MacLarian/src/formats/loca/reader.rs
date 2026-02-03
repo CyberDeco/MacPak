@@ -14,7 +14,12 @@ use std::path::Path;
 /// Read a .loca file from disk
 ///
 /// # Errors
-/// Returns an error if the file cannot be read or has an invalid format.
+///
+/// Returns [`Error::Io`] if the file cannot be opened or read.
+/// Returns [`Error::InvalidLocaMagic`] if the file does not have a valid LOCA header.
+///
+/// [`Error::Io`]: crate::Error::Io
+/// [`Error::InvalidLocaMagic`]: crate::Error::InvalidLocaMagic
 pub fn read_loca<P: AsRef<Path>>(path: P) -> Result<LocaResource> {
     let mut file = File::open(path)?;
     let mut buffer = Vec::new();
@@ -25,7 +30,12 @@ pub fn read_loca<P: AsRef<Path>>(path: P) -> Result<LocaResource> {
 /// Parse .loca data from bytes
 ///
 /// # Errors
-/// Returns an error if the data has an invalid .loca format.
+///
+/// Returns [`Error::InvalidLocaMagic`] if the data does not have a valid LOCA header.
+/// Returns [`Error::Io`] if reading from the byte buffer fails (e.g., truncated data).
+///
+/// [`Error::InvalidLocaMagic`]: crate::Error::InvalidLocaMagic
+/// [`Error::Io`]: crate::Error::Io
 pub fn parse_loca_bytes(data: &[u8]) -> Result<LocaResource> {
     let mut cursor = Cursor::new(data);
 

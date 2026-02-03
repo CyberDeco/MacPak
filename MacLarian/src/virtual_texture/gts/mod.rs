@@ -61,11 +61,7 @@ impl GtsFile {
         let header = read_header::read_header(reader)?;
 
         if header.magic != GtsHeader::MAGIC {
-            let magic = header.magic;
-            let expected = GtsHeader::MAGIC;
-            return Err(Error::ConversionError(format!(
-                "Invalid GTS magic: 0x{magic:08X}, expected 0x{expected:08X}"
-            )));
+            return Err(Error::InvalidGtsMagic);
         }
 
         // Read parameter blocks

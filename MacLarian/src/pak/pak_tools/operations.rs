@@ -26,7 +26,17 @@ impl PakOperations {
     /// Extract a PAK file to a directory
     ///
     /// # Errors
-    /// Returns an error if the PAK file cannot be read or extraction fails.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened or output directory cannot be created.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    /// Returns [`Error::Lz4DecompressionFailed`] or [`Error::ZlibDecompressionFailed`] if file decompression fails.
+    /// Returns [`Error::PakExtractionPartialFailure`] if extraction completes with partial failures.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
+    /// [`Error::Lz4DecompressionFailed`]: crate::Error::Lz4DecompressionFailed
+    /// [`Error::ZlibDecompressionFailed`]: crate::Error::ZlibDecompressionFailed
+    /// [`Error::PakExtractionPartialFailure`]: crate::Error::PakExtractionPartialFailure
     pub fn extract<P: AsRef<Path>>(pak_path: P, output_dir: P) -> Result<()> {
         Self::extract_with_progress(pak_path, output_dir, &|_| {})
     }
@@ -38,7 +48,17 @@ impl PakOperations {
     /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
     /// # Errors
-    /// Returns an error if the PAK file cannot be read or extraction fails.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened or output directory cannot be created.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    /// Returns [`Error::Lz4DecompressionFailed`] or [`Error::ZlibDecompressionFailed`] if file decompression fails.
+    /// Returns [`Error::PakExtractionPartialFailure`] if extraction completes with partial failures.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
+    /// [`Error::Lz4DecompressionFailed`]: crate::Error::Lz4DecompressionFailed
+    /// [`Error::ZlibDecompressionFailed`]: crate::Error::ZlibDecompressionFailed
+    /// [`Error::PakExtractionPartialFailure`]: crate::Error::PakExtractionPartialFailure
     pub fn extract_with_progress<P: AsRef<Path>>(
         pak_path: P,
         output_dir: P,
@@ -175,12 +195,11 @@ impl PakOperations {
 
         // If there were errors, return a summary error
         if !errors.is_empty() {
-            return Err(Error::ConversionError(format!(
-                "Extracted {} files with {} errors. First error: {}",
-                total_files - errors.len(),
-                errors.len(),
-                errors[0].1
-            )));
+            return Err(Error::PakExtractionPartialFailure {
+                total: total_files,
+                failed: errors.len(),
+                first_error: errors[0].1.clone(),
+            });
         }
 
         Ok(())
@@ -189,7 +208,14 @@ impl PakOperations {
     /// Create a PAK file from a directory
     ///
     /// # Errors
-    /// Returns an error if the directory cannot be read or PAK creation fails.
+    ///
+    /// Returns [`Error::Io`] if the source directory cannot be read or output file cannot be written.
+    /// Returns [`Error::WalkDirError`] if directory traversal fails.
+    /// Returns [`Error::CompressionError`] if file compression fails.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::WalkDirError`]: crate::Error::WalkDirError
+    /// [`Error::CompressionError`]: crate::Error::CompressionError
     pub fn create<P: AsRef<Path>>(source_dir: P, output_pak: P) -> Result<()> {
         Self::create_with_progress(source_dir, output_pak, &|_| {})
     }
@@ -197,7 +223,14 @@ impl PakOperations {
     /// Create a PAK file from a directory with progress callback
     ///
     /// # Errors
-    /// Returns an error if the directory cannot be read or PAK creation fails.
+    ///
+    /// Returns [`Error::Io`] if the source directory cannot be read or output file cannot be written.
+    /// Returns [`Error::WalkDirError`] if directory traversal fails.
+    /// Returns [`Error::CompressionError`] if file compression fails.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::WalkDirError`]: crate::Error::WalkDirError
+    /// [`Error::CompressionError`]: crate::Error::CompressionError
     pub fn create_with_progress<P: AsRef<Path>>(
         source_dir: P,
         output_pak: P,
@@ -211,7 +244,14 @@ impl PakOperations {
     /// Create a PAK file from a directory with specified compression
     ///
     /// # Errors
-    /// Returns an error if the directory cannot be read or PAK creation fails.
+    ///
+    /// Returns [`Error::Io`] if the source directory cannot be read or output file cannot be written.
+    /// Returns [`Error::WalkDirError`] if directory traversal fails.
+    /// Returns [`Error::CompressionError`] if file compression fails.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::WalkDirError`]: crate::Error::WalkDirError
+    /// [`Error::CompressionError`]: crate::Error::CompressionError
     pub fn create_with_compression<P: AsRef<Path>>(
         source_dir: P,
         output_pak: P,
@@ -223,7 +263,14 @@ impl PakOperations {
     /// Create a PAK file from a directory with compression and progress callback
     ///
     /// # Errors
-    /// Returns an error if the directory cannot be read or PAK creation fails.
+    ///
+    /// Returns [`Error::Io`] if the source directory cannot be read or output file cannot be written.
+    /// Returns [`Error::WalkDirError`] if directory traversal fails.
+    /// Returns [`Error::CompressionError`] if file compression fails.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::WalkDirError`]: crate::Error::WalkDirError
+    /// [`Error::CompressionError`]: crate::Error::CompressionError
     pub fn create_with_compression_and_progress<P: AsRef<Path>>(
         source_dir: P,
         output_pak: P,
@@ -238,7 +285,12 @@ impl PakOperations {
     /// List contents of a PAK file
     ///
     /// # Errors
-    /// Returns an error if the PAK file cannot be read.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
     pub fn list<P: AsRef<Path>>(pak_path: P) -> Result<Vec<String>> {
         Self::list_with_progress(pak_path, &|_| {})
     }
@@ -246,7 +298,12 @@ impl PakOperations {
     /// List contents of a PAK file with progress callback
     ///
     /// # Errors
-    /// Returns an error if the PAK file cannot be read.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
     pub fn list_with_progress<P: AsRef<Path>>(
         pak_path: P,
         progress: ProgressCallback,
@@ -282,7 +339,12 @@ impl PakOperations {
     /// Returns full file entries including sizes and compression info.
     ///
     /// # Errors
-    /// Returns an error if the PAK file cannot be read.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
     pub(crate) fn list_detailed<P: AsRef<Path>>(pak_path: P) -> Result<Vec<FileTableEntry>> {
         let file = File::open(pak_path.as_ref())?;
         let mut reader = LspkReader::with_path(file, pak_path.as_ref());
@@ -295,7 +357,17 @@ impl PakOperations {
     /// File paths should match exactly as returned by `list()`.
     ///
     /// # Errors
-    /// Returns an error if the PAK file cannot be read or extraction fails.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened or output directory cannot be created.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    /// Returns [`Error::Lz4DecompressionFailed`] or [`Error::ZlibDecompressionFailed`] if file decompression fails.
+    /// Returns [`Error::RequestedFilesNotFound`] if none of the requested files are found.
+    /// Returns [`Error::PakExtractionPartialFailure`] if extraction completes with partial failures.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
+    /// [`Error::DecompressionError`]: crate::Error::DecompressionError
+    /// [`Error::ConversionError`]: crate::Error::ConversionError
     pub fn extract_files<P: AsRef<Path>, S: AsRef<str>>(
         pak_path: P,
         output_dir: P,
@@ -312,7 +384,17 @@ impl PakOperations {
     /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
     /// # Errors
-    /// Returns an error if the PAK file cannot be read or extraction fails.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened or output directory cannot be created.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    /// Returns [`Error::Lz4DecompressionFailed`] or [`Error::ZlibDecompressionFailed`] if file decompression fails.
+    /// Returns [`Error::RequestedFilesNotFound`] if none of the requested files are found.
+    /// Returns [`Error::PakExtractionPartialFailure`] if extraction completes with partial failures.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
+    /// [`Error::DecompressionError`]: crate::Error::DecompressionError
+    /// [`Error::ConversionError`]: crate::Error::ConversionError
     pub fn extract_files_with_progress<P: AsRef<Path>, S: AsRef<str>>(
         pak_path: P,
         output_dir: P,
@@ -344,9 +426,7 @@ impl PakOperations {
             .collect();
 
         if entries_to_extract.is_empty() {
-            return Err(Error::ConversionError(
-                "None of the requested files were found in the PAK".to_string(),
-            ));
+            return Err(Error::RequestedFilesNotFound);
         }
 
         std::fs::create_dir_all(&output_dir)?;
@@ -453,12 +533,11 @@ impl PakOperations {
 
         // If there were errors, return a summary error
         if !errors.is_empty() {
-            return Err(Error::ConversionError(format!(
-                "Extracted {} files with {} errors. First error: {}",
-                total_files - errors.len(),
-                errors.len(),
-                errors[0].1
-            )));
+            return Err(Error::PakExtractionPartialFailure {
+                total: total_files,
+                failed: errors.len(),
+                first_error: errors[0].1.clone(),
+            });
         }
 
         Ok(())
@@ -469,7 +548,16 @@ impl PakOperations {
     /// Returns the decompressed file contents, or an error if the file is not found.
     ///
     /// # Errors
-    /// Returns an error if the PAK cannot be read or the file is not found.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    /// Returns [`Error::FileNotFoundInPak`] if the requested file path is not in the archive.
+    /// Returns [`Error::DecompressionError`] if file decompression fails.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
+    /// [`Error::FileNotFoundInPak`]: crate::Error::FileNotFoundInPak
+    /// [`Error::DecompressionError`]: crate::Error::DecompressionError
     pub fn read_file_bytes<P: AsRef<Path>>(pak_path: P, file_path: &str) -> Result<Vec<u8>> {
         let file = File::open(pak_path.as_ref())?;
         let mut reader = LspkReader::with_path(file, pak_path.as_ref());
@@ -495,7 +583,14 @@ impl PakOperations {
     /// Supports multi-part archives (e.g., `Textures.pak` with `Textures_1.pak`, `Textures_2.pak`).
     ///
     /// # Errors
-    /// Returns an error if the PAK cannot be read.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    /// Returns [`Error::ConversionError`] if a required archive part file cannot be found.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
+    /// [`Error::ConversionError`]: crate::Error::ConversionError
     pub fn read_files_bytes<P: AsRef<Path>, S: AsRef<str>>(
         pak_path: P,
         file_paths: &[S],
@@ -531,9 +626,8 @@ impl PakOperations {
         let mut compressed_files: Vec<(String, CompressedFile)> = Vec::new();
 
         for (part, part_entries) in &entries_by_part {
-            let part_path = get_part_path(pak_path, *part).ok_or_else(|| {
-                Error::ConversionError(format!("Cannot determine path for archive part {part}"))
-            })?;
+            let part_path = get_part_path(pak_path, *part)
+                .ok_or(Error::ArchivePartNotFound { part: *part })?;
 
             if !part_path.exists() {
                 tracing::warn!("Archive part file not found: {}", part_path.display());
@@ -598,7 +692,16 @@ impl PakOperations {
     /// Extract meta.lsx from a PAK
     ///
     /// # Errors
-    /// Returns an error if the PAK cannot be read or meta.lsx is not found.
+    ///
+    /// Returns [`Error::Io`] if the PAK file cannot be opened.
+    /// Returns [`Error::InvalidPakMagic`] if the file is not a valid PAK archive.
+    /// Returns [`Error::FileNotFoundInPak`] if `meta.lsx` is not found in the archive.
+    /// Returns [`Error::ConversionError`] if `meta.lsx` contains invalid UTF-8.
+    ///
+    /// [`Error::Io`]: crate::Error::Io
+    /// [`Error::InvalidPakMagic`]: crate::Error::InvalidPakMagic
+    /// [`Error::FileNotFoundInPak`]: crate::Error::FileNotFoundInPak
+    /// [`Error::ConversionError`]: crate::Error::ConversionError
     pub fn extract_meta<P: AsRef<Path>>(pak_path: P) -> Result<String> {
         let file = File::open(pak_path.as_ref())?;
 
@@ -625,7 +728,6 @@ impl PakOperations {
             })
             .ok_or_else(|| Error::FileNotFoundInPak("meta.lsx".to_string()))?;
 
-        String::from_utf8(meta_file.data.clone())
-            .map_err(|e| Error::ConversionError(format!("Invalid UTF-8 in meta.lsx: {e}")))
+        String::from_utf8(meta_file.data.clone()).map_err(Error::from)
     }
 }
