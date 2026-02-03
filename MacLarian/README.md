@@ -78,7 +78,7 @@ use maclarian::pak::PakOperations;
 
 // List contents of a PAK file
 let contents = PakOperations::list("Shared.pak")?;
-println!("Found {} files", files.len());
+println!("Found {} files", contents.len());
 for entry in contents.files {
     println!("{}: {} bytes", entry.name, entry.size);
 }
