@@ -71,6 +71,7 @@ pub struct VTexConfigTexture {
 // ============================================================================
 
 /// Source of a virtual texture mapping discovery
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiscoverySource {
     /// Discovered from `VTexConfig.xml` (primary, richer metadata)

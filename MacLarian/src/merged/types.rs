@@ -66,6 +66,7 @@ impl MergedProgress {
 }
 
 /// Phase of merged database operation
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MergedPhase {
     /// Scanning for _merged.lsf files

@@ -56,6 +56,7 @@ impl ModProgress {
 }
 
 /// Phase of mod operation
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModPhase {
     /// Validating mod structure

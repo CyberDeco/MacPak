@@ -67,6 +67,7 @@ impl VTexProgress {
 }
 
 /// Phase of virtual texture operation
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VTexPhase {
     // === Extraction phases ===
@@ -126,6 +127,7 @@ impl VTexPhase {
 // ============================================================================
 
 /// GTS codec types
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum GtsCodec {
@@ -234,6 +236,7 @@ impl GtsDataType {
 }
 
 /// Tile compression method
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TileCompression {
     Raw,
@@ -457,6 +460,7 @@ pub(crate) struct TileLocation {
 /// - Layer 0: BaseMap (color/albedo)
 /// - Layer 1: NormalMap (surface normals)
 /// - Layer 2: PhysicalMap (roughness/metallic/etc)
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VirtualTextureLayer {
     BaseMap = 0,

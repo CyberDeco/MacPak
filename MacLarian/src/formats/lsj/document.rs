@@ -90,6 +90,7 @@ impl<'de> Deserialize<'de> for LsjNode {
 }
 
 /// LSJ Attribute - can be simple value, `TranslatedString`, or `TranslatedFSString`
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum LsjAttribute {
     Simple {

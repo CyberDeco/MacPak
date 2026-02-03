@@ -51,6 +51,7 @@ pub mod tags {
 }
 
 /// Compression formats
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Compression {
@@ -81,6 +82,7 @@ impl Compression {
 }
 
 /// Pointer size determined from magic signature
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PointerSize {
     Bit32,
@@ -88,6 +90,7 @@ pub enum PointerSize {
 }
 
 /// Endianness determined from magic signature
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Endian {
     Little,

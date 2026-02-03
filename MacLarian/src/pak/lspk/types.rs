@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 /// Compression method used for a file in the PAK
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionMethod {
     None,
@@ -183,6 +184,7 @@ impl PakProgress {
 }
 
 /// Phase of PAK operation
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PakPhase {
     /// Reading PAK header

@@ -62,6 +62,7 @@ impl Gr2ExtractionProgress {
 }
 
 /// Phase of GR2 extraction operation
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Gr2ExtractionPhase {
     /// Converting GR2 to GLB format

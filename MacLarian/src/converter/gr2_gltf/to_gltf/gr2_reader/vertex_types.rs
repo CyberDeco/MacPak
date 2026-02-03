@@ -12,6 +12,7 @@ pub(super) struct SectionHeader {
 }
 
 /// Member type enumeration for vertex attributes.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u32)]
 pub enum MemberType {

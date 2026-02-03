@@ -62,6 +62,7 @@ impl ImageProgress {
 }
 
 /// Phase of image conversion operation
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImagePhase {
     /// Reading the input file

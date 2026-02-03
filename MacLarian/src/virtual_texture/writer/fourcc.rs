@@ -15,6 +15,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use std::io::{Seek, SeekFrom, Write};
 
 /// Format codes for `FourCC` nodes
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum FourCCFormat {
@@ -31,6 +32,7 @@ pub enum FourCCFormat {
 }
 
 /// A node in the `FourCC` metadata tree
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum FourCCNode {
     /// Container node with children

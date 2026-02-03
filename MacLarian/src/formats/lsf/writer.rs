@@ -27,6 +27,7 @@ use std::io::Write;
 use std::path::Path;
 
 /// Node/attribute format for LSF files
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum LsfFormat {
     /// V2 format: 12-byte nodes/attributes (more compact, default)

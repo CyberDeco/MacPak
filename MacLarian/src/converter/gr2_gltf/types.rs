@@ -62,6 +62,7 @@ impl Gr2Progress {
 }
 
 /// Phase of GR2/glTF conversion operation
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Gr2Phase {
     // === GR2 -> glTF phases ===

@@ -11,6 +11,7 @@
 use crate::error::{Error, Result};
 
 /// LSF Metadata format (from header field)
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LsfMetadataFormat {
     #[default]

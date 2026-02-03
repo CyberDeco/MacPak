@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 /// Compression preference for tile data
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TileCompressionPreference {
     /// Raw (uncompressed)
@@ -29,6 +30,7 @@ impl TileCompressionPreference {
 }
 
 /// BC format for texture layers
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BcFormat {
     /// BC1 (DXT1) - RGB with optional 1-bit alpha

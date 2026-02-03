@@ -13,6 +13,7 @@ use crate::error::{Error, Result};
 use ddsfile::{AlphaMode, D3DFormat, Dds, DxgiFormat, NewDxgiParams};
 
 /// DDS compression format for PNG to DDS conversion
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DdsFormat {
     /// BC1/DXT1 - Good for opaque textures or 1-bit alpha

@@ -2,6 +2,7 @@
 use lz4_flex::frame::Error as Lz4FrameError;
 use thiserror::Error;
 
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("IO error: {0}")]
