@@ -254,7 +254,7 @@ pub enum ModCommands {
         quiet: bool,
     },
 
-    /// Package mod for BaldursModManager (generates info.json alongside PAK)
+    /// Package mod for `BaldursModManager` (generates info.json alongside PAK)
     Package {
         /// Path to .pak file or mod directory
         source: PathBuf,

@@ -21,7 +21,7 @@ pub fn expand_globs(paths: &[PathBuf]) -> Result<Vec<PathBuf>> {
         if path_str.contains('*') || path_str.contains('?') || path_str.contains('[') {
             let matches: Vec<_> = glob(&path_str)
                 .with_context(|| format!("Invalid glob pattern: {path_str}"))?
-                .filter_map(|r| r.ok())
+                .filter_map(Result::ok)
                 .collect();
 
             if matches.is_empty() {

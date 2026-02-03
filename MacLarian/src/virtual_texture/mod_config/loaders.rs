@@ -98,7 +98,7 @@ pub fn load_vtex_config_xml(mod_root: &Path, mod_name: &str) -> Option<VTexConfi
 // LSF VTexConfig parsing (for PAK files)
 // ============================================================================
 
-/// Parsed VTexConfig data from LSF format
+/// Parsed `VTexConfig` data from LSF format
 #[derive(Debug)]
 pub struct LsfVTexConfig {
     pub tileset_name: String,
@@ -106,7 +106,7 @@ pub struct LsfVTexConfig {
     pub texture_names: Vec<String>,
 }
 
-/// Parse VTexConfig from LSF document
+/// Parse `VTexConfig` from `LsfDocument`
 pub fn parse_vtex_config_from_lsf(doc: &LsfDocument) -> Option<LsfVTexConfig> {
     // Find root TileSet node
     let root_nodes = doc.root_nodes();

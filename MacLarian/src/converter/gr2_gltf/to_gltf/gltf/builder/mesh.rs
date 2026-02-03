@@ -44,7 +44,7 @@ impl GltfBuilder {
             .vertices
             .iter()
             .map(|v| {
-                let (n, t) = decode_qtangent(&v.qtangent);
+                let (n, t) = decode_qtangent(v.qtangent);
                 ([n[0], -n[1], -n[2]], [-t[0], t[1], t[2], t[3]])
             })
             .unzip();

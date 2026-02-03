@@ -23,7 +23,7 @@ pub fn f32_to_half(value: f32) -> u16 {
 
 /// Decode `QTangent` quaternion to normal and tangent vectors.
 #[must_use]
-pub fn decode_qtangent(qt: &[i16; 4]) -> ([f32; 3], [f32; 4]) {
+pub fn decode_qtangent(qt: [i16; 4]) -> ([f32; 3], [f32; 4]) {
     let q: [f32; 4] = [
         f32::from(qt[0]) / 32767.0,
         f32::from(qt[1]) / 32767.0,

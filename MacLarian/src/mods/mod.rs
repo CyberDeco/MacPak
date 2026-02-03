@@ -2,7 +2,7 @@
 //!
 //! This module provides tools for working with BG3 mod packages:
 //! - Generate meta.lsx mod metadata files
-//! - Generate info.json for `BaldursModManager` import
+//! - Generate info.json for ``BaldursModManager`` import
 //! - Validate mod directory structure
 //! - PAK integrity checking
 //! - Find and parse mod metadata

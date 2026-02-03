@@ -20,12 +20,12 @@ pub fn version_to_int64(major: u32, minor: u32, patch: u32, build: u32) -> i64 {
 /// Returns (major, minor, patch, build) or None if invalid
 #[must_use]
 pub fn parse_version_string(version: &str) -> Option<(u32, u32, u32, u32)> {
-    let trimmed = version.trim();
-
     // Check if it's a raw Version64 integer (no dots, parses as i64)
     // Version64 for major=1 is 2^55, so any value >= 2^31 is likely a Version64
     // (values below that are treated as simple major version numbers)
     const VERSION64_THRESHOLD: i64 = 1 << 31;
+
+    let trimmed = version.trim();
     if !trimmed.contains('.') {
         if let Ok(v64) = trimmed.parse::<i64>() {
             if v64 >= VERSION64_THRESHOLD {
@@ -168,13 +168,7 @@ pub fn generate_meta_lsx(
             </children>
         </node>
     </region>
-</save>"#,
-        author = author,
-        description = description,
-        folder = folder,
-        mod_name = mod_name,
-        uuid = uuid,
-        version64 = version64,
+</save>"#
     )
 }
 

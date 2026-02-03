@@ -114,7 +114,7 @@ pub fn discover_mod_virtual_textures(mod_root: &Path) -> Result<Vec<DiscoveredVi
 ///
 /// # Arguments
 /// * `mod_root` - Path to the mod root directory
-/// * `seen_hashes` - Set of already-discovered GTex hashes to skip
+/// * `seen_hashes` - Set of already-discovered `GTex` hashes to skip
 /// * `seen_gts_paths` - Set of already-discovered GTS file paths to skip
 ///
 /// # Returns
@@ -228,23 +228,17 @@ fn find_gts_files_recursive(dir: &Path) -> Vec<PathBuf> {
     gts_files
 }
 
-/// Extract GTex hash from GTP filename
+/// Extract `GTex` hash from GTP filename
 ///
 /// GTP files are named: `<tileset>_<gtex_hash>.gtp` or `<tileset>.gtp`
-/// Returns the GTex hash if found, or None if the GTP has no hash suffix.
+/// Returns the `GTex` hash if found, or None if the GTP has no hash suffix.
 fn extract_gtex_hash_from_gtp_name(gtp_name: &str, gts_stem: &str) -> Option<String> {
-    // Check if GTP name starts with GTS stem followed by underscore
-    if gtp_name.starts_with(gts_stem) && gtp_name.len() > gts_stem.len() + 1 {
-        let suffix = &gtp_name[gts_stem.len()..];
-        if suffix.starts_with('_') {
-            let hash = &suffix[1..];
-            // Validate it looks like a hash (32 hex chars typical)
-            if !hash.is_empty() && hash.chars().all(|c| c.is_ascii_hexdigit()) {
-                return Some(hash.to_string());
-            }
-        }
-    }
-    None
+    // Check if GTP name starts with GTS stem followed by underscore and hash
+    gtp_name
+        .strip_prefix(gts_stem)
+        .and_then(|suffix| suffix.strip_prefix('_'))
+        .filter(|hash| !hash.is_empty() && hash.chars().all(|c| c.is_ascii_hexdigit()))
+        .map(ToString::to_string)
 }
 
 /// Extract mod name from a file path relative to mod root
@@ -271,7 +265,7 @@ fn extract_mod_name_from_path(file_path: &Path, mod_root: &Path) -> String {
         .to_string()
 }
 
-/// Try to find a StackedTexture XML file for a given GTex hash
+/// Try to find a `StackedTexture` XML file for a given `GTex` hash
 fn find_stacked_texture_xml(mod_root: &Path, gtex_hash: &str) -> Option<String> {
     // Look for <gtex_hash>.xml files in VirtualTextures subdirectories
     let xml_name = format!("{gtex_hash}.xml");
@@ -390,25 +384,23 @@ pub fn discover_pak_virtual_textures(pak_path: &Path) -> Result<Vec<DiscoveredVi
                     })
             };
 
-            if let Some((tileset_name, vt_path, texture_names)) = parsed {
+            if let Some((tileset_name, Some(vt_path), texture_names)) = parsed {
                 // Derive GTS path from VirtualTextures path + TileSet name
-                if let Some(ref vt_path) = vt_path {
-                    let vt_path_normalized = vt_path.replace('\\', "/");
-                    let gts_filename = format!("{tileset_name}.gts");
-                    // GTS path is relative to PAK root
-                    let gts_path = PathBuf::from(&vt_path_normalized).join(&gts_filename);
+                let vt_path_normalized = vt_path.replace('\\', "/");
+                let gts_filename = format!("{tileset_name}.gts");
+                // GTS path is relative to PAK root
+                let gts_path = PathBuf::from(&vt_path_normalized).join(&gts_filename);
 
-                    for texture_name in texture_names {
-                        seen_hashes.insert(texture_name.clone());
-                        discovered.push(DiscoveredVirtualTexture {
-                            mod_name: mod_name.clone(),
-                            mod_root: pak_path.to_path_buf(), // PAK file is the "root"
-                            tileset_name: Some(tileset_name.clone()),
-                            gtex_hash: texture_name,
-                            gts_path: gts_path.clone(),
-                            source: DiscoverySource::VTexConfigXml,
-                        });
-                    }
+                for texture_name in texture_names {
+                    seen_hashes.insert(texture_name.clone());
+                    discovered.push(DiscoveredVirtualTexture {
+                        mod_name: mod_name.clone(),
+                        mod_root: pak_path.to_path_buf(), // PAK file is the "root"
+                        tileset_name: Some(tileset_name.clone()),
+                        gtex_hash: texture_name,
+                        gts_path: gts_path.clone(),
+                        source: DiscoverySource::VTexConfigXml,
+                    });
                 }
             }
         }

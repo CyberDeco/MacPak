@@ -82,7 +82,7 @@ pub fn check_pak_integrity_with_progress(
         ModPhase::Validating,
         1,
         2,
-        format!("Checking {} files...", file_count),
+        format!("Checking {file_count} files..."),
     ));
 
     // Check for duplicate paths (shouldn't happen but indicates corruption)

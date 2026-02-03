@@ -122,7 +122,7 @@ fn validate_single(source: &Path, quiet: bool) -> Result<()> {
     }
 
     // Print result
-    let valid = result.valid && integrity_result.as_ref().map_or(true, |i| i.valid);
+    let valid = result.valid && integrity_result.as_ref().is_none_or(|i| i.valid);
     if valid {
         println!("\nValidation: PASSED");
         Ok(())
@@ -132,7 +132,7 @@ fn validate_single(source: &Path, quiet: bool) -> Result<()> {
     }
 }
 
-/// Package mod for BaldursModManager (generates info.json alongside PAK)
+/// Package mod for `BaldursModManager` (generates info.json alongside PAK)
 pub fn package(
     source: &Path,
     destination: &Path,

@@ -26,7 +26,7 @@ impl TileCoord {
 
     /// Encode as packed u32 for GTS file
     #[must_use]
-    pub fn to_packed_id(&self) -> u32 {
+    pub fn to_packed_id(self) -> u32 {
         ((self.x as u32) << 20)
             | ((self.y as u32) << 8)
             | ((self.level as u32) << 4)

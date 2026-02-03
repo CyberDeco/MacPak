@@ -51,45 +51,45 @@ pub enum FourCCNode {
 impl FourCCNode {
     /// Create a container node
     #[must_use]
-    pub fn container(fourcc: &[u8; 4]) -> Self {
+    pub fn container(fourcc: [u8; 4]) -> Self {
         Self::Container {
-            fourcc: *fourcc,
+            fourcc,
             children: Vec::new(),
         }
     }
 
     /// Create a string node
     #[must_use]
-    pub fn string(fourcc: &[u8; 4], value: impl Into<String>) -> Self {
+    pub fn string(fourcc: [u8; 4], value: impl Into<String>) -> Self {
         Self::String {
-            fourcc: *fourcc,
+            fourcc,
             value: value.into(),
         }
     }
 
     /// Create an integer node
     #[must_use]
-    pub fn int(fourcc: &[u8; 4], value: u32) -> Self {
+    pub fn int(fourcc: [u8; 4], value: u32) -> Self {
         Self::Int {
-            fourcc: *fourcc,
+            fourcc,
             value,
         }
     }
 
     /// Create a binary node
     #[must_use]
-    pub fn binary(fourcc: &[u8; 4], data: Vec<u8>) -> Self {
+    pub fn binary(fourcc: [u8; 4], data: Vec<u8>) -> Self {
         Self::Binary {
-            fourcc: *fourcc,
+            fourcc,
             data,
         }
     }
 
     /// Create a GUID node
     #[must_use]
-    pub fn guid(fourcc: &[u8; 4], guid: [u8; 16]) -> Self {
+    pub fn guid(fourcc: [u8; 4], guid: [u8; 16]) -> Self {
         Self::Guid {
-            fourcc: *fourcc,
+            fourcc,
             guid,
         }
     }
@@ -246,55 +246,55 @@ pub fn build_metadata_tree(
     let mut tree = FourCCTree::new();
 
     // Build META root
-    let mut meta = FourCCNode::container(b"META");
+    let mut meta = FourCCNode::container(*b"META");
 
     // ATLS (Atlas)
-    let mut atls = FourCCNode::container(b"ATLS");
-    let mut txts = FourCCNode::container(b"TXTS");
+    let mut atls = FourCCNode::container(*b"ATLS");
+    let mut txts = FourCCNode::container(*b"TXTS");
 
     // TXTR (Texture entry)
-    let mut txtr = FourCCNode::container(b"TXTR");
-    txtr.add_child(FourCCNode::string(b"NAME", texture_name));
-    txtr.add_child(FourCCNode::int(b"WDTH", width));
-    txtr.add_child(FourCCNode::int(b"HGHT", height));
-    txtr.add_child(FourCCNode::int(b"XXXX", x));
-    txtr.add_child(FourCCNode::int(b"YYYY", y));
-    txtr.add_child(FourCCNode::string(b"ADDR", ""));
-    txtr.add_child(FourCCNode::binary(b"SRGB", vec![1, 0, 0, 0]));
-    txtr.add_child(FourCCNode::guid(b"THMB", *guid));
+    let mut txtr = FourCCNode::container(*b"TXTR");
+    txtr.add_child(FourCCNode::string(*b"NAME", texture_name));
+    txtr.add_child(FourCCNode::int(*b"WDTH", width));
+    txtr.add_child(FourCCNode::int(*b"HGHT", height));
+    txtr.add_child(FourCCNode::int(*b"XXXX", x));
+    txtr.add_child(FourCCNode::int(*b"YYYY", y));
+    txtr.add_child(FourCCNode::string(*b"ADDR", ""));
+    txtr.add_child(FourCCNode::binary(*b"SRGB", vec![1, 0, 0, 0]));
+    txtr.add_child(FourCCNode::guid(*b"THMB", *guid));
 
     txts.add_child(txtr);
     atls.add_child(txts);
     meta.add_child(atls);
 
     // PROJ (Project) - empty
-    meta.add_child(FourCCNode::container(b"PROJ"));
+    meta.add_child(FourCCNode::container(*b"PROJ"));
 
     // LINF (Layer info)
-    let mut linf = FourCCNode::container(b"LINF");
+    let mut linf = FourCCNode::container(*b"LINF");
     for (i, (name, layer_type)) in layers.iter().enumerate() {
-        let mut layr = FourCCNode::container(b"LAYR");
-        layr.add_child(FourCCNode::int(b"INDX", i as u32));
-        layr.add_child(FourCCNode::string(b"TYPE", *layer_type));
-        layr.add_child(FourCCNode::string(b"NAME", *name));
+        let mut layr = FourCCNode::container(*b"LAYR");
+        layr.add_child(FourCCNode::int(*b"INDX", i as u32));
+        layr.add_child(FourCCNode::string(*b"TYPE", *layer_type));
+        layr.add_child(FourCCNode::string(*b"NAME", *name));
         linf.add_child(layr);
     }
     meta.add_child(linf);
 
     // INFO (Build info)
-    let mut info = FourCCNode::container(b"INFO");
+    let mut info = FourCCNode::container(*b"INFO");
 
     // COMP (Compiler)
-    let mut comp = FourCCNode::container(b"COMP");
-    comp.add_child(FourCCNode::binary(b"CMPW", vec![1, 0])); // Version 1.0
-    comp.add_child(FourCCNode::binary(b"BLDV", vec![1, 0, 0, 0, 0, 0]));
+    let mut comp = FourCCNode::container(*b"COMP");
+    comp.add_child(FourCCNode::binary(*b"CMPW", vec![1, 0])); // Version 1.0
+    comp.add_child(FourCCNode::binary(*b"BLDV", vec![1, 0, 0, 0, 0, 0]));
     info.add_child(comp);
 
-    info.add_child(FourCCNode::string(b"DATE", ""));
-    info.add_child(FourCCNode::string(b"BLKS", ""));
-    info.add_child(FourCCNode::string(b"TILE", ""));
-    info.add_child(FourCCNode::string(b"BDPR", ""));
-    info.add_child(FourCCNode::int(b"LTMP", 0));
+    info.add_child(FourCCNode::string(*b"DATE", ""));
+    info.add_child(FourCCNode::string(*b"BLKS", ""));
+    info.add_child(FourCCNode::string(*b"TILE", ""));
+    info.add_child(FourCCNode::string(*b"BDPR", ""));
+    info.add_child(FourCCNode::int(*b"LTMP", 0));
 
     meta.add_child(info);
 

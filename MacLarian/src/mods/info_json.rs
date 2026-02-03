@@ -1,4 +1,4 @@
-//! info.json generation for `BaldursModManager` compatibility
+//! info.json generation for ``BaldursModManager`` compatibility
 
 use std::fmt::Write;
 use std::io::Read;
@@ -239,15 +239,12 @@ fn generate_info_json_from_pak(pak_path: &Path, progress: ModProgressCallback) -
     ));
 
     // Find and read meta.lsx from the PAK
-    let meta_lsx_content = match find_and_read_meta_lsx_from_pak(pak_path) {
-        Some(content) => content,
-        None => {
-            return InfoJsonResult {
-                success: false,
-                content: None,
-                message: "No meta.lsx found in PAK file. Use 'maclarian mods meta' to generate one first, then recreate the .pak with 'maclarian pak create'.".to_string(),
-            };
-        }
+    let Some(meta_lsx_content) = find_and_read_meta_lsx_from_pak(pak_path) else {
+        return InfoJsonResult {
+            success: false,
+            content: None,
+            message: "No meta.lsx found in PAK file. Use 'maclarian mods meta' to generate one first, then recreate the .pak with 'maclarian pak create'.".to_string(),
+        };
     };
 
     // Parse the metadata

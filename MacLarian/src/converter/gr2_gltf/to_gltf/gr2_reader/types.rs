@@ -55,6 +55,7 @@ pub struct Skeleton {
 
 /// Information about what data a GR2 file contains.
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_field_names)]
 pub struct Gr2ContentInfo {
     pub material_count: usize,
     pub skeleton_count: usize,
