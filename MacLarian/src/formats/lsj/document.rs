@@ -9,27 +9,37 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use std::collections::HashMap;
 
+/// An LSJ (Larian Save JSON) document.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LsjDocument {
+    /// The save data container.
     pub save: LsjSave,
 }
 
+/// The save container in an LSJ document.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LsjSave {
+    /// Document header with version information.
     pub header: LsjHeader,
+    /// Named regions containing the document data.
     pub regions: HashMap<String, LsjNode>,
 }
 
+/// Header of an LSJ document.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LsjHeader {
-    pub version: String, // "4.0.0.100" format
+    /// Version string in "major.minor.revision.build" format.
+    pub version: String,
 }
 
-/// LSJ Node - represents both regions and nodes
-/// In JSON, this is an object with mixed attributes and child arrays
+/// LSJ Node - represents both regions and nodes.
+///
+/// In JSON, this is an object with mixed attributes and child arrays.
 #[derive(Debug, Clone)]
 pub struct LsjNode {
+    /// Named attributes on this node.
     pub attributes: IndexMap<String, LsjAttribute>,
+    /// Named child node arrays.
     pub children: IndexMap<String, Vec<LsjNode>>,
 }
 
@@ -89,24 +99,37 @@ impl<'de> Deserialize<'de> for LsjNode {
     }
 }
 
-/// LSJ Attribute - can be simple value, `TranslatedString`, or `TranslatedFSString`
+/// LSJ Attribute - can be simple value, `TranslatedString`, or `TranslatedFSString`.
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum LsjAttribute {
+    /// A simple typed value.
     Simple {
+        /// The type name (e.g., "FixedString", "int32").
         type_name: String,
+        /// The JSON value.
         value: Value,
     },
+    /// A translated string with localization handle.
     TranslatedString {
+        /// The type name ("TranslatedString").
         type_name: String,
+        /// Optional inline text value.
         value: Option<String>,
+        /// Localization handle for lookup.
         handle: String,
+        /// Version number for the translation.
         version: Option<u16>,
     },
+    /// A translated string with format arguments.
     TranslatedFSString {
+        /// The type name ("TranslatedFSString").
         type_name: String,
+        /// Optional inline text value.
         value: Option<String>,
+        /// Localization handle for lookup.
         handle: String,
+        /// Format arguments for string interpolation.
         arguments: Vec<TranslatedFSStringArgument>,
     },
 }
@@ -240,21 +263,30 @@ impl<'de> Deserialize<'de> for LsjAttribute {
     }
 }
 
+/// An argument for a `TranslatedFSString`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TranslatedFSStringArgument {
+    /// Argument key/name.
     pub key: String,
+    /// Nested translated string value.
     pub string: TranslatedFSStringValue,
+    /// The argument value.
     pub value: String,
 }
 
+/// Value container for `TranslatedFSString` arguments.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TranslatedFSStringValue {
+    /// Optional inline text value.
     pub value: Option<String>,
+    /// Localization handle for lookup.
     pub handle: String,
+    /// Nested format arguments.
     pub arguments: Vec<TranslatedFSStringArgument>,
 }
 
 impl LsjDocument {
+    /// Creates a new LSJ document with the specified version.
     #[must_use]
     pub fn new(major: u32, minor: u32, revision: u32, build: u32) -> Self {
         LsjDocument {
@@ -281,6 +313,7 @@ impl LsjDocument {
 }
 
 impl LsjNode {
+    /// Creates a new empty LSJ node.
     #[must_use]
     pub fn new() -> Self {
         LsjNode {

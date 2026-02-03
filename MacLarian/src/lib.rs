@@ -112,6 +112,7 @@ pub mod prelude {
 
 }
 
+/// The version of the `maclarian` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // CLI module (feature-gated)

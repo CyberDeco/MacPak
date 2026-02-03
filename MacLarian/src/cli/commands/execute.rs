@@ -8,6 +8,7 @@ use super::definitions::{
 use super::{convert, gr2, loca, mod_cmd, pak, texture, virtual_texture};
 
 impl Commands {
+    /// Execute the selected command.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             Commands::Pak { command } => command.execute(),
@@ -34,6 +35,7 @@ impl Commands {
 }
 
 impl PakCommands {
+    /// Execute the selected PAK command.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             PakCommands::Extract {
@@ -67,6 +69,7 @@ impl PakCommands {
 }
 
 impl Gr2Commands {
+    /// Execute the selected GR2 command.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             Gr2Commands::Inspect { path, output } => gr2::inspect(path, output.as_deref()),
@@ -95,6 +98,7 @@ impl Gr2Commands {
 }
 
 impl VirtualTextureCommands {
+    /// Execute the selected virtual texture command.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             VirtualTextureCommands::List {
@@ -138,6 +142,7 @@ impl VirtualTextureCommands {
 }
 
 impl LocaCommands {
+    /// Execute the selected LOCA command.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             LocaCommands::Search {
@@ -152,6 +157,7 @@ impl LocaCommands {
 }
 
 impl TextureCommands {
+    /// Execute the selected texture command.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             TextureCommands::Info { path } => texture::info(path),
@@ -160,6 +166,7 @@ impl TextureCommands {
 }
 
 impl ModCommands {
+    /// Execute the selected mod command.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             ModCommands::Validate { source, quiet } => mod_cmd::validate(source, *quiet),

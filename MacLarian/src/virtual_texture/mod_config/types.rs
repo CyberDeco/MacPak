@@ -12,6 +12,7 @@ use std::path::PathBuf;
 /// `VirtualTextures.json` structure (Script Extender)
 #[derive(Debug, Deserialize)]
 pub struct VirtualTexturesJson {
+    /// List of `GTex` to GTS file mappings.
     #[serde(rename = "Mappings")]
     pub mappings: Vec<VTexMapping>,
 }
@@ -19,8 +20,10 @@ pub struct VirtualTexturesJson {
 /// A single `GTex` → GTS mapping from `VirtualTextures.json`
 #[derive(Debug, Clone, Deserialize)]
 pub struct VTexMapping {
+    /// The `GTex` hash name.
     #[serde(rename = "GTexName")]
     pub gtex_name: String,
+    /// Path to the GTS metadata file.
     #[serde(rename = "GTS")]
     pub gts_path: String,
 }
@@ -33,12 +36,16 @@ pub struct VTexMapping {
 #[derive(Debug, Deserialize)]
 #[serde(rename = "TileSet")]
 pub struct VTexConfigXml {
+    /// Configuration version.
     #[serde(rename = "@Version")]
     pub version: Option<String>,
+    /// Tile set name.
     #[serde(rename = "@Name")]
     pub name: String,
+    /// Path configuration.
     #[serde(rename = "Paths")]
     pub paths: Option<VTexConfigPaths>,
+    /// Texture list.
     #[serde(rename = "Textures")]
     pub textures: Option<VTexConfigTextures>,
 }
@@ -46,8 +53,10 @@ pub struct VTexConfigXml {
 /// Paths section of `VTexConfig.xml`
 #[derive(Debug, Deserialize)]
 pub struct VTexConfigPaths {
+    /// Path to source texture files.
     #[serde(rename = "SourceTextures")]
     pub source_textures: Option<String>,
+    /// Path to virtual texture output.
     #[serde(rename = "VirtualTextures")]
     pub virtual_textures: Option<String>,
 }
@@ -55,6 +64,7 @@ pub struct VTexConfigPaths {
 /// Textures section of `VTexConfig.xml`
 #[derive(Debug, Deserialize)]
 pub struct VTexConfigTextures {
+    /// List of texture entries.
     #[serde(rename = "Texture", default)]
     pub textures: Vec<VTexConfigTexture>,
 }
@@ -62,6 +72,7 @@ pub struct VTexConfigTextures {
 /// A single texture entry in `VTexConfig.xml`
 #[derive(Debug, Deserialize)]
 pub struct VTexConfigTexture {
+    /// Texture name (typically a `GTex` hash).
     #[serde(rename = "@Name")]
     pub name: String,
 }

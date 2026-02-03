@@ -134,8 +134,9 @@ pub struct TextureRef {
     /// Pak file where this texture is located (e.g., "Textures.pak")
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub source_pak: String,
-    /// Texture dimensions
+    /// Texture width in pixels.
     pub width: u32,
+    /// Texture height in pixels.
     pub height: u32,
     /// Parameter name in material (e.g., "`MSKColor`", "`NormalMap`")
     pub parameter_name: Option<String>,
@@ -243,6 +244,7 @@ pub struct MergedDatabase {
 }
 
 impl MergedDatabase {
+    /// Creates a new empty merged database with the given source path.
     pub fn new(source_path: impl Into<String>) -> Self {
         Self {
             source_path: source_path.into(),
@@ -397,9 +399,13 @@ impl MergedDatabase {
 /// Statistics about a merged database
 #[derive(Debug, Clone)]
 pub struct DatabaseStats {
+    /// Number of visual assets.
     pub visual_count: usize,
+    /// Number of materials.
     pub material_count: usize,
+    /// Number of textures.
     pub texture_count: usize,
+    /// Number of virtual textures.
     pub virtual_texture_count: usize,
 }
 

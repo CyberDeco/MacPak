@@ -1,5 +1,6 @@
 //! `MacLarian` CLI - Command-line interface for Larian file format tools
 
+/// CLI command definitions and implementations.
 pub mod commands;
 pub mod progress;
 

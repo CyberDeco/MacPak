@@ -131,21 +131,34 @@ impl VTexPhase {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum GtsCodec {
+    /// Uniform color codec.
     Uniform = 0,
+    /// YCoCg 4:2:0 color codec.
     Color420 = 1,
+    /// Normal map codec.
     Normal = 2,
+    /// Raw color data.
     RawColor = 3,
+    /// Binary data codec.
     Binary = 4,
+    /// Codec 1.5 YCoCg 4:2:0.
     Codec15Color420 = 5,
+    /// Codec 1.5 normal map.
     Codec15Normal = 6,
+    /// Raw normal data.
     RawNormal = 7,
+    /// Half-precision float codec.
     Half = 8,
+    /// Block compression codec (BC1-BC7).
     Bc = 9,
+    /// Multi-channel codec.
     MultiChannel = 10,
+    /// ASTC compression codec.
     Astc = 11,
 }
 
 impl GtsCodec {
+    /// Converts a u32 value to a `GtsCodec`, if valid.
     #[must_use]
     pub fn from_u32(value: u32) -> Option<Self> {
         match value {
@@ -239,9 +252,11 @@ impl GtsDataType {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TileCompression {
+    /// No compression (raw data).
     Raw,
-    /// LZ4 compression (legacy, read-only support)
+    /// LZ4 compression (legacy, read-only support).
     Lz4,
+    /// `FastLZ` compression (default for BG3).
     FastLZ,
 }
 
@@ -463,12 +478,16 @@ pub(crate) struct TileLocation {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VirtualTextureLayer {
+    /// Color/albedo layer.
     BaseMap = 0,
+    /// Surface normal layer.
     NormalMap = 1,
+    /// Physical properties layer (roughness/metallic).
     PhysicalMap = 2,
 }
 
 impl VirtualTextureLayer {
+    /// Converts a layer index to a `VirtualTextureLayer`, if valid.
     #[must_use]
     pub fn from_index(index: u8) -> Option<Self> {
         match index {
@@ -479,6 +498,7 @@ impl VirtualTextureLayer {
         }
     }
 
+    /// Returns the layer type as a string.
     #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -492,8 +512,12 @@ impl VirtualTextureLayer {
 /// Output from virtual texture extraction
 #[derive(Debug)]
 pub struct VirtualTextureOutput {
+    /// The texture layer type.
     pub layer: VirtualTextureLayer,
+    /// Texture width in pixels.
     pub width: u32,
+    /// Texture height in pixels.
     pub height: u32,
+    /// Raw RGBA pixel data.
     pub data: Vec<u8>,
 }

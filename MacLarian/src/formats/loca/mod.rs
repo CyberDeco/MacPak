@@ -35,5 +35,6 @@ pub struct LocalizedText {
 /// A collection of localized text entries
 #[derive(Debug, Clone, Default)]
 pub struct LocaResource {
+    /// The localized text entries in this resource.
     pub entries: Vec<LocalizedText>,
 }

@@ -76,6 +76,7 @@ pub use definitions::{
     VirtualTextureCommands,
 };
 
+/// Top-level CLI commands.
 #[derive(Subcommand)]
 pub enum Commands {
     /// PAK archive operations (extract, create, list)
@@ -90,6 +91,7 @@ Examples:
   maclarian pak extract \"*.pak\" ./output -f \"Public/**/*.lsf\"
   maclarian pak create ./MyMod MyMod.pak -c lz4")]
     Pak {
+        /// PAK subcommand to execute.
         #[command(subcommand)]
         command: PakCommands,
     },
@@ -149,6 +151,7 @@ Examples:
   maclarian gr2 from-gr2 \"*.GR2\" ./output/ -f gltf
   maclarian gr2 to-gr2 model.glb model.GR2")]
     Gr2 {
+        /// GR2 subcommand to execute.
         #[command(subcommand)]
         command: Gr2Commands,
     },
@@ -170,6 +173,7 @@ Examples:
   maclarian vt extract Textures.gts ./output/ -t MyTexture --layer BM,NM
   maclarian vt create ./textures/ ./output/ -t MyTexture")]
     VirtualTexture {
+        /// Virtual texture subcommand to execute.
         #[command(subcommand)]
         command: VirtualTextureCommands,
     },
@@ -188,6 +192,7 @@ Examples:
   maclarian mods package ./MyMod ./dist/ -c zip
   maclarian mods conflicts Mod1.pak Mod2.pak Mod3.pak")]
     Mods {
+        /// Mod utilities subcommand to execute.
         #[command(subcommand)]
         command: ModCommands,
     },
@@ -203,6 +208,7 @@ Examples:
   maclarian loca search English.loca \"h12345\" --handle
   maclarian loca search English.loca \"quest\" -l 100")]
     Loca {
+        /// LOCA subcommand to execute.
         #[command(subcommand)]
         command: LocaCommands,
     },
@@ -215,6 +221,7 @@ Inspect and analyze DDS texture files.
 Examples:
   maclarian texture info albedo.dds")]
     Texture {
+        /// Texture subcommand to execute.
         #[command(subcommand)]
         command: TextureCommands,
     },

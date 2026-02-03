@@ -3,11 +3,17 @@
 /// Full mod metadata extracted from meta.lsx
 #[derive(Clone, Debug, Default)]
 pub struct ModMetadata {
+    /// Mod display name.
     pub name: String,
+    /// Mod folder name.
     pub folder: String,
+    /// Mod unique identifier (GUID).
     pub uuid: String,
+    /// Mod author name.
     pub author: String,
+    /// Mod description text.
     pub description: String,
+    /// Encoded version number (use `version_string()` to decode).
     pub version64: Option<i64>,
 }
 

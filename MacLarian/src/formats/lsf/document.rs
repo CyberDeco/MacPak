@@ -30,36 +30,57 @@ impl From<u32> for LsfMetadataFormat {
     }
 }
 
+/// An LSF (Larian Save Format) document.
 #[derive(Debug)]
 pub struct LsfDocument {
+    /// Engine version that created this document.
     pub engine_version: u64,
+    /// String name table, organized as buckets of strings.
     pub names: Vec<Vec<String>>,
+    /// All nodes in the document.
     pub nodes: Vec<LsfNode>,
+    /// All attributes in the document.
     pub attributes: Vec<LsfAttribute>,
+    /// Raw attribute value bytes.
     pub values: Vec<u8>,
+    /// Optional keys for each node.
     pub node_keys: Vec<Option<String>>,
+    /// Whether this document has a keys section.
     pub has_keys_section: bool,
+    /// Metadata format used by this document.
     pub metadata_format: LsfMetadataFormat,
 }
 
+/// A node in an LSF document.
 #[derive(Debug, Clone)]
 pub struct LsfNode {
+    /// Outer index into the names table (bucket index).
     pub name_index_outer: usize,
+    /// Inner index into the names table (string index within bucket).
     pub name_index_inner: usize,
+    /// Index of parent node (-1 for root nodes).
     pub parent_index: i32,
+    /// Index of first attribute (-1 if no attributes).
     pub first_attribute_index: i32,
 }
 
+/// An attribute in an LSF document.
 #[derive(Debug, Clone)]
 pub struct LsfAttribute {
+    /// Outer index into the names table (bucket index).
     pub name_index_outer: usize,
+    /// Inner index into the names table (string index within bucket).
     pub name_index_inner: usize,
+    /// Type ID (lower 6 bits) and value length (upper bits).
     pub type_info: u32,
+    /// Index of next attribute in chain (-1 if last).
     pub next_index: i32,
+    /// Byte offset into the values buffer.
     pub offset: usize,
 }
 
 impl LsfDocument {
+    /// Creates a new empty LSF document.
     #[must_use]
     pub fn new() -> Self {
         LsfDocument {

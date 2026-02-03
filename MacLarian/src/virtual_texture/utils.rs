@@ -12,38 +12,56 @@ use std::path::Path;
 /// Information about a GTS file
 #[derive(Debug, Clone, Serialize)]
 pub struct GtsInfo {
+    /// GTS format version.
     pub version: u32,
+    /// Unique identifier for this virtual texture set.
     pub guid: [u8; 16],
+    /// Width of each tile in pixels.
     pub tile_width: i32,
+    /// Height of each tile in pixels.
     pub tile_height: i32,
+    /// Border size around each tile in pixels.
     pub tile_border: i32,
+    /// Number of texture layers (typically 3 for BG3).
     pub num_layers: u32,
+    /// Number of mip levels.
     pub num_levels: u32,
+    /// List of GTP page files.
     pub page_files: Vec<PageFileInfo>,
 }
 
 /// Information about a page file
 #[derive(Debug, Clone, Serialize)]
 pub struct PageFileInfo {
+    /// GTP filename.
     pub filename: String,
+    /// Number of pages in the file.
     pub num_pages: u32,
 }
 
 /// Information about a GTP file
 #[derive(Debug, Clone)]
 pub struct GtpInfo {
+    /// GTP format version.
     pub version: u32,
+    /// Unique identifier matching the parent GTS file.
     pub guid: [u8; 16],
+    /// Total number of pages in the file.
     pub num_pages: usize,
+    /// Number of chunks in each page.
     pub chunks_per_page: Vec<usize>,
 }
 
 /// Result of extracting virtual textures
 #[derive(Debug, Clone)]
 pub struct ExtractResult {
+    /// Number of successfully extracted textures.
     pub extracted: usize,
+    /// Number of failed extractions.
     pub failed: usize,
+    /// Total number of textures attempted.
     pub total: usize,
+    /// Error messages from failed extractions.
     pub errors: Vec<String>,
 }
 

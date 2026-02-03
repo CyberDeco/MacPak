@@ -5,6 +5,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Cursor, Read};
 
+/// Numeric identifier for LSF/LSX/LSJ value types.
 pub type TypeId = u32;
 
 // Type constants used internally for type identification

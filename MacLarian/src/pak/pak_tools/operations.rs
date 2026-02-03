@@ -20,6 +20,7 @@ struct CompressedFile {
     compressed_data: Vec<u8>,
 }
 
+/// High-level PAK archive operations.
 pub struct PakOperations;
 
 impl PakOperations {

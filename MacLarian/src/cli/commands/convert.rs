@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use super::expand_globs;
 use crate::cli::progress::simple_spinner;
 
+/// Execute format conversion for the given sources and destination.
 pub fn execute(
     sources: &[PathBuf],
     destination: &Path,

@@ -8,8 +8,11 @@ use std::path::PathBuf;
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionMethod {
+    /// No compression (raw data).
     None,
+    /// Zlib/DEFLATE compression.
     Zlib,
+    /// LZ4 block compression.
     Lz4,
 }
 
@@ -25,6 +28,7 @@ impl CompressionMethod {
         }
     }
 
+    /// Returns the compression method as a string.
     #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -109,6 +113,7 @@ pub struct PakContents {
 }
 
 impl PakContents {
+    /// Creates a new empty `PakContents` with the given PAK version.
     #[must_use]
     pub fn new(version: u32) -> Self {
         Self {

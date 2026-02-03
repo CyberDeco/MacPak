@@ -101,8 +101,11 @@ pub fn load_vtex_config_xml(mod_root: &Path, mod_name: &str) -> Option<VTexConfi
 /// Parsed `VTexConfig` data from LSF format
 #[derive(Debug)]
 pub struct LsfVTexConfig {
+    /// The tile set name.
     pub tileset_name: String,
+    /// Path to virtual textures output directory.
     pub virtual_textures_path: Option<String>,
+    /// Names of textures in the tile set.
     pub texture_names: Vec<String>,
 }
 

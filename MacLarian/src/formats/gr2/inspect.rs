@@ -14,20 +14,30 @@ use std::path::Path;
 /// Information about a GR2 file.
 #[derive(Debug, Clone)]
 pub struct Gr2Info {
+    /// GR2 format version number.
     pub version: u32,
+    /// Whether the file uses 64-bit pointers.
     pub is_64bit: bool,
+    /// Total file size in bytes.
     pub file_size: u64,
+    /// Number of data sections in the file.
     pub num_sections: usize,
+    /// Information about each section.
     pub sections: Vec<SectionInfo>,
 }
 
 /// Information about a GR2 section.
 #[derive(Debug, Clone)]
 pub struct SectionInfo {
+    /// Section index (0-based).
     pub index: usize,
+    /// Compression method name (e.g., "BitKnit", "None").
     pub compression: String,
+    /// Size of compressed data in bytes.
     pub compressed_size: u32,
+    /// Size of uncompressed data in bytes.
     pub uncompressed_size: u32,
+    /// Compression ratio (compressed/uncompressed), if compressed.
     pub compression_ratio: Option<f64>,
 }
 
@@ -75,34 +85,48 @@ pub fn inspect_gr2<P: AsRef<Path>>(source: P) -> Result<Gr2Info> {
 /// Mesh data extracted from a GR2 file.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Gr2MeshInfo {
+    /// Mesh name from the GR2 file.
     pub name: String,
+    /// Number of vertices in the mesh.
     pub vertex_count: usize,
+    /// Number of triangles in the mesh.
     pub triangle_count: usize,
+    /// Whether the mesh has an associated skeleton.
     pub has_skeleton: bool,
 }
 
 /// Skeleton data extracted from a GR2 file.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Gr2SkeletonInfo {
+    /// Skeleton name from the GR2 file.
     pub name: String,
+    /// Number of bones in the skeleton.
     pub bone_count: usize,
+    /// Information about each bone.
     pub bones: Vec<Gr2BoneInfo>,
 }
 
 /// Bone data from a GR2 skeleton.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Gr2BoneInfo {
+    /// Bone name.
     pub name: String,
+    /// Index of the parent bone (-1 for root bones).
     pub parent_index: i32,
 }
 
 /// Complete GR2 model info including meshes and skeleton.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Gr2ModelInfo {
+    /// Path to the source GR2 file.
     pub file_path: String,
+    /// GR2 format version number.
     pub version: u32,
+    /// Whether the file uses 64-bit pointers.
     pub is_64bit: bool,
+    /// Skeleton data, if present.
     pub skeleton: Option<Gr2SkeletonInfo>,
+    /// List of meshes in the file.
     pub meshes: Vec<Gr2MeshInfo>,
 }
 
