@@ -24,7 +24,9 @@ pub fn search_toolbar(state: SearchState, config_state: ConfigState) -> impl Int
             .placeholder("Search for files, UUIDs, or content...")
             .style(|s| {
                 s.flex_grow(1.0)
-                    .max_width(400.0)
+                    .flex_basis(0.0)
+                    .width_full()
+                    .min_width(100.0)
                     .class(PlaceholderTextClass, |s| {
                         s.color(Color::rgb8(120, 120, 120))
                     })
