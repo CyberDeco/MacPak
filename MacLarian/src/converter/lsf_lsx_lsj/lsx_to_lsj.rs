@@ -1,7 +1,3 @@
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! LSX to LSJ conversion
 //!
 //! Key insight: In LSJ, the region IS the root node.

@@ -3,9 +3,7 @@
 //! This module provides high-level functions for extracting GTS/GTP virtual textures,
 //! including parallel batch extraction.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};

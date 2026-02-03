@@ -1,8 +1,6 @@
 //! LSX document structures
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 use serde::{Deserialize, Serialize};
 

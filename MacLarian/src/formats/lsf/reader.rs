@@ -2,9 +2,7 @@
 //!
 //! Based on `LSLib`'s `LSFReader.cs` implementation.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT), 2023 saghm (xiba, Apache-2.0)
 //!
-//! SPDX-License-Identifier: MIT AND Apache-2.0
 
 // Binary format parsing requires many intentional casts between integer types
 #![allow(

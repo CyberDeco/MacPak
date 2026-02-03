@@ -3,9 +3,7 @@
 //! This module provides parsing and decompression for Granny2 GR2 files
 //! used by Baldur's Gate 3 and Divinity: Original Sin 2.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 #![allow(clippy::cast_possible_truncation)]
 

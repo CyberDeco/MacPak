@@ -1,7 +1,3 @@
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! LOCA and XML localization format conversions
 //!
 //! Handles conversions between Larian's localization formats:

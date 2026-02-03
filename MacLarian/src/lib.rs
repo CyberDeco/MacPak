@@ -49,8 +49,7 @@
 //! use maclarian::prelude::*;
 //!
 //! // Now you have access to:
-//! // - PakOperations, SearchIndex, FileType
-//! // - LsfDocument, LsxDocument, LsjDocument
+//! // - PakOperations, LsfDocument, LsxDocument, LsjDocument
 //! // - VirtualTextureExtractor, GtsFile, GtpFile
 //! // - Error, Result, and more
 //! ```
@@ -104,7 +103,7 @@ pub mod prelude {
         Gr2ExtractionOptions, Gr2ExtractionResult, extract_gr2_with_textures,
         process_extracted_gr2, process_extracted_gr2_to_dir,
     };
-    pub use crate::merged::{MergedDatabase, MergedResolver, VisualAsset};
+    pub use crate::merged::{GameDataResolver, MergedDatabase, MergedResolver, VisualAsset};
 
     // Mods module exports
     pub use crate::mods::{

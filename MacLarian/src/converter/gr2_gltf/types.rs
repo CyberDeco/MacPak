@@ -1,8 +1,6 @@
 //! Types for GR2/glTF conversion progress tracking
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 // ============================================================================
 // Progress Types

@@ -3,9 +3,7 @@
 //! Loads glTF/GLB files and converts them to intermediate structures
 //! suitable for GR2 export.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 #![allow(clippy::never_loop, clippy::needless_range_loop)]
 

@@ -69,7 +69,6 @@ maclarian = "0.1.0"
 [dependencies]
 maclarian = { version = "0.1", default-features = false }
 ```
-</details>
 
 <details>
   <summary><b>Working with PAK Files</b></summary>
@@ -123,8 +122,7 @@ The prelude provides convenient access to commonly used types:
 use maclarian::prelude::*;
 
 // Now you have access to:
-// - PakOperations, SearchIndex, FileType
-// - LsfDocument, LsxDocument, LsjDocument
+// - PakOperations, LsfDocument, LsxDocument, LsjDocument
 // - VirtualTextureExtractor, GtsFile, GtpFile
 // - Error, Result, and more
 ```

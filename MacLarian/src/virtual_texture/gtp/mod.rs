@@ -3,9 +3,7 @@
 //! GTP files contain the actual tile data for virtual textures.
 //! Each file consists of pages, and each page contains multiple chunks (tiles).
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 

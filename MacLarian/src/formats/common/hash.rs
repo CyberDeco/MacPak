@@ -1,8 +1,6 @@
 //! Hashing utilities
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 /// C# `String.GetHashCode()` equivalent for `LSLib` compatibility
 #[must_use]

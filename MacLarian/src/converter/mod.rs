@@ -1,7 +1,3 @@
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! Format conversion utilities
 //!
 //! This module handles conversions between different Larian file formats:

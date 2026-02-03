@@ -2,9 +2,7 @@
 //!
 //! Contains common data conversion functions used by both directions.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 #![allow(clippy::cast_possible_truncation, clippy::if_same_then_else)]
 

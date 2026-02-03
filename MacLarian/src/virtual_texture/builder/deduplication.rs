@@ -1,7 +1,5 @@
 //! Tile deduplication using MD5 hashing
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`
-//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 use super::tile_processor::ProcessedTile;
 use std::collections::HashMap;

@@ -1,8 +1,6 @@
 //! GTS file writer
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 use super::fourcc::FourCCTree;
 use crate::error::Result;

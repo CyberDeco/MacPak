@@ -1,8 +1,6 @@
 //! `FourCC` metadata tree builder and serializer
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 //!
 //! The `FourCC` metadata in GTS files uses a hierarchical tree structure
 //! with format codes indicating node types:

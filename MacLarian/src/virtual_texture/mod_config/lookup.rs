@@ -1,8 +1,6 @@
 //! Lookup and extraction functions for virtual textures
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 use std::path::{Path, PathBuf};
 

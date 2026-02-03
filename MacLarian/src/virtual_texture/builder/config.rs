@@ -1,8 +1,6 @@
 //! Configuration types for virtual texture building
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 use std::path::PathBuf;
 

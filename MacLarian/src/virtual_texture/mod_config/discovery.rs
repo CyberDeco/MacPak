@@ -1,8 +1,6 @@
 //! Virtual texture discovery functions
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 use quick_xml::de::from_str as xml_from_str;
 use std::collections::HashSet;

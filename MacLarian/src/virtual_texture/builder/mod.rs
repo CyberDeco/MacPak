@@ -1,8 +1,6 @@
 //! Virtual texture builder module
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 //!
 //! This module provides functionality for creating virtual textures (GTS/GTP files)
 //! from source DDS textures.

@@ -1,7 +1,3 @@
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! glTF 2.0 types and builder.
 //!
 //! This module provides types and utilities for constructing glTF 2.0 documents.

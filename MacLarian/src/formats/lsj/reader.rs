@@ -1,8 +1,6 @@
 //! LSJ file reading
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 use super::document::LsjDocument;
 use crate::error::Result;

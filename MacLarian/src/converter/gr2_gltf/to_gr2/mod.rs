@@ -5,9 +5,7 @@
 //! Note: Compression is currently disabled/broken. GR2 files are written
 //! with uncompressed data for now.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 #![allow(
     clippy::cast_possible_truncation,

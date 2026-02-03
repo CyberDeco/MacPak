@@ -3,9 +3,7 @@
 //! This is a replacement for the larian-formats crate's PAK handling,
 //! with better error handling, progress callbacks, and error recovery.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT), 2023 saghm (xiba, Apache-2.0)
 //!
-//! SPDX-License-Identifier: MIT AND Apache-2.0
 
 mod reader;
 mod types;

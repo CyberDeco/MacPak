@@ -3,9 +3,7 @@
 //! GTS (Game Texture Set) files contain metadata about virtual textures.
 //! GTP (Game Texture Page) files contain the actual tile data.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 #![allow(clippy::cast_possible_truncation, clippy::doc_markdown)]
 

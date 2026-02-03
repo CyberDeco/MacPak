@@ -2,8 +2,6 @@
 //!
 //! Note: `virtual_texture` has been promoted to a top-level module.
 //! It is re-exported here for backwards compatibility.
-//!
-//! as they are GUI-specific features.
 
 pub mod common;
 pub mod gr2;

@@ -1,8 +1,6 @@
 //! DDS decoding - Block Compression (BC) decompression using `bcdec_rs`
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //!
-//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 #![allow(clippy::cast_possible_truncation, clippy::doc_markdown)]
 

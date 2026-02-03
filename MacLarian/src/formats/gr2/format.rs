@@ -2,9 +2,7 @@
 //!
 //! Based on RAD Game Tools Granny2 format, version 2.11.8.0.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 // Format specification fields - kept for documentation and future extensibility
 #![allow(dead_code)]

@@ -1,8 +1,6 @@
 //! GR2 format structures and parser.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 mod reader;
 mod types;

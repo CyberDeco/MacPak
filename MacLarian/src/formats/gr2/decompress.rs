@@ -4,9 +4,7 @@
 //! - <https://github.com/neptuwunium/Knit/blob/develop/Knit/Compression/GrannyBitKnitCompression.cs>
 //! - <https://github.com/eiz/pybg3/blob/9ebda24314822bf35580e74bb7917f666ae046c6/src/rans.h>
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco` (`MacPak`, `PolyForm` Noncommercial), 2025 Legiayayana (Knit, EUPL-1.2), 2024 eiz (pybg3, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 #![allow(clippy::cast_possible_truncation)]
 

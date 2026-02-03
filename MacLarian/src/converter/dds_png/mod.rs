@@ -3,9 +3,7 @@
 //! Converts between DDS (`DirectDraw` Surface) texture files and PNG images.
 //! Supports common DDS formats used in BG3: BC1, BC2, BC3, BC4, BC5, BC7, and uncompressed.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //!
-//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 #![allow(clippy::cast_possible_truncation)]
 

@@ -1,8 +1,6 @@
 //! Types for DDS/PNG image conversion progress tracking
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`
 //!
-//! SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 // ============================================================================
 // Progress Types

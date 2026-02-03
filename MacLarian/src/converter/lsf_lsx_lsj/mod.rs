@@ -10,9 +10,7 @@
 //! - LSX ↔ LSJ: Direct conversion
 //! - LSF ↔ LSJ: Via LSX intermediate
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 mod lsf_to_lsj;
 mod lsf_to_lsx;

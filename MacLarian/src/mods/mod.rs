@@ -1,8 +1,8 @@
-//! Mod utilities - info.json generation and validation for BG3 mods
+//! Mod utilities - meta.lsx, info.json generation, and validation for BG3 mods
 //!
 //! This module provides tools for working with BG3 mod packages:
-//! - Generate info.json for `BaldursModManager` compatibility
 //! - Generate meta.lsx mod metadata files
+//! - Generate info.json for `BaldursModManager` import
 //! - Validate mod directory structure
 //! - PAK integrity checking
 //! - Find and parse mod metadata

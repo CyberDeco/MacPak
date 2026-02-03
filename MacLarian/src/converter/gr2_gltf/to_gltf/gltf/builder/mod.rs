@@ -1,8 +1,6 @@
 //! glTF 2.0 document builder.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 #![allow(clippy::same_item_push)]
 

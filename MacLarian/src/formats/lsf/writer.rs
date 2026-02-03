@@ -11,9 +11,7 @@
 //! and `allowChunked=true` uses Frame format. The compression flags in the header
 //! (0x22 = LZ4 + `DefaultCompress`) indicate the method but not per-section format.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT), 2023 saghm (xiba, Apache-2.0)
 //!
-//! SPDX-License-Identifier: MIT AND Apache-2.0
 
 // Binary format writing requires many intentional casts between integer types
 #![allow(

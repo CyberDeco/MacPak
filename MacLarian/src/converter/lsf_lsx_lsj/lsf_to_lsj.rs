@@ -1,7 +1,3 @@
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
-//!
-//! SPDX-License-Identifier: MIT
-//!
 //! LSF to LSJ conversion (via LSX intermediate)
 
 use crate::error::Result;

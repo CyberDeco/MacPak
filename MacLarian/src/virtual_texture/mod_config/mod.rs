@@ -1,8 +1,6 @@
 //! Mod configuration file handlers for virtual textures
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 //!
 //! This module handles parsing mod configuration files that map `GTex` hashes
 //! to GTS paths:

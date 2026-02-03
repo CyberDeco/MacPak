@@ -1,8 +1,6 @@
 //! `.loca` localization file format
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 //!
 //! Binary format for Baldur's Gate 3 localization strings.
 //! Use `read_loca` / `write_loca` to read and write files,

@@ -2,9 +2,7 @@
 //!
 //! Helper functions for working with GTS/GTP files.
 //!
-//! SPDX-FileCopyrightText: 2025 `CyberDeco`, 2015 Norbyte (`LSLib`, MIT)
 //!
-//! SPDX-License-Identifier: MIT
 
 use super::{GtpFile, GtsFile};
 use crate::error::{Error, Result};
