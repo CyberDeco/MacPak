@@ -45,7 +45,7 @@
 //!
 //! The prelude provides convenient access to commonly used types:
 //!
-//! ```
+//! ```no_run
 //! use maclarian::prelude::*;
 //!
 //! // Now you have access to:
