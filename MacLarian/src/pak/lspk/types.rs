@@ -71,7 +71,7 @@ pub(crate) struct LspkFooter {
 
 /// Entry in the file table describing a file in the PAK
 #[derive(Debug, Clone)]
-pub(crate) struct FileTableEntry {
+pub struct FileTableEntry {
     /// Path of the file within the archive
     pub path: PathBuf,
     /// Offset of the compressed data from the start of the archive part

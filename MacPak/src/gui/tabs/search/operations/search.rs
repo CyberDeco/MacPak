@@ -65,7 +65,7 @@ pub fn perform_search(state: SearchState) {
 
         // 1. Get fulltext results (text files with content matches)
         let fulltext_results: Vec<SearchResult> = if idx.has_fulltext() {
-            let progress_callback = |progress: &maclarian::search::SearchProgress| {
+            let progress_callback = |progress: &crate::search::SearchProgress| {
                 let name = progress
                     .current_file
                     .as_deref()

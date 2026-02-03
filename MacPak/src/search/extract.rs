@@ -2,8 +2,8 @@
 //!
 //! Extracts searchable text from various file formats for indexing.
 
-use crate::formats::common::extract_value;
-use crate::formats::lsf::parse_lsf_bytes;
+use maclarian::formats::common::extract_value;
+use maclarian::formats::lsf::parse_lsf_bytes;
 
 use super::FileType;
 

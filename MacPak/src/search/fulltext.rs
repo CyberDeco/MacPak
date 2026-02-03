@@ -10,7 +10,7 @@ use tantivy::schema::{Field, STORED, STRING, Schema, TEXT, Value};
 use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument, doc};
 
 use super::{SearchPhase, SearchProgress, SearchProgressCallback};
-use crate::error::{Error, Result};
+use maclarian::error::{Error, Result};
 
 /// Full-text search index using Tantivy with in-memory storage.
 ///

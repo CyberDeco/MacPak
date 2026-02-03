@@ -10,10 +10,10 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::converter::lsf_lsx_lsj::to_lsx;
-use crate::error::{Error, Result};
-use crate::formats::lsf::parse_lsf_bytes;
-use crate::pak::PakOperations;
+use maclarian::converter::to_lsx;
+use maclarian::error::{Error, Result};
+use maclarian::formats::lsf::parse_lsf_bytes;
+use maclarian::pak::PakOperations;
 
 use super::{FileType, IndexedFile};
 

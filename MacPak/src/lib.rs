@@ -109,6 +109,9 @@ pub mod formats;
 #[cfg(feature = "gui")]
 pub mod gui;
 
+#[cfg(feature = "gui")]
+pub mod search;
+
 #[cfg(feature = "viewer")]
 pub mod viewer;
 

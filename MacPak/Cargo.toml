@@ -48,6 +48,8 @@ gui = [
     "dep:rayon",
     # Config persistence
     "dep:dirs",
+    # Full-text search
+    "dep:tantivy",
 ]
 viewer = [
     "gui",  # viewer requires gui
@@ -93,6 +95,8 @@ byteorder = { version = "1.5", optional = true }
 rayon = { version = "1.10", optional = true }
 # Config persistence
 dirs = { version = "5.0", optional = true }
+# Full-text search (moved from maclarian)
+tantivy = { version = "0.22", optional = true }
 
 # Viewer dependencies (optional)
 clap = { version = "4.4", features = ["derive", "cargo"], optional = true }

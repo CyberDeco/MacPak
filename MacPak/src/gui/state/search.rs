@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 
 use floem::prelude::*;
-use maclarian::search::{ContentCache, FileType, IndexedFile, SearchIndex};
+use crate::search::{ContentCache, FileType, IndexedFile, SearchIndex};
 
 /// Index status for UI display
 #[derive(Clone, Debug, PartialEq)]

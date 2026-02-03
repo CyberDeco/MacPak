@@ -81,7 +81,7 @@ pub fn auto_load_cached_index(state: SearchState) {
 }
 
 /// Save the index to the cache directory (called automatically after building)
-pub fn auto_save_index(index: Arc<RwLock<maclarian::search::SearchIndex>>) {
+pub fn auto_save_index(index: Arc<RwLock<crate::search::SearchIndex>>) {
     let cache_path = match get_index_cache_path() {
         Some(p) => p,
         None => return,

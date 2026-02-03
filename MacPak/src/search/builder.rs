@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 
 use rayon::prelude::*;
 
-use crate::error::Result;
-use crate::pak::PakReaderCache;
-use crate::pak::lspk::LspkReader;
+use maclarian::error::Result;
+use maclarian::pak::lspk::LspkReader;
+use maclarian::pak::PakReaderCache;
 
 use super::SearchIndex;
 use super::extract;
@@ -254,7 +254,7 @@ impl SearchIndex {
         // Commit and reload
         writer
             .commit()
-            .map_err(|e| crate::error::Error::SearchError(format!("Commit failed: {e}")))?;
+            .map_err(|e| maclarian::error::Error::SearchError(format!("Commit failed: {e}")))?;
         fulltext.reload()?;
 
         tracing::info!(

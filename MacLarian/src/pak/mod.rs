@@ -4,17 +4,16 @@ mod batch;
 mod creator;
 mod extractor;
 mod lister;
-pub(crate) mod lspk;
+pub mod lspk;
 pub mod pak_tools;
 mod smart_extract;
 
 // Primary public API
-pub use pak_tools::{PakOperations, ProgressCallback};
+pub use pak_tools::{PakOperations, PakReaderCache, ProgressCallback};
 
 // Internal API (used by search module)
 pub use creator::create_pak;
 pub use lspk::CompressionMethod;
-pub(crate) use pak_tools::PakReaderCache;
 
 // Re-export for convenience
 pub use extractor::extract_pak;

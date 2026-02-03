@@ -95,7 +95,7 @@ pub fn build_index(state: SearchState) {
 
                         // Phase 2: Build fulltext index (slower, extracts content)
                         // Progress is reported via SEARCH_PROGRESS in the callback
-                        let progress_callback = |progress: &maclarian::search::SearchProgress| {
+                        let progress_callback = |progress: &crate::search::SearchProgress| {
                             let name = progress
                                 .current_file
                                 .as_deref()

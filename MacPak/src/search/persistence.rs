@@ -5,7 +5,7 @@ use std::path::Path;
 
 use rayon::prelude::*;
 
-use crate::error::Result;
+use maclarian::error::Result;
 
 use super::SearchIndex;
 use super::fulltext::FullTextIndex;
@@ -41,7 +41,7 @@ impl SearchIndex {
 
         // Checks for fulltext index
         if self.fulltext.is_none() {
-            return Err(crate::error::Error::SearchError(
+            return Err(maclarian::error::Error::SearchError(
                 "No fulltext index to export".to_string(),
             ));
         }
@@ -65,7 +65,7 @@ impl SearchIndex {
         ));
         let entries_path = dir.join("entries.json");
         let entries_json = serde_json::to_string(&self.entries).map_err(|e| {
-            crate::error::Error::SearchError(format!("Failed to serialize entries: {e}"))
+            maclarian::error::Error::SearchError(format!("Failed to serialize entries: {e}"))
         })?;
         std::fs::write(&entries_path, entries_json)?;
 
@@ -84,7 +84,7 @@ impl SearchIndex {
         };
         let meta_path = dir.join("metadata.json");
         let meta_json = serde_json::to_string_pretty(&metadata).map_err(|e| {
-            crate::error::Error::SearchError(format!("Failed to serialize metadata: {e}"))
+            maclarian::error::Error::SearchError(format!("Failed to serialize metadata: {e}"))
         })?;
         std::fs::write(&meta_path, meta_json)?;
 
@@ -129,7 +129,7 @@ impl SearchIndex {
         // Sequential write (IndexWriter is not thread-safe for concurrent adds)
         for (i, doc) in all_docs.into_iter().enumerate() {
             writer.add_document(doc).map_err(|e| {
-                crate::error::Error::SearchError(format!("Failed to copy doc: {e}"))
+                maclarian::error::Error::SearchError(format!("Failed to copy doc: {e}"))
             })?;
             if i % 5000 == 0 {
                 progress(&SearchProgress::with_file(
@@ -149,7 +149,7 @@ impl SearchIndex {
         ));
         writer
             .commit()
-            .map_err(|e| crate::error::Error::SearchError(format!("Export commit failed: {e}")))?;
+            .map_err(|e| maclarian::error::Error::SearchError(format!("Export commit failed: {e}")))?;
 
         progress(&SearchProgress::new(
             SearchPhase::Complete,
@@ -196,7 +196,7 @@ impl SearchIndex {
         let meta_path = dir.join("metadata.json");
         let meta_json = std::fs::read_to_string(&meta_path)?;
         let metadata: IndexMetadata = serde_json::from_str(&meta_json).map_err(|e| {
-            crate::error::Error::SearchError(format!("Failed to parse metadata: {e}"))
+            maclarian::error::Error::SearchError(format!("Failed to parse metadata: {e}"))
         })?;
 
         progress(&SearchProgress::with_file(
@@ -211,7 +211,7 @@ impl SearchIndex {
         let entries: HashMap<String, IndexedFile> = if entries_path.exists() {
             let entries_json = std::fs::read_to_string(&entries_path)?;
             serde_json::from_str(&entries_json).map_err(|e| {
-                crate::error::Error::SearchError(format!("Failed to parse entries: {e}"))
+                maclarian::error::Error::SearchError(format!("Failed to parse entries: {e}"))
             })?
         } else {
             HashMap::new()

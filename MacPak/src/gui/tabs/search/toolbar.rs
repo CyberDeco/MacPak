@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use floem::keyboard::{Key, NamedKey};
 use floem::prelude::*;
 use floem::views::PlaceholderTextClass;
-use maclarian::search::FileType;
+use crate::search::FileType;
 
 use crate::gui::state::{ConfigState, IndexStatus, SearchState};
 

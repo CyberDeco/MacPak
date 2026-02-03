@@ -67,7 +67,6 @@ pub mod gr2_extraction;
 pub mod merged;
 pub mod mods;
 pub mod pak;
-pub mod search;
 pub mod utils;
 
 // Top-level domain modules (promoted from formats/)
@@ -112,8 +111,6 @@ pub mod prelude {
         InfoJsonResult, ModValidationResult, generate_info_json, validate_mod_structure,
     };
 
-    // Search module exports (public types only)
-    pub use crate::search::{FileType, FullTextResult, IndexedFile, SearchIndex};
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
