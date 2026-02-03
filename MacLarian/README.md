@@ -77,16 +77,16 @@ maclarian = { version = "0.1", default-features = false }
 use maclarian::pak::PakOperations;
 
 // List contents of a PAK file
-let contents = PakOperations::list("Shared.pak")?;
-println!("Found {} files", contents.len());
-for entry in contents.files {
-    println!("{}: {} bytes", entry.name, entry.size);
+let files = PakOperations::list("Shared.pak")?;
+println!("Found {} files", files.len());
+for path in &files {
+    println!("{path}");
 }
 
 // Extract an entire PAK file
 PakOperations::extract("Shared.pak", "output/")?;
 
-// Extract a specific file from a PAK file
+// Read a specific file from a PAK without extracting
 let data = PakOperations::read_file_bytes("Shared.pak", "Public/Shared/meta.lsx")?;
 ```
 </details>
