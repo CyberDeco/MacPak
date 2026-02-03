@@ -56,7 +56,6 @@ uuid = { version = "1.0", features = ["v4"] }
 
 # File system
 walkdir = "2.4"             # Recursive directory traversal
-dirs = "5.0"                # Platform-specific directories (cache, data)
 tempfile = "3.14"           # Temp directories for LSF→LSX conversion
 shellexpand = "3.1"         # Tilde expansion for paths
 glob = "0.3"                # Cross-platform glob pattern expansion
@@ -100,7 +99,6 @@ path = "src/bin/maclarian.rs"
 required-features = ["cli"]
 
 [dev-dependencies]
-pretty_assertions = "1.4"
 tracing-subscriber = "0.3"
 
 [lints.clippy]
