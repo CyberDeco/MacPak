@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 authors = ["CyberDeco"]
-license-file = "LICENSE"
+license = "PolyForm-Noncommercial-1.0.0"
 repository = "https://github.com/CyberDeco/MacPak/tree/main/MacLarian"
 readme = "README.md"
 description = "Larian file format library for Baldur's Gate 3 - PAK, LSF, LSX, GR2, DDS, and more"
@@ -99,6 +99,7 @@ path = "src/bin/maclarian.rs"
 required-features = ["cli"]
 
 [dev-dependencies]
+pretty_assertions = "1.4"
 tracing-subscriber = "0.3"
 
 [lints.clippy]
