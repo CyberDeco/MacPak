@@ -90,7 +90,14 @@ impl SearchIndex {
 
         // Create a new index in the directory with larger heap for faster writes
         let ft = self.fulltext.as_ref().unwrap();
-        let dest_index = FullTextIndex::create_in_dir(&dir.join("tantivy"))?;
+        let tantivy_dir = dir.join("tantivy");
+
+        // Remove existing tantivy index if present (for rebuild/overwrite)
+        if tantivy_dir.exists() {
+            std::fs::remove_dir_all(&tantivy_dir)?;
+        }
+
+        let dest_index = FullTextIndex::create_in_dir(&tantivy_dir)?;
         let mut writer = dest_index.writer(500_000_000)?; // 500MB heap for faster batching
 
         // Count total documents for progress
@@ -245,6 +252,9 @@ impl SearchIndex {
         let tantivy_dir = dir.join("tantivy");
         let fulltext = FullTextIndex::open_from_dir(&tantivy_dir)?;
 
+        // Reader must be reloaded to see segments from disk with Manual reload policy
+        fulltext.reload()?;
+
         // Update state
         self.entries = entries;
         self.filename_index = filename_index;
@@ -256,10 +266,9 @@ impl SearchIndex {
         progress(&SearchProgress::new(SearchPhase::Complete, 4, 4));
 
         tracing::info!(
-            "Imported index from {} ({} files, {} docs from {} paks)",
+            "Imported index from {} ({} files from {} paks)",
             dir.display(),
             self.entries.len(),
-            metadata.fulltext_doc_count,
             metadata.pak_count
         );
 

@@ -487,6 +487,7 @@ fn parse_tagged_text(node: &LsjNode) -> Option<TaggedText> {
                                 LsjAttribute::Simple { value, .. } => {
                                     (value.as_str().unwrap_or("").to_string(), None, None)
                                 }
+                                _ => (String::new(), None, None),
                             }
                         } else {
                             (String::new(), None, None)
@@ -614,6 +615,7 @@ fn get_string_value(attr: &LsjAttribute) -> String {
         LsjAttribute::TranslatedFSString { value, handle, .. } => {
             value.clone().unwrap_or_else(|| handle.clone())
         }
+        _ => String::new(),
     }
 }
 
