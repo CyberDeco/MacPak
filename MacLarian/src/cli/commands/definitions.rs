@@ -339,18 +339,23 @@ pub enum TextureCommands {
 /// Mod utility commands
 #[derive(Subcommand)]
 pub enum ModCommands {
-    /// Validate mod directory or PAK file structure
+    /// Validate mod structure, PAK integrity, or directory for PAK creation
     Validate {
-        /// Path to mod directory, PAK file, or folder containing mods
-        source: PathBuf,
+        /// Path(s) to mod directory, PAK file(s), or folder containing mods
+        #[arg(required = true)]
+        source: Vec<PathBuf>,
 
         /// Recursively scan directory for all mods
         #[arg(short, long)]
         recursive: bool,
 
-        /// Check PAK file integrity (verify files can be read)
+        /// Check PAK file integrity (verify all files can be read/decompressed)
         #[arg(short = 'i', long)]
         check_integrity: bool,
+
+        /// Validate directory can be packed into a PAK
+        #[arg(short = 'd', long)]
+        dry_run: bool,
 
         /// Only check PAK files (skip directories)
         #[arg(long)]
@@ -359,27 +364,6 @@ pub enum ModCommands {
         /// Only check directories (skip PAK files)
         #[arg(long)]
         dirs_only: bool,
-
-        /// Suppress progress output
-        #[arg(short, long)]
-        quiet: bool,
-    },
-
-    /// Validate directory can be packed into a PAK (dry run)
-    DryRun {
-        /// Directory to validate for PAK creation
-        source: PathBuf,
-
-        /// Suppress progress output
-        #[arg(short, long)]
-        quiet: bool,
-    },
-
-    /// Check PAK file integrity
-    Integrity {
-        /// PAK file(s) to check
-        #[arg(required = true)]
-        source: Vec<PathBuf>,
 
         /// Suppress progress output
         #[arg(short, long)]
@@ -444,6 +428,71 @@ pub enum ModCommands {
         output: Option<PathBuf>,
 
         /// Suppress extra output
+        #[arg(short, long)]
+        quiet: bool,
+    },
+}
+
+/// Diff and merge commands
+#[derive(Subcommand)]
+pub enum DiffCommands {
+    /// Compare two LSF/LSX files
+    Compare {
+        /// First file (old/base)
+        old: PathBuf,
+
+        /// Second file (new)
+        new: PathBuf,
+
+        /// Ignore whitespace differences
+        #[arg(short = 'w', long)]
+        ignore_whitespace: bool,
+
+        /// Ignore version header differences
+        #[arg(long)]
+        ignore_version: bool,
+
+        /// Match nodes by key attribute when available
+        #[arg(short = 'k', long)]
+        match_by_key: bool,
+
+        /// Output format (text or json)
+        #[arg(short, long, default_value = "text")]
+        format: String,
+
+        /// Suppress summary output
+        #[arg(short, long)]
+        quiet: bool,
+    },
+
+    /// Three-way merge of LSF/LSX files
+    Merge {
+        /// Base file (common ancestor)
+        base: PathBuf,
+
+        /// Our changes
+        ours: PathBuf,
+
+        /// Their changes
+        theirs: PathBuf,
+
+        /// Output file for merged result
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Prefer our changes on conflict
+        #[arg(long)]
+        prefer_ours: bool,
+
+        /// Prefer their changes on conflict
+        #[arg(long)]
+        prefer_theirs: bool,
+
+        /// Match nodes by key attribute when available
+        #[arg(short = 'k', long)]
+        match_by_key: bool,
+
+        /// Suppress progress output
         #[arg(short, long)]
         quiet: bool,
     },

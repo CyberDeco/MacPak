@@ -15,21 +15,70 @@ use crate::mods::{
     validate_mod_structure, validate_pak_mod_structure,
 };
 
-/// Validate mod structure with batch support
-pub fn validate_batch(
-    source: &Path,
+/// Unified validation command: mod structure, PAK integrity, and dry-run for PAK creation
+pub fn validate(
+    sources: &[std::path::PathBuf],
     recursive: bool,
+    check_integrity: bool,
+    dry_run: bool,
+    paks_only: bool,
+    dirs_only: bool,
+    quiet: bool,
+) -> Result<()> {
+    // Handle dry-run mode (validates directories for PAK creation)
+    if dry_run {
+        return validate_dry_run(sources, quiet);
+    }
+
+    // Handle multiple sources with --check-integrity (PAK integrity check)
+    if sources.len() > 1 || (sources.len() == 1 && check_integrity && !recursive) {
+        let all_paks = sources.iter().all(|s| {
+            s.extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("pak"))
+        });
+
+        // If all sources are PAK files with --check-integrity, do integrity-only check
+        if all_paks && check_integrity {
+            return validate_integrity(sources, quiet);
+        }
+    }
+
+    // Single source, non-recursive validation
+    if sources.len() == 1 && !recursive {
+        return validate_single(&sources[0], check_integrity, quiet);
+    }
+
+    // Recursive/batch validation
+    if sources.len() == 1 {
+        return validate_recursive(&sources[0], check_integrity, paks_only, dirs_only, quiet);
+    }
+
+    // Multiple sources - validate each
+    let mut all_valid = true;
+    for source in sources {
+        if !quiet {
+            println!("Validating: {}", source.display());
+        }
+        if validate_single(source, check_integrity, quiet).is_err() {
+            all_valid = false;
+        }
+    }
+
+    if all_valid {
+        Ok(())
+    } else {
+        std::process::exit(1);
+    }
+}
+
+/// Validate directories recursively for mods
+fn validate_recursive(
+    source: &Path,
     check_integrity: bool,
     paks_only: bool,
     dirs_only: bool,
     quiet: bool,
 ) -> Result<()> {
-    // If not recursive, use single-mod validation
-    if !recursive {
-        return validate_single(source, check_integrity, quiet);
-    }
-
-    // Batch validation
     let options = BatchValidationOptions {
         include_paks: !dirs_only,
         include_directories: !paks_only,
@@ -189,54 +238,77 @@ fn validate_single(source: &Path, check_integrity: bool, quiet: bool) -> Result<
 }
 
 /// Dry-run PAK creation validation
-pub fn dry_run(source: &Path, quiet: bool) -> Result<()> {
-    let pb = if quiet {
-        None
-    } else {
-        Some(simple_spinner("Validating directory for PAK creation..."))
-    };
+fn validate_dry_run(sources: &[std::path::PathBuf], quiet: bool) -> Result<()> {
+    let mut all_valid = true;
 
-    let result = crate::mods::validate_for_pak_creation_with_progress(source, &|p| {
-        if let Some(ref pb) = pb {
-            if let Some(ref file) = p.current_file {
-                pb.set_message(file.clone());
+    for source in sources {
+        let pb = if quiet {
+            None
+        } else {
+            Some(simple_spinner(&format!(
+                "Validating {} for PAK creation...",
+                source.display()
+            )))
+        };
+
+        let result = crate::mods::validate_for_pak_creation_with_progress(source, &|p| {
+            if let Some(ref pb) = pb {
+                if let Some(ref file) = p.current_file {
+                    pb.set_message(file.clone());
+                }
+            }
+        })?;
+
+        if let Some(pb) = pb {
+            pb.finish_and_clear();
+        }
+
+        // Print results
+        if sources.len() > 1 {
+            println!("{}:", source.display());
+        }
+        println!("Files: {}", result.file_count);
+        println!(
+            "Total size: {} bytes ({:.2} MB)",
+            result.total_size,
+            result.total_size as f64 / 1024.0 / 1024.0
+        );
+
+        if !result.errors.is_empty() {
+            println!("\nErrors:");
+            for error in &result.errors {
+                println!("  ✗ {error}");
             }
         }
-    })?;
 
-    if let Some(pb) = pb {
-        pb.finish_and_clear();
-    }
+        if !result.warnings.is_empty() {
+            println!("\nWarnings:");
+            for warning in &result.warnings {
+                println!("  ⚠ {warning}");
+            }
+        }
 
-    // Print results
-    println!("Files: {}", result.file_count);
-    println!("Total size: {} bytes ({:.2} MB)", result.total_size, result.total_size as f64 / 1024.0 / 1024.0);
+        if result.valid {
+            println!("\nDry run: PAK creation would succeed");
+        } else {
+            println!("\nDry run: PAK creation would FAIL");
+            all_valid = false;
+        }
 
-    if !result.errors.is_empty() {
-        println!("\nErrors:");
-        for error in &result.errors {
-            println!("  ✗ {error}");
+        if sources.len() > 1 {
+            println!();
         }
     }
 
-    if !result.warnings.is_empty() {
-        println!("\nWarnings:");
-        for warning in &result.warnings {
-            println!("  ⚠ {warning}");
-        }
-    }
-
-    if result.valid {
-        println!("\nDry run: PAK creation would succeed");
+    if all_valid {
         Ok(())
     } else {
-        println!("\nDry run: PAK creation would FAIL");
         std::process::exit(1);
     }
 }
 
 /// Check PAK file integrity
-pub fn integrity(sources: &[std::path::PathBuf], quiet: bool) -> Result<()> {
+fn validate_integrity(sources: &[std::path::PathBuf], quiet: bool) -> Result<()> {
     let mut all_valid = true;
 
     for source in sources {

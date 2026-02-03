@@ -2,9 +2,10 @@
 
 use super::Commands;
 use super::definitions::{
-    Gr2Commands, LocaCommands, ModCommands, PakCommands, TextureCommands, VirtualTextureCommands,
+    DiffCommands, Gr2Commands, LocaCommands, ModCommands, PakCommands, TextureCommands,
+    VirtualTextureCommands,
 };
-use super::{convert, gr2, loca, mod_cmd, pak, texture, virtual_texture};
+use super::{convert, diff, gr2, loca, mod_cmd, pak, texture, virtual_texture};
 
 impl Commands {
     pub fn execute(&self) -> anyhow::Result<()> {
@@ -28,6 +29,7 @@ impl Commands {
             Commands::Mods { command } => command.execute(),
             Commands::Loca { command } => command.execute(),
             Commands::Texture { command } => command.execute(),
+            Commands::Diff { command } => command.execute(),
         }
     }
 }
@@ -200,19 +202,19 @@ impl ModCommands {
                 source,
                 recursive,
                 check_integrity,
+                dry_run,
                 paks_only,
                 dirs_only,
                 quiet,
-            } => mod_cmd::validate_batch(
+            } => mod_cmd::validate(
                 source,
                 *recursive,
                 *check_integrity,
+                *dry_run,
                 *paks_only,
                 *dirs_only,
                 *quiet,
             ),
-            ModCommands::DryRun { source, quiet } => mod_cmd::dry_run(source, *quiet),
-            ModCommands::Integrity { source, quiet } => mod_cmd::integrity(source, *quiet),
             ModCommands::Package {
                 source,
                 destination,
@@ -241,6 +243,49 @@ impl ModCommands {
                 output,
                 quiet,
             } => virtual_texture::discover(source, output.as_deref(), *quiet),
+        }
+    }
+}
+
+impl DiffCommands {
+    pub fn execute(&self) -> anyhow::Result<()> {
+        match self {
+            DiffCommands::Compare {
+                old,
+                new,
+                ignore_whitespace,
+                ignore_version,
+                match_by_key,
+                format,
+                quiet,
+            } => diff::compare(
+                old,
+                new,
+                *ignore_whitespace,
+                *ignore_version,
+                *match_by_key,
+                format,
+                *quiet,
+            ),
+            DiffCommands::Merge {
+                base,
+                ours,
+                theirs,
+                output,
+                prefer_ours,
+                prefer_theirs,
+                match_by_key,
+                quiet,
+            } => diff::merge(
+                base,
+                ours,
+                theirs,
+                output,
+                *prefer_ours,
+                *prefer_theirs,
+                *match_by_key,
+                *quiet,
+            ),
         }
     }
 }

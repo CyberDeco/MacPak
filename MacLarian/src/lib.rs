@@ -61,6 +61,7 @@
 
 pub mod compression;
 pub mod converter;
+pub mod diff;
 pub mod error;
 pub mod formats;
 pub mod gr2_extraction;
