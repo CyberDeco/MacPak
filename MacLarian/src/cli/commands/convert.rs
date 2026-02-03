@@ -6,6 +6,9 @@ use super::expand_globs;
 use crate::cli::progress::simple_spinner;
 
 /// Execute format conversion for the given sources and destination.
+///
+/// # Errors
+/// Returns an error if glob expansion, file reading, or conversion fails.
 pub fn execute(
     sources: &[PathBuf],
     destination: &Path,

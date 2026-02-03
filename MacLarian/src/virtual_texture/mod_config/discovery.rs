@@ -28,8 +28,8 @@ use super::types::{DiscoveredVirtualTexture, DiscoverySource, VTexConfigXml, Vir
 /// # Arguments
 /// * `mod_root` - Path to the mod root directory (containing `Mods/` and `Public/`)
 ///
-/// # Returns
-/// A list of discovered virtual textures, or an empty vec if none found
+/// # Errors
+/// Returns an error if directory traversal fails.
 pub fn discover_mod_virtual_textures(mod_root: &Path) -> Result<Vec<DiscoveredVirtualTexture>> {
     let mut discovered = Vec::new();
     let mut seen_hashes = HashSet::new();
@@ -328,8 +328,8 @@ fn walkdir_simple_inner(
 /// # Arguments
 /// * `pak_path` - Path to the PAK file
 ///
-/// # Returns
-/// A list of discovered virtual textures, or an empty vec if none found
+/// # Errors
+/// Returns an error if the PAK file cannot be read or is invalid.
 pub fn discover_pak_virtual_textures(pak_path: &Path) -> Result<Vec<DiscoveredVirtualTexture>> {
     let mut discovered = Vec::new();
     let mut seen_hashes = HashSet::new();
@@ -462,8 +462,8 @@ fn extract_mod_name_from_pak_path(path: &str) -> String {
 /// # Arguments
 /// * `search_paths` - Paths to scan (can be mod roots, directories containing mods, or .pak files)
 ///
-/// # Returns
-/// All discovered virtual textures across all search paths
+/// # Errors
+/// Returns an error if directory traversal fails or PAK files cannot be read.
 pub fn discover_virtual_textures(search_paths: &[PathBuf]) -> Result<Vec<DiscoveredVirtualTexture>> {
     let mut all_discovered = Vec::new();
 

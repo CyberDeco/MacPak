@@ -8,6 +8,9 @@ use std::str::FromStr;
 ///
 /// If a path contains glob characters (*, ?, [), expands it.
 /// Otherwise returns the path as-is (with tilde expansion).
+///
+/// # Errors
+/// Returns an error if a glob pattern is invalid or matches no files.
 pub fn expand_globs(paths: &[PathBuf]) -> Result<Vec<PathBuf>> {
     let mut expanded = Vec::new();
 

@@ -66,6 +66,9 @@ pub fn print_done(elapsed: Duration) {
 /// Spinner style for indeterminate progress
 ///
 /// Format: `[1/4]  ⠋ processing file.pak`
+///
+/// # Panics
+/// Panics if the template string is invalid (this is a compile-time constant).
 #[must_use]
 pub fn spinner_style() -> ProgressStyle {
     ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
@@ -76,6 +79,9 @@ pub fn spinner_style() -> ProgressStyle {
 /// Progress bar style for determinate progress
 ///
 /// Format: `Extracting [████████░░░░░░░░] 50/100`
+///
+/// # Panics
+/// Panics if the template string is invalid (this is a compile-time constant).
 #[must_use]
 pub fn bar_style() -> ProgressStyle {
     ProgressStyle::default_bar()
@@ -86,6 +92,9 @@ pub fn bar_style() -> ProgressStyle {
 /// Progress bar style with percentage
 ///
 /// Format: `Extracting [████████░░░░░░░░] 50% (50/100)`
+///
+/// # Panics
+/// Panics if the template string is invalid (this is a compile-time constant).
 #[must_use]
 pub fn bar_style_with_percent() -> ProgressStyle {
     ProgressStyle::default_bar()
@@ -109,6 +118,7 @@ pub fn multi_progress() -> MultiProgress {
 /// * `mp` - The multi-progress manager
 /// * `prefix` - Prefix like `[1/4]`
 /// * `msg` - Initial message
+#[must_use]
 pub fn add_spinner(mp: &MultiProgress, prefix: &str, msg: &str) -> ProgressBar {
     let pb = mp.add(ProgressBar::new_spinner());
     pb.set_style(spinner_style());
@@ -124,6 +134,7 @@ pub fn add_spinner(mp: &MultiProgress, prefix: &str, msg: &str) -> ProgressBar {
 /// * `mp` - The multi-progress manager
 /// * `total` - Total number of items
 /// * `msg` - Progress bar message
+#[must_use]
 pub fn add_bar(mp: &MultiProgress, total: u64, msg: &str) -> ProgressBar {
     let pb = mp.add(ProgressBar::new(total));
     pb.set_style(bar_style());
@@ -136,6 +147,9 @@ pub fn add_bar(mp: &MultiProgress, total: u64, msg: &str) -> ProgressBar {
 // =============================================================================
 
 /// Create a simple spinner (not part of multi-progress)
+///
+/// # Panics
+/// Panics if the template string is invalid (this is a compile-time constant).
 #[must_use]
 pub fn simple_spinner(msg: &str) -> ProgressBar {
     let pb = ProgressBar::new_spinner();

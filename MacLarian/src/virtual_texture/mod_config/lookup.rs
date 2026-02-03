@@ -23,8 +23,8 @@ use super::types::DiscoveredVirtualTexture;
 /// * `gtex_hash` - The `GTex` hash to look up
 /// * `search_paths` - Paths to search (mod roots or directories containing mods)
 ///
-/// # Returns
-/// The resolved GTS file path if found, or `None` if not found
+/// # Errors
+/// Returns an error if discovery fails due to IO or PAK reading errors.
 pub fn find_gts_for_gtex(gtex_hash: &str, search_paths: &[PathBuf]) -> Result<Option<PathBuf>> {
     let discovered = discover_virtual_textures(search_paths)?;
 
@@ -40,6 +40,9 @@ pub fn find_gts_for_gtex(gtex_hash: &str, search_paths: &[PathBuf]) -> Result<Op
 /// Find a discovered virtual texture by `GTex` hash
 ///
 /// Like `find_gts_for_gtex` but returns full discovery information.
+///
+/// # Errors
+/// Returns an error if discovery fails due to IO or PAK reading errors.
 pub fn find_virtual_texture(
     gtex_hash: &str,
     search_paths: &[PathBuf],

@@ -29,6 +29,9 @@ struct Cli {
 }
 
 /// Run the `MacLarian` CLI
+///
+/// # Errors
+/// Returns an error if the CLI command execution fails.
 pub fn run_cli() -> anyhow::Result<()> {
     // Setup logging
     tracing_subscriber::fmt::init();

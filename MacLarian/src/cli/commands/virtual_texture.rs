@@ -16,6 +16,9 @@ use crate::virtual_texture::builder::{
 use crate::virtual_texture::{VTexPhase, VTexProgress};
 
 /// List textures in a GTS file
+///
+/// # Errors
+/// Returns an error if the GTS file cannot be read or parsed.
 pub fn list(gts_path: &Path, detailed: bool, output: Option<&Path>) -> Result<()> {
     let info = virtual_texture::list_gts(gts_path)
         .with_context(|| format!("Failed to parse GTS file: {}", gts_path.display()))?;
@@ -57,6 +60,9 @@ pub fn list(gts_path: &Path, detailed: bool, output: Option<&Path>) -> Result<()
 }
 
 /// Extract textures from GTS/GTP files
+///
+/// # Errors
+/// Returns an error if glob expansion, GTS/GTP reading, or file writing fails.
 pub fn extract(
     sources: &[PathBuf],
     output_dir: &Path,
@@ -217,6 +223,9 @@ fn extract_batch(
 }
 
 /// Create a virtual texture set from DDS source textures
+///
+/// # Errors
+/// Returns an error if texture loading, processing, or output writing fails.
 pub fn create(
     source_dir: &Path,
     output_dir: &Path,

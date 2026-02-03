@@ -1,6 +1,7 @@
 //! Mod metadata parsing from meta.lsx files
 
 /// Full mod metadata extracted from meta.lsx
+#[non_exhaustive]
 #[derive(Clone, Debug, Default)]
 pub struct ModMetadata {
     /// Mod display name.

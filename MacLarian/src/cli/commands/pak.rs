@@ -138,6 +138,9 @@ fn format_size(bytes: u64) -> String {
 }
 
 /// Extract files from PAK archive(s)
+///
+/// # Errors
+/// Returns an error if glob expansion, PAK reading, or file writing fails.
 pub fn extract(
     sources: &[PathBuf],
     destination: &Path,
@@ -306,6 +309,9 @@ fn extract_batch(
 }
 
 /// Create PAK file(s) from directory(ies)
+///
+/// # Errors
+/// Returns an error if glob expansion, directory scanning, or PAK writing fails.
 pub fn create(
     sources: &[PathBuf],
     destination: &Path,
@@ -449,6 +455,9 @@ fn create_batch(
 }
 
 /// List contents of a PAK file
+///
+/// # Errors
+/// Returns an error if the PAK file cannot be read or is invalid.
 pub fn list(
     source: &Path,
     detailed: bool,

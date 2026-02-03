@@ -124,17 +124,12 @@ cast-possible-truncation = { level = "allow", priority = 1 }
 cast-possible-wrap = { level = "allow", priority = 1 }
 cast-sign-loss = { level = "allow", priority = 1 }
 cast-lossless = { level = "allow", priority = 1 }
-# Documentation lints - to be addressed in future doc improvements
-missing-errors-doc = { level = "allow", priority = 1 }
-missing-panics-doc = { level = "allow", priority = 1 }
 # Other acceptable pedantic lints
-must-use-candidate = { level = "allow", priority = 1 }
 fn-params-excessive-bools = { level = "allow", priority = 1 }
 struct-excessive-bools = { level = "allow", priority = 1 }
 too-many-lines = { level = "allow", priority = 1 }
 # CLI progress patterns commonly use if !quiet { progress } else { simple }
 if-not-else = { level = "allow", priority = 1 }
-map-unwrap-or = { level = "allow", priority = 1 }
 
 [lints.rust]
 unsafe_code = "forbid"

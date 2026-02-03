@@ -108,6 +108,10 @@ impl TileSetConfiguration {
     }
 
     /// Validate the configuration
+    ///
+    /// # Errors
+    /// Returns an error string if the configuration is invalid (e.g., invalid
+    /// tile dimensions or out-of-range values).
     pub fn validate(&self) -> Result<(), String> {
         // Tile dimensions must be divisible by 4 (BC block alignment)
         if self.tile_width % 4 != 0 {

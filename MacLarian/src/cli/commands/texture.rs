@@ -3,6 +3,9 @@
 use std::path::Path;
 
 /// Show info about a DDS texture file
+///
+/// # Errors
+/// Returns an error if the file cannot be read or is not a valid DDS.
 pub fn info(path: &Path) -> anyhow::Result<()> {
     let file = std::fs::File::open(path)?;
     let dds = ddsfile::Dds::read(file).map_err(|e| anyhow::anyhow!("Failed to read DDS: {e}"))?;

@@ -73,6 +73,7 @@ pub(crate) struct LspkFooter {
 }
 
 /// Entry in the file table describing a file in the PAK
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct FileTableEntry {
     /// Path of the file within the archive
@@ -93,6 +94,7 @@ pub struct FileTableEntry {
 }
 
 /// A decompressed file from the PAK archive
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct PakFile {
     /// Path of the file within the archive
@@ -102,6 +104,7 @@ pub struct PakFile {
 }
 
 /// Result of reading a PAK file, with support for partial success
+#[non_exhaustive]
 #[derive(Debug)]
 pub struct PakContents {
     /// Successfully extracted files
@@ -137,6 +140,7 @@ impl PakContents {
 }
 
 /// Progress information during PAK operations
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct PakProgress {
     /// Current operation phase

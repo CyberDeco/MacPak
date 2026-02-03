@@ -46,7 +46,7 @@ pub struct LsxNode {
 pub struct LsxAttribute {
     /// Attribute identifier/name.
     pub id: String,
-    /// Type name (e.g., "FixedString", "int32").
+    /// Type name (e.g., "`FixedString`", "`int32`").
     pub type_name: String,
     /// String representation of the value.
     pub value: String,

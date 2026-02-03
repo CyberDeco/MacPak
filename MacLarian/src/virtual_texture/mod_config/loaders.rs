@@ -110,6 +110,7 @@ pub struct LsfVTexConfig {
 }
 
 /// Parse `VTexConfig` from `LsfDocument`
+#[must_use]
 pub fn parse_vtex_config_from_lsf(doc: &LsfDocument) -> Option<LsfVTexConfig> {
     // Find root TileSet node
     let root_nodes = doc.root_nodes();

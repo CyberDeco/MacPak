@@ -12,6 +12,7 @@ use crate::error::Result;
 use std::path::Path;
 
 /// Information about a GR2 file.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct Gr2Info {
     /// GR2 format version number.
@@ -27,11 +28,12 @@ pub struct Gr2Info {
 }
 
 /// Information about a GR2 section.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct SectionInfo {
     /// Section index (0-based).
     pub index: usize,
-    /// Compression method name (e.g., "BitKnit", "None").
+    /// Compression method name (e.g., "`BitKnit`", "`None`").
     pub compression: String,
     /// Size of compressed data in bytes.
     pub compressed_size: u32,

@@ -19,6 +19,9 @@ use crate::mods::{
 use crate::pak::PakOperations;
 
 /// Validate mod structure and PAK integrity
+///
+/// # Errors
+/// Returns an error if glob expansion or validation fails.
 pub fn validate(sources: &[PathBuf], quiet: bool) -> Result<()> {
     // Expand glob patterns
     let sources = expand_globs(sources)?;
@@ -133,6 +136,12 @@ fn validate_single(source: &Path, quiet: bool) -> Result<()> {
 }
 
 /// Package mod for `BaldursModManager` (generates info.json alongside PAK)
+///
+/// # Errors
+/// Returns an error if validation, PAK creation, or file writing fails.
+///
+/// # Panics
+/// Panics if info.json generation succeeds but returns no content (internal invariant).
 pub fn package(
     source: &Path,
     destination: &Path,
@@ -359,6 +368,9 @@ fn compress_to_7z(
 }
 
 /// Generate meta.lsx metadata file for a mod
+///
+/// # Errors
+/// Returns an error if version parsing or file writing fails.
 pub fn meta(
     source: &Path,
     name: &str,
@@ -376,9 +388,7 @@ pub fn meta(
     let folder = to_folder_name(folder.unwrap_or(name));
 
     // Generate UUID if not provided
-    let uuid = uuid
-        .map(String::from)
-        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let uuid = uuid.map_or_else(|| uuid::Uuid::new_v4().to_string(), String::from);
 
     // Generate the meta.lsx content
     let content = generate_meta_lsx(name, &folder, author, description, &uuid, major, minor, patch, build);
@@ -404,6 +414,9 @@ pub fn meta(
 }
 
 /// Find files modified by multiple mods (potential conflicts)
+///
+/// # Errors
+/// Returns an error if glob expansion or PAK reading fails.
 pub fn conflicts(sources: &[PathBuf], quiet: bool) -> Result<()> {
     // Expand glob patterns
     let sources = expand_globs(sources)?;
@@ -428,8 +441,7 @@ pub fn conflicts(sources: &[PathBuf], quiet: bool) -> Result<()> {
 
         let name = source
             .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| source.display().to_string());
+            .map_or_else(|| source.display().to_string(), |n| n.to_string_lossy().to_string());
 
         let files = if source.is_dir() {
             collect_mod_files(source)?

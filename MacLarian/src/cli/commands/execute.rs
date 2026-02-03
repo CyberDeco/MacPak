@@ -9,6 +9,9 @@ use super::{convert, gr2, loca, mod_cmd, pak, texture, virtual_texture};
 
 impl Commands {
     /// Execute the selected command.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying command fails.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             Commands::Pak { command } => command.execute(),
@@ -36,6 +39,9 @@ impl Commands {
 
 impl PakCommands {
     /// Execute the selected PAK command.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying PAK operation fails.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             PakCommands::Extract {
@@ -70,6 +76,9 @@ impl PakCommands {
 
 impl Gr2Commands {
     /// Execute the selected GR2 command.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying GR2 operation fails.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             Gr2Commands::Inspect { path, output } => gr2::inspect(path, output.as_deref()),
@@ -99,6 +108,9 @@ impl Gr2Commands {
 
 impl VirtualTextureCommands {
     /// Execute the selected virtual texture command.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying virtual texture operation fails.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             VirtualTextureCommands::List {
@@ -143,6 +155,9 @@ impl VirtualTextureCommands {
 
 impl LocaCommands {
     /// Execute the selected LOCA command.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying LOCA operation fails.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             LocaCommands::Search {
@@ -158,6 +173,9 @@ impl LocaCommands {
 
 impl TextureCommands {
     /// Execute the selected texture command.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying texture operation fails.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             TextureCommands::Info { path } => texture::info(path),
@@ -167,6 +185,9 @@ impl TextureCommands {
 
 impl ModCommands {
     /// Execute the selected mod command.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying mod operation fails.
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
             ModCommands::Validate { source, quiet } => mod_cmd::validate(source, *quiet),

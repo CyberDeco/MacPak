@@ -7,6 +7,9 @@ use crate::formats::loca::read_loca;
 /// Search for entries in a LOCA file
 ///
 /// If `search_handle` is true, searches handle/key names instead of text content.
+///
+/// # Errors
+/// Returns an error if the LOCA file cannot be read or parsed.
 pub fn search(
     path: &Path,
     query: &str,

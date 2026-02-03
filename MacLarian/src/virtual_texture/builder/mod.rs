@@ -151,8 +151,9 @@ impl VirtualTextureBuilder {
     /// # Arguments
     /// * `output_dir` - Directory to write the GTS and GTP files to
     ///
-    /// # Returns
-    /// Result containing build information on success
+    /// # Errors
+    /// Returns an error if validation fails, textures cannot be loaded,
+    /// or output files cannot be written.
     pub fn build<P: AsRef<Path>>(self, output_dir: P) -> Result<BuildResult> {
         self.build_with_progress(output_dir, |_| {})
     }
@@ -163,8 +164,9 @@ impl VirtualTextureBuilder {
     /// * `output_dir` - Directory to write the GTS and GTP files to
     /// * `progress` - Callback function that receives progress updates
     ///
-    /// # Returns
-    /// Result containing build information on success
+    /// # Errors
+    /// Returns an error if validation fails, textures cannot be loaded,
+    /// or output files cannot be written.
     pub fn build_with_progress<P, F>(self, output_dir: P, progress: F) -> Result<BuildResult>
     where
         P: AsRef<Path>,

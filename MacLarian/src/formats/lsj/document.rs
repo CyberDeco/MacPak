@@ -105,14 +105,14 @@ impl<'de> Deserialize<'de> for LsjNode {
 pub enum LsjAttribute {
     /// A simple typed value.
     Simple {
-        /// The type name (e.g., "FixedString", "int32").
+        /// The type name (e.g., "`FixedString`", "`int32`").
         type_name: String,
         /// The JSON value.
         value: Value,
     },
     /// A translated string with localization handle.
     TranslatedString {
-        /// The type name ("TranslatedString").
+        /// The type name (`TranslatedString`).
         type_name: String,
         /// Optional inline text value.
         value: Option<String>,
@@ -123,7 +123,7 @@ pub enum LsjAttribute {
     },
     /// A translated string with format arguments.
     TranslatedFSString {
-        /// The type name ("TranslatedFSString").
+        /// The type name (`TranslatedFSString`).
         type_name: String,
         /// Optional inline text value.
         value: Option<String>,

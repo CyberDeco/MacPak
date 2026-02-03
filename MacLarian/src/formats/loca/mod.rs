@@ -22,6 +22,7 @@ pub const ENTRY_SIZE: usize = 70;
 pub const KEY_SIZE: usize = 64;
 
 /// A single localized text entry
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct LocalizedText {
     /// Unique identifier key (e.g., "h1234567890abcdef...")
@@ -33,6 +34,7 @@ pub struct LocalizedText {
 }
 
 /// A collection of localized text entries
+#[non_exhaustive]
 #[derive(Debug, Clone, Default)]
 pub struct LocaResource {
     /// The localized text entries in this resource.

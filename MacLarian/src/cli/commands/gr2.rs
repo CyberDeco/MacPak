@@ -37,6 +37,9 @@ fn find_bg3_path() -> Option<std::path::PathBuf> {
 }
 
 /// Inspect a GR2 file and display its structure.
+///
+/// # Errors
+/// Returns an error if the file cannot be read or is not a valid GR2.
 pub fn inspect(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
     if let Some(out_path) = output {
         // Output to JSON file
@@ -103,6 +106,9 @@ pub fn inspect(path: &Path, output: Option<&Path>) -> anyhow::Result<()> {
 }
 
 /// Convert GR2 to glTF/GLB format.
+///
+/// # Errors
+/// Returns an error if glob expansion, file reading, or conversion fails.
 pub fn from_gr2(
     sources: &[PathBuf],
     destination: &Path,
@@ -398,6 +404,9 @@ fn from_gr2_batch(
 }
 
 /// Convert glTF/GLB to GR2 format.
+///
+/// # Errors
+/// Returns an error if glob expansion, file reading, or conversion fails.
 pub fn to_gr2(sources: &[PathBuf], destination: &Path, quiet: bool) -> anyhow::Result<()> {
     // Expand glob patterns
     let sources = expand_globs(sources)?;
