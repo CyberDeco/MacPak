@@ -129,13 +129,4 @@ impl GltfBuilder {
 
         node_idx
     }
-
-    /// Set material for an existing mesh (by mesh index).
-    pub fn set_mesh_material(&mut self, mesh_idx: usize, material_idx: usize) {
-        if let Some(mesh) = self.meshes.get_mut(mesh_idx) {
-            for prim in &mut mesh.primitives {
-                prim.material = Some(material_idx);
-            }
-        }
-    }
 }

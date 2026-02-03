@@ -42,14 +42,6 @@ impl GltfBuilder {
         sampler_idx
     }
 
-    /// Add a custom texture sampler.
-    /// Returns the sampler index.
-    pub fn add_sampler_custom(&mut self, sampler: GltfSampler) -> usize {
-        let sampler_idx = self.samplers.len();
-        self.samplers.push(sampler);
-        sampler_idx
-    }
-
     /// Add a texture referencing an image and optionally a sampler.
     /// Returns the texture index.
     pub fn add_texture(
@@ -121,16 +113,6 @@ impl GltfBuilder {
         });
 
         mat_idx
-    }
-
-    /// Add a simple material with just a base color texture.
-    /// Returns the material index.
-    pub fn add_simple_material(
-        &mut self,
-        name: Option<String>,
-        base_color_texture: usize,
-    ) -> usize {
-        self.add_material(name, Some(base_color_texture), None, None, None)
     }
 
     /// Convenience method to add an image, create a texture for it, and return the texture index.

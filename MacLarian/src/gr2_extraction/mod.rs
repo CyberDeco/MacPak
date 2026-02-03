@@ -27,9 +27,7 @@ mod types;
 mod virtual_textures;
 
 // Crate-internal exports (used by search and other modules)
-pub(crate) use dds::{
-    cleanup_empty_dirs, extract_dds_textures, extract_textures_from_pak, find_texture_paks,
-};
+pub(crate) use dds::extract_dds_textures;
 
 // Public types for external consumers
 pub use types::{
@@ -38,10 +36,7 @@ pub use types::{
 };
 
 // Crate-internal virtual texture helpers
-pub(crate) use virtual_textures::{
-    adjust_vt_path_for_extraction, derive_gts_path, extract_and_rename_virtual_texture,
-    extract_virtual_texture_from_pak, extract_virtual_textures, find_gtp_files_in_pak,
-};
+pub(crate) use virtual_textures::extract_virtual_textures;
 
 use crate::converter::{convert_dds_to_png, convert_gr2_to_glb};
 use crate::error::{Error, Result};

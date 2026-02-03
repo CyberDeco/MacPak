@@ -512,27 +512,19 @@ impl Gr2Reader {
 
         let mut pos = root_addr + ptr_size * 3; // After 3 pointers
 
-        // Read counts for each array type
-        let texture_count = self.read_u32(pos) as usize;
-        pos += array_size;
+        // Read counts for each array type (skip texture_count, vertex_data_count, topology_count)
+        pos += array_size; // texture_count
         let material_count = self.read_u32(pos) as usize;
         pos += array_size;
         let skeleton_count = self.read_u32(pos) as usize;
-        pos += array_size;
-        let vertex_data_count = self.read_u32(pos) as usize;
-        pos += array_size;
-        let topology_count = self.read_u32(pos) as usize;
-        pos += array_size;
+        pos += array_size * 3; // skip vertex_data_count, topology_count
         let mesh_count = self.read_u32(pos) as usize;
         pos += array_size;
         let model_count = self.read_u32(pos) as usize;
 
         Ok(Gr2ContentInfo {
-            texture_count,
             material_count,
             skeleton_count,
-            vertex_data_count,
-            topology_count,
             mesh_count,
             model_count,
         })

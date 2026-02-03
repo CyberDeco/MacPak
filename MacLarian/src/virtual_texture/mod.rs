@@ -73,5 +73,3 @@ pub use mod_config::{
     DiscoveredVirtualTexture, DiscoverySource, discover_mod_virtual_textures,
     discover_virtual_textures, find_gts_for_gtex, find_virtual_texture,
 };
-// Crate-internal helper
-pub(crate) use mod_config::extract_by_gtex;

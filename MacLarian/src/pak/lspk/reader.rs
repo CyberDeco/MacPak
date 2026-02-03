@@ -106,7 +106,7 @@ impl<R: Read + Seek> LspkReader<R> {
     ///
     /// # Panics
     /// This function does not panic under normal conditions.
-    pub fn read_header(&mut self) -> Result<&LspkHeader> {
+    pub(crate) fn read_header(&mut self) -> Result<&LspkHeader> {
         self.reader.seek(SeekFrom::Start(0))?;
 
         let mut magic = [0u8; 4];
@@ -146,7 +146,7 @@ impl<R: Read + Seek> LspkReader<R> {
     ///
     /// # Panics
     /// This function does not panic under normal conditions.
-    pub fn read_footer(&mut self) -> Result<&LspkFooter> {
+    pub(crate) fn read_footer(&mut self) -> Result<&LspkFooter> {
         let header = self
             .header
             .as_ref()

@@ -56,11 +56,8 @@ pub struct Skeleton {
 /// Information about what data a GR2 file contains.
 #[derive(Debug, Clone)]
 pub struct Gr2ContentInfo {
-    pub texture_count: usize,
     pub material_count: usize,
     pub skeleton_count: usize,
-    pub vertex_data_count: usize,
-    pub topology_count: usize,
     pub mesh_count: usize,
     pub model_count: usize,
 }

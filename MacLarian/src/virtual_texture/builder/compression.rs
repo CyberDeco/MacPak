@@ -10,27 +10,17 @@ use crate::error::Result;
 /// A compressed tile
 #[derive(Debug, Clone)]
 pub struct CompressedTile {
-    /// The compression method used
-    pub method: TileCompressionPreference,
     /// Compressed data
     pub data: Vec<u8>,
 }
 
 /// Compress tile data using the specified method
 pub fn compress_tile(data: &[u8], preference: TileCompressionPreference) -> Result<CompressedTile> {
-    match preference {
-        TileCompressionPreference::Raw => Ok(CompressedTile {
-            method: TileCompressionPreference::Raw,
-            data: data.to_vec(),
-        }),
-        TileCompressionPreference::FastLZ => {
-            let compressed = compress_fastlz(data)?;
-            Ok(CompressedTile {
-                method: TileCompressionPreference::FastLZ,
-                data: compressed,
-            })
-        }
-    }
+    let data = match preference {
+        TileCompressionPreference::Raw => data.to_vec(),
+        TileCompressionPreference::FastLZ => compress_fastlz(data)?,
+    };
+    Ok(CompressedTile { data })
 }
 
 /// Compress data using `FastLZ`

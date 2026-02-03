@@ -228,102 +228,6 @@ pub enum LocaCommands {
         #[arg(short, long)]
         quiet: bool,
     },
-
-    /// Get a specific entry by key
-    Get {
-        /// LOCA file
-        path: PathBuf,
-
-        /// Entry key/handle
-        key: String,
-    },
-
-    /// Add or update an entry
-    Set {
-        /// LOCA file to modify
-        path: PathBuf,
-
-        /// Entry key/handle
-        key: String,
-
-        /// Text content
-        text: String,
-
-        /// Create file if it doesn't exist
-        #[arg(short, long)]
-        create: bool,
-    },
-
-    /// Delete an entry
-    Delete {
-        /// LOCA file to modify
-        path: PathBuf,
-
-        /// Entry key/handle to delete
-        key: String,
-    },
-
-    /// Find and replace text across all entries
-    Replace {
-        /// LOCA file to modify
-        path: PathBuf,
-
-        /// Text to find
-        find: String,
-
-        /// Text to replace with
-        replace: String,
-
-        /// Case-sensitive matching
-        #[arg(short = 's', long)]
-        case_sensitive: bool,
-
-        /// Only replace in entries matching this key pattern
-        #[arg(short, long)]
-        key_pattern: Option<String>,
-
-        /// Dry run - show what would be changed without modifying
-        #[arg(short, long)]
-        dry_run: bool,
-    },
-
-    /// Export LOCA to TSV for translation
-    Export {
-        /// LOCA file to export
-        path: PathBuf,
-
-        /// Output file (default: <input>.tsv)
-        #[arg(short, long)]
-        output: Option<PathBuf>,
-
-        /// Export format
-        #[arg(short, long, value_parser = ["tsv", "csv"], default_value = "tsv")]
-        format: String,
-    },
-
-    /// Import translations from TSV/CSV
-    Import {
-        /// LOCA file to update
-        path: PathBuf,
-
-        /// Translation file (TSV/CSV)
-        translations: PathBuf,
-
-        /// Import format
-        #[arg(short, long, value_parser = ["tsv", "csv"], default_value = "tsv")]
-        format: String,
-
-        /// Create backup before modifying
-        #[arg(short, long)]
-        backup: bool,
-    },
-
-    /// Show LOCA file statistics
-    Stats {
-        /// LOCA file(s) to analyze
-        #[arg(required = true)]
-        paths: Vec<PathBuf>,
-    },
 }
 
 /// Texture operation commands
@@ -375,7 +279,7 @@ pub enum ModCommands {
         /// Path to .pak file or mod directory
         source: PathBuf,
 
-        /// Output directory (creates <destination>/ModName/ModName.pak + info.json)
+        /// Output directory (creates `<destination>/ModName/ModName.pak` + `info.json`)
         destination: PathBuf,
 
         /// Compress output as zip or 7z
@@ -389,7 +293,7 @@ pub enum ModCommands {
 
     /// Generate meta.lsx metadata file for a mod
     Meta {
-        /// Mod source directory (creates <source>/Mods/<Folder>/meta.lsx)
+        /// Mod source directory (creates `<source>/Mods/<Folder>/meta.lsx`)
         source: PathBuf,
 
         /// Mod display name
@@ -443,4 +347,3 @@ pub enum ModCommands {
         quiet: bool,
     },
 }
-

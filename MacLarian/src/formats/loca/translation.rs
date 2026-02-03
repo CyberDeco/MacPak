@@ -25,7 +25,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 
 use super::{LocalizedText, LocaResource};
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// Export format for translation
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
