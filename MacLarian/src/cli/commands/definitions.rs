@@ -245,21 +245,9 @@ pub enum TextureCommands {
 pub enum ModCommands {
     /// Validate mod structure and PAK integrity
     Validate {
-        /// Path(s) to mod directory, PAK file(s), or folder containing mods
+        /// Path(s) to mod directory or PAK file(s) - supports glob patterns
         #[arg(required = true)]
         source: Vec<PathBuf>,
-
-        /// Recursively scan directory for all mods
-        #[arg(short, long)]
-        recursive: bool,
-
-        /// Only check PAK files (skip directories)
-        #[arg(long)]
-        paks_only: bool,
-
-        /// Only check directories (skip PAK files)
-        #[arg(long)]
-        dirs_only: bool,
 
         /// Suppress progress output
         #[arg(short, long)]
@@ -311,21 +299,6 @@ pub enum ModCommands {
         /// Version in format "major.minor.patch.build" (default: 1.0.0.0)
         #[arg(short, long, default_value = "1.0.0.0")]
         version: String,
-    },
-
-    /// Discover virtual textures defined in mod config files
-    Vtex {
-        /// Mod directory(ies) to scan (can be mod roots or folders containing mods)
-        #[arg(required = true)]
-        source: Vec<PathBuf>,
-
-        /// Output to JSON file
-        #[arg(short, long)]
-        output: Option<PathBuf>,
-
-        /// Suppress extra output
-        #[arg(short, long)]
-        quiet: bool,
     },
 
     /// Find files modified by multiple mods (potential conflicts)

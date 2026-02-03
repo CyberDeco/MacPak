@@ -13,30 +13,19 @@ use zip::write::SimpleFileOptions;
 use super::expand_globs;
 use crate::cli::progress::simple_spinner;
 use crate::mods::{
-    BatchValidationOptions, generate_meta_lsx, parse_version_string, to_folder_name,
-    validate_mod_structure, validate_pak_mod_structure,
+    generate_meta_lsx, parse_version_string, to_folder_name, validate_mod_structure,
+    validate_pak_mod_structure,
 };
 use crate::pak::PakOperations;
 
 /// Validate mod structure and PAK integrity
-pub fn validate(
-    sources: &[PathBuf],
-    recursive: bool,
-    paks_only: bool,
-    dirs_only: bool,
-    quiet: bool,
-) -> Result<()> {
+pub fn validate(sources: &[PathBuf], quiet: bool) -> Result<()> {
     // Expand glob patterns
     let sources = expand_globs(sources)?;
 
-    // Single source, non-recursive validation
-    if sources.len() == 1 && !recursive {
-        return validate_single(&sources[0], quiet);
-    }
-
-    // Recursive/batch validation
+    // Single source validation
     if sources.len() == 1 {
-        return validate_recursive(&sources[0], paks_only, dirs_only, quiet);
+        return validate_single(&sources[0], quiet);
     }
 
     // Multiple sources - validate each
@@ -48,6 +37,9 @@ pub fn validate(
         if validate_single(source, quiet).is_err() {
             all_valid = false;
         }
+        if !quiet {
+            println!();
+        }
     }
 
     if all_valid {
@@ -57,89 +49,7 @@ pub fn validate(
     }
 }
 
-/// Validate directories recursively for mods
-fn validate_recursive(
-    source: &Path,
-    paks_only: bool,
-    dirs_only: bool,
-    quiet: bool,
-) -> Result<()> {
-    let options = BatchValidationOptions {
-        include_paks: !dirs_only,
-        include_directories: !paks_only,
-        check_integrity: true, // Always check integrity
-        max_depth: None,
-    };
-
-    let pb = if quiet {
-        None
-    } else {
-        Some(simple_spinner("Scanning for mods..."))
-    };
-
-    let result = crate::mods::validate_directory_recursive_with_progress(source, &options, &|p| {
-        if let Some(ref pb) = pb {
-            if let Some(ref file) = p.current_file {
-                pb.set_message(format!("[{}/{}] {}", p.current, p.total, file));
-            } else {
-                pb.set_message(p.phase.as_str().to_string());
-            }
-        }
-    })?;
-
-    if let Some(pb) = pb {
-        pb.finish_and_clear();
-    }
-
-    if result.total == 0 {
-        println!("No mods found in {}", source.display());
-        return Ok(());
-    }
-
-    // Print results for each mod
-    for entry in &result.entries {
-        let status = if entry.result.valid { "✓" } else { "✗" };
-        let type_str = if entry.is_pak { "PAK" } else { "DIR" };
-        println!("{status} [{type_str}] {}", entry.name);
-
-        if !quiet {
-            // Print structure
-            for item in &entry.result.structure {
-                println!("    {item}");
-            }
-
-            // Print warnings
-            for warning in &entry.result.warnings {
-                println!("    ⚠ {warning}");
-            }
-
-            // Print integrity issues
-            if let Some(ref integrity) = entry.integrity {
-                if !integrity.valid {
-                    for issue in &integrity.issues {
-                        println!("    ⚠ {issue}");
-                    }
-                } else if !quiet {
-                    println!(
-                        "    Integrity: OK ({} files, {} bytes)",
-                        integrity.file_count, integrity.total_size
-                    );
-                }
-            }
-        }
-    }
-
-    // Print summary
-    println!("\n{}", result.summary());
-
-    if result.all_valid() {
-        Ok(())
-    } else {
-        std::process::exit(1);
-    }
-}
-
-/// Validate a single mod (helper for non-recursive validation)
+/// Validate a single mod
 fn validate_single(source: &Path, quiet: bool) -> Result<()> {
     let is_pak = source
         .extension()

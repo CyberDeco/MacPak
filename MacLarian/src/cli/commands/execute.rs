@@ -162,13 +162,7 @@ impl TextureCommands {
 impl ModCommands {
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
-            ModCommands::Validate {
-                source,
-                recursive,
-                paks_only,
-                dirs_only,
-                quiet,
-            } => mod_cmd::validate(source, *recursive, *paks_only, *dirs_only, *quiet),
+            ModCommands::Validate { source, quiet } => mod_cmd::validate(source, *quiet),
             ModCommands::Package {
                 source,
                 destination,
@@ -192,11 +186,6 @@ impl ModCommands {
                 uuid.as_deref(),
                 version,
             ),
-            ModCommands::Vtex {
-                source,
-                output,
-                quiet,
-            } => virtual_texture::discover(source, output.as_deref(), *quiet),
             ModCommands::Conflicts { sources, quiet } => mod_cmd::conflicts(sources, *quiet),
         }
     }

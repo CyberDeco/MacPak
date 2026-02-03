@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result};
 use indicatif::ProgressBar;
-use serde::Serialize;
 
 use super::expand_globs;
 use crate::cli::progress::{bar_style, spinner_style};
@@ -14,88 +13,7 @@ use crate::virtual_texture;
 use crate::virtual_texture::builder::{
     SourceTexture, TileCompressionPreference, VirtualTextureBuilder,
 };
-use crate::virtual_texture::mod_config::{DiscoverySource, discover_virtual_textures};
 use crate::virtual_texture::{VTexPhase, VTexProgress};
-
-/// JSON output format for discovered virtual textures
-#[derive(Serialize)]
-struct DiscoveredTextureJson {
-    mod_name: String,
-    gtex_hash: String,
-    tileset_name: Option<String>,
-    gts_path: String,
-    source: String,
-}
-
-/// Discover virtual textures in mod directories
-pub fn discover(sources: &[PathBuf], output: Option<&Path>, quiet: bool) -> Result<()> {
-    // Expand glob patterns
-    let sources = expand_globs(sources)?;
-
-    let discovered = discover_virtual_textures(&sources)
-        .with_context(|| "Failed to discover virtual textures")?;
-
-    if discovered.is_empty() {
-        if !quiet {
-            println!("No virtual textures found in the specified paths.");
-        }
-        return Ok(());
-    }
-
-    // Convert to JSON-serializable format
-    let json_data: Vec<DiscoveredTextureJson> = discovered
-        .iter()
-        .map(|vt| DiscoveredTextureJson {
-            mod_name: vt.mod_name.clone(),
-            gtex_hash: vt.gtex_hash.clone(),
-            tileset_name: vt.tileset_name.clone(),
-            gts_path: vt.gts_path.display().to_string(),
-            source: match vt.source {
-                DiscoverySource::VTexConfigXml => "VTexConfig.xml".to_string(),
-                DiscoverySource::VirtualTexturesJson => "VirtualTextures.json".to_string(),
-                DiscoverySource::GtsFileScan => "GTS file scan".to_string(),
-            },
-        })
-        .collect();
-
-    if let Some(out_path) = output {
-        // Output to JSON file
-        let json = serde_json::to_string_pretty(&json_data)?;
-        std::fs::write(out_path, json)?;
-        if !quiet {
-            println!(
-                "Discovered {} virtual texture(s), written to: {}",
-                discovered.len(),
-                out_path.display()
-            );
-        }
-        return Ok(());
-    }
-
-    // Print to CLI
-    if !quiet {
-        println!("Discovered {} virtual texture(s):\n", discovered.len());
-    }
-
-    for vt in &discovered {
-        let source_str = match vt.source {
-            DiscoverySource::VTexConfigXml => "VTexConfig.xml",
-            DiscoverySource::VirtualTexturesJson => "VirtualTextures.json",
-            DiscoverySource::GtsFileScan => "GTS file scan",
-        };
-
-        println!("Mod: {}", vt.mod_name);
-        println!("  GTex:    {}", vt.gtex_hash);
-        if let Some(ref tileset) = vt.tileset_name {
-            println!("  TileSet: {tileset}");
-        }
-        println!("  GTS:     {}", vt.gts_path.display());
-        println!("  Source:  {source_str}");
-        println!();
-    }
-
-    Ok(())
-}
 
 /// List textures in a GTS file
 pub fn list(gts_path: &Path, detailed: bool, output: Option<&Path>) -> Result<()> {
