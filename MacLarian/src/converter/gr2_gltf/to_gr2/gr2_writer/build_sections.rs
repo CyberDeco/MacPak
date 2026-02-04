@@ -7,8 +7,8 @@ use crate::error::Result;
 use super::Gr2Writer;
 use super::constants::{
     MEMBER_ARRAY_OF_REFS, MEMBER_BINORMAL_INT16, MEMBER_INT32, MEMBER_REAL16, MEMBER_REAL32,
-    MEMBER_REF_TO_ARRAY, MEMBER_REFERENCE, MEMBER_STRING, MEMBER_TRANSFORM, MEMBER_UINT32,
-    MEMBER_UINT8,
+    MEMBER_REF_TO_ARRAY, MEMBER_REFERENCE, MEMBER_STRING, MEMBER_TRANSFORM, MEMBER_UINT8,
+    MEMBER_UINT32,
 };
 use super::section::Section;
 use super::types::{MemberDef, write_type_def};
@@ -28,32 +28,78 @@ impl Gr2Writer {
         // Collect all necessary strings
         let mut all_strings: Vec<String> = Vec::new();
         let static_strings = [
-            "ArtToolInfo", "ExporterInfo", "FromFileName", "Textures", "Materials",
-            "Skeletons", "VertexDatas", "TriTopologies", "Meshes", "Models",
-            "TrackGroups", "Animations", "ExtendedData",
+            "ArtToolInfo",
+            "ExporterInfo",
+            "FromFileName",
+            "Textures",
+            "Materials",
+            "Skeletons",
+            "VertexDatas",
+            "TriTopologies",
+            "Meshes",
+            "Models",
+            "TrackGroups",
+            "Animations",
+            "ExtendedData",
             // Vertex type member names
-            "Position", "BoneWeights", "BoneIndices", "QTangent", "DiffuseColor0",
+            "Position",
+            "BoneWeights",
+            "BoneIndices",
+            "QTangent",
+            "DiffuseColor0",
             "TextureCoordinates0",
             // Bone type member names
-            "Name", "ParentIndex", "Transform", "InverseWorldTransform", "LODError",
+            "Name",
+            "ParentIndex",
+            "Transform",
+            "InverseWorldTransform",
+            "LODError",
             // Skeleton/Mesh member names
-            "Bones", "LODType", "PrimaryVertexData", "MorphTargets", "PrimaryTopology",
-            "MaterialBindings", "BoneBindings",
+            "Bones",
+            "LODType",
+            "PrimaryVertexData",
+            "MorphTargets",
+            "PrimaryTopology",
+            "MaterialBindings",
+            "BoneBindings",
             // Mesh ExtendedData member names
-            "MeshProxy", "Rigid", "Cloth", "Spring", "Occluder", "LOD",
-            "UserDefinedProperties", "UserMeshProperties", "LSMVersion",
+            "MeshProxy",
+            "Rigid",
+            "Cloth",
+            "Spring",
+            "Occluder",
+            "LOD",
+            "UserDefinedProperties",
+            "UserMeshProperties",
+            "LSMVersion",
             // MeshPropertySet member names
-            "Flags", "Lod", "FormatDescs", "LodDistance", "IsImpostor",
+            "Flags",
+            "Lod",
+            "FormatDescs",
+            "LodDistance",
+            "IsImpostor",
             // Topology member names
-            "Groups", "Indices", "Indices16",
+            "Groups",
+            "Indices",
+            "Indices16",
             // VertexData member names
-            "Vertices", "VertexComponentNames", "VertexAnnotationSets",
+            "Vertices",
+            "VertexComponentNames",
+            "VertexAnnotationSets",
             // TopologyGroup member names
-            "MaterialIndex", "TriFirst", "TriCount",
+            "MaterialIndex",
+            "TriFirst",
+            "TriCount",
             // BoneBinding member names
-            "BoneName", "OBBMin", "OBBMax", "TriangleCount", "TriangleIndices",
+            "BoneName",
+            "OBBMin",
+            "OBBMax",
+            "TriangleCount",
+            "TriangleIndices",
             // Model member names
-            "Skeleton", "MeshBindings", "InitialPlacement",
+            "Skeleton",
+            "MeshBindings",
+            "InitialPlacement",
         ];
         for s in &static_strings {
             all_strings.push((*s).to_string());
@@ -603,10 +649,8 @@ impl Gr2Writer {
                     sections[3].write_ptr(3, mat_off);
                 }
 
-                material_binding_offsets.push(Some((
-                    mb_array_offset,
-                    mesh.material_binding_names.len(),
-                )));
+                material_binding_offsets
+                    .push(Some((mb_array_offset, mesh.material_binding_names.len())));
             }
         }
 
@@ -620,19 +664,39 @@ impl Gr2Writer {
 
                 // Flags[4] (u32 x 4)
                 let mut flags0 = 0u32;
-                if profile.mesh_proxy == Some(true) { flags0 |= 0x01; }
-                if profile.cloth == Some(true) { flags0 |= 0x02; }
-                if profile.proxy_geometry == Some(true) { flags0 |= 0x04; }
-                if profile.rigid == Some(true) { flags0 |= 0x20; }
-                if profile.spring == Some(true) { flags0 |= 0x40; }
-                if profile.occluder == Some(true) { flags0 |= 0x80; }
+                if profile.mesh_proxy == Some(true) {
+                    flags0 |= 0x01;
+                }
+                if profile.cloth == Some(true) {
+                    flags0 |= 0x02;
+                }
+                if profile.proxy_geometry == Some(true) {
+                    flags0 |= 0x04;
+                }
+                if profile.rigid == Some(true) {
+                    flags0 |= 0x20;
+                }
+                if profile.spring == Some(true) {
+                    flags0 |= 0x40;
+                }
+                if profile.occluder == Some(true) {
+                    flags0 |= 0x80;
+                }
                 sections[3].write_u32(flags0);
                 sections[3].write_u32(0); // Flags[1]
                 let mut flags2 = 0u32;
-                if profile.cloth_01 == Some(true) { flags2 |= 0x01; }
-                if profile.cloth_02 == Some(true) { flags2 |= 0x02; }
-                if profile.cloth_04 == Some(true) { flags2 |= 0x04; }
-                if profile.cloth_physics == Some(true) { flags2 |= 0x100; }
+                if profile.cloth_01 == Some(true) {
+                    flags2 |= 0x01;
+                }
+                if profile.cloth_02 == Some(true) {
+                    flags2 |= 0x02;
+                }
+                if profile.cloth_04 == Some(true) {
+                    flags2 |= 0x04;
+                }
+                if profile.cloth_physics == Some(true) {
+                    flags2 |= 0x100;
+                }
                 sections[3].write_u32(flags2);
                 sections[3].write_u32(0); // Flags[3]
                 // Lod[1]
@@ -775,8 +839,13 @@ impl Gr2Writer {
         }
 
         // Write Model data and pointer array if model is present
-        let (model_ptr_array_offset, model_count) =
-            self.write_model_data(sections, string_offsets, type_offsets, mesh_offsets, skeleton_offsets);
+        let (model_ptr_array_offset, model_count) = self.write_model_data(
+            sections,
+            string_offsets,
+            type_offsets,
+            mesh_offsets,
+            skeleton_offsets,
+        );
 
         // Write material pointer array (collect unique materials from MaterialBindings)
         let (material_ptr_array_offset, material_count) =
@@ -854,10 +923,7 @@ impl Gr2Writer {
             // Map mesh binding names to mesh offsets
             for binding_name in &model.mesh_binding_names {
                 // Find the mesh offset that matches this name
-                let mesh_idx = self
-                    .meshes
-                    .iter()
-                    .position(|m| m.name == *binding_name);
+                let mesh_idx = self.meshes.iter().position(|m| m.name == *binding_name);
                 if let Some(idx) = mesh_idx {
                     if idx < mesh_offsets.len() {
                         sections[0].write_ptr(3, mesh_offsets[idx]);

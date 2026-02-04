@@ -70,7 +70,10 @@ pub struct Bg3MeshProfile {
     pub material_bindings: Option<Vec<String>>,
     #[serde(rename = "TopologyGroups", skip_serializing_if = "Option::is_none")]
     pub topology_groups: Option<Vec<Bg3TopologyGroup>>,
-    #[serde(rename = "UserDefinedProperties", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "UserDefinedProperties",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub user_defined_properties: Option<String>,
 }
 

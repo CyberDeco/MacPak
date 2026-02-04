@@ -55,8 +55,7 @@ pub fn convert_gr2_bytes_to_glb_with_textures(
     // Add skeleton first
     let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
         let models = reader.parse_models(gr2_data).unwrap_or_default();
-        let skel_profile =
-            super::convert::to_bg3_skeleton_profile_from(skel, &models);
+        let skel_profile = super::convert::to_bg3_skeleton_profile_from(skel, &models);
         let skin_idx = builder.add_skeleton_with_profile(skel, skel_profile);
         let root_idx = skel
             .bones

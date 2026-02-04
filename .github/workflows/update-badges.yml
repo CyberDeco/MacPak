@@ -7,6 +7,9 @@ on:
       - 'Cargo.toml'
       - 'MacLarian/Cargo.toml'
 
+permissions:
+  contents: write
+
 jobs:
   update-badges:
     runs-on: ubuntu-latest

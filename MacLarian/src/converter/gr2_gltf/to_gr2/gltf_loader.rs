@@ -11,9 +11,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use super::utils::encode_qtangent;
-use crate::converter::gr2_gltf::to_gltf::{
-    Bg3MeshProfile, Bg3SkeletonProfile,
-};
+use crate::converter::gr2_gltf::to_gltf::{Bg3MeshProfile, Bg3SkeletonProfile};
 use crate::error::{Error, Result};
 
 // ============================================================================
@@ -158,10 +156,7 @@ impl GltfModel {
                 if let Some(ref name) = profile.model_name {
                     model = Some(ModelData {
                         name: name.clone(),
-                        mesh_binding_names: profile
-                            .model_mesh_bindings
-                            .clone()
-                            .unwrap_or_default(),
+                        mesh_binding_names: profile.model_mesh_bindings.clone().unwrap_or_default(),
                         initial_placement: profile
                             .initial_placement
                             .as_ref()
@@ -270,10 +265,7 @@ fn load_skeleton_with_profile(
         .as_ref()
         .and_then(|p| p.bone_lod_error.as_ref());
 
-    let lod_type = skel_profile
-        .as_ref()
-        .and_then(|p| p.lod_type)
-        .unwrap_or(0);
+    let lod_type = skel_profile.as_ref().and_then(|p| p.lod_type).unwrap_or(0);
 
     let mut bones = Vec::with_capacity(joints.len());
 
@@ -314,7 +306,14 @@ fn load_skeleton_with_profile(
         });
     }
 
-    Ok((Skeleton { name, bones, lod_type }, skel_profile))
+    Ok((
+        Skeleton {
+            name,
+            bones,
+            lod_type,
+        },
+        skel_profile,
+    ))
 }
 
 /// Find the parent bone index for a joint.

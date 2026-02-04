@@ -1,8 +1,7 @@
 //! Basic GR2 to glTF/GLB conversion functions.
 
 use super::gltf::{
-    Bg3BoneBinding, Bg3MeshProfile, Bg3SkeletonProfile, Bg3TopologyGroup, Bg3Transform,
-    GltfBuilder,
+    Bg3BoneBinding, Bg3MeshProfile, Bg3SkeletonProfile, Bg3TopologyGroup, Bg3Transform, GltfBuilder,
 };
 use super::gr2_reader::{Gr2Reader, MeshData, MeshExtendedData, Model, Skeleton};
 use crate::error::{Error, Result};
@@ -95,7 +94,10 @@ fn to_bg3_profile(ext: &MeshExtendedData, mesh: &MeshData, idx: usize) -> Bg3Mes
     }
 }
 
-pub(super) fn to_bg3_skeleton_profile_from(skel: &Skeleton, models: &[Model]) -> Bg3SkeletonProfile {
+pub(super) fn to_bg3_skeleton_profile_from(
+    skel: &Skeleton,
+    models: &[Model],
+) -> Bg3SkeletonProfile {
     let model = models.first();
     Bg3SkeletonProfile {
         lod_type: Some(skel.lod_type),
