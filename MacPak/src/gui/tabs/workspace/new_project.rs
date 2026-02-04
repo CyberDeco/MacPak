@@ -26,6 +26,18 @@ pub fn new_project_dialog(state: WorkspaceState) -> impl IntoView {
             }
         },
     )
+    .style(move |s| {
+        if show.get() {
+            s.position(floem::style::Position::Absolute)
+                .inset(0.0)
+                .items_center()
+                .justify_center()
+                .background(Color::rgba8(0, 0, 0, 150))
+                .z_index(100)
+        } else {
+            s.display(floem::style::Display::None)
+        }
+    })
 }
 
 fn new_project_form(state: WorkspaceState) -> impl IntoView {
@@ -45,12 +57,10 @@ fn new_project_form(state: WorkspaceState) -> impl IntoView {
     let state_for_cancel = state.clone();
     let recipes = state.recipes;
 
-    // Overlay background
+    // Dialog card
     v_stack((
-        // Dialog card
-        v_stack((
-            // Title
-            label(|| "New Project").style(move |s| {
+        // Title
+        label(|| "New Project").style(move |s| {
                 let colors = theme_signal()
                     .map(|t| ThemeColors::for_theme(t.get().effective()))
                     .unwrap_or_else(ThemeColors::dark);
@@ -206,18 +216,7 @@ fn new_project_form(state: WorkspaceState) -> impl IntoView {
                 .border_color(colors.border)
                 .border_radius(8.0)
                 .gap(4.0)
-        }),
-    ))
-    .style(|s| {
-        s.position(floem::style::Position::Absolute)
-            .inset(0.0)
-            .width_full()
-            .height_full()
-            .items_center()
-            .justify_center()
-            .background(Color::rgba8(0, 0, 0, 150))
-            .z_index(100)
-    })
+        })
 }
 
 fn recipe_selector(recipes: RwSignal<Vec<Recipe>>, selected: RwSignal<usize>) -> impl IntoView {
@@ -346,6 +345,8 @@ fn location_field(location: RwSignal<String>) -> impl IntoView {
                     .map(|t| ThemeColors::for_theme(t.get().effective()))
                     .unwrap_or_else(ThemeColors::dark);
                 s.flex_grow(1.0)
+                    .flex_basis(0.0)
+                    .min_width(0.0)
                     .padding(8.0)
                     .background(colors.bg_elevated)
                     .color(colors.text_primary)
