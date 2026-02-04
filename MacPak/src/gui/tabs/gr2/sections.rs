@@ -275,7 +275,21 @@ fn select_and_convert_gr2(state: Gr2State, config: ConfigState, to_glb: bool, ba
             files.sort();
             state.batch_files.set(files);
 
-            convert_batch_with_options(state, to_glb, game_data);
+            // Ask for output folder
+            let dest_dialog = rfd::FileDialog::new()
+                .set_title("Select Output Folder for Converted Files")
+                .set_directory(&dir);
+
+            let Some(dest_dir) = dest_dialog.pick_folder() else {
+                return;
+            };
+
+            convert_batch_with_options(
+                state,
+                to_glb,
+                game_data,
+                dest_dir.to_string_lossy().to_string(),
+            );
         }
     } else {
         // Single file mode
@@ -339,7 +353,21 @@ fn select_and_convert_gltf(state: Gr2State, batch: bool) {
             files.sort();
             state.batch_files.set(files);
 
-            convert_batch_with_options(state, false, String::new()); // to_glb is ignored for gltf->gr2
+            // Ask for output folder
+            let dest_dialog = rfd::FileDialog::new()
+                .set_title("Select Output Folder for Converted Files")
+                .set_directory(&dir);
+
+            let Some(dest_dir) = dest_dialog.pick_folder() else {
+                return;
+            };
+
+            convert_batch_with_options(
+                state,
+                false,
+                String::new(),
+                dest_dir.to_string_lossy().to_string(),
+            ); // to_glb is ignored for gltf->gr2
         }
     } else {
         // Single file mode

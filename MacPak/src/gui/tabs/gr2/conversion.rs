@@ -205,7 +205,12 @@ pub fn convert_single_with_options(state: Gr2State, to_glb: bool, game_data_path
 
 /// Convert batch files with explicit options (for operation buttons UI)
 /// Determines direction from input file extensions
-pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path: String) {
+pub fn convert_batch_with_options(
+    state: Gr2State,
+    to_glb: bool,
+    game_data_path: String,
+    output_dir: String,
+) {
     let files = state.batch_files.get();
     if files.is_empty() {
         state.status_message.set("No files to convert".to_string());
@@ -243,7 +248,6 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                     .unwrap_or_default()
                     .to_string_lossy()
                     .to_string();
-                let parent = input.parent().unwrap_or(Path::new("."));
                 let input_ext = input
                     .extension()
                     .map(|e| e.to_string_lossy().to_lowercase())
@@ -253,6 +257,18 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                     .unwrap_or_default()
                     .to_string_lossy()
                     .to_string();
+
+                // Compute output parent from output_dir + relative path from input base
+                let output_parent = if let Some(ref in_base) = input_base_dir {
+                    let rel = input
+                        .parent()
+                        .unwrap_or(Path::new("."))
+                        .strip_prefix(in_base)
+                        .unwrap_or(Path::new("."));
+                    PathBuf::from(&output_dir).join(rel)
+                } else {
+                    PathBuf::from(&output_dir)
+                };
 
                 // Determine direction from input file extension
                 let is_gr2_input = input_ext == "gr2";
@@ -266,14 +282,14 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                 // - Converting to glTF (always, because it outputs .gltf + .bin)
                 // - Converting to GLB with texture extraction enabled
                 let use_subdir = is_gr2_input && (!to_glb || extract_textures);
-                let (output_dir, output_path) = if use_subdir {
-                    let subdir = parent.join(&stem);
+                let (file_output_dir, output_path) = if use_subdir {
+                    let subdir = output_parent.join(&stem);
                     (
                         Some(subdir.clone()),
                         subdir.join(format!("{}.{}", stem, output_ext)),
                     )
                 } else {
-                    (None, parent.join(format!("{}.{}", stem, output_ext)))
+                    (None, output_parent.join(format!("{}.{}", stem, output_ext)))
                 };
 
                 // Update progress (atomic)
@@ -281,8 +297,10 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                 shared.update(current, total, &input_name);
 
                 // Create output directory if needed
-                if let Some(ref dir) = output_dir {
+                if let Some(ref dir) = file_output_dir {
                     let _ = std::fs::create_dir_all(dir);
+                } else {
+                    let _ = std::fs::create_dir_all(&output_parent);
                 }
 
                 // Perform conversion (no per-file progress for batch - just count files)
@@ -331,8 +349,8 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
                                 keep_original_dds,
                             };
 
-                            let parent_buf = parent.to_path_buf();
-                            let tex_output_dir = output_dir.as_ref().unwrap_or(&parent_buf);
+                            let tex_output_dir =
+                                file_output_dir.as_ref().unwrap_or(&output_parent);
                             match maclarian::gr2_extraction::process_extracted_gr2_to_dir(
                                 input,
                                 tex_output_dir,
@@ -349,14 +367,14 @@ pub fn convert_batch_with_options(state: Gr2State, to_glb: bool, game_data_path:
 
                         // Copy original GR2 to subdirectory if requested (works for both GLB and glTF)
                         if keep_original_gr2 {
-                            if let Some(ref dir) = output_dir {
+                            if let Some(ref dir) = file_output_dir {
                                 let gr2_dest = dir.join(&input_name);
                                 let _ = std::fs::copy(input, &gr2_dest);
                             }
                         }
 
                         // Show subdirectory in output
-                        let display_output = if output_dir.is_some() {
+                        let display_output = if file_output_dir.is_some() {
                             format!("{}/{}{}", stem, output_name, texture_info)
                         } else {
                             format!("{}{}", output_name, texture_info)
