@@ -5,6 +5,13 @@ description = "Custom spells, passives, and status effects with localization"
 category = "Gameplay"
 
 [[variables]]
+name = "spell_type"
+label = "Spell Type"
+type = "select"
+options = ["Projectile", "Target", "Zone", "Shout", "Throw", "Rush", "Wall", "ProjectileStrike", "Teleportation"]
+default = "Projectile"
+
+[[variables]]
 name = "spell_school"
 label = "Spell School"
 type = "select"
@@ -17,7 +24,10 @@ directories = [
     "Public/{{mod_name}}/Stats/Generated/Data",
     "Public/{{mod_name}}/Stats/Generated",
     "Public/{{mod_name}}/Lists",
+    "Public/{{mod_name}}/ActionResourceDefinitions",
     "Localization/English",
+    "Public/Game/GUI/Assets/Tooltips/Icons",
+    "Public/Game/GUI/Assets/ControllerUIIcons/skills_png",
 ]
 
 [[files]]
@@ -33,29 +43,54 @@ generator = "localization_xml"
 description = "Localized spell names, descriptions, and tooltips"
 
 [[files]]
-path = "Public/{{mod_name}}/Stats/Generated/Data/Spell_{{spell_school}}.txt"
-kind = "manual"
-description = "Spell definitions (damage, range, targeting, etc.)"
-hint = """
-new entry "MySpell"
-type "SpellData"
-data "SpellType" "Zone"
-data "Level" "1"
-data "SpellSchool" "Evocation"
-data "TargetRadius" "18"
-"""
+path = "Public/{{mod_name}}/Stats/Generated/Data/Spell_{{spell_type}}.txt"
+kind = "generated"
+generator = "spell_data_txt"
+description = "Spell definitions (damage, range, targeting, saves)"
 
 [[files]]
 path = "Public/{{mod_name}}/Stats/Generated/Data/Passive.txt"
 kind = "optional"
-description = "Passive ability definitions"
+description = "Custom passive abilities granted or triggered by spells"
+hint = """
+new entry "MyPassive"
+type "PassiveData"
+data "DisplayName" "<name-handle>;1"
+data "Description" "<desc-handle>;1"
+data "Icon" "PassiveFeature_Generic"
+data "Properties" "Highlighted"
+data "StatsFunctorContext" "OnAttack"
+data "StatsFunctors" "DealDamage(1d6,Radiant)"
+"""
 
 [[files]]
 path = "Public/{{mod_name}}/Stats/Generated/Data/Status_BOOST.txt"
 kind = "optional"
-description = "Status effect definitions applied by spells"
+description = "Status effects applied by spells (buffs, debuffs, conditions)"
+hint = """
+new entry "MY_STATUS"
+type "StatusData"
+data "StatusType" "BOOST"
+data "DisplayName" "<name-handle>;1"
+data "Description" "<desc-handle>;1"
+data "Icon" "Spell_Abjuration_Shield"
+data "Boosts" "AC(2);Advantage(SavingThrow,Dexterity)"
+data "StatusPropertyFlags" "DisableOverhead"
+"""
 
 [[files]]
 path = "Public/{{mod_name}}/Lists/SpellLists.lsx"
 kind = "optional"
-description = "Spell list assignments (which classes get this spell)"
+description = "Spell list assignments controlling which classes learn this spell"
+hint = """
+Append to existing SpellList UUIDs for each class:
+  Wizard: 11f331b0-e8b7-473b-9d1f-19571b8d5571
+  Sorcerer: 3cae2e56-9871-4cef-bba6-96845ea765d8
+  Cleric: 4d5d3c2e-ea03-4775-b44b-d448d8b2bde0
+  Warlock: e17c61ba-4cd0-4e29-ba4f-0458e1391f8b
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/ActionResourceDefinitions/ActionResourceDefinitions.lsx"
+kind = "optional"
+description = "Custom action resources (e.g., special charges, unique spell slots)"
