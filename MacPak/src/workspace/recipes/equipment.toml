@@ -1,0 +1,59 @@
+[recipe]
+id = "equipment"
+name = "Equipment Mod"
+description = "Armor, weapons, and accessories with stats, templates, and icons"
+category = "Items"
+
+[[variables]]
+name = "item_type"
+label = "Item Type"
+type = "select"
+options = ["Armor", "Weapon", "Accessory"]
+default = "Armor"
+
+[structure]
+directories = [
+    "Mods/{{mod_name}}",
+    "Public/{{mod_name}}/RootTemplates",
+    "Public/{{mod_name}}/Stats/Generated/Data",
+    "Public/{{mod_name}}/Stats/Generated",
+    "Public/{{mod_name}}/Assets/Textures/Icons",
+    "Public/{{mod_name}}/GUI",
+    "Public/{{mod_name}}/Content/UI/[PAK]_UI",
+    "Localization/English",
+    "Public/Game/GUI/Assets/Tooltips/ItemIcons",
+    "Public/Game/GUI/Assets/ControllerUIIcons/items_png",
+]
+
+[[files]]
+path = "Mods/{{mod_name}}/meta.lsx"
+kind = "generated"
+generator = "meta_lsx"
+description = "Mod metadata — required for all mods"
+
+[[files]]
+path = "Localization/English/{{mod_name}}.xml"
+kind = "generated"
+generator = "localization_xml"
+description = "Localized display names and descriptions"
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Object.txt"
+kind = "manual"
+description = "Item stat definitions (type, using template, root template reference)"
+hint = """
+new entry "MyItem"
+type "Object"
+using "EQP_Armor"
+data "RootTemplate" "<your-template-uuid>"
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/ItemCombos.txt"
+kind = "optional"
+description = "Item combination rules (e.g., dyeing, crafting)"
+
+[[files]]
+path = "Public/{{mod_name}}/RootTemplates/_merged.lsf"
+kind = "manual"
+description = "Item templates defining in-game objects (LSF binary)"

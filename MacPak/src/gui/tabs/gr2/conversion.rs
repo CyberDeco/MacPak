@@ -349,8 +349,7 @@ pub fn convert_batch_with_options(
                                 keep_original_dds,
                             };
 
-                            let tex_output_dir =
-                                file_output_dir.as_ref().unwrap_or(&output_parent);
+                            let tex_output_dir = file_output_dir.as_ref().unwrap_or(&output_parent);
                             match maclarian::gr2_extraction::process_extracted_gr2_to_dir(
                                 input,
                                 tex_output_dir,

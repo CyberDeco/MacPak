@@ -1,0 +1,61 @@
+[recipe]
+id = "spell"
+name = "Spell Mod"
+description = "Custom spells, passives, and status effects with localization"
+category = "Gameplay"
+
+[[variables]]
+name = "spell_school"
+label = "Spell School"
+type = "select"
+options = ["Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"]
+default = "Evocation"
+
+[structure]
+directories = [
+    "Mods/{{mod_name}}",
+    "Public/{{mod_name}}/Stats/Generated/Data",
+    "Public/{{mod_name}}/Stats/Generated",
+    "Public/{{mod_name}}/Lists",
+    "Localization/English",
+]
+
+[[files]]
+path = "Mods/{{mod_name}}/meta.lsx"
+kind = "generated"
+generator = "meta_lsx"
+description = "Mod metadata — required for all mods"
+
+[[files]]
+path = "Localization/English/{{mod_name}}.xml"
+kind = "generated"
+generator = "localization_xml"
+description = "Localized spell names, descriptions, and tooltips"
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Spell_{{spell_school}}.txt"
+kind = "manual"
+description = "Spell definitions (damage, range, targeting, etc.)"
+hint = """
+new entry "MySpell"
+type "SpellData"
+data "SpellType" "Zone"
+data "Level" "1"
+data "SpellSchool" "Evocation"
+data "TargetRadius" "18"
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Passive.txt"
+kind = "optional"
+description = "Passive ability definitions"
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Status_BOOST.txt"
+kind = "optional"
+description = "Status effect definitions applied by spells"
+
+[[files]]
+path = "Public/{{mod_name}}/Lists/SpellLists.lsx"
+kind = "optional"
+description = "Spell list assignments (which classes get this spell)"

@@ -1,0 +1,24 @@
+[recipe]
+id = "generic"
+name = "Generic Mod"
+description = "Bare minimum mod structure with meta.lsx. For mods that don't fit a specific category."
+category = "General"
+
+[structure]
+directories = [
+    "Mods/{{mod_name}}",
+    "Public/{{mod_name}}",
+    "Localization/English",
+]
+
+[[files]]
+path = "Mods/{{mod_name}}/meta.lsx"
+kind = "generated"
+generator = "meta_lsx"
+description = "Mod metadata — required for all mods"
+
+[[files]]
+path = "Localization/English/{{mod_name}}.xml"
+kind = "generated"
+generator = "localization_xml"
+description = "Localized display names and descriptions"

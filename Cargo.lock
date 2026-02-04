@@ -4686,6 +4686,7 @@ dependencies = [
  "sha2",
  "tantivy",
  "thiserror 1.0.69",
+ "toml",
  "tracing",
  "uuid",
  "walkdir",

@@ -178,6 +178,8 @@ pub struct PersistedConfig {
     pub search: PersistedSearchState,
     #[serde(default)]
     pub dialogue: PersistedDialogueState,
+    #[serde(default)]
+    pub workspace: super::PersistedWorkspaceState,
 }
 
 impl PersistedConfig {
@@ -360,6 +362,7 @@ impl ConfigState {
         browser: &super::BrowserState,
         search: &super::SearchState,
         dialogue: &super::DialogueState,
+        workspace: &super::WorkspaceState,
     ) {
         // Collect editor tab file paths (only tabs with saved files)
         let open_files: Vec<String> = editor_tabs
@@ -414,6 +417,17 @@ impl ConfigState {
                 show_tags: dialogue.show_tags.get(),
                 show_editor_data: dialogue.show_editor_data.get(),
                 browser_panel_width: dialogue.browser_panel_width.get(),
+            },
+
+            // Workspace state
+            workspace: {
+                let ws = workspace.workspace.get();
+                super::PersistedWorkspaceState {
+                    last_open_project: ws
+                        .as_ref()
+                        .map(|w| w.project_dir.to_string_lossy().to_string()),
+                    recent_projects: Vec::new(),
+                }
             },
         };
 

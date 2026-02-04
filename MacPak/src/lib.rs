@@ -119,7 +119,7 @@ pub use error::{Error, Result};
 
 /// Main toolkit interface
 pub struct Toolkit {
-    workspace: workspace::Workspace,
+    workspace: Option<workspace::Workspace>,
     #[allow(dead_code)] // Future: file indexing functionality
     index: index::FileIndex,
 }
@@ -129,21 +129,22 @@ impl Toolkit {
     ///
     /// # Errors
     ///
-    /// Returns an error if workspace or file index initialization fails.
+    /// Returns an error if file index initialization fails.
     pub fn new() -> Result<Self> {
         Ok(Self {
-            workspace: workspace::Workspace::new()?,
+            workspace: None,
             index: index::FileIndex::new()?,
         })
     }
 
-    /// Open or create a workspace.
+    /// Open an existing workspace from a project directory.
     ///
     /// # Errors
     ///
     /// Returns an error if the workspace cannot be opened.
     pub fn open_workspace(&mut self, path: impl AsRef<Path>) -> Result<()> {
-        self.workspace.open(path)?;
+        let ws = workspace::Workspace::open(path).map_err(|e| Error::Workspace(e))?;
+        self.workspace = Some(ws);
         Ok(())
     }
 

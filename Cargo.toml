@@ -49,6 +49,7 @@ tempfile = "3.14"
 md5 = "0.7"
 chrono = "0.4"
 uuid = { version = "1.0", features = ["v4"] }
+toml = "0.8"
 
 # For 3D model/mesh/texture handling
 bcdec_rs = "0.2"  # BC7 texture decompression

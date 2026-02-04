@@ -68,6 +68,7 @@ anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+toml.workspace = true
 
 # GUI dependencies (optional)
 floem = { version = "0.2", optional = true }
