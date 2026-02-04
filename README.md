@@ -78,7 +78,7 @@ See the [MacLarian README](MacLarian/README.md) and [CLI section of the wiki](ht
 </details>
 
 ---
-                                                                                                                    
+
 ## Technical Notes
 
 <div align="center">
