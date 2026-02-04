@@ -59,7 +59,7 @@ To install the MacLarian library as a dependency crate, add this to your `Cargo.
 
 ```toml
 [dependencies]
-maclarian = "0.1"
+maclarian = "0.1.1"
 ```
 
 To use MacLarian as a CLI tool (need to have Rust installed first):
