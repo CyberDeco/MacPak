@@ -5,7 +5,7 @@
 //!
 //! Note: Compression is currently disabled. Files are written uncompressed.
 
-#![allow(dead_code, clippy::vec_init_then_push)]
+#![allow(clippy::vec_init_then_push)]
 
 mod build_sections;
 mod constants;
@@ -17,7 +17,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-use super::gltf_loader::{MeshData, Skeleton};
+use super::gltf_loader::{MeshData, ModelData, Skeleton};
 use crate::error::Result;
 
 // Section is used internally by build_sections and file_bytes
@@ -25,6 +25,7 @@ use crate::error::Result;
 pub struct Gr2Writer {
     meshes: Vec<MeshData>,
     skeleton: Option<Skeleton>,
+    model: Option<ModelData>,
 }
 
 impl Gr2Writer {
@@ -33,19 +34,20 @@ impl Gr2Writer {
         Self {
             meshes: Vec::new(),
             skeleton: None,
+            model: None,
         }
     }
 
     pub fn add_mesh(&mut self, mesh: &MeshData) {
-        self.meshes.push(MeshData {
-            name: mesh.name.clone(),
-            vertices: mesh.vertices.clone(),
-            indices: mesh.indices.clone(),
-        });
+        self.meshes.push(mesh.clone());
     }
 
     pub fn add_skeleton(&mut self, skeleton: &Skeleton) {
         self.skeleton = Some(skeleton.clone());
+    }
+
+    pub fn set_model(&mut self, model: &ModelData) {
+        self.model = Some(model.clone());
     }
 
     /// Build the GR2 file and return as bytes.

@@ -27,6 +27,9 @@ impl GltfBuilder {
             }
         }
 
+        let has_profiles = self.meshes.iter().any(|m| m.extensions.is_some())
+            || self.skins.iter().any(|s| s.extensions.is_some());
+
         let doc = GltfDocument {
             asset: GltfAsset {
                 version: "2.0".to_string(),
@@ -50,6 +53,11 @@ impl GltfBuilder {
                 byte_length: self.buffer.len(),
                 uri: buffer_uri,
             }],
+            extensions_used: if has_profiles {
+                vec!["MACLARIAN_glTF_extensions".into()]
+            } else {
+                vec![]
+            },
         };
 
         (doc, self.buffer)

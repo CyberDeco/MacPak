@@ -2,10 +2,9 @@
 //!
 //! Based on RAD Game Tools Granny2 format, version 2.11.8.0.
 //!
-//!
+//! Struct fields document the binary layout and are populated during parsing
+//! even when not individually accessed by consuming code.
 
-// Format specification fields - kept for documentation and future extensibility
-#![allow(dead_code)]
 #![allow(clippy::cast_possible_truncation)]
 
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -38,16 +37,6 @@ pub mod magic {
         0x31, 0x95, 0xD4, 0xE3, 0x20, 0xDC, 0x4F, 0x62, 0xCC, 0x36, 0xD0, 0x3A, 0xB1, 0x82, 0xFF,
         0x89,
     ];
-}
-
-/// Known game tags
-pub mod tags {
-    /// Divinity: Original Sin
-    pub const DOS: u32 = 0x80000037;
-    /// Divinity: Original Sin Enhanced Edition
-    pub const DOS_EE: u32 = 0x80000039;
-    /// Divinity: Original Sin 2 / Baldur's Gate 3
-    pub const DOS2_BG3: u32 = 0xE57F0039;
 }
 
 /// Compression formats
@@ -99,6 +88,7 @@ pub enum Endian {
 
 /// Magic block (32 bytes at offset 0)
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Gr2Magic {
     /// Format signature (16 bytes)
     pub signature: [u8; 16],
@@ -175,6 +165,7 @@ impl Gr2Magic {
 
 /// Reference to data in a section
 #[derive(Debug, Clone, Copy, Default)]
+#[allow(dead_code)]
 pub struct SectionRef {
     pub section: u32,
     pub offset: u32,
@@ -193,6 +184,7 @@ impl SectionRef {
 
 /// Main file header
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Gr2Header {
     /// Format version (6 or 7)
     pub version: u32,
@@ -267,6 +259,7 @@ impl Gr2Header {
 
 /// Section header (44 bytes each)
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct SectionHeader {
     /// Compression format
     pub compression: Compression,
@@ -331,31 +324,6 @@ impl SectionHeader {
     }
 }
 
-/// Relocation entry (12 bytes)
-#[derive(Debug, Clone, Copy)]
-pub struct Relocation {
-    /// Offset within the section to patch
-    pub offset_in_section: u32,
-    /// Target section index
-    pub target_section: u32,
-    /// Offset within target section
-    pub target_offset: u32,
-}
-
-impl Relocation {
-    pub const SIZE: usize = 12;
-
-    /// # Errors
-    /// Returns an error if reading from the reader fails.
-    pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
-        Ok(Self {
-            offset_in_section: reader.read_u32::<LittleEndian>()?,
-            target_section: reader.read_u32::<LittleEndian>()?,
-            target_offset: reader.read_u32::<LittleEndian>()?,
-        })
-    }
-}
-
 /// Parsed GR2 file
 #[derive(Debug)]
 pub struct Gr2File {
@@ -370,19 +338,6 @@ pub struct Gr2File {
 }
 
 impl Gr2File {
-    /// Parse a GR2 file from a reader
-    ///
-    /// # Errors
-    /// Returns an error if reading fails or if the file format is invalid.
-    pub fn read<R: Read + Seek>(reader: &mut R) -> Result<Self> {
-        // Read entire file into memory
-        let mut data = Vec::new();
-        reader.seek(SeekFrom::Start(0))?;
-        reader.read_to_end(&mut data)?;
-
-        Self::from_bytes(&data)
-    }
-
     /// Parse a GR2 file from bytes
     ///
     /// # Errors
@@ -448,12 +403,6 @@ impl Gr2File {
         }
 
         Ok(&self.data[start..end])
-    }
-
-    /// Get raw file data
-    #[must_use]
-    pub fn raw_data(&self) -> &[u8] {
-        &self.data
     }
 
     /// Get pointer size

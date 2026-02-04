@@ -30,3 +30,6 @@ pub use convert::{
 };
 
 pub use textured::{TexturedGlbResult, convert_gr2_bytes_to_glb_with_textures};
+
+// Re-export glTF extension types for cross-module use
+pub(crate) use gltf::{Bg3MeshProfile, Bg3SkeletonProfile};

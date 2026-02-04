@@ -5,7 +5,10 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use super::super::utils::half_to_f32;
-use super::types::{Bone, Gr2ContentInfo, MeshData, Skeleton, Transform, Vertex};
+use super::types::{
+    Bone, BoneBinding, ClothFlags, Gr2ContentInfo, MeshData, MeshExtendedData, MeshPropertySet,
+    Model, ModelFlags, Skeleton, TopologyGroup, Transform, Vertex,
+};
 use super::vertex_types::{MemberDef, MemberType, SectionHeader, VertexType};
 use super::{MAGIC_LE32, MAGIC_LE64};
 use crate::error::{Error, Result};
@@ -201,6 +204,10 @@ impl Gr2Reader {
         i16::from_le_bytes(self.data[offset..offset + 2].try_into().unwrap())
     }
 
+    fn read_i32(&self, offset: usize) -> i32 {
+        i32::from_le_bytes(self.data[offset..offset + 4].try_into().unwrap())
+    }
+
     fn read_f32(&self, offset: usize) -> f32 {
         f32::from_le_bytes(self.data[offset..offset + 4].try_into().unwrap())
     }
@@ -306,6 +313,48 @@ impl Gr2Reader {
         vertex
     }
 
+    fn parse_mesh_property_set(&self, ptr: usize) -> Option<MeshPropertySet> {
+        if ptr == 0 || ptr + 44 > self.data.len() {
+            return None;
+        }
+        // Layout: Flags[4](u32x4), Lod[1](i32), FormatDescs(ptr),
+        //         ExtData(ptr), LodDist[1](f32), IsImpostor[1](i32)
+        Some(MeshPropertySet {
+            model_flags: ModelFlags::from_u32(self.read_u32(ptr)),
+            cloth_flags: ClothFlags::from_u32(self.read_u32(ptr + 8)),
+            lod_distance: self.read_f32(ptr + 36),
+            is_impostor: self.read_i32(ptr + 40) != 0,
+        })
+    }
+
+    fn parse_mesh_extended_data(&self, ptr: usize) -> Option<MeshExtendedData> {
+        if ptr == 0 || ptr + 44 > self.data.len() {
+            return None;
+        }
+        let ptr_size = self.ptr_size();
+        // Layout: MeshProxy(i32), Rigid(i32), Cloth(i32), Spring(i32),
+        //         Occluder(i32), LOD(i32), UserDefinedProps(ptr),
+        //         UserMeshProps(ptr), LSMVersion(i32)
+        let base = ptr;
+        Some(MeshExtendedData {
+            mesh_proxy: self.read_i32(base),
+            rigid: self.read_i32(base + 4),
+            cloth: self.read_i32(base + 8),
+            spring: self.read_i32(base + 12),
+            occluder: self.read_i32(base + 16),
+            lod: self.read_i32(base + 20),
+            user_defined_properties: {
+                let p = self.read_ptr(base + 24);
+                if p != 0 && p < self.data.len() {
+                    Some(self.read_string(p))
+                } else {
+                    None
+                }
+            },
+            mesh_properties: self.parse_mesh_property_set(self.read_ptr(base + 24 + ptr_size)),
+        })
+    }
+
     /// Parse meshes from the GR2 file.
     ///
     /// # Errors
@@ -340,6 +389,19 @@ impl Gr2Reader {
             let vertex_data_ptr = self.read_ptr(mesh_ptr + ptr_size);
             let topology_ptr = self.read_ptr(mesh_ptr + ptr_size * 2 + array_size);
 
+            // Parse ExtendedData variant reference
+            // Mesh layout: Name(ptr), PrimaryVertexData(ptr), MorphTargets(array),
+            //   PrimaryTopology(ptr), MaterialBindings(array), BoneBindings(array),
+            //   ExtendedData(variant: type_ptr + data_ptr)
+            let ext_offset = mesh_ptr + ptr_size * 3 + array_size * 3;
+            let ext_type_ptr = self.read_ptr(ext_offset);
+            let ext_data_ptr = self.read_ptr(ext_offset + ptr_size);
+            let extended_data = if ext_type_ptr != 0 && ext_data_ptr != 0 {
+                self.parse_mesh_extended_data(ext_data_ptr)
+            } else {
+                None
+            };
+
             // Parse vertex data
             let vertices = if vertex_data_ptr > 0 && vertex_data_ptr < self.data.len() {
                 let type_ptr = self.read_ptr(vertex_data_ptr);
@@ -369,37 +431,49 @@ impl Gr2Reader {
                 Vec::new()
             };
 
-            // Parse topology
-            let (indices, is_32bit) = if topology_ptr > 0 && topology_ptr < self.data.len() {
-                let idx32_count = self.read_u32(topology_ptr + 12) as usize;
-                let idx32_ptr = self.read_ptr(topology_ptr + 16);
-                let idx16_count = self.read_u32(topology_ptr + 24) as usize;
-                let idx16_ptr = self.read_ptr(topology_ptr + 28);
+            // Parse MaterialBindings
+            let mat_bind_offset = mesh_ptr + ptr_size * 2 + array_size + ptr_size;
+            let material_binding_names = self.parse_material_bindings(mat_bind_offset);
 
-                if idx32_count > 0 && idx32_ptr > 0 {
-                    let mut inds = Vec::with_capacity(idx32_count);
-                    for j in 0..idx32_count {
-                        let idx_offset = idx32_ptr + j * 4;
-                        if idx_offset + 4 <= self.data.len() {
-                            inds.push(self.read_u32(idx_offset));
+            // Parse BoneBindings
+            let bone_bind_offset = mat_bind_offset + array_size;
+            let bone_bindings = self.parse_bone_bindings(bone_bind_offset);
+
+            // Parse topology
+            let (indices, is_32bit, topology_groups) =
+                if topology_ptr > 0 && topology_ptr < self.data.len() {
+                    // Parse TopologyGroups
+                    let groups = self.parse_topology_groups(topology_ptr);
+
+                    let idx32_count = self.read_u32(topology_ptr + 12) as usize;
+                    let idx32_ptr = self.read_ptr(topology_ptr + 16);
+                    let idx16_count = self.read_u32(topology_ptr + 24) as usize;
+                    let idx16_ptr = self.read_ptr(topology_ptr + 28);
+
+                    if idx32_count > 0 && idx32_ptr > 0 {
+                        let mut inds = Vec::with_capacity(idx32_count);
+                        for j in 0..idx32_count {
+                            let idx_offset = idx32_ptr + j * 4;
+                            if idx_offset + 4 <= self.data.len() {
+                                inds.push(self.read_u32(idx_offset));
+                            }
                         }
-                    }
-                    (inds, true)
-                } else if idx16_count > 0 && idx16_ptr > 0 {
-                    let mut inds = Vec::with_capacity(idx16_count);
-                    for j in 0..idx16_count {
-                        let idx_offset = idx16_ptr + j * 2;
-                        if idx_offset + 2 <= self.data.len() {
-                            inds.push(u32::from(self.read_u16(idx_offset)));
+                        (inds, true, groups)
+                    } else if idx16_count > 0 && idx16_ptr > 0 {
+                        let mut inds = Vec::with_capacity(idx16_count);
+                        for j in 0..idx16_count {
+                            let idx_offset = idx16_ptr + j * 2;
+                            if idx_offset + 2 <= self.data.len() {
+                                inds.push(u32::from(self.read_u16(idx_offset)));
+                            }
                         }
+                        (inds, false, groups)
+                    } else {
+                        (Vec::new(), false, groups)
                     }
-                    (inds, false)
                 } else {
-                    (Vec::new(), false)
-                }
-            } else {
-                (Vec::new(), false)
-            };
+                    (Vec::new(), false, Vec::new())
+                };
 
             if !vertices.is_empty() {
                 meshes.push(MeshData {
@@ -407,6 +481,10 @@ impl Gr2Reader {
                     vertices,
                     indices,
                     is_32bit_indices: is_32bit,
+                    extended_data,
+                    bone_bindings,
+                    material_binding_names,
+                    topology_groups,
                 });
             }
         }
@@ -465,6 +543,10 @@ impl Gr2Reader {
         let bone_count = self.read_u32(skeleton_ptr + ptr_size) as usize;
         let bones_array_ptr = self.read_ptr(skeleton_ptr + ptr_size + 4);
 
+        // LODType is after Name(ptr) + Bones(array_ref = count + ptr)
+        let lod_type_offset = skeleton_ptr + ptr_size + array_size;
+        let lod_type = self.read_i32(lod_type_offset);
+
         let mut bones = Vec::with_capacity(bone_count);
 
         let bone_size = ptr_size + 4 + 68 + 64 + 4 + 2 * ptr_size;
@@ -485,15 +567,212 @@ impl Gr2Reader {
                 inverse_world_transform[j] = self.read_f32(iwt_offset + j * 4);
             }
 
+            let lod_error_offset = iwt_offset + 64;
+            let lod_error = self.read_f32(lod_error_offset);
+
             bones.push(Bone {
                 name: bone_name,
                 parent_index,
                 transform,
                 inverse_world_transform,
+                lod_error,
             });
         }
 
-        Ok(Some(Skeleton { name, bones }))
+        Ok(Some(Skeleton {
+            name,
+            bones,
+            lod_type,
+        }))
+    }
+
+    fn parse_material_bindings(&self, offset: usize) -> Vec<String> {
+        if offset + 12 > self.data.len() {
+            return Vec::new();
+        }
+        let count = self.read_u32(offset) as usize;
+        if count == 0 {
+            return Vec::new();
+        }
+        let array_ptr = self.read_ptr(offset + 4);
+        if array_ptr == 0 || array_ptr >= self.data.len() {
+            return Vec::new();
+        }
+
+        let ptr_size = self.ptr_size();
+        let mut names = Vec::with_capacity(count);
+        for i in 0..count {
+            // Each MaterialBinding entry is a pointer to a Material struct
+            let binding_ptr = self.read_ptr(array_ptr + i * ptr_size);
+            if binding_ptr > 0 && binding_ptr < self.data.len() {
+                // Material struct: first field is Name (string ptr)
+                let mat_name = self.read_string_ptr(binding_ptr);
+                names.push(mat_name);
+            }
+        }
+        names
+    }
+
+    fn parse_bone_bindings(&self, offset: usize) -> Vec<BoneBinding> {
+        if offset + 12 > self.data.len() {
+            return Vec::new();
+        }
+        let count = self.read_u32(offset) as usize;
+        if count == 0 {
+            return Vec::new();
+        }
+        let array_ptr = self.read_ptr(offset + 4);
+        if array_ptr == 0 || array_ptr >= self.data.len() {
+            return Vec::new();
+        }
+
+        let ptr_size = self.ptr_size();
+        // BoneBinding struct layout:
+        // BoneName(string/ptr), OBBMin(3xf32), OBBMax(3xf32),
+        // TriangleCount(i32), TriangleIndices(ref_to_array: count + ptr)
+        let binding_size = ptr_size + 24 + 4 + 4 + ptr_size; // name + 6*f32 + tri_count + array(count+ptr)
+        let mut bindings = Vec::with_capacity(count);
+        for i in 0..count {
+            let b_offset = array_ptr + i * binding_size;
+            if b_offset + binding_size > self.data.len() {
+                break;
+            }
+
+            let bone_name = self.read_string_ptr(b_offset);
+            let mut pos = b_offset + ptr_size;
+
+            let mut obb_min = [0.0f32; 3];
+            for j in 0..3 {
+                obb_min[j] = self.read_f32(pos + j * 4);
+            }
+            pos += 12;
+
+            let mut obb_max = [0.0f32; 3];
+            for j in 0..3 {
+                obb_max[j] = self.read_f32(pos + j * 4);
+            }
+            pos += 12;
+
+            let tri_count = self.read_i32(pos);
+            pos += 4;
+
+            // TriangleIndices: ref_to_array (count + ptr)
+            let tri_idx_count = self.read_u32(pos) as usize;
+            let tri_idx_ptr = self.read_ptr(pos + 4);
+            let mut tri_indices = Vec::with_capacity(tri_idx_count);
+            if tri_idx_ptr > 0 && tri_idx_ptr < self.data.len() {
+                for j in 0..tri_idx_count {
+                    let idx_off = tri_idx_ptr + j * 4;
+                    if idx_off + 4 <= self.data.len() {
+                        tri_indices.push(self.read_i32(idx_off));
+                    }
+                }
+            }
+
+            bindings.push(BoneBinding {
+                bone_name,
+                obb_min,
+                obb_max,
+                tri_count,
+                tri_indices,
+            });
+        }
+        bindings
+    }
+
+    fn parse_topology_groups(&self, topology_ptr: usize) -> Vec<TopologyGroup> {
+        if topology_ptr + 12 > self.data.len() {
+            return Vec::new();
+        }
+        let count = self.read_u32(topology_ptr) as usize;
+        if count == 0 {
+            return Vec::new();
+        }
+        let groups_ptr = self.read_ptr(topology_ptr + 4);
+        if groups_ptr == 0 || groups_ptr >= self.data.len() {
+            return Vec::new();
+        }
+
+        let mut groups = Vec::with_capacity(count);
+        for i in 0..count {
+            let g_offset = groups_ptr + i * 12; // 3 x i32 = 12 bytes
+            if g_offset + 12 > self.data.len() {
+                break;
+            }
+            groups.push(TopologyGroup {
+                material_index: self.read_i32(g_offset),
+                tri_first: self.read_i32(g_offset + 4),
+                tri_count: self.read_i32(g_offset + 8),
+            });
+        }
+        groups
+    }
+
+    /// Parse models from the GR2 file.
+    ///
+    /// # Errors
+    /// Returns an error if the model data cannot be read.
+    pub fn parse_models(&self, file_data: &[u8]) -> Result<Vec<Model>> {
+        let mut cursor = std::io::Cursor::new(&file_data[0x20..]);
+        cursor.set_position(28);
+        let root_section = cursor.read_u32::<LittleEndian>()? as usize;
+        let root_offset = cursor.read_u32::<LittleEndian>()? as usize;
+
+        let root_addr = self.section_offsets[root_section] + root_offset;
+        let ptr_size = self.ptr_size();
+        let array_size = 4 + ptr_size;
+
+        // Root layout: 3 ptrs + Textures(array) + Materials(array) + Skeletons(array)
+        //   + VertexDatas(array) + TriTopologies(array) + Meshes(array) + Models(array)
+        let mut pos = root_addr;
+        pos += ptr_size * 3; // Skip first 3 ptrs
+        pos += array_size * 4; // Skip TextureInfos, Materials, Skeletons, VertexDatas
+        pos += array_size; // Skip TriTopologies
+        pos += array_size; // Skip Meshes
+        // Now at Models array
+        let model_count = self.read_u32(pos) as usize;
+        let models_ptr = self.read_ptr(pos + 4);
+
+        if model_count == 0 || models_ptr == 0 {
+            return Ok(Vec::new());
+        }
+
+        let mut models = Vec::with_capacity(model_count);
+        for i in 0..model_count {
+            let model_ptr = self.read_ptr(models_ptr + i * ptr_size);
+            if model_ptr == 0 || model_ptr >= self.data.len() {
+                continue;
+            }
+
+            let name = self.read_string_ptr(model_ptr);
+
+            // InitialPlacement (Transform) - after Name(ptr) + Skeleton(ptr) + MeshBindings(array)
+            let placement_offset = model_ptr + ptr_size * 2 + array_size;
+            let initial_placement = self.read_transform(placement_offset);
+
+            // MeshBindings array
+            let mesh_bind_offset = model_ptr + ptr_size * 2;
+            let mesh_bind_count = self.read_u32(mesh_bind_offset) as usize;
+            let mesh_bind_ptr = self.read_ptr(mesh_bind_offset + 4);
+            let mut mesh_binding_names = Vec::with_capacity(mesh_bind_count);
+            if mesh_bind_ptr > 0 && mesh_bind_ptr < self.data.len() {
+                for j in 0..mesh_bind_count {
+                    let binding_ptr = self.read_ptr(mesh_bind_ptr + j * ptr_size);
+                    if binding_ptr > 0 && binding_ptr < self.data.len() {
+                        let mesh_name = self.read_string_ptr(binding_ptr);
+                        mesh_binding_names.push(mesh_name);
+                    }
+                }
+            }
+
+            models.push(Model {
+                name,
+                mesh_binding_names,
+                initial_placement,
+            });
+        }
+
+        Ok(models)
     }
 
     /// Get a description of what data the GR2 file contains.

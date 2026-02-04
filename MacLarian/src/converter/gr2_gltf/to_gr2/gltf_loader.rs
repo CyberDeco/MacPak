@@ -11,6 +11,9 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use super::utils::encode_qtangent;
+use crate::converter::gr2_gltf::to_gltf::{
+    Bg3MeshProfile, Bg3SkeletonProfile,
+};
 use crate::error::{Error, Result};
 
 // ============================================================================
@@ -28,12 +31,43 @@ pub struct Vertex {
     pub uv: [f32; 2],
 }
 
+/// Bone binding data extracted from glTF.
+#[derive(Debug, Clone)]
+pub struct BoneBindingData {
+    pub bone_name: String,
+    pub obb_min: [f32; 3],
+    pub obb_max: [f32; 3],
+    pub tri_count: i32,
+    pub tri_indices: Vec<i32>,
+}
+
+/// Topology group data extracted from glTF.
+#[derive(Debug, Clone)]
+pub struct TopologyGroupData {
+    pub material_index: i32,
+    pub tri_first: i32,
+    pub tri_count: i32,
+}
+
+/// Model data extracted from glTF.
+#[derive(Debug, Clone)]
+pub struct ModelData {
+    pub name: String,
+    pub mesh_binding_names: Vec<String>,
+    pub initial_placement: Transform,
+}
+
 /// Mesh data extracted from glTF.
 #[derive(Clone)]
 pub struct MeshData {
     pub name: String,
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
+    pub bg3_profile: Option<Bg3MeshProfile>,
+    pub bone_bindings: Vec<BoneBindingData>,
+    pub material_binding_names: Vec<String>,
+    pub topology_groups: Vec<TopologyGroupData>,
+    pub user_defined_properties: Option<String>,
 }
 
 /// Transform data for bones.
@@ -61,6 +95,7 @@ pub struct Bone {
     pub parent_index: i32,
     pub transform: Transform,
     pub inverse_world_transform: [f32; 16],
+    pub lod_error: f32,
 }
 
 /// Skeleton data.
@@ -68,12 +103,14 @@ pub struct Bone {
 pub struct Skeleton {
     pub name: String,
     pub bones: Vec<Bone>,
+    pub lod_type: i32,
 }
 
 /// Complete glTF model.
 pub struct GltfModel {
     pub meshes: Vec<MeshData>,
     pub skeleton: Option<Skeleton>,
+    pub model: Option<ModelData>,
 }
 
 // ============================================================================
@@ -109,10 +146,34 @@ impl GltfModel {
     ) -> Result<Self> {
         let mut meshes = Vec::new();
         let mut skeleton = None;
+        let mut model = None;
 
         // First pass: find skeleton from skins
         for skin in document.skins() {
-            skeleton = Some(load_skeleton(document, &skin, buffers)?);
+            let (skel, skel_profile) = load_skeleton_with_profile(document, &skin, buffers)?;
+            skeleton = Some(skel);
+
+            // Extract model data from skin profile
+            if let Some(ref profile) = skel_profile {
+                if let Some(ref name) = profile.model_name {
+                    model = Some(ModelData {
+                        name: name.clone(),
+                        mesh_binding_names: profile
+                            .model_mesh_bindings
+                            .clone()
+                            .unwrap_or_default(),
+                        initial_placement: profile
+                            .initial_placement
+                            .as_ref()
+                            .map(|p| Transform {
+                                translation: p.translation,
+                                rotation: p.rotation,
+                                scale_shear: p.scale_shear,
+                            })
+                            .unwrap_or_default(),
+                    });
+                }
+            }
             break; // Only support one skeleton for now
         }
 
@@ -137,6 +198,7 @@ impl GltfModel {
         for node in document.nodes() {
             if let Some(mesh) = node.mesh() {
                 let node_name = node.name().unwrap_or("Mesh");
+                let bg3_profile = parse_bg3_profile(&mesh);
 
                 for (prim_idx, primitive) in mesh.primitives().enumerate() {
                     let name = if mesh.primitives().len() > 1 {
@@ -145,7 +207,12 @@ impl GltfModel {
                         mesh.name().unwrap_or(node_name).to_string()
                     };
 
-                    if let Some(mesh_data) = load_primitive(&primitive, buffers, &name)? {
+                    if let Some(mut mesh_data) = load_primitive(&primitive, buffers, &name)? {
+                        // Extract extension data before overwriting the profile
+                        if let Some(ref profile) = bg3_profile {
+                            extract_mesh_extension_data(&mut mesh_data, profile);
+                        }
+                        mesh_data.bg3_profile.clone_from(&bg3_profile);
                         meshes.push(mesh_data);
                     }
                 }
@@ -158,18 +225,25 @@ impl GltfModel {
             ));
         }
 
-        Ok(GltfModel { meshes, skeleton })
+        Ok(GltfModel {
+            meshes,
+            skeleton,
+            model,
+        })
     }
 }
 
-/// Load skeleton from a glTF skin.
-fn load_skeleton(
+/// Load skeleton from a glTF skin, returning the skeleton and optional skin profile.
+fn load_skeleton_with_profile(
     document: &gltf::Document,
     skin: &gltf::Skin,
     buffers: &[gltf::buffer::Data],
-) -> Result<Skeleton> {
+) -> Result<(Skeleton, Option<Bg3SkeletonProfile>)> {
     let name = skin.name().unwrap_or("Skeleton").to_string();
     let joints: Vec<_> = skin.joints().collect();
+
+    // Parse skeleton profile from skin extensions
+    let skel_profile = parse_bg3_skeleton_profile(skin);
 
     // Build parent index map
     let joint_indices: HashMap<usize, usize> = joints
@@ -190,6 +264,16 @@ fn load_skeleton(
             joints.len()
         ]
     };
+
+    // Extract per-bone LOD errors from the profile
+    let bone_lod_errors = skel_profile
+        .as_ref()
+        .and_then(|p| p.bone_lod_error.as_ref());
+
+    let lod_type = skel_profile
+        .as_ref()
+        .and_then(|p| p.lod_type)
+        .unwrap_or(0);
 
     let mut bones = Vec::with_capacity(joints.len());
 
@@ -217,15 +301,20 @@ fn load_skeleton(
             1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ]);
 
+        let lod_error = bone_lod_errors
+            .and_then(|errors| errors.get(bone_idx).copied())
+            .unwrap_or(0.0);
+
         bones.push(Bone {
             name: bone_name,
             parent_index,
             transform,
             inverse_world_transform,
+            lod_error,
         });
     }
 
-    Ok(Skeleton { name, bones })
+    Ok((Skeleton { name, bones, lod_type }, skel_profile))
 }
 
 /// Find the parent bone index for a joint.
@@ -246,6 +335,55 @@ fn find_parent_bone_index(
         }
     }
     -1 // Root bone
+}
+
+/// Parse the `MACLARIAN_glTF_extensions` extension from a glTF mesh.
+fn parse_bg3_profile(mesh: &gltf::Mesh) -> Option<Bg3MeshProfile> {
+    let ext_map = mesh.extensions()?;
+    let profile_json = ext_map.get("MACLARIAN_glTF_extensions")?;
+    serde_json::from_value(profile_json.clone()).ok()
+}
+
+/// Parse the `MACLARIAN_glTF_extensions` extension from a glTF skin.
+fn parse_bg3_skeleton_profile(skin: &gltf::Skin) -> Option<Bg3SkeletonProfile> {
+    let ext_map = skin.extensions()?;
+    let profile_json = ext_map.get("MACLARIAN_glTF_extensions")?;
+    serde_json::from_value(profile_json.clone()).ok()
+}
+
+/// Extract mesh extension data (bone bindings, materials, topology groups, UDP) from a profile.
+fn extract_mesh_extension_data(mesh_data: &mut MeshData, profile: &Bg3MeshProfile) {
+    if let Some(ref bindings) = profile.bone_bindings {
+        mesh_data.bone_bindings = bindings
+            .iter()
+            .map(|bb| BoneBindingData {
+                bone_name: bb.bone_name.clone(),
+                obb_min: bb.obb_min,
+                obb_max: bb.obb_max,
+                tri_count: bb.tri_count,
+                tri_indices: bb.tri_indices.clone(),
+            })
+            .collect();
+    }
+
+    if let Some(ref mats) = profile.material_bindings {
+        mesh_data.material_binding_names.clone_from(mats);
+    }
+
+    if let Some(ref groups) = profile.topology_groups {
+        mesh_data.topology_groups = groups
+            .iter()
+            .map(|tg| TopologyGroupData {
+                material_index: tg.material_index,
+                tri_first: tg.tri_first,
+                tri_count: tg.tri_count,
+            })
+            .collect();
+    }
+
+    mesh_data
+        .user_defined_properties
+        .clone_from(&profile.user_defined_properties);
 }
 
 /// Load a mesh primitive.
@@ -377,6 +515,11 @@ fn load_primitive(
         name: name.to_string(),
         vertices,
         indices: flipped_indices,
+        bg3_profile: None,
+        bone_bindings: Vec::new(),
+        material_binding_names: Vec::new(),
+        topology_groups: Vec::new(),
+        user_defined_properties: None,
     }))
 }
 

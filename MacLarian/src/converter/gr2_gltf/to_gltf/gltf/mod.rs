@@ -12,8 +12,9 @@ pub use builder::GltfBuilder;
 // Re-export all types for external use
 #[allow(unused_imports)]
 pub use types::{
-    GltfAccessor, GltfAsset, GltfBuffer, GltfBufferView, GltfDocument, GltfMesh, GltfNode,
-    GltfPrimitive, GltfScene, GltfSkin,
+    Bg3BoneBinding, Bg3MeshProfile, Bg3SkeletonProfile, Bg3TopologyGroup, Bg3Transform,
+    GltfAccessor, GltfAsset, GltfBuffer, GltfBufferView, GltfDocument, GltfMesh,
+    GltfMeshExtensions, GltfNode, GltfPrimitive, GltfScene, GltfSkin, GltfSkinExtensions,
 };
 
 // Re-export material types for external use

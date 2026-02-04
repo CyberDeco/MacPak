@@ -1,6 +1,6 @@
 [package]
 name = "maclarian"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.85"
 authors = ["CyberDeco"]
@@ -39,7 +39,7 @@ byteorder = "1.5"           # Reading/writing little-endian data
 glam = "0.27"               # SIMD-optimized vectors, quaternions, matrices
 half = { version = "2.6", features = ["bytemuck", "serde"] }  # IEEE 754 half-precision floats (f16)
 bytemuck = { version = "1.14", features = ["derive"] }        # Safe zero-copy type casting
-gltf = "1.4.1"              # glTF 2.0 export (includes gltf-json)
+gltf = { version = "1.4.1", features = ["extensions"] }  # glTF 2.0 export (includes gltf-json)
 
 # Encoding
 base64 = "0.22"             # Base64 encoding for ScratchBuffer type

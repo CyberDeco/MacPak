@@ -23,17 +23,14 @@ pub const NUM_SECTIONS: u32 = 7;
 
 // Member types
 pub const MEMBER_NONE: u32 = 0;
-pub const MEMBER_INLINE: u32 = 1;
 pub const MEMBER_REFERENCE: u32 = 2;
 pub const MEMBER_REF_TO_ARRAY: u32 = 3;
 pub const MEMBER_ARRAY_OF_REFS: u32 = 4;
 pub const MEMBER_STRING: u32 = 8;
 pub const MEMBER_TRANSFORM: u32 = 9;
 pub const MEMBER_REAL32: u32 = 10;
-pub const MEMBER_INT8: u32 = 11;
 pub const MEMBER_UINT8: u32 = 12;
 pub const MEMBER_BINORMAL_INT16: u32 = 17;
-pub const MEMBER_UINT16: u32 = 16;
 pub const MEMBER_INT32: u32 = 19;
 pub const MEMBER_UINT32: u32 = 20;
 pub const MEMBER_REAL16: u32 = 21;

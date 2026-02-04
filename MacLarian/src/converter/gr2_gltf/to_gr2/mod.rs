@@ -63,6 +63,10 @@ pub fn convert_gltf_to_gr2_with_progress(
         writer.add_skeleton(skeleton);
     }
 
+    if let Some(ref model_data) = model.model {
+        writer.set_model(model_data);
+    }
+
     for mesh in &model.meshes {
         writer.add_mesh(mesh);
     }
@@ -110,6 +114,10 @@ pub fn convert_gltf_bytes_to_gr2_with_progress(
 
     if let Some(ref skeleton) = model.skeleton {
         writer.add_skeleton(skeleton);
+    }
+
+    if let Some(ref model_data) = model.model {
+        writer.set_model(model_data);
     }
 
     for mesh in &model.meshes {

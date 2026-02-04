@@ -5,14 +5,10 @@ use std::collections::HashMap;
 use crate::converter::gr2_gltf::to_gltf::gr2_reader::MeshData;
 use crate::converter::gr2_gltf::to_gltf::utils::decode_qtangent;
 
-use super::super::types::{GltfMesh, GltfNode, GltfPrimitive};
+use super::super::types::{Bg3MeshProfile, GltfMesh, GltfMeshExtensions, GltfNode, GltfPrimitive};
 use super::GltfBuilder;
 
 impl GltfBuilder {
-    pub fn add_mesh(&mut self, mesh_data: &MeshData, skin_idx: Option<usize>) -> usize {
-        self.add_mesh_internal(mesh_data, skin_idx, None)
-    }
-
     /// Add a mesh with an associated material.
     /// Returns the node index.
     pub fn add_mesh_with_material(
@@ -21,7 +17,18 @@ impl GltfBuilder {
         skin_idx: Option<usize>,
         material_idx: Option<usize>,
     ) -> usize {
-        self.add_mesh_internal(mesh_data, skin_idx, material_idx)
+        self.add_mesh_internal(mesh_data, skin_idx, material_idx, None)
+    }
+
+    /// Add a mesh with an associated BG3 profile extension.
+    /// Returns the node index.
+    pub fn add_mesh_with_profile(
+        &mut self,
+        mesh_data: &MeshData,
+        skin_idx: Option<usize>,
+        profile: Option<Bg3MeshProfile>,
+    ) -> usize {
+        self.add_mesh_internal(mesh_data, skin_idx, None, profile)
     }
 
     fn add_mesh_internal(
@@ -29,6 +36,7 @@ impl GltfBuilder {
         mesh_data: &MeshData,
         skin_idx: Option<usize>,
         material_idx: Option<usize>,
+        profile: Option<Bg3MeshProfile>,
     ) -> usize {
         // Extract vertex attributes with X-axis negation for coordinate system conversion
         let positions: Vec<[f32; 3]> = mesh_data
@@ -113,6 +121,9 @@ impl GltfBuilder {
                 indices: indices_idx,
                 material: material_idx,
             }],
+            extensions: profile.map(|p| GltfMeshExtensions {
+                bg3_profile: Some(p),
+            }),
         });
 
         // Add node for mesh

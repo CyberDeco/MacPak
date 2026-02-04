@@ -1,9 +1,8 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [0.1.1] - 2026-02-03
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+- Added support for missing GR2 metadata via glTF extensions: MeshProxy, Rigid, Cloth, Spring, Occluder, LOD, LSMVersion, Flags, and LodDistance
 
 ## [0.1.0] - 2026-02-03
 
@@ -12,7 +11,7 @@ Initial release.
 ### Added
 
 #### PAK Archives
-- Extract, create, and list LSPK package files
+- Extract, create, and list .pak files
 - LZ4 and Zlib compression support
 - Batch operations with glob patterns
 - Progress callbacks for UI integration
