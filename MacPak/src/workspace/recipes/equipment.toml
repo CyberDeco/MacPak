@@ -17,9 +17,10 @@ directories = [
     "Public/{{mod_name}}/RootTemplates",
     "Public/{{mod_name}}/Stats/Generated/Data",
     "Public/{{mod_name}}/Stats/Generated",
+    "Public/{{mod_name}}/Content/Assets/Characters/[PAK]_Armor",
     "Public/{{mod_name}}/Assets/Textures/Icons",
     "Public/{{mod_name}}/GUI",
-    "Public/{{mod_name}}/Content/UI/[PAK]_UI",
+    "Generated/Public/{{mod_name}}/Assets",
     "Localization/English",
     "Public/Game/GUI/Assets/Tooltips/ItemIcons",
     "Public/Game/GUI/Assets/ControllerUIIcons/items_png",
@@ -35,25 +36,87 @@ description = "Mod metadata — required for all mods"
 path = "Localization/English/{{mod_name}}.xml"
 kind = "generated"
 generator = "localization_xml"
-description = "Localized display names and descriptions"
+description = "Localized item names and descriptions"
 
 [[files]]
-path = "Public/{{mod_name}}/Stats/Generated/Data/Object.txt"
-kind = "manual"
-description = "Item stat definitions (type, using template, root template reference)"
+path = "Public/{{mod_name}}/Stats/Generated/Data/Armor.txt"
+kind = "generated"
+generator = "equipment_armor_txt"
+description = "Armor stat definitions (AC, rarity, boosts, passives)"
 hint = """
-new entry "MyItem"
-type "Object"
-using "EQP_Armor"
-data "RootTemplate" "<your-template-uuid>"
+new entry "MyArmor"
+type "Armor"
+using "ARM_ScaleMail_Body"
+data "RootTemplate" "<template-uuid>"
+data "Rarity" "Rare"
+data "Boosts" "AC(1)"
 """
 
 [[files]]
-path = "Public/{{mod_name}}/Stats/Generated/ItemCombos.txt"
+path = "Public/{{mod_name}}/Stats/Generated/Data/Weapon.txt"
 kind = "optional"
-description = "Item combination rules (e.g., dyeing, crafting)"
+description = "Weapon stat definitions (damage, type, properties)"
+hint = """
+new entry "MyWeapon"
+type "Weapon"
+using "WPN_Longsword_1"
+data "RootTemplate" "<template-uuid>"
+data "Damage" "1d8"
+data "DefaultBoosts" "WeaponProperty(Magical)"
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Object.txt"
+kind = "optional"
+description = "Generic object stat definitions (pouches, consumables, misc items)"
+hint = """
+new entry "MyObject"
+type "Object"
+using "OBJ_Pouch"
+data "RootTemplate" "<template-uuid>"
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Passive.txt"
+kind = "optional"
+description = "Custom passive abilities granted by equipment"
+hint = """
+new entry "MyPassive"
+type "PassiveData"
+data "DisplayName" "<name-handle>;1"
+data "Description" "<desc-handle>;1"
+data "Icon" "PassiveFeature_Generic"
+data "StatsFunctorContext" "OnAttacked"
+data "StatsFunctors" "DealDamage(1d4,Radiant)"
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/TreasureTable.txt"
+kind = "generated"
+generator = "equipment_treasure_table_txt"
+description = "Treasure table entries for vendor and loot placement"
 
 [[files]]
 path = "Public/{{mod_name}}/RootTemplates/_merged.lsf"
 kind = "manual"
-description = "Item templates defining in-game objects (LSF binary)"
+description = "Item root templates defining in-game objects (GameObjects nodes with DisplayName, Icon, Stats, ParentTemplateId)"
+
+[[files]]
+path = "Public/{{mod_name}}/Content/Assets/Characters/[PAK]_Armor/_merged.lsf"
+kind = "optional"
+description = "VisualBank and MaterialBank definitions for custom meshes and textures"
+
+[[files]]
+path = "Public/{{mod_name}}/GUI/{{mod_name}}_TextureAtlasInfo.lsf"
+kind = "optional"
+description = "Icon atlas UV metadata for custom item icons"
+
+[[files]]
+path = "Public/{{mod_name}}/Assets/Textures/Icons/{{mod_name}}_Icons.dds"
+kind = "optional"
+description = "DDS texture atlas containing item icons"
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/ItemCombos.txt"
+kind = "optional"
+description = "Item combination rules (e.g., dyeing, crafting recipes)"
