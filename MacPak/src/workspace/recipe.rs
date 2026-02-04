@@ -70,10 +70,11 @@ pub enum FileKind {
 const GENERIC_RECIPE: &str = include_str!("recipes/generic.toml");
 const EQUIPMENT_RECIPE: &str = include_str!("recipes/equipment.toml");
 const SPELL_RECIPE: &str = include_str!("recipes/spell.toml");
+const DYES_RECIPE: &str = include_str!("recipes/dyes.toml");
 
 /// Load all bundled recipes
 pub fn load_bundled_recipes() -> Vec<Recipe> {
-    let sources = [GENERIC_RECIPE, EQUIPMENT_RECIPE, SPELL_RECIPE];
+    let sources = [GENERIC_RECIPE, EQUIPMENT_RECIPE, SPELL_RECIPE, DYES_RECIPE];
     sources
         .iter()
         .filter_map(|src| match toml::from_str::<Recipe>(src) {
@@ -112,10 +113,11 @@ mod tests {
     #[test]
     fn test_load_bundled_recipes() {
         let recipes = load_bundled_recipes();
-        assert_eq!(recipes.len(), 3);
+        assert_eq!(recipes.len(), 4);
         assert!(recipes.iter().any(|r| r.recipe.id == "generic"));
         assert!(recipes.iter().any(|r| r.recipe.id == "equipment"));
         assert!(recipes.iter().any(|r| r.recipe.id == "spell"));
+        assert!(recipes.iter().any(|r| r.recipe.id == "dyes"));
     }
 
     #[test]

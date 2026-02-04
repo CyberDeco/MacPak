@@ -1,0 +1,74 @@
+[recipe]
+id = "dyes"
+name = "Dye Color Mod"
+description = "Custom dye colors for armor and clothing with vendor distribution"
+category = "Colors"
+
+[structure]
+directories = [
+    "Mods/{{mod_name}}",
+    "Public/{{mod_name}}/Assets/Textures/Icons",
+    "Public/{{mod_name}}/Content/Assets/Characters/[PAK]_DYE_Colors",
+    "Public/{{mod_name}}/Content/UI/[PAK]_UI",
+    "Public/{{mod_name}}/GUI",
+    "Public/{{mod_name}}/RootTemplates",
+    "Public/{{mod_name}}/Stats/Generated/Data",
+    "Public/Game/GUI/Assets/Tooltips/ItemIcons",
+    "Public/Game/GUI/Assets/ControllerUIIcons/items_png",
+    "Localization/English",
+]
+
+[[files]]
+path = "Mods/{{mod_name}}/meta.lsx"
+kind = "generated"
+generator = "meta_lsx"
+description = "Mod metadata — required for all mods"
+
+[[files]]
+path = "Localization/English/{{mod_name}}.xml"
+kind = "generated"
+generator = "localization_xml"
+description = "Localized dye names, descriptions, and pouch text"
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Object.txt"
+kind = "generated"
+generator = "dye_object_txt"
+description = "Dye item stat definitions (using _Dyes template)"
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/ItemCombos.txt"
+kind = "generated"
+generator = "dye_item_combos_txt"
+description = "Dye application recipes (dye + DyableArmor → dyed armor)"
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/TreasureTable.txt"
+kind = "generated"
+generator = "dye_treasure_table_txt"
+description = "Vendor distribution tables for dye pouch"
+
+[[files]]
+path = "Public/{{mod_name}}/RootTemplates/_merged.lsf"
+kind = "manual"
+description = "Item templates defining dye and pouch objects (generate with Dye Lab)"
+
+[[files]]
+path = "Public/{{mod_name}}/Content/Assets/Characters/[PAK]_DYE_Colors/_merged.lsf"
+kind = "manual"
+description = "MaterialPresetBank with color parameters for each dye (generate with Dye Lab)"
+
+[[files]]
+path = "Public/{{mod_name}}/Content/UI/[PAK]_UI/_merged.lsf"
+kind = "manual"
+description = "TextureBank referencing the icon atlas (generate with Dye Lab)"
+
+[[files]]
+path = "Public/{{mod_name}}/GUI/{{mod_name}}_TextureAtlasInfo.lsf"
+kind = "manual"
+description = "Icon atlas UV metadata (generate with Dye Lab)"
+
+[[files]]
+path = "Public/{{mod_name}}/Assets/Textures/Icons/{{mod_name}}_Icons.dds"
+kind = "manual"
+description = "Icon atlas DDS texture (generate with Dye Lab)"

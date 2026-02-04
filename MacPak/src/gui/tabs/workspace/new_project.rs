@@ -61,162 +61,162 @@ fn new_project_form(state: WorkspaceState) -> impl IntoView {
     v_stack((
         // Title
         label(|| "New Project").style(move |s| {
-                let colors = theme_signal()
-                    .map(|t| ThemeColors::for_theme(t.get().effective()))
-                    .unwrap_or_else(ThemeColors::dark);
-                s.font_size(20.0)
-                    .font_weight(floem::text::Weight::BOLD)
-                    .color(colors.text_primary)
-                    .margin_bottom(16.0)
-            }),
-            // Recipe selector
-            label(|| "Recipe (Mod Type)").style(move |s| {
-                let colors = theme_signal()
-                    .map(|t| ThemeColors::for_theme(t.get().effective()))
-                    .unwrap_or_else(ThemeColors::dark);
-                s.font_size(13.0)
-                    .font_weight(floem::text::Weight::SEMIBOLD)
-                    .color(colors.text_secondary)
-                    .margin_bottom(4.0)
-            }),
-            recipe_selector(recipes, selected_recipe_idx),
-            // Mod name
-            form_field("Mod Name", mod_name),
-            // Author
-            form_field("Author", author),
-            // Description
-            form_field("Description", description),
-            // Location
-            location_field(project_location),
-            // Error message
-            dyn_container(
-                move || form_error.get(),
-                move |err| {
-                    if err.is_empty() {
-                        empty().into_any()
-                    } else {
-                        label(move || err.clone())
-                            .style(move |s| {
-                                let colors = theme_signal()
-                                    .map(|t| ThemeColors::for_theme(t.get().effective()))
-                                    .unwrap_or_else(ThemeColors::dark);
-                                s.color(colors.error).font_size(12.0).margin_top(8.0)
-                            })
-                            .into_any()
-                    }
-                },
-            ),
-            // Buttons
-            h_stack((
-                empty().style(|s| s.flex_grow(1.0)),
-                button("Cancel")
-                    .action(move || {
-                        state_for_cancel.show_new_dialog.set(false);
-                    })
-                    .style(move |s| {
-                        let colors = theme_signal()
-                            .map(|t| ThemeColors::for_theme(t.get().effective()))
-                            .unwrap_or_else(ThemeColors::dark);
-                        s.padding_horiz(20.0)
-                            .padding_vert(8.0)
-                            .background(colors.bg_elevated)
-                            .color(colors.text_primary)
-                            .border(1.0)
-                            .border_color(colors.border)
-                            .border_radius(6.0)
-                            .hover(|s| s.background(colors.bg_hover))
-                    }),
-                button("Create Project")
-                    .action(move || {
-                        let name = mod_name.get();
-                        if name.is_empty() {
-                            form_error.set("Mod name is required.".to_string());
-                            return;
-                        }
-
-                        let all_recipes = recipes.get();
-                        let idx = selected_recipe_idx.get();
-                        let recipe = match all_recipes.get(idx) {
-                            Some(r) => r.clone(),
-                            None => {
-                                form_error.set("Please select a recipe.".to_string());
-                                return;
-                            }
-                        };
-
-                        let folder = to_folder_name(&name);
-                        let uuid = generate_uuid(UuidFormat::Standard);
-                        let location = project_location.get();
-                        let project_dir = std::path::PathBuf::from(&location).join(&folder);
-
-                        if project_dir.exists() {
-                            form_error.set(format!(
-                                "Directory already exists: {}",
-                                project_dir.display()
-                            ));
-                            return;
-                        }
-
-                        // Build recipe variables with defaults
-                        let mut variables = HashMap::new();
-                        for var in &recipe.variables {
-                            variables.insert(var.name.clone(), var.default.clone());
-                        }
-
-                        let manifest = ProjectManifest {
-                            project: ProjectMeta {
-                                name: name.clone(),
-                                folder,
-                                author: author.get(),
-                                description: description.get(),
-                                uuid,
-                                version: "1.0.0.0".to_string(),
-                                recipe: recipe.recipe.id.clone(),
-                            },
-                            build: BuildSettings::default(),
-                            variables,
-                        };
-
-                        match Workspace::create(&project_dir, manifest) {
-                            Ok(ws) => {
-                                state_for_create.error_message.set(None);
-                                state_for_create
-                                    .result_message
-                                    .set(Some(format!("Created: {}", ws.manifest.project.name)));
-                                state_for_create.workspace.set(Some(ws));
-                                state_for_create.show_new_dialog.set(false);
-                            }
-                            Err(e) => {
-                                form_error.set(format!("Failed to create project: {}", e));
-                            }
-                        }
-                    })
-                    .style(move |s| {
-                        let colors = theme_signal()
-                            .map(|t| ThemeColors::for_theme(t.get().effective()))
-                            .unwrap_or_else(ThemeColors::dark);
-                        s.padding_horiz(20.0)
-                            .padding_vert(8.0)
-                            .background(colors.accent)
-                            .color(colors.text_inverse)
-                            .border_radius(6.0)
-                            .hover(|s| s.background(colors.accent_hover))
-                    }),
-            ))
-            .style(|s| s.width_full().gap(8.0).margin_top(16.0)),
-        ))
-        .style(move |s| {
             let colors = theme_signal()
                 .map(|t| ThemeColors::for_theme(t.get().effective()))
                 .unwrap_or_else(ThemeColors::dark);
-            s.width(500.0)
-                .padding(24.0)
-                .background(colors.bg_surface)
-                .border(1.0)
-                .border_color(colors.border)
-                .border_radius(8.0)
-                .gap(4.0)
-        })
+            s.font_size(20.0)
+                .font_weight(floem::text::Weight::BOLD)
+                .color(colors.text_primary)
+                .margin_bottom(16.0)
+        }),
+        // Recipe selector
+        label(|| "Recipe (Mod Type)").style(move |s| {
+            let colors = theme_signal()
+                .map(|t| ThemeColors::for_theme(t.get().effective()))
+                .unwrap_or_else(ThemeColors::dark);
+            s.font_size(13.0)
+                .font_weight(floem::text::Weight::SEMIBOLD)
+                .color(colors.text_secondary)
+                .margin_bottom(4.0)
+        }),
+        recipe_selector(recipes, selected_recipe_idx),
+        // Mod name
+        form_field("Mod Name", mod_name),
+        // Author
+        form_field("Author", author),
+        // Description
+        form_field("Description", description),
+        // Location
+        location_field(project_location),
+        // Error message
+        dyn_container(
+            move || form_error.get(),
+            move |err| {
+                if err.is_empty() {
+                    empty().into_any()
+                } else {
+                    label(move || err.clone())
+                        .style(move |s| {
+                            let colors = theme_signal()
+                                .map(|t| ThemeColors::for_theme(t.get().effective()))
+                                .unwrap_or_else(ThemeColors::dark);
+                            s.color(colors.error).font_size(12.0).margin_top(8.0)
+                        })
+                        .into_any()
+                }
+            },
+        ),
+        // Buttons
+        h_stack((
+            empty().style(|s| s.flex_grow(1.0)),
+            button("Cancel")
+                .action(move || {
+                    state_for_cancel.show_new_dialog.set(false);
+                })
+                .style(move |s| {
+                    let colors = theme_signal()
+                        .map(|t| ThemeColors::for_theme(t.get().effective()))
+                        .unwrap_or_else(ThemeColors::dark);
+                    s.padding_horiz(20.0)
+                        .padding_vert(8.0)
+                        .background(colors.bg_elevated)
+                        .color(colors.text_primary)
+                        .border(1.0)
+                        .border_color(colors.border)
+                        .border_radius(6.0)
+                        .hover(|s| s.background(colors.bg_hover))
+                }),
+            button("Create Project")
+                .action(move || {
+                    let name = mod_name.get();
+                    if name.is_empty() {
+                        form_error.set("Mod name is required.".to_string());
+                        return;
+                    }
+
+                    let all_recipes = recipes.get();
+                    let idx = selected_recipe_idx.get();
+                    let recipe = match all_recipes.get(idx) {
+                        Some(r) => r.clone(),
+                        None => {
+                            form_error.set("Please select a recipe.".to_string());
+                            return;
+                        }
+                    };
+
+                    let folder = to_folder_name(&name);
+                    let uuid = generate_uuid(UuidFormat::Standard);
+                    let location = project_location.get();
+                    let project_dir = std::path::PathBuf::from(&location).join(&folder);
+
+                    if project_dir.exists() {
+                        form_error.set(format!(
+                            "Directory already exists: {}",
+                            project_dir.display()
+                        ));
+                        return;
+                    }
+
+                    // Build recipe variables with defaults
+                    let mut variables = HashMap::new();
+                    for var in &recipe.variables {
+                        variables.insert(var.name.clone(), var.default.clone());
+                    }
+
+                    let manifest = ProjectManifest {
+                        project: ProjectMeta {
+                            name: name.clone(),
+                            folder,
+                            author: author.get(),
+                            description: description.get(),
+                            uuid,
+                            version: "1.0.0.0".to_string(),
+                            recipe: recipe.recipe.id.clone(),
+                        },
+                        build: BuildSettings::default(),
+                        variables,
+                    };
+
+                    match Workspace::create(&project_dir, manifest) {
+                        Ok(ws) => {
+                            state_for_create.error_message.set(None);
+                            state_for_create
+                                .result_message
+                                .set(Some(format!("Created: {}", ws.manifest.project.name)));
+                            state_for_create.workspace.set(Some(ws));
+                            state_for_create.show_new_dialog.set(false);
+                        }
+                        Err(e) => {
+                            form_error.set(format!("Failed to create project: {}", e));
+                        }
+                    }
+                })
+                .style(move |s| {
+                    let colors = theme_signal()
+                        .map(|t| ThemeColors::for_theme(t.get().effective()))
+                        .unwrap_or_else(ThemeColors::dark);
+                    s.padding_horiz(20.0)
+                        .padding_vert(8.0)
+                        .background(colors.accent)
+                        .color(colors.text_inverse)
+                        .border_radius(6.0)
+                        .hover(|s| s.background(colors.accent_hover))
+                }),
+        ))
+        .style(|s| s.width_full().gap(8.0).margin_top(16.0)),
+    ))
+    .style(move |s| {
+        let colors = theme_signal()
+            .map(|t| ThemeColors::for_theme(t.get().effective()))
+            .unwrap_or_else(ThemeColors::dark);
+        s.width(500.0)
+            .padding(24.0)
+            .background(colors.bg_surface)
+            .border(1.0)
+            .border_color(colors.border)
+            .border_radius(8.0)
+            .gap(4.0)
+    })
 }
 
 fn recipe_selector(recipes: RwSignal<Vec<Recipe>>, selected: RwSignal<usize>) -> impl IntoView {
