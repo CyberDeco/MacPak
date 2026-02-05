@@ -72,6 +72,7 @@ const EQUIPMENT_RECIPE: &str = include_str!("recipes/equipment.toml");
 const SPELL_RECIPE: &str = include_str!("recipes/spell.toml");
 const DYES_RECIPE: &str = include_str!("recipes/dyes.toml");
 const HAIR_RECIPE: &str = include_str!("recipes/hair.toml");
+const CLASS_RECIPE: &str = include_str!("recipes/class.toml");
 
 /// Load all bundled recipes
 pub fn load_bundled_recipes() -> Vec<Recipe> {
@@ -81,6 +82,7 @@ pub fn load_bundled_recipes() -> Vec<Recipe> {
         SPELL_RECIPE,
         DYES_RECIPE,
         HAIR_RECIPE,
+        CLASS_RECIPE,
     ];
     sources
         .iter()
@@ -120,12 +122,13 @@ mod tests {
     #[test]
     fn test_load_bundled_recipes() {
         let recipes = load_bundled_recipes();
-        assert_eq!(recipes.len(), 5);
+        assert_eq!(recipes.len(), 6);
         assert!(recipes.iter().any(|r| r.recipe.id == "generic"));
         assert!(recipes.iter().any(|r| r.recipe.id == "equipment"));
         assert!(recipes.iter().any(|r| r.recipe.id == "spell"));
         assert!(recipes.iter().any(|r| r.recipe.id == "dyes"));
         assert!(recipes.iter().any(|r| r.recipe.id == "hair"));
+        assert!(recipes.iter().any(|r| r.recipe.id == "class"));
     }
 
     #[test]

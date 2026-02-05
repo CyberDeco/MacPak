@@ -1,0 +1,109 @@
+[recipe]
+id = "class"
+name = "Class / Subclass Mod"
+description = "Custom classes or subclasses with progressions, spell lists, and abilities"
+category = "Gameplay"
+
+[[variables]]
+name = "class_name"
+label = "Class Name"
+type = "text"
+default = "MyClass"
+
+[structure]
+directories = [
+    "Mods/{{mod_name}}",
+    "Public/{{mod_name}}/ClassDescriptions",
+    "Public/{{mod_name}}/Progressions",
+    "Public/{{mod_name}}/Lists",
+    "Public/{{mod_name}}/Tags",
+    "Public/{{mod_name}}/ActionResourceDefinitions",
+    "Public/{{mod_name}}/Stats/Generated/Data",
+    "Public/{{mod_name}}/Stats/Generated",
+    "Localization/English",
+    "Public/Game/GUI/Assets/Tooltips/Icons",
+    "Public/Game/GUI/Assets/ControllerUIIcons/skills_png",
+]
+
+[[files]]
+path = "Mods/{{mod_name}}/meta.lsx"
+kind = "generated"
+generator = "meta_lsx"
+description = "Mod metadata — required for all mods"
+
+[[files]]
+path = "Localization/English/{{mod_name}}.xml"
+kind = "generated"
+generator = "localization_xml"
+description = "Localized class name, description, feature names, and spell text"
+
+[[files]]
+path = "Public/{{mod_name}}/ClassDescriptions/{{class_name}}.ClassDescriptions.lsx"
+kind = "generated"
+generator = "class_descriptions_lsx"
+description = "Class definition (base HP, abilities, spellcasting, progression table reference)"
+
+[[files]]
+path = "Public/{{mod_name}}/Progressions/{{class_name}}.Progressions.lsx"
+kind = "generated"
+generator = "class_progressions_lsx"
+description = "Level-by-level progression table (features, spells, ability improvements per level)"
+
+[[files]]
+path = "Public/{{mod_name}}/Lists/SpellLists.lsx"
+kind = "optional"
+description = "Spell lists granting spells at specific progression levels"
+hint = """
+<region id="SpellLists">
+  <node id="root"><children>
+    <node id="SpellList">
+      <attribute id="Spells" type="LSString" value="MySpell_1,MySpell_2" />
+      <attribute id="UUID" type="guid" value="<unique-uuid>" />
+    </node>
+  </children></node>
+</region>
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/Lists/PassiveLists.lsx"
+kind = "optional"
+description = "Passive ability lists granted at specific progression levels"
+hint = """
+<region id="PassiveLists">
+  <node id="root"><children>
+    <node id="PassiveList">
+      <attribute id="Passives" type="LSString" value="MyPassive_1,MyPassive_2" />
+      <attribute id="UUID" type="guid" value="<unique-uuid>" />
+    </node>
+  </children></node>
+</region>
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Passive.txt"
+kind = "optional"
+description = "Passive ability stat definitions for class features"
+hint = """
+new entry "MyClassFeature"
+type "PassiveData"
+data "DisplayName" "<name-handle>;1"
+data "Description" "<desc-handle>;1"
+data "Icon" "PassiveFeature_Generic"
+data "Properties" "Highlighted"
+data "Boosts" "AC(1)"
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/Stats/Generated/Data/Status_BOOST.txt"
+kind = "optional"
+description = "Status effects for class abilities (buffs, auras, conditions)"
+
+[[files]]
+path = "Public/{{mod_name}}/ActionResourceDefinitions/ActionResourceDefinitions.lsx"
+kind = "optional"
+description = "Custom action resources (e.g., rage charges, ki points, channel divinity uses)"
+
+[[files]]
+path = "Public/{{mod_name}}/Tags/{{class_name}}.Tags.lsx"
+kind = "optional"
+description = "Class tags for conditional checks and game logic"
