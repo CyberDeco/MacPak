@@ -8,10 +8,7 @@ use crate::workspace::project::ProjectManifest;
 /// Generate a placeholder Armor.txt for an equipment mod.
 ///
 /// Contains an example armor entry showing the stat format with common fields.
-pub fn generate_equipment_armor_txt(
-    dest: &Path,
-    manifest: &ProjectManifest,
-) -> Result<(), String> {
+pub fn generate_equipment_armor_txt(dest: &Path, manifest: &ProjectManifest) -> Result<(), String> {
     let mod_name = &manifest.project.folder;
     let content = format!(
         r#"new entry "{mod_name}_ExampleArmor"

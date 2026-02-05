@@ -1,6 +1,7 @@
 //! New Project wizard dialog
 
 use floem::prelude::*;
+use floem_reactive::create_effect;
 use std::collections::HashMap;
 
 use crate::gui::shared::{ThemeColors, theme_signal};
@@ -52,6 +53,7 @@ fn new_project_form(state: WorkspaceState) -> impl IntoView {
             .to_string(),
     );
     let form_error = RwSignal::new(String::new());
+    let variable_values = RwSignal::new(HashMap::<String, String>::new());
 
     let state_for_create = state.clone();
     let state_for_cancel = state.clone();
@@ -86,6 +88,8 @@ fn new_project_form(state: WorkspaceState) -> impl IntoView {
         form_field("Author", author),
         // Description
         form_field("Description", description),
+        // Recipe-specific variables (text inputs, select dropdowns)
+        recipe_variables_section(recipes, selected_recipe_idx, variable_values),
         // Location
         location_field(project_location),
         // Error message
@@ -157,11 +161,8 @@ fn new_project_form(state: WorkspaceState) -> impl IntoView {
                         return;
                     }
 
-                    // Build recipe variables with defaults
-                    let mut variables = HashMap::new();
-                    for var in &recipe.variables {
-                        variables.insert(var.name.clone(), var.default.clone());
-                    }
+                    // Grab user-selected recipe variable values
+                    let variables = variable_values.get();
 
                     let manifest = ProjectManifest {
                         project: ProjectMeta {
@@ -322,6 +323,172 @@ fn form_field(label_text: &'static str, signal: RwSignal<String>) -> impl IntoVi
                 .border_color(colors.border)
                 .border_radius(4.0)
                 .font_size(13.0)
+        }),
+    ))
+    .style(|s| s.width_full())
+}
+
+/// Dynamic section that renders form inputs for recipe-specific variables.
+///
+/// Rebuilds whenever the selected recipe changes. For `select` variables,
+/// renders a row of clickable chips. For `text` variables, renders a text input.
+fn recipe_variables_section(
+    recipes: RwSignal<Vec<Recipe>>,
+    selected_idx: RwSignal<usize>,
+    variable_values: RwSignal<HashMap<String, String>>,
+) -> impl IntoView {
+    dyn_container(
+        move || {
+            let idx = selected_idx.get();
+            let recipe_list = recipes.get();
+            recipe_list.get(idx).cloned()
+        },
+        move |recipe_opt| {
+            let recipe = match recipe_opt {
+                Some(r) => r,
+                None => return empty().into_any(),
+            };
+
+            if recipe.variables.is_empty() {
+                // Clear stale values and render nothing
+                variable_values.set(HashMap::new());
+                return empty().into_any();
+            }
+
+            // Reset to defaults for this recipe
+            let mut defaults = HashMap::new();
+            for var in &recipe.variables {
+                defaults.insert(var.name.clone(), var.default.clone());
+            }
+            variable_values.set(defaults);
+
+            let fields: Vec<_> = recipe
+                .variables
+                .iter()
+                .map(|var| match var.var_type.as_str() {
+                    "text" => {
+                        let text_signal = RwSignal::new(var.default.clone());
+                        let var_name = var.name.clone();
+                        create_effect(move |_| {
+                            let val = text_signal.get();
+                            variable_values.update(|map| {
+                                map.insert(var_name.clone(), val);
+                            });
+                        });
+                        variable_text_field(var.label.clone(), text_signal).into_any()
+                    }
+                    "select" => variable_select_field(
+                        var.label.clone(),
+                        var.name.clone(),
+                        var.options.clone(),
+                        variable_values,
+                    )
+                    .into_any(),
+                    _ => empty().into_any(),
+                })
+                .collect();
+
+            v_stack_from_iter(fields)
+                .style(|s| s.width_full())
+                .into_any()
+        },
+    )
+}
+
+/// A text input field for a recipe variable (like class_name).
+fn variable_text_field(label_text: String, signal: RwSignal<String>) -> impl IntoView {
+    v_stack((
+        label(move || label_text.clone()).style(move |s| {
+            let colors = theme_signal()
+                .map(|t| ThemeColors::for_theme(t.get().effective()))
+                .unwrap_or_else(ThemeColors::dark);
+            s.font_size(13.0)
+                .font_weight(floem::text::Weight::SEMIBOLD)
+                .color(colors.text_secondary)
+                .margin_top(8.0)
+                .margin_bottom(4.0)
+        }),
+        text_input(signal).style(move |s| {
+            let colors = theme_signal()
+                .map(|t| ThemeColors::for_theme(t.get().effective()))
+                .unwrap_or_else(ThemeColors::dark);
+            s.width_full()
+                .padding(8.0)
+                .background(colors.bg_elevated)
+                .color(colors.text_primary)
+                .border(1.0)
+                .border_color(colors.border)
+                .border_radius(4.0)
+                .font_size(13.0)
+        }),
+    ))
+    .style(|s| s.width_full())
+}
+
+/// A row of clickable chips for a select-type recipe variable.
+fn variable_select_field(
+    label_text: String,
+    var_name: String,
+    options: Vec<String>,
+    variable_values: RwSignal<HashMap<String, String>>,
+) -> impl IntoView {
+    v_stack((
+        label(move || label_text.clone()).style(move |s| {
+            let colors = theme_signal()
+                .map(|t| ThemeColors::for_theme(t.get().effective()))
+                .unwrap_or_else(ThemeColors::dark);
+            s.font_size(13.0)
+                .font_weight(floem::text::Weight::SEMIBOLD)
+                .color(colors.text_secondary)
+                .margin_top(8.0)
+                .margin_bottom(4.0)
+        }),
+        v_stack_from_iter(options.into_iter().map({
+            let var_name = var_name.clone();
+            move |opt| {
+                let opt_display = opt.clone();
+                let opt_click = opt.clone();
+                let opt_check = opt.clone();
+                let var_name_click = var_name.clone();
+                let var_name_check = var_name.clone();
+
+                label(move || opt_display.clone())
+                    .on_click_stop(move |_| {
+                        variable_values.update(|map| {
+                            map.insert(var_name_click.clone(), opt_click.clone());
+                        });
+                    })
+                    .style(move |s| {
+                        let colors = theme_signal()
+                            .map(|t| ThemeColors::for_theme(t.get().effective()))
+                            .unwrap_or_else(ThemeColors::dark);
+                        let is_selected = variable_values
+                            .get()
+                            .get(&var_name_check)
+                            .map(|v| v == &opt_check)
+                            .unwrap_or(false);
+                        let s = s
+                            .font_size(12.0)
+                            .padding_horiz(10.0)
+                            .padding_vert(4.0)
+                            .border_radius(4.0)
+                            .cursor(floem::style::CursorStyle::Pointer);
+                        if is_selected {
+                            s.background(colors.accent).color(colors.text_inverse)
+                        } else {
+                            s.background(colors.bg_elevated)
+                                .color(colors.text_primary)
+                                .border(1.0)
+                                .border_color(colors.border)
+                                .hover(|s| s.background(colors.bg_hover))
+                        }
+                    })
+            }
+        }))
+        .style(|s| {
+            s.flex_direction(floem::style::FlexDirection::Row)
+                .gap(4.0)
+                .flex_wrap(floem::style::FlexWrap::Wrap)
         }),
     ))
     .style(|s| s.width_full())

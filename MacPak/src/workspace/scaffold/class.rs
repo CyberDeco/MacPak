@@ -66,8 +66,7 @@ pub fn generate_class_descriptions_lsx(
 "#
     );
 
-    fs::write(dest, content)
-        .map_err(|e| format!("Failed to write ClassDescriptions.lsx: {}", e))
+    fs::write(dest, content).map_err(|e| format!("Failed to write ClassDescriptions.lsx: {}", e))
 }
 
 /// Generate a placeholder Progressions LSX for a class mod.
