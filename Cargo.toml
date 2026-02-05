@@ -15,6 +15,16 @@ repository = "https://github.com/CyberDeco/MacPak"
 readme = "README.md"
 keywords = ["bg3", "baldurs-gate-3", "modding", "larian", "pak", "gr2", "granny2", "bitknit", "glTF"]
 
+# Internal crates
+[workspace.dependencies.macpak]
+version = "0.1.0"
+path = "./MacPak"
+
+[workspace.dependencies.maclarian]
+version = "0.1.2"
+path = "./MacLarian"
+default-features = false
+
 # Workspace-wide shared dependencies
 [workspace.dependencies]
 anyhow = "1.0"
@@ -63,16 +73,6 @@ half = { version = "2.6", features = ["bytemuck", "serde"] } # IEEE 754 half-pre
 bytemuck = { version = "1.14", features = ["derive"] } # Safe zero-copy type casting
 libloading = "0.8.9"
 # bevy = "0.17.2" # eventual GUI preview
-
-# Internal crates
-[workspace.dependencies.macpak]
-version = "0.1.0"
-path = "./MacPak"
-
-[workspace.dependencies.maclarian]
-version = "0.1.1"
-path = "./MacLarian"
-default-features = false
 
 # Lints for the workspace
 [workspace.lints.clippy]
