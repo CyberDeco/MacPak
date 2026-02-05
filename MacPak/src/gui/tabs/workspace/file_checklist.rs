@@ -61,7 +61,7 @@ pub fn file_checklist(
                                 let description = file.description.clone();
                                 let hint = file.hint.clone();
                                 let kind = file.kind.clone();
-                                let full_path = w.project_dir.join(&resolved_path).to_path_buf();
+                                let full_path = w.project_dir.join(&resolved_path);
                                 let editor_tabs = editor_tabs_state.clone();
 
                                 file_row(

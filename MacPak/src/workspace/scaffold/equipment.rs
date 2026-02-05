@@ -22,10 +22,7 @@ fn item_type(manifest: &ProjectManifest) -> &str {
 /// - Armor: body armor example with ArmorClass, AC boost, weight
 /// - Accessory: amulet example with ability boost (no ArmorClass)
 /// - Weapon: empty file (primary stats go in Weapon.txt)
-pub fn generate_equipment_armor_txt(
-    dest: &Path,
-    manifest: &ProjectManifest,
-) -> Result<(), String> {
+pub fn generate_equipment_armor_txt(dest: &Path, manifest: &ProjectManifest) -> Result<(), String> {
     let mod_name = &manifest.project.folder;
 
     let content = match item_type(manifest) {
