@@ -18,6 +18,7 @@ use format::{Compression, Gr2File};
 // Crate-internal exports for other modules that need these
 pub(crate) use decompress::decompress_bitknit as bitknit_decompress;
 pub(crate) use format::PointerSize;
+pub(crate) use format::magic;
 
 // Public inspection API
 pub use inspect::{

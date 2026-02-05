@@ -12,7 +12,7 @@ use std::io::{Read, Seek, SeekFrom};
 
 use crate::error::{Error, Result};
 
-/// Magic signatures for different GR2 formats
+/// Magic signatures for GR2 formats (little-endian only)
 pub mod magic {
     /// Little-endian 32-bit format
     pub const LE32: [u8; 16] = [
@@ -26,16 +26,10 @@ pub mod magic {
         0xC4,
     ];
 
-    /// Big-endian 32-bit format
-    pub const BE32: [u8; 16] = [
-        0x0E, 0x11, 0x95, 0xB5, 0x6A, 0xA5, 0xB5, 0x4B, 0xEB, 0x28, 0x28, 0x50, 0x25, 0x78, 0xB3,
-        0x04,
-    ];
-
-    /// Big-endian 64-bit format
-    pub const BE64: [u8; 16] = [
-        0x31, 0x95, 0xD4, 0xE3, 0x20, 0xDC, 0x4F, 0x62, 0xCC, 0x36, 0xD0, 0x3A, 0xB1, 0x82, 0xFF,
-        0x89,
+    /// Little-endian 64-bit format (alternate, used by D:OS EE / D:OS 2 DE via `LSLib`)
+    pub const LE64_V2: [u8; 16] = [
+        0xE5, 0x2F, 0x4A, 0xE1, 0x6F, 0xC2, 0x8A, 0xEE, 0x1E, 0xD2, 0xB4, 0x4C, 0x90, 0xD7, 0x55,
+        0xAF,
     ];
 }
 
@@ -78,14 +72,6 @@ pub enum PointerSize {
     Bit64,
 }
 
-/// Endianness determined from magic signature
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Endian {
-    Little,
-    Big,
-}
-
 /// Magic block (32 bytes at offset 0)
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -126,9 +112,9 @@ impl Gr2Magic {
     /// # Errors
     /// Returns an error if the magic signature is invalid.
     pub fn pointer_size(&self) -> Result<PointerSize> {
-        if self.signature == magic::LE32 || self.signature == magic::BE32 {
+        if self.signature == magic::LE32 {
             Ok(PointerSize::Bit32)
-        } else if self.signature == magic::LE64 || self.signature == magic::BE64 {
+        } else if self.signature == magic::LE64 || self.signature == magic::LE64_V2 {
             Ok(PointerSize::Bit64)
         } else {
             Err(Error::DecompressionError(
@@ -137,29 +123,12 @@ impl Gr2Magic {
         }
     }
 
-    /// Get endianness from signature
-    ///
-    /// # Errors
-    /// Returns an error if the magic signature is invalid.
-    pub fn endian(&self) -> Result<Endian> {
-        if self.signature == magic::LE32 || self.signature == magic::LE64 {
-            Ok(Endian::Little)
-        } else if self.signature == magic::BE32 || self.signature == magic::BE64 {
-            Ok(Endian::Big)
-        } else {
-            Err(Error::DecompressionError(
-                "Invalid GR2 magic signature".to_string(),
-            ))
-        }
-    }
-
-    /// Check if the magic signature is valid
+    /// Check if the magic signature is valid (little-endian only)
     #[must_use]
     pub fn is_valid(&self) -> bool {
         self.signature == magic::LE32
             || self.signature == magic::LE64
-            || self.signature == magic::BE32
-            || self.signature == magic::BE64
+            || self.signature == magic::LE64_V2
     }
 }
 
@@ -350,13 +319,6 @@ impl Gr2File {
         if !magic.is_valid() {
             return Err(Error::DecompressionError(
                 "Invalid GR2 magic signature".to_string(),
-            ));
-        }
-
-        // Verify endianness - only little-endian GR2 files are supported
-        if magic.endian()? == Endian::Big {
-            return Err(Error::DecompressionError(
-                "Big-endian GR2 files are not supported".to_string(),
             ));
         }
 

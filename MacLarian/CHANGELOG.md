@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.2] - 2026-02-04
+
+- Added support for alternate GR2 magic signature (LE64v2) for mods that were exported from LSLib with Divinity: Original Sin 2 DE settings
+
 ## [0.1.1] - 2026-02-03
 
 - Added support for missing GR2 metadata via glTF extensions: MeshProxy, Rigid, Cloth, Spring, Occluder, LOD, LSMVersion, Flags, and LodDistance

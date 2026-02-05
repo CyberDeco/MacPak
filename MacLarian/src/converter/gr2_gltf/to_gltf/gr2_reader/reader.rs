@@ -10,9 +10,9 @@ use super::types::{
     Model, ModelFlags, Skeleton, TopologyGroup, Transform, Vertex,
 };
 use super::vertex_types::{MemberDef, MemberType, SectionHeader, VertexType};
-use super::{MAGIC_LE32, MAGIC_LE64};
 use crate::error::{Error, Result};
 use crate::formats::gr2::bitknit_decompress as decompress_bitknit;
+use crate::formats::gr2::magic;
 
 /// GR2 file reader and parser.
 pub struct Gr2Reader {
@@ -34,10 +34,10 @@ impl Gr2Reader {
             return Err(Error::DecompressionError("GR2 file too small".to_string()));
         }
 
-        let magic: [u8; 16] = file_data[0..16].try_into().unwrap();
-        let is_64bit = if magic == MAGIC_LE64 {
+        let sig: [u8; 16] = file_data[0..16].try_into().unwrap();
+        let is_64bit = if sig == magic::LE64 || sig == magic::LE64_V2 {
             true
-        } else if magic == MAGIC_LE32 {
+        } else if sig == magic::LE32 {
             false
         } else {
             return Err(Error::DecompressionError(

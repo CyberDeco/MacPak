@@ -4,8 +4,9 @@ use crate::error::Result;
 
 use super::super::utils::crc32;
 use super::Gr2Writer;
-use super::constants::{MAGIC_LE64, NUM_SECTIONS, TAG_BG3, VERSION};
+use super::constants::{NUM_SECTIONS, TAG_BG3, VERSION};
 use super::section::Section;
+use crate::formats::gr2::magic;
 
 impl Gr2Writer {
     pub(super) fn build_file_bytes(
@@ -48,7 +49,7 @@ impl Gr2Writer {
         let mut output = Vec::with_capacity(file_size);
 
         // Write magic block (32 bytes)
-        output.extend_from_slice(&MAGIC_LE64);
+        output.extend_from_slice(&magic::LE64);
         output.extend_from_slice(&(data_start as u32).to_le_bytes());
         output.extend_from_slice(&0u32.to_le_bytes()); // header_format (uncompressed)
         output.extend_from_slice(&[0u8; 8]);
