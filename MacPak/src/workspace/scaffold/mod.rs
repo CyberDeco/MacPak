@@ -93,6 +93,9 @@ pub fn scaffold_project(
             Some("equipment_armor_txt") => {
                 equipment::generate_equipment_armor_txt(&full_path, manifest)?;
             }
+            Some("equipment_weapon_txt") => {
+                equipment::generate_equipment_weapon_txt(&full_path, manifest)?;
+            }
             Some("equipment_treasure_table_txt") => {
                 equipment::generate_equipment_treasure_table_txt(&full_path, manifest)?;
             }

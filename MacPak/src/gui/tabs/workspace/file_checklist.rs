@@ -31,76 +31,72 @@ pub fn file_checklist(
                 .margin_bottom(8.0)
         }),
         // Scrollable file list
-        scroll(
-            dyn_container(
-                move || ws_signal.get(),
-                move |maybe_ws| {
-                    if let Some(w) = maybe_ws {
-                        let vars = {
-                            let mut vars = std::collections::HashMap::new();
-                            vars.insert(
-                                "mod_name".to_string(),
-                                w.manifest.project.folder.clone(),
-                            );
-                            vars.insert("uuid".to_string(), w.manifest.project.uuid.clone());
-                            vars.insert("author".to_string(), w.manifest.project.author.clone());
-                            vars.insert(
-                                "version".to_string(),
-                                w.manifest.project.version.clone(),
-                            );
-                            for (key, value) in &w.manifest.variables {
-                                vars.insert(key.clone(), value.clone());
-                            }
-                            vars
-                        };
+        scroll(dyn_container(
+            move || ws_signal.get(),
+            move |maybe_ws| {
+                if let Some(w) = maybe_ws {
+                    let vars = {
+                        let mut vars = std::collections::HashMap::new();
+                        vars.insert("mod_name".to_string(), w.manifest.project.folder.clone());
+                        vars.insert("uuid".to_string(), w.manifest.project.uuid.clone());
+                        vars.insert("author".to_string(), w.manifest.project.author.clone());
+                        vars.insert("version".to_string(), w.manifest.project.version.clone());
+                        for (key, value) in &w.manifest.variables {
+                            vars.insert(key.clone(), value.clone());
+                        }
+                        vars
+                    };
 
-                        v_stack_from_iter(
-                            w.recipe
-                                .files
-                                .iter()
-                                .map(|file| {
-                                    let resolved_path = substitute(&file.path, &vars);
-                                    let status = w
-                                        .file_status
-                                        .get(&resolved_path)
-                                        .cloned()
-                                        .unwrap_or(FileStatus::Missing);
-                                    let description = file.description.clone();
-                                    let hint = file.hint.clone();
-                                    let kind = file.kind.clone();
-                                    let full_path =
-                                        w.project_dir.join(&resolved_path).to_path_buf();
-                                    let editor_tabs = editor_tabs_state.clone();
+                    v_stack_from_iter(
+                        w.recipe
+                            .files
+                            .iter()
+                            .map(|file| {
+                                let resolved_path = substitute(&file.path, &vars);
+                                let status = w
+                                    .file_status
+                                    .get(&resolved_path)
+                                    .cloned()
+                                    .unwrap_or(FileStatus::Missing);
+                                let description = file.description.clone();
+                                let hint = file.hint.clone();
+                                let kind = file.kind.clone();
+                                let full_path = w.project_dir.join(&resolved_path).to_path_buf();
+                                let editor_tabs = editor_tabs_state.clone();
 
-                                    file_row(
-                                        resolved_path,
-                                        status,
-                                        kind,
-                                        description,
-                                        hint,
-                                        full_path,
-                                        editor_tabs,
-                                        active_tab,
-                                    )
-                                })
-                                .collect::<Vec<_>>(),
-                        )
-                        .style(|s| s.width_full().gap(4.0))
-                        .into_any()
-                    } else {
-                        label(|| "No project open")
-                            .style(move |s| {
-                                let colors = theme_signal()
-                                    .map(|t| ThemeColors::for_theme(t.get().effective()))
-                                    .unwrap_or_else(ThemeColors::dark);
-                                s.color(colors.text_muted)
+                                file_row(
+                                    resolved_path,
+                                    status,
+                                    kind,
+                                    description,
+                                    hint,
+                                    full_path,
+                                    editor_tabs,
+                                    active_tab,
+                                )
                             })
-                            .into_any()
-                    }
-                },
-            ),
-        )
-        .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).min_height(0.0))
+                            .collect::<Vec<_>>(),
+                    )
+                    .style(|s| s.width_full().gap(4.0))
+                    .into_any()
+                } else {
+                    label(|| "No project open")
+                        .style(move |s| {
+                            let colors = theme_signal()
+                                .map(|t| ThemeColors::for_theme(t.get().effective()))
+                                .unwrap_or_else(ThemeColors::dark);
+                            s.color(colors.text_muted)
+                        })
+                        .into_any()
+                }
+            },
+        ))
+        .style(|s| {
+            s.width_full()
+                .flex_grow(1.0)
+                .flex_basis(0.0)
+                .min_height(0.0)
+        })
         .scroll_style(|s| s.handle_thickness(6.0)),
     ))
     .style(move |s| {
