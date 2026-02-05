@@ -1,0 +1,63 @@
+[recipe]
+id = "hair"
+name = "Hair Mod"
+description = "Custom hairstyles for character creation with mesh and texture support"
+category = "Cosmetic"
+
+[structure]
+directories = [
+    "Mods/{{mod_name}}",
+    "Public/{{mod_name}}/Content/Assets/Characters/[PAK]_Hair",
+    "Public/{{mod_name}}/CharacterCreation",
+    "Generated/Public/{{mod_name}}/[PAK]_Hair",
+    "Localization/English",
+]
+
+[[files]]
+path = "Mods/{{mod_name}}/meta.lsx"
+kind = "generated"
+generator = "meta_lsx"
+description = "Mod metadata — required for all mods"
+
+[[files]]
+path = "Localization/English/{{mod_name}}.xml"
+kind = "generated"
+generator = "localization_xml"
+description = "Localized hair names displayed in character creation"
+
+[[files]]
+path = "Public/{{mod_name}}/CharacterCreation/CharacterCreationAppearanceVisuals.lsx"
+kind = "generated"
+generator = "hair_cc_appearance_lsx"
+description = "Character creation slot definitions — one entry per race/body type combo"
+
+[[files]]
+path = "Public/{{mod_name}}/Content/Assets/Characters/[PAK]_Hair/_merged.lsf"
+kind = "manual"
+description = "VisualBank with hair mesh references (SourceFile, ScalpMaterialId, NeedsSkeletonRemap)"
+hint = """
+Create as _merged.lsf.lsx, then convert to .lsf with multitool.
+VisualBank Resource node requires:
+  ID — unique UUID (referenced by VisualResource in CC visuals)
+  SourceFile — path to GR2 mesh (e.g., Generated/Public/ModName/[PAK]_Hair/MyHair.GR2)
+  Template — same path + .Dummy_Root.0
+  NeedsSkeletonRemap — True for autosnapping, False for per-race meshes
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/CharacterCreation/CharacterCreationSharedVisuals.lsx"
+kind = "optional"
+description = "Simpler alternative to AppearanceVisuals (less compatible with other mods)"
+hint = """
+Uses a single entry instead of per-race nodes:
+  DisplayName — handle from localization file
+  SlotName — "Hair"
+  UUID — unique identifier
+  VisualResource — GUID from _merged.lsf VisualBank Resource ID
+Note: Requires Races.lsx to link to specific races.
+"""
+
+[[files]]
+path = "Public/{{mod_name}}/CharacterCreation/Races.lsx"
+kind = "optional"
+description = "Links SharedVisuals entries to specific races for CC (only needed with SharedVisuals approach)"
