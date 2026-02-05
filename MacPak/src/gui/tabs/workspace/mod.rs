@@ -3,6 +3,7 @@
 mod build;
 mod dashboard;
 mod file_checklist;
+mod file_tree;
 mod new_project;
 
 use floem::prelude::*;

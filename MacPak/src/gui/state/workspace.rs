@@ -1,5 +1,8 @@
 //! Workspace tab state
 
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use floem::prelude::*;
 
 use crate::workspace::Workspace;
@@ -20,6 +23,9 @@ pub struct WorkspaceState {
     pub result_message: RwSignal<Option<String>>,
     /// Error message
     pub error_message: RwSignal<Option<String>>,
+    /// Persisted expanded state for the file tree (full path → expanded).
+    /// Survives tab switches since WorkspaceState lives in app state.
+    pub file_tree_expanded: RwSignal<HashMap<PathBuf, bool>>,
 }
 
 impl WorkspaceState {
@@ -32,6 +38,7 @@ impl WorkspaceState {
             build_progress: RwSignal::new(None),
             result_message: RwSignal::new(None),
             error_message: RwSignal::new(None),
+            file_tree_expanded: RwSignal::new(HashMap::new()),
         }
     }
 

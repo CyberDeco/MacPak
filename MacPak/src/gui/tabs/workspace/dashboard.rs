@@ -7,6 +7,7 @@ use crate::gui::state::{EditorTabsState, WorkspaceState};
 
 use super::build::build_panel;
 use super::file_checklist::file_checklist;
+use super::file_tree::file_tree_card;
 
 /// Main dashboard view for an open project
 pub fn project_dashboard(
@@ -87,10 +88,14 @@ pub fn project_dashboard(
         // Main content: checklist + build panel side by side
         h_stack((
             // File checklist (left, takes most space)
-            file_checklist(state.clone(), editor_tabs_state, active_tab)
+            file_checklist(state.clone(), editor_tabs_state.clone(), active_tab)
                 .style(|s| s.flex_grow(1.0).flex_basis(0.0).min_width(0.0)),
-            // Build panel (right sidebar)
-            build_panel(state.clone()).style(|s| s.width(280.0)),
+            // Right sidebar: build panel + file tree
+            v_stack((
+                build_panel(state.clone()),
+                file_tree_card(state.clone(), editor_tabs_state.clone(), active_tab),
+            ))
+            .style(|s| s.width(280.0).gap(16.0).min_height(0.0)),
         ))
         .style(|s| {
             s.width_full()

@@ -1,5 +1,8 @@
 //! File status checklist for workspace projects
 
+use floem::action::show_context_menu;
+use floem::event::EventPropagation;
+use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 
 use crate::gui::shared::{ThemeColors, theme_signal};
@@ -27,73 +30,85 @@ pub fn file_checklist(
                 .color(colors.text_primary)
                 .margin_bottom(8.0)
         }),
-        // File list
-        dyn_container(
-            move || ws_signal.get(),
-            move |maybe_ws| {
-                if let Some(w) = maybe_ws {
-                    let vars = {
-                        let mut vars = std::collections::HashMap::new();
-                        vars.insert("mod_name".to_string(), w.manifest.project.folder.clone());
-                        vars.insert("uuid".to_string(), w.manifest.project.uuid.clone());
-                        vars.insert("author".to_string(), w.manifest.project.author.clone());
-                        vars.insert("version".to_string(), w.manifest.project.version.clone());
-                        for (key, value) in &w.manifest.variables {
-                            vars.insert(key.clone(), value.clone());
-                        }
-                        vars
-                    };
+        // Scrollable file list
+        scroll(
+            dyn_container(
+                move || ws_signal.get(),
+                move |maybe_ws| {
+                    if let Some(w) = maybe_ws {
+                        let vars = {
+                            let mut vars = std::collections::HashMap::new();
+                            vars.insert(
+                                "mod_name".to_string(),
+                                w.manifest.project.folder.clone(),
+                            );
+                            vars.insert("uuid".to_string(), w.manifest.project.uuid.clone());
+                            vars.insert("author".to_string(), w.manifest.project.author.clone());
+                            vars.insert(
+                                "version".to_string(),
+                                w.manifest.project.version.clone(),
+                            );
+                            for (key, value) in &w.manifest.variables {
+                                vars.insert(key.clone(), value.clone());
+                            }
+                            vars
+                        };
 
-                    v_stack_from_iter(
-                        w.recipe
-                            .files
-                            .iter()
-                            .map(|file| {
-                                let resolved_path = substitute(&file.path, &vars);
-                                let status = w
-                                    .file_status
-                                    .get(&resolved_path)
-                                    .cloned()
-                                    .unwrap_or(FileStatus::Missing);
-                                let description = file.description.clone();
-                                let hint = file.hint.clone();
-                                let kind = file.kind.clone();
-                                let full_path = w.project_dir.join(&resolved_path).to_path_buf();
-                                let editor_tabs = editor_tabs_state.clone();
+                        v_stack_from_iter(
+                            w.recipe
+                                .files
+                                .iter()
+                                .map(|file| {
+                                    let resolved_path = substitute(&file.path, &vars);
+                                    let status = w
+                                        .file_status
+                                        .get(&resolved_path)
+                                        .cloned()
+                                        .unwrap_or(FileStatus::Missing);
+                                    let description = file.description.clone();
+                                    let hint = file.hint.clone();
+                                    let kind = file.kind.clone();
+                                    let full_path =
+                                        w.project_dir.join(&resolved_path).to_path_buf();
+                                    let editor_tabs = editor_tabs_state.clone();
 
-                                file_row(
-                                    resolved_path,
-                                    status,
-                                    kind,
-                                    description,
-                                    hint,
-                                    full_path,
-                                    editor_tabs,
-                                    active_tab,
-                                )
-                            })
-                            .collect::<Vec<_>>(),
-                    )
-                    .style(|s| s.width_full().gap(4.0))
-                    .into_any()
-                } else {
-                    label(|| "No project open")
-                        .style(move |s| {
-                            let colors = theme_signal()
-                                .map(|t| ThemeColors::for_theme(t.get().effective()))
-                                .unwrap_or_else(ThemeColors::dark);
-                            s.color(colors.text_muted)
-                        })
+                                    file_row(
+                                        resolved_path,
+                                        status,
+                                        kind,
+                                        description,
+                                        hint,
+                                        full_path,
+                                        editor_tabs,
+                                        active_tab,
+                                    )
+                                })
+                                .collect::<Vec<_>>(),
+                        )
+                        .style(|s| s.width_full().gap(4.0))
                         .into_any()
-                }
-            },
-        ),
+                    } else {
+                        label(|| "No project open")
+                            .style(move |s| {
+                                let colors = theme_signal()
+                                    .map(|t| ThemeColors::for_theme(t.get().effective()))
+                                    .unwrap_or_else(ThemeColors::dark);
+                                s.color(colors.text_muted)
+                            })
+                            .into_any()
+                    }
+                },
+            ),
+        )
+        .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).min_height(0.0))
+        .scroll_style(|s| s.handle_thickness(6.0)),
     ))
     .style(move |s| {
         let colors = theme_signal()
             .map(|t| ThemeColors::for_theme(t.get().effective()))
             .unwrap_or_else(ThemeColors::dark);
         s.width_full()
+            .min_height(0.0)
             .padding(16.0)
             .background(colors.bg_surface)
             .border(1.0)
@@ -214,16 +229,31 @@ fn file_row(
             .items_start()
             .border_radius(4.0);
         if can_open {
-            s.cursor(floem::style::CursorStyle::Pointer)
-                .hover(|s| s.background(colors.bg_hover))
+            s.hover(|s| s.background(colors.bg_hover))
         } else {
             s
         }
     })
-    .on_click_stop(move |_| {
+    .on_secondary_click(move |_| {
         if can_open {
-            load_file_in_tab(&full_path, editor_tabs.clone());
-            active_tab.set(1); // Switch to Editor tab
+            let path_for_editor = full_path.clone();
+            let path_for_finder = full_path.clone();
+            let editor = editor_tabs.clone();
+
+            let menu = Menu::new("")
+                .entry(MenuItem::new("Open in Editor").action(move || {
+                    load_file_in_tab(&path_for_editor, editor.clone());
+                    active_tab.set(1);
+                }))
+                .entry(MenuItem::new("Show in Finder").action(move || {
+                    let _ = std::process::Command::new("open")
+                        .arg("-R")
+                        .arg(&path_for_finder)
+                        .spawn();
+                }));
+
+            show_context_menu(menu, None);
         }
+        EventPropagation::Stop
     })
 }
