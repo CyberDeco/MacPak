@@ -40,7 +40,7 @@
 | **Dye Lab** | Import/export clothing and armor dye mods and create custom color palettes |
 | **Search** | Search across PAK contents (file name + contents both supported) |
 | **Dialogue** | Search and view character dialogue trees and play linked audio |
-| **Workbench** | Start a custom mod with sample recipes for armor, dyes, spells, etc. |
+| **Workbench** | Start a new mod with sample recipes for armor, dyes, spells, etc. |
 
 </div>
 
