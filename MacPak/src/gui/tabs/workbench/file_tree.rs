@@ -1,7 +1,7 @@
 //! Collapsible file tree showing the project directory on disk.
 //!
 //! Expanded/collapsed state for each directory is persisted in
-//! `WorkspaceState::file_tree_expanded` so it survives tab switches
+//! `WorkbenchState::file_tree_expanded` so it survives tab switches
 //! (the tab container recreates views on every switch).
 
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 
 use crate::gui::shared::{ThemeColors, theme_signal};
-use crate::gui::state::{EditorTabsState, WorkspaceState};
+use crate::gui::state::{EditorTabsState, WorkbenchState};
 use crate::gui::tabs::load_file_in_tab;
 
 /// A node in the flat file tree list.
@@ -30,13 +30,13 @@ struct FileNode {
     parent_idx: Option<usize>,
 }
 
-/// File tree card for the workspace sidebar.
+/// File tree card for the workbench sidebar.
 pub fn file_tree_card(
-    state: WorkspaceState,
+    state: WorkbenchState,
     editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
-    let ws_signal = state.workspace;
+    let ws_signal = state.workbench;
     let expanded_map = state.file_tree_expanded;
 
     v_stack((

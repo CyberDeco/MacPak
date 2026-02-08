@@ -1,6 +1,6 @@
-//! Workspace management for MacPak mod projects
+//! Workbench management for MacPak mod projects
 //!
-//! A workspace represents a mod project on disk with a `macpak.toml` manifest,
+//! A workbench represents a mod project on disk with a `macpak.toml` manifest,
 //! a recipe describing the expected structure, and file status tracking.
 
 pub mod project;
@@ -19,7 +19,7 @@ use project::ProjectManifest;
 use recipe::{FileKind, Recipe, find_recipe, substitute};
 use scaffold::scaffold_project;
 
-/// Status of a file in the workspace
+/// Status of a file in the workbench
 #[derive(Debug, Clone, PartialEq)]
 pub enum FileStatus {
     /// File exists on disk
@@ -32,9 +32,9 @@ pub enum FileStatus {
     Generated,
 }
 
-/// A workspace representing an open mod project
+/// A workbench representing an open mod project
 #[derive(Debug, Clone)]
-pub struct Workspace {
+pub struct Workbench {
     /// Root directory of the project
     pub project_dir: PathBuf,
     /// The project manifest (macpak.toml)
@@ -45,7 +45,7 @@ pub struct Workspace {
     pub file_status: HashMap<String, FileStatus>,
 }
 
-impl Workspace {
+impl Workbench {
     /// Create a new project from a manifest.
     ///
     /// Scaffolds the directory structure and generated files on disk.

@@ -1,4 +1,4 @@
-//! File status checklist for workspace projects
+//! File status checklist for workbench projects
 
 use floem::action::show_context_menu;
 use floem::event::EventPropagation;
@@ -6,18 +6,18 @@ use floem::menu::{Menu, MenuItem};
 use floem::prelude::*;
 
 use crate::gui::shared::{ThemeColors, theme_signal};
-use crate::gui::state::{EditorTabsState, WorkspaceState};
+use crate::gui::state::{EditorTabsState, WorkbenchState};
 use crate::gui::tabs::load_file_in_tab;
-use crate::workspace::FileStatus;
-use crate::workspace::recipe::{FileKind, substitute};
+use crate::workbench::FileStatus;
+use crate::workbench::recipe::{FileKind, substitute};
 
 /// File checklist showing all recipe files and their status
 pub fn file_checklist(
-    state: WorkspaceState,
+    state: WorkbenchState,
     editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
-    let ws_signal = state.workspace;
+    let ws_signal = state.workbench;
 
     v_stack((
         // Section header

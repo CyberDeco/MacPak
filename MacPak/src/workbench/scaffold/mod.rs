@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::workspace::project::ProjectManifest;
-use crate::workspace::recipe::{FileKind, Recipe, substitute};
+use crate::workbench::project::ProjectManifest;
+use crate::workbench::recipe::{FileKind, Recipe, substitute};
 
 use maclarian::mods::meta_generator::{generate_meta_lsx, parse_version_string};
 

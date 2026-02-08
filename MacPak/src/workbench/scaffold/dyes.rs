@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::workspace::project::ProjectManifest;
+use crate::workbench::project::ProjectManifest;
 
 /// Generate a placeholder Object.txt for a dye mod.
 ///

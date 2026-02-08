@@ -1,4 +1,4 @@
-//! Workspace Tab - Project management for BG3 mods
+//! Workbench Tab - Project management for BG3 mods
 
 mod build;
 mod dashboard;
@@ -9,32 +9,32 @@ mod new_project;
 use floem::prelude::*;
 
 use crate::gui::shared::{ThemeColors, theme_signal};
-use crate::gui::state::{EditorTabsState, WorkspaceState};
+use crate::gui::state::{EditorTabsState, WorkbenchState};
 
-pub fn workspace_tab(
-    workspace_state: WorkspaceState,
+pub fn workbench_tab(
+    workbench_state: WorkbenchState,
     editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
-    let ws = workspace_state.clone();
-    let ws_for_new = workspace_state.clone();
+    let ws = workbench_state.clone();
+    let ws_for_new = workbench_state.clone();
 
     v_stack((
         // Header bar
-        workspace_header(workspace_state.clone()),
+        workbench_header(workbench_state.clone()),
         // Content: either welcome screen or project dashboard
         dyn_container(
-            move || ws.workspace.get().is_some(),
+            move || ws.workbench.get().is_some(),
             move |has_project| {
                 if has_project {
                     dashboard::project_dashboard(
-                        workspace_state.clone(),
+                        workbench_state.clone(),
                         editor_tabs_state.clone(),
                         active_tab,
                     )
                     .into_any()
                 } else {
-                    welcome_screen(workspace_state.clone()).into_any()
+                    welcome_screen(workbench_state.clone()).into_any()
                 }
             },
         )
@@ -58,8 +58,8 @@ pub fn workspace_tab(
     })
 }
 
-fn workspace_header(state: WorkspaceState) -> impl IntoView {
-    let ws = state.workspace;
+fn workbench_header(state: WorkbenchState) -> impl IntoView {
+    let ws = state.workbench;
     let result_msg = state.result_message;
     let error_msg = state.error_message;
 
@@ -67,9 +67,9 @@ fn workspace_header(state: WorkspaceState) -> impl IntoView {
         // Title
         label(move || {
             if let Some(ref w) = ws.get() {
-                format!("Workspace: {}", w.manifest.project.name)
+                format!("Workbench: {}", w.manifest.project.name)
             } else {
-                "Workspace".to_string()
+                "Workbench".to_string()
             }
         })
         .style(move |s| {
@@ -165,7 +165,7 @@ fn workspace_header(state: WorkspaceState) -> impl IntoView {
     })
 }
 
-fn welcome_screen(state: WorkspaceState) -> impl IntoView {
+fn welcome_screen(state: WorkbenchState) -> impl IntoView {
     let state_for_new = state.clone();
     let state_for_open = state.clone();
 
@@ -233,19 +233,19 @@ fn welcome_screen(state: WorkspaceState) -> impl IntoView {
 }
 
 /// Open an existing project via folder picker
-pub fn open_project_dialog(state: WorkspaceState) {
+pub fn open_project_dialog(state: WorkbenchState) {
     let dialog = rfd::FileDialog::new()
         .set_title("Open MacPak Project")
-        .set_directory(crate::workspace::Workspace::default_projects_dir());
+        .set_directory(crate::workbench::Workbench::default_projects_dir());
 
     if let Some(path) = dialog.pick_folder() {
-        match crate::workspace::Workspace::open(&path) {
+        match crate::workbench::Workbench::open(&path) {
             Ok(ws) => {
                 state.error_message.set(None);
                 state
                     .result_message
                     .set(Some(format!("Opened: {}", ws.manifest.project.name)));
-                state.workspace.set(Some(ws));
+                state.workbench.set(Some(ws));
             }
             Err(e) => {
                 state

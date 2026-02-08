@@ -8,7 +8,7 @@ pub mod gr2;
 pub mod pak_ops;
 pub mod search;
 pub mod virtual_textures;
-pub mod workspace;
+pub mod workbench;
 
 pub use browser::browser_tab;
 pub use browser::kill_preview_process;
@@ -20,4 +20,4 @@ pub use gr2::gr2_tab;
 pub use pak_ops::pak_ops_tab;
 pub use search::search_tab;
 pub use virtual_textures::virtual_textures_tab;
-pub use workspace::workspace_tab;
+pub use workbench::workbench_tab;

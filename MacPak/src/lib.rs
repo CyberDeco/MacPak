@@ -98,7 +98,7 @@ pub use maclarian;
 pub mod error;
 pub mod index;
 pub mod operations;
-pub mod workspace;
+pub mod workbench;
 
 // GUI-specific modules (moved from MacLarian)
 pub mod dialog;
@@ -119,7 +119,7 @@ pub use error::{Error, Result};
 
 /// Main toolkit interface
 pub struct Toolkit {
-    workspace: Option<workspace::Workspace>,
+    workbench: Option<workbench::Workbench>,
     #[allow(dead_code)] // Future: file indexing functionality
     index: index::FileIndex,
 }
@@ -132,19 +132,19 @@ impl Toolkit {
     /// Returns an error if file index initialization fails.
     pub fn new() -> Result<Self> {
         Ok(Self {
-            workspace: None,
+            workbench: None,
             index: index::FileIndex::new()?,
         })
     }
 
-    /// Open an existing workspace from a project directory.
+    /// Open an existing workbench from a project directory.
     ///
     /// # Errors
     ///
-    /// Returns an error if the workspace cannot be opened.
-    pub fn open_workspace(&mut self, path: impl AsRef<Path>) -> Result<()> {
-        let ws = workspace::Workspace::open(path).map_err(|e| Error::Workspace(e))?;
-        self.workspace = Some(ws);
+    /// Returns an error if the workbench cannot be opened.
+    pub fn open_workbench(&mut self, path: impl AsRef<Path>) -> Result<()> {
+        let ws = workbench::Workbench::open(path).map_err(|e| Error::Workbench(e))?;
+        self.workbench = Some(ws);
         Ok(())
     }
 

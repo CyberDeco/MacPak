@@ -5,16 +5,16 @@ use floem_reactive::create_effect;
 use std::collections::HashMap;
 
 use crate::gui::shared::{ThemeColors, theme_signal};
-use crate::gui::state::WorkspaceState;
+use crate::gui::state::WorkbenchState;
 use crate::gui::utils::{UuidFormat, generate_uuid};
-use crate::workspace::Workspace;
-use crate::workspace::project::{BuildSettings, ProjectManifest, ProjectMeta};
-use crate::workspace::recipe::Recipe;
+use crate::workbench::Workbench;
+use crate::workbench::project::{BuildSettings, ProjectManifest, ProjectMeta};
+use crate::workbench::recipe::Recipe;
 
 use maclarian::mods::meta_generator::to_folder_name;
 
 /// New Project dialog overlay (only visible when show_new_dialog is true)
-pub fn new_project_dialog(state: WorkspaceState) -> impl IntoView {
+pub fn new_project_dialog(state: WorkbenchState) -> impl IntoView {
     let show = state.show_new_dialog;
 
     dyn_container(
@@ -41,14 +41,14 @@ pub fn new_project_dialog(state: WorkspaceState) -> impl IntoView {
     })
 }
 
-fn new_project_form(state: WorkspaceState) -> impl IntoView {
+fn new_project_form(state: WorkbenchState) -> impl IntoView {
     // Form signals
     let mod_name = RwSignal::new(String::new());
     let author = RwSignal::new(String::new());
     let description = RwSignal::new(String::new());
     let selected_recipe_idx = RwSignal::new(0_usize);
     let project_location = RwSignal::new(
-        Workspace::default_projects_dir()
+        Workbench::default_projects_dir()
             .to_string_lossy()
             .to_string(),
     );
@@ -178,13 +178,13 @@ fn new_project_form(state: WorkspaceState) -> impl IntoView {
                         variables,
                     };
 
-                    match Workspace::create(&project_dir, manifest) {
+                    match Workbench::create(&project_dir, manifest) {
                         Ok(ws) => {
                             state_for_create.error_message.set(None);
                             state_for_create
                                 .result_message
                                 .set(Some(format!("Created: {}", ws.manifest.project.name)));
-                            state_for_create.workspace.set(Some(ws));
+                            state_for_create.workbench.set(Some(ws));
                             state_for_create.show_new_dialog.set(false);
                         }
                         Err(e) => {
@@ -526,7 +526,7 @@ fn location_field(location: RwSignal<String>) -> impl IntoView {
                 .action(move || {
                     let dialog = rfd::FileDialog::new()
                         .set_title("Choose Project Location")
-                        .set_directory(Workspace::default_projects_dir());
+                        .set_directory(Workbench::default_projects_dir());
                     if let Some(path) = dialog.pick_folder() {
                         location.set(path.to_string_lossy().to_string());
                     }

@@ -10,7 +10,7 @@ pub mod gr2;
 mod pak_ops;
 mod search;
 pub mod virtual_textures;
-mod workspace;
+mod workbench;
 
 // Re-export all state types
 pub use app::AppState;
@@ -31,4 +31,4 @@ pub use gr2::Gr2State;
 pub use pak_ops::{ActiveDialog, PakCompression, PakOpsState};
 pub use search::{IndexStatus, SearchResult, SearchSortColumn, SearchState, SortDirection};
 pub use virtual_textures::VirtualTexturesState;
-pub use workspace::{PersistedWorkspaceState, WorkspaceState};
+pub use workbench::{PersistedWorkbenchState, WorkbenchState};

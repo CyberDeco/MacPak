@@ -1,4 +1,4 @@
-//! Recipe system for workspace project scaffolding
+//! Recipe system for workbench project scaffolding
 //!
 //! Recipes are bundled TOML files describing what a mod type needs:
 //! directory structure, generated files, and manual/optional files.

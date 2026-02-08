@@ -1,13 +1,13 @@
-//! Build controls for workspace projects
+//! Build controls for workbench projects
 
 use floem::prelude::*;
 
 use crate::gui::shared::{ThemeColors, theme_signal};
-use crate::gui::state::WorkspaceState;
+use crate::gui::state::WorkbenchState;
 
 /// Build panel sidebar
-pub fn build_panel(state: WorkspaceState) -> impl IntoView {
-    let ws = state.workspace;
+pub fn build_panel(state: WorkbenchState) -> impl IntoView {
+    let ws = state.workbench;
     let build_progress = state.build_progress;
     let state_for_build = state.clone();
     let state_for_validate = state.clone();
@@ -50,7 +50,7 @@ pub fn build_panel(state: WorkspaceState) -> impl IntoView {
         // Validate button
         button("Validate")
             .action(move || {
-                if let Some(ref w) = state_for_validate.workspace.get() {
+                if let Some(ref w) = state_for_validate.workbench.get() {
                     let result = w.validate();
                     if result.valid {
                         state_for_validate
@@ -89,7 +89,7 @@ pub fn build_panel(state: WorkspaceState) -> impl IntoView {
                 state_for_build.error_message.set(None);
                 state_for_build.result_message.set(None);
 
-                let ws = state_for_build.workspace.get();
+                let ws = state_for_build.workbench.get();
                 if let Some(w) = ws {
                     match w.build() {
                         Ok(pak_path) => {

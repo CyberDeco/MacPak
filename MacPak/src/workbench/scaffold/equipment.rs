@@ -6,7 +6,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::workspace::project::ProjectManifest;
+use crate::workbench::project::ProjectManifest;
 
 /// Read the item_type variable from the manifest, defaulting to "Armor".
 fn item_type(manifest: &ProjectManifest) -> &str {

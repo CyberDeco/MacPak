@@ -77,8 +77,8 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     let dialogue_state = DialogueState::new();
     dialogue_state.apply_persisted(&persisted.dialogue);
 
-    let workspace_state = WorkspaceState::new();
-    workspace_state.apply_persisted(&persisted.workspace);
+    let workbench_state = WorkbenchState::new();
+    workbench_state.apply_persisted(&persisted.workbench);
 
     let active_tab = app_state.active_tab;
     let config_state_for_keyboard = config_state.clone();
@@ -96,14 +96,14 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     let config_state_for_vt_keyboard = config_state.clone();
     let dyes_state_for_keyboard = dyes_state.clone();
     let config_state_for_dialogue = config_state.clone();
-    let workspace_state_for_keyboard = workspace_state.clone();
+    let workbench_state_for_keyboard = workbench_state.clone();
 
     // Clones for save_session on close
     let app_state_for_close = app_state.clone();
     let browser_state_for_close = browser_state.clone();
     let search_state_for_close = search_state.clone();
     let dialogue_state_for_close = dialogue_state.clone();
-    let workspace_state_for_close = workspace_state.clone();
+    let workbench_state_for_close = workbench_state.clone();
     let config_state_for_close = config_state.clone();
 
     v_stack((
@@ -121,7 +121,7 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
             dyes_state,
             search_state,
             dialogue_state,
-            workspace_state,
+            workbench_state,
             config_state_for_dialogue,
         ),
         // Config dialog (overlays when visible)
@@ -162,7 +162,7 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
                 &browser_state_for_close,
                 &search_state_for_close,
                 &dialogue_state_for_close,
-                &workspace_state_for_close,
+                &workbench_state_for_close,
             );
 
             // Kill any running preview process before exiting
@@ -235,8 +235,8 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
                     }
                     // Dialogue tab (7) - no CMD+O action, use toolbar buttons instead
                     8 => {
-                        // Workspace - open existing project
-                        tabs::workspace::open_project_dialog(workspace_state_for_keyboard.clone());
+                        // Workbench - open existing project
+                        tabs::workbench::open_project_dialog(workbench_state_for_keyboard.clone());
                     }
                     _ => {} // Other tabs - no action
                 }
@@ -308,7 +308,7 @@ fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
         tab_button("🧪 Dyes", 5, active_tab),
         tab_button("🔍 Search", 6, active_tab),
         tab_button("💬 Dialogue", 7, active_tab),
-        tab_button("🛠 Workspace", 8, active_tab),
+        tab_button("🛠 Workbench", 8, active_tab),
         empty().style(|s| s.flex_grow(1.0)),
         // App info
         label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION"))).style(move |s| {
@@ -372,7 +372,7 @@ fn tab_content(
     dyes_state: DyesState,
     search_state: SearchState,
     dialogue_state: DialogueState,
-    workspace_state: WorkspaceState,
+    workbench_state: WorkbenchState,
     config_state: ConfigState,
 ) -> impl IntoView {
     dyn_container(
@@ -412,8 +412,8 @@ fn tab_content(
                 config_state.clone(),
             )
             .into_any(),
-            8 => workspace_tab(
-                workspace_state.clone(),
+            8 => workbench_tab(
+                workbench_state.clone(),
                 editor_tabs_state.clone(),
                 active_tab,
             )

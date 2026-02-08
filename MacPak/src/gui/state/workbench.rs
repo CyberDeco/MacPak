@@ -1,18 +1,18 @@
-//! Workspace tab state
+//! Workbench tab state
 
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 use floem::prelude::*;
 
-use crate::workspace::Workspace;
-use crate::workspace::recipe::Recipe;
+use crate::workbench::Workbench;
+use crate::workbench::recipe::Recipe;
 
-/// Reactive state for the Workspace tab
+/// Reactive state for the Workbench tab
 #[derive(Clone)]
-pub struct WorkspaceState {
-    /// Currently open workspace (None = no project open)
-    pub workspace: RwSignal<Option<Workspace>>,
+pub struct WorkbenchState {
+    /// Currently open workbench (None = no project open)
+    pub workbench: RwSignal<Option<Workbench>>,
     /// Available recipes (loaded once at startup)
     pub recipes: RwSignal<Vec<Recipe>>,
     /// Whether the "New Project" dialog is showing
@@ -24,15 +24,15 @@ pub struct WorkspaceState {
     /// Error message
     pub error_message: RwSignal<Option<String>>,
     /// Persisted expanded state for the file tree (full path → expanded).
-    /// Survives tab switches since WorkspaceState lives in app state.
+    /// Survives tab switches since WorkbenchState lives in app state.
     pub file_tree_expanded: RwSignal<HashMap<PathBuf, bool>>,
 }
 
-impl WorkspaceState {
+impl WorkbenchState {
     pub fn new() -> Self {
-        let recipes = crate::workspace::recipe::load_bundled_recipes();
+        let recipes = crate::workbench::recipe::load_bundled_recipes();
         Self {
-            workspace: RwSignal::new(None),
+            workbench: RwSignal::new(None),
             recipes: RwSignal::new(recipes),
             show_new_dialog: RwSignal::new(false),
             build_progress: RwSignal::new(None),
@@ -43,27 +43,27 @@ impl WorkspaceState {
     }
 
     /// Apply persisted state (restore last open project)
-    pub fn apply_persisted(&self, persisted: &PersistedWorkspaceState) {
+    pub fn apply_persisted(&self, persisted: &PersistedWorkbenchState) {
         if let Some(ref path) = persisted.last_open_project {
-            match Workspace::open(path) {
-                Ok(ws) => self.workspace.set(Some(ws)),
+            match Workbench::open(path) {
+                Ok(ws) => self.workbench.set(Some(ws)),
                 Err(e) => {
-                    tracing::warn!("Failed to restore workspace {}: {}", path, e);
+                    tracing::warn!("Failed to restore workbench {}: {}", path, e);
                 }
             }
         }
     }
 }
 
-impl Default for WorkspaceState {
+impl Default for WorkbenchState {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// Persisted workspace state (saved to config.json)
+/// Persisted workbench state (saved to config.json)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
-pub struct PersistedWorkspaceState {
+pub struct PersistedWorkbenchState {
     #[serde(default)]
     pub recent_projects: Vec<String>,
     #[serde(default)]

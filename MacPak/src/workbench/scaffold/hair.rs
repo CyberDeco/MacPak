@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::workspace::project::ProjectManifest;
+use crate::workbench::project::ProjectManifest;
 
 /// Generate a placeholder CharacterCreationAppearanceVisuals.lsx for a hair mod.
 ///

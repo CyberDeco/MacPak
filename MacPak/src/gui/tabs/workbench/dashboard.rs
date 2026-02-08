@@ -1,9 +1,9 @@
-//! Project dashboard shown when a workspace is open
+//! Project dashboard shown when a workbench is open
 
 use floem::prelude::*;
 
 use crate::gui::shared::{ThemeColors, theme_signal};
-use crate::gui::state::{EditorTabsState, WorkspaceState};
+use crate::gui::state::{EditorTabsState, WorkbenchState};
 
 use super::build::build_panel;
 use super::file_checklist::file_checklist;
@@ -11,11 +11,11 @@ use super::file_tree::file_tree_card;
 
 /// Main dashboard view for an open project
 pub fn project_dashboard(
-    state: WorkspaceState,
+    state: WorkbenchState,
     editor_tabs_state: EditorTabsState,
     active_tab: RwSignal<usize>,
 ) -> impl IntoView {
-    let ws = state.workspace;
+    let ws = state.workbench;
     let state_for_close = state.clone();
     let state_for_finder = state.clone();
     let state_for_refresh = state.clone();
@@ -109,7 +109,7 @@ pub fn project_dashboard(
         h_stack((
             button("Refresh")
                 .action(move || {
-                    state_for_refresh.workspace.update(|ws| {
+                    state_for_refresh.workbench.update(|ws| {
                         if let Some(w) = ws {
                             w.refresh_status();
                         }
@@ -130,7 +130,7 @@ pub fn project_dashboard(
                 }),
             button("Open in Finder")
                 .action(move || {
-                    if let Some(ref w) = state_for_finder.workspace.get() {
+                    if let Some(ref w) = state_for_finder.workbench.get() {
                         let _ = std::process::Command::new("open")
                             .arg(&w.project_dir)
                             .spawn();
@@ -152,7 +152,7 @@ pub fn project_dashboard(
             empty().style(|s| s.flex_grow(1.0)),
             button("Close Project")
                 .action(move || {
-                    state_for_close.workspace.set(None);
+                    state_for_close.workbench.set(None);
                     state_for_close.result_message.set(None);
                     state_for_close.error_message.set(None);
                 })

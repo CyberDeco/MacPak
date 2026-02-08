@@ -11,8 +11,8 @@ pub enum Error {
     #[error("JSON serialization error: {0}")]
     Json(#[from] serde_json::Error),
 
-    #[error("Workspace error: {0}")]
-    Workspace(String),
+    #[error("Workbench error: {0}")]
+    Workbench(String),
 
     #[error("Index error: {0}")]
     Index(String),
