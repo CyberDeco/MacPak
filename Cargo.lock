@@ -4587,6 +4587,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lucide-icons"
+version = "0.563.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d69ca187c666b7f2746c707214d8217878be91cd3c2a7c54a23329788b71c16e"
+
+[[package]]
 name = "lz4_flex"
 version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4672,6 +4678,7 @@ dependencies = [
  "im",
  "image",
  "lazy_static",
+ "lucide-icons",
  "maclarian",
  "md5",
  "muda",
