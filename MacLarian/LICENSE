@@ -7,12 +7,12 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 Permission is hereby granted to any person obtaining a copy of this software and associated documentation files ("MacPak", "MacLarian") to use, copy, modify, merge, publish, and distribute the Software for non-commercial purposes, subject to the terms of the license. The Software (and any derivative works) must be made available to the public free of charge; no payment, access fee, or other cost may be required to download, use, or access the software.
 
 **Attribution Requirement:**
-The above copyright notice and appropriate credit must be given to CyberDeco as the original author of MacPak, provide a link to the license, and indicate if changes were made. Attribution may be included in the source code, documentation, or other materials provided with the software.
+The above copyright notice and appropriate credit must be given to CyberDeco as the original author of MacLarian, provide a link to the license, and indicate if changes were made. Attribution may be included in the source code, documentation, or other materials provided with the software.
 
 **Commercial Use:**
 Commercial use of this software, or redistribution for profit, is strictly prohibited. This includes all derivative works.
 
-MACPAK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+MACLARIAN IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ####################################################################################
 
@@ -38,8 +38,6 @@ The following file is licensed under MIT (Knit/pybg3):
 
 All other files in MacLarian/src/formats/*, MacLarian/src/converter/*, and
 MacLarian/src/virtual_texture/* are licensed under MIT (LSLib).
-
-See individual file headers for specific SPDX license identifiers.
 
 ####################################################################################
 
