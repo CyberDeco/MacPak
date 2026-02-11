@@ -107,16 +107,17 @@ MacPak is self-contained, so there's no need to download/install/build any exter
 - [LSLib](https://github.com/Norbyte/lslib)
   - PAK handling
   - LSF/LSX/LSJ handling
-    - *LSLib metadata is still used in MacPak's LSF/LSX/LSJ output as a nod to the GOAT.*
+    - *Note: LSLib metadata is still used in MacLarian's LSF/LSX/LSJ output as a nod to the GOAT.*
   - GR2/glTF conversion
   - Virtual texture handling
   - Loca file handling
 - [xiba](https://gitlab.com/saghm/xiba/)
-  - PAK handling
+  - PAK handling in Rust
+  - *Note: This is a Linux-focused BG3 mod toolkit project ([see here](https://gitlab.com/saghm/xiba/-/tree/main/oliver)).*
 - [Knit](https://github.com/neptuwunium/Knit)
   - GR2 decompression
   - ***Huge*** shoutout to [neptuwunium](https://github.com/arves100/opengr2/issues/8) for their clean room reverse-engineering.
 - [BG3 Dialog Reader](https://github.com/angaityel/bg3-dialog-reader)
-  - Character dialogue handling
+  - Character dialogue tree and bark handling
 - [Padme's BG3 Tutorials Templates and Modding Resources](https://www.nexusmods.com/baldursgate3/mods/132?tab=files)
   - Dye mod templates
