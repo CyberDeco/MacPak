@@ -32,13 +32,13 @@
 
 | MacPak Tab | General Purpose |
 |:----------:|--------------|
-| **Browser** | In-app file browser and previewer for text, image, and model files |
+| **Browser** | In-app file browser and previewer for text, image, and GR2 files (via bevy) |
 | **Editor** | In-app, multi-tab text file editor and converter (TXT, XML, LOCA, LSF, LSX, LSJ, and JSON) |
-| **PAK Ops** | Browse, extract, and create .pak archives |
+| **PAK Ops** | Browse, extract, and create PAK files |
 | **Models** | GR2 ↔ glTF/GLB extraction, conversion, and texture matching |
 | **Textures** | Virtual texture (GTS/GTP) extraction, DDS ↔ PNG conversion |
 | **Dye Lab** | Import/export clothing and armor dye mods and create custom color palettes |
-| **Search** | Search across .pak contents (file name + contents both supported) |
+| **Search** | Search across PAK contents (file name + contents both supported) without extraction |
 | **Dialogue** | Search and view character dialogue trees and play linked audio |
 | **Workbench** | Start a new mod with sample recipes for armor, dyes, spells, etc. |
 
@@ -106,15 +106,14 @@ MacPak is self-contained, so there's no need to download/install/build any exter
 
 **Core functionality is derived from (and wouldn't be possible without):**
 - [LSLib](https://github.com/Norbyte/lslib)
-  - .pak handling
+  - PAK handling
   - LSF/LSX/LSJ handling
     - *Note: LSLib metadata is intentionally used in MacLarian's LSF/LSX/LSJ output.*
   - GR2/glTF conversion
   - Virtual texture handling
   - Loca file handling
 - [xiba](https://gitlab.com/saghm/xiba/)
-  - .pak handling in Rust
-  - *Note: This is a Linux-focused BG3 mod toolkit project ([see here](https://gitlab.com/saghm/xiba/-/tree/main/oliver)).*
+  - PAK handling in Rust
 - [Knit](https://github.com/neptuwunium/Knit)
   - GR2 decompression
   - ***Huge*** shoutout to [neptuwunium](https://github.com/arves100/opengr2/issues/8) for their clean room reverse-engineering.
