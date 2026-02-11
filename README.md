@@ -107,7 +107,7 @@ MacPak is self-contained, so there's no need to download/install/build any exter
 - [LSLib](https://github.com/Norbyte/lslib)
   - .pak handling
   - LSF/LSX/LSJ handling
-    - *Note: LSLib metadata is still used in MacLarian's LSF/LSX/LSJ output as a nod to the GOAT.*
+    - *Note: LSLib metadata is intentionally used in MacLarian's LSF/LSX/LSJ output.*
   - GR2/glTF conversion
   - Virtual texture handling
   - Loca file handling
