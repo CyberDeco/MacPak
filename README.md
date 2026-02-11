@@ -38,7 +38,7 @@
 | **Models** | GR2 ↔ glTF/GLB extraction, conversion, and texture matching |
 | **Textures** | Virtual texture (GTS/GTP) extraction, DDS ↔ PNG conversion |
 | **Dye Lab** | Import/export clothing and armor dye mods and create custom color palettes |
-| **Search** | Search across PAK contents (file name + contents both supported) |
+| **Search** | Search across .pak contents (file name + contents both supported) |
 | **Dialogue** | Search and view character dialogue trees and play linked audio |
 | **Workbench** | Start a new mod with sample recipes for armor, dyes, spells, etc. |
 
@@ -105,14 +105,14 @@ MacPak is self-contained, so there's no need to download/install/build any exter
 
 **Core functionality is derived from (and wouldn't be possible without):**
 - [LSLib](https://github.com/Norbyte/lslib)
-  - PAK handling
+  - .pak handling
   - LSF/LSX/LSJ handling
     - *Note: LSLib metadata is still used in MacLarian's LSF/LSX/LSJ output as a nod to the GOAT.*
   - GR2/glTF conversion
   - Virtual texture handling
   - Loca file handling
 - [xiba](https://gitlab.com/saghm/xiba/)
-  - PAK handling in Rust
+  - .pak handling in Rust
   - *Note: This is a Linux-focused BG3 mod toolkit project ([see here](https://gitlab.com/saghm/xiba/-/tree/main/oliver)).*
 - [Knit](https://github.com/neptuwunium/Knit)
   - GR2 decompression
