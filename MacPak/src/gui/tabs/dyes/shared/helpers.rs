@@ -2,7 +2,6 @@
 
 use super::constants::COLOR_DEFAULT_GRAY;
 use floem::prelude::*;
-use std::process::Command;
 
 /// Parse hex string to Color for display
 pub fn parse_hex_to_color(hex: &str) -> Color {
@@ -48,6 +47,7 @@ pub fn normalize_hex(hex: &str) -> String {
 pub fn copy_to_clipboard(text: &str) {
     #[cfg(target_os = "macos")]
     {
+        use std::process::Command;
         let _ = Command::new("pbcopy")
             .stdin(std::process::Stdio::piped())
             .spawn()
@@ -58,42 +58,5 @@ pub fn copy_to_clipboard(text: &str) {
                 }
                 child.wait()
             });
-    }
-}
-
-/// Opens the native macOS color picker and returns the selected color as (R, G, B).
-pub fn pick_color_from_screen() -> Option<(u8, u8, u8)> {
-    #[cfg(target_os = "macos")]
-    {
-        let script = r"choose color";
-        let output = Command::new("osascript")
-            .args(["-e", script])
-            .output()
-            .ok()?;
-
-        if !output.status.success() {
-            return None;
-        }
-
-        let result = String::from_utf8_lossy(&output.stdout);
-        let parts: Vec<&str> = result.trim().split(", ").collect();
-        if parts.len() >= 3 {
-            let r16: u32 = parts[0].parse().ok()?;
-            let g16: u32 = parts[1].parse().ok()?;
-            let b16: u32 = parts[2].parse().ok()?;
-
-            // Convert 16-bit to 8-bit
-            let r = (r16 / 257) as u8;
-            let g = (g16 / 257) as u8;
-            let b = (b16 / 257) as u8;
-
-            return Some((r, g, b));
-        }
-        None
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    {
-        None
     }
 }

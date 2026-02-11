@@ -3,13 +3,15 @@
 use floem::prelude::*;
 
 use super::shared::constants::*;
-use super::shared::{
-    copy_to_clipboard, normalize_hex, parse_hex_color, parse_hex_to_color, pick_color_from_screen,
-};
+use super::shared::{copy_to_clipboard, normalize_hex, parse_hex_color, parse_hex_to_color};
 use crate::gui::state::DyeColorEntry;
 
-/// Creates a single color row with label, color swatch (clickable for eyedropper), hex input, and sRGB
-pub fn color_row(entry: DyeColorEntry, status: RwSignal<String>) -> impl IntoView {
+/// Creates a single color row with label, color swatch (clickable to open picker), hex input, and sRGB
+pub fn color_row(
+    entry: DyeColorEntry,
+    status: RwSignal<String>,
+    active_picker_color: RwSignal<Option<&'static str>>,
+) -> impl IntoView {
     let hex = entry.hex;
     let name = entry.name;
 
@@ -22,7 +24,7 @@ pub fn color_row(entry: DyeColorEntry, status: RwSignal<String>) -> impl IntoVie
         }),
         // Color picker section (second column)
         h_stack((
-            // Color swatch - click to open eyedropper
+            // Color swatch - click to open picker overlay
             {
                 let hex_copy = hex;
                 empty()
@@ -37,9 +39,7 @@ pub fn color_row(entry: DyeColorEntry, status: RwSignal<String>) -> impl IntoVie
                             .cursor(floem::style::CursorStyle::Pointer)
                     })
                     .on_click_stop(move |_| {
-                        if let Some((r, g, b)) = pick_color_from_screen() {
-                            hex_copy.set(format!("{:02X}{:02X}{:02X}", r, g, b));
-                        }
+                        active_picker_color.set(Some(name));
                     })
             },
             // Hash symbol

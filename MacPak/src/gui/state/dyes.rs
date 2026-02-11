@@ -1,6 +1,7 @@
 //! Dyes tab state
 
 use floem::prelude::*;
+use floem_picker::SolidColor;
 use std::collections::HashMap;
 
 // Import from local dyes module (moved from maclarian)
@@ -372,6 +373,12 @@ pub struct DyesState {
     /// Path to the imported LSF file (for re-export in place)
     pub imported_lsf_path: RwSignal<Option<String>>,
 
+    // Color picker overlay
+    /// Which color row is being edited (None = picker hidden)
+    pub active_picker_color: RwSignal<Option<&'static str>>,
+    /// Bound to the solid_picker widget
+    pub picker_color: RwSignal<SolidColor>,
+
     // Meta.lsx dialog visibility
     pub show_meta_dialog: RwSignal<bool>,
 
@@ -419,6 +426,10 @@ impl DyesState {
             imported_lsf_entries: RwSignal::new(Vec::new()),
             selected_lsf_index: RwSignal::new(None),
             imported_lsf_path: RwSignal::new(None),
+
+            // Color picker overlay
+            active_picker_color: RwSignal::new(None),
+            picker_color: RwSignal::new(SolidColor::default()),
 
             // Meta.lsx dialog
             show_meta_dialog: RwSignal::new(false),

@@ -4,6 +4,7 @@ mod color_row;
 mod export;
 mod generate;
 mod import;
+mod picker_overlay;
 mod sections;
 pub mod shared;
 
@@ -16,12 +17,14 @@ use export::export_section;
 use generate::generate_dye_section;
 pub use import::import_from_mod_folder;
 use import::import_section;
+use picker_overlay::color_picker_overlay;
 use sections::{common_section, header_section, recommended_section, required_section};
 use shared::constants::*;
 
 pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
     let status = state.status_message;
     let show_meta = state.show_meta_dialog;
+    let active_picker_color = state.active_picker_color;
     let state_for_export = state.clone();
     let selected_vendors = state.selected_vendors;
 
@@ -67,11 +70,11 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
         // Color sections (scrollable to handle overflow)
         scroll(
             h_stack((
-                required_section(state.clone(), status),
-                common_section(state.clone(), status),
+                required_section(state.clone(), status, active_picker_color),
+                common_section(state.clone(), status, active_picker_color),
                 // Recommended + Generate Dye stacked in same column
                 v_stack((
-                    recommended_section(state.clone(), status),
+                    recommended_section(state.clone(), status, active_picker_color),
                     generate_dye_section(state.clone()),
                 ))
                 .style(|s| s.flex_grow(1.0).flex_basis(0.0).gap(GAP_LG)),
@@ -87,6 +90,8 @@ pub fn dyes_tab(_app_state: AppState, state: DyesState) -> impl IntoView {
                 .gap(GAP_LG)
                 .items_start()
         }),
+        // Color picker overlay
+        color_picker_overlay(state.clone()),
         // Meta.lsx / Export dialog overlay with vendor selection
         meta_dialog_with_signals_and_extra(
             show_meta,

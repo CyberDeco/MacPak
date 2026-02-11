@@ -42,6 +42,7 @@ fn color_section(
     title: &'static str,
     entries: Vec<DyeColorEntry>,
     status: RwSignal<String>,
+    active_picker_color: RwSignal<Option<&'static str>>,
 ) -> impl IntoView {
     v_stack((
         section_header(title),
@@ -49,7 +50,7 @@ fn color_section(
             dyn_stack(
                 move || entries.clone(),
                 |entry| entry.name,
-                move |entry| color_row(entry, status),
+                move |entry| color_row(entry, status, active_picker_color),
             )
             .style(|s| s.width_full().padding(4.0).flex_col()),
         )
@@ -59,36 +60,48 @@ fn color_section(
 }
 
 /// Required colors section
-pub fn required_section(state: DyesState, status: RwSignal<String>) -> impl IntoView {
+pub fn required_section(
+    state: DyesState,
+    status: RwSignal<String>,
+    active_picker_color: RwSignal<Option<&'static str>>,
+) -> impl IntoView {
     let entries: Vec<DyeColorEntry> = state
         .colors_by_category(ColorCategory::Required)
         .into_iter()
         .cloned()
         .collect();
 
-    color_section("Required", entries, status)
+    color_section("Required", entries, status, active_picker_color)
 }
 
 /// Recommended colors section
-pub fn recommended_section(state: DyesState, status: RwSignal<String>) -> impl IntoView {
+pub fn recommended_section(
+    state: DyesState,
+    status: RwSignal<String>,
+    active_picker_color: RwSignal<Option<&'static str>>,
+) -> impl IntoView {
     let entries: Vec<DyeColorEntry> = state
         .colors_by_category(ColorCategory::Recommended)
         .into_iter()
         .cloned()
         .collect();
 
-    color_section("Recommended", entries, status)
+    color_section("Recommended", entries, status, active_picker_color)
 }
 
 /// Commonly used in mods section
-pub fn common_section(state: DyesState, status: RwSignal<String>) -> impl IntoView {
+pub fn common_section(
+    state: DyesState,
+    status: RwSignal<String>,
+    active_picker_color: RwSignal<Option<&'static str>>,
+) -> impl IntoView {
     let entries: Vec<DyeColorEntry> = state
         .colors_by_category(ColorCategory::Common)
         .into_iter()
         .cloned()
         .collect();
 
-    color_section("Commonly Used", entries, status)
+    color_section("Commonly Used", entries, status, active_picker_color)
 }
 
 /// Header section with title and status message
