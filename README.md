@@ -56,6 +56,7 @@
 
 <details>
   <summary><h3>Standalone MacLarian Install</h3></summary>
+    
 To install the MacLarian library as a dependency crate, add this to your `Cargo.toml`:
 
 ```toml
