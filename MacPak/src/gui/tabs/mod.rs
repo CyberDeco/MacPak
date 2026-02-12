@@ -18,8 +18,6 @@ pub use dialogue::dialogue_tab;
 pub use dyes::dyes_tab;
 pub use editor::editor_tab;
 pub use editor::load_file_in_tab;
-pub use gr2::gr2_tab;
 pub use pak_ops::pak_ops_tab;
 pub use search::search_tab;
-pub use virtual_textures::virtual_textures_tab;
 pub use workbench::workbench_tab;

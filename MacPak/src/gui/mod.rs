@@ -147,9 +147,7 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     let pak_ops_state_for_keyboard = pak_ops_state.clone();
     let lsf_state_for_keyboard = lsf_convert_state.clone();
     let gr2_state_for_keyboard = gr2_state.clone();
-    let config_state_for_gr2_keyboard = config_state.clone();
     let vt_state_for_keyboard = vt_state.clone();
-    let config_state_for_vt_keyboard = config_state.clone();
     let dyes_state_for_keyboard = dyes_state.clone();
     let config_state_for_dialogue = config_state.clone();
     let workbench_state_for_keyboard = workbench_state.clone();
@@ -270,16 +268,13 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
                     0 => open_folder_dialog(browser_state_for_keyboard.clone()), // Browser - open folder
                     1 => open_file_dialog(editor_tabs_for_keyboard.clone()), // Editor - open file
                     2 => extract_pak_file(pak_ops_state_for_keyboard.clone()), // PAK Ops - extract PAK
-                    3 => open_lsf_file(lsf_state_for_keyboard.clone()), // Convert - open LSF file
-                    4 => open_gr2_file(
-                        gr2_state_for_keyboard.clone(),
-                        config_state_for_gr2_keyboard.clone(),
-                    ), // GR2 - open GR2 file
-                    5 => open_gts_file(
-                        vt_state_for_keyboard.clone(),
-                        config_state_for_vt_keyboard.clone(),
-                    ), // Textures - open GTS file
-                    6 => {
+                    3 => match convert_subtab.get() {
+                        0 => open_lsf_file(lsf_state_for_keyboard.clone()),
+                        1 => open_gr2_file(gr2_state_for_keyboard.clone(), config_state_for_keyboard.clone()),
+                        2 => open_gts_file(vt_state_for_keyboard.clone(), config_state_for_keyboard.clone()),
+                        _ => open_lsf_file(lsf_state_for_keyboard.clone()),
+                    },
+                    4 => {
                         // Dyes - import from mod folder
                         // Create temporary signals for display (actual data stored in state)
                         let temp_name = RwSignal::new(String::new());
@@ -294,8 +289,8 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
                             temp_author,
                         );
                     }
-                    // Dialogue tab (8) - no CMD+O action, use toolbar buttons instead
-                    9 => {
+                    // Dialogue tab (6) - no CMD+O action, use toolbar buttons instead
+                    7 => {
                         // Workbench - open existing project
                         tabs::workbench::open_project_dialog(workbench_state_for_keyboard.clone());
                     }
@@ -378,12 +373,10 @@ fn tab_bar(active_tab: RwSignal<usize>, convert_subtab: RwSignal<usize>) -> impl
             tab_button("📝 Editor", 1, active_tab),
             tab_button("📦 PAK Ops", 2, active_tab),
             tab_button("🔄 Convert", 3, active_tab),
-            tab_button("🦴 GR2", 4, active_tab),
-            tab_button("🖼️ Textures", 5, active_tab),
-            tab_button("🧪 Dyes", 6, active_tab),
-            tab_button("🔍 Search", 7, active_tab),
-            tab_button("💬 Dialogue", 8, active_tab),
-            tab_button("🛠 Workbench", 9, active_tab),
+            tab_button("🧪 Dyes", 4, active_tab),
+            tab_button("🔍 Search", 5, active_tab),
+            tab_button("💬 Dialogue", 6, active_tab),
+            tab_button("🛠 Workbench", 7, active_tab),
             empty().style(|s| s.flex_grow(1.0)),
             // App info
             label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION"))).style(move |s| {
@@ -491,11 +484,8 @@ fn tab_content(
                 config_state.clone(),
             )
             .into_any(),
-            4 => gr2_tab(app_state.clone(), gr2_state.clone(), config_state.clone()).into_any(),
-            5 => virtual_textures_tab(app_state.clone(), vt_state.clone(), config_state.clone())
-                .into_any(),
-            6 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
-            7 => search_tab(
+            4 => dyes_tab(app_state.clone(), dyes_state.clone()).into_any(),
+            5 => search_tab(
                 app_state.clone(),
                 search_state.clone(),
                 config_state.clone(),
@@ -504,13 +494,13 @@ fn tab_content(
                 active_tab,
             )
             .into_any(),
-            8 => dialogue_tab(
+            6 => dialogue_tab(
                 app_state.clone(),
                 dialogue_state.clone(),
                 config_state.clone(),
             )
             .into_any(),
-            9 => workbench_tab(
+            7 => workbench_tab(
                 workbench_state.clone(),
                 editor_tabs_state.clone(),
                 active_tab,

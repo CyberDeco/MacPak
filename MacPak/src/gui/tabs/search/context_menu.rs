@@ -203,7 +203,7 @@ fn open_in_dialogue(
         state.is_building_flag_index.set(true);
 
         // Switch to Dialogue tab to show overlay
-        active_tab.set(7);
+        active_tab.set(6);
 
         // Init caches in background
         let loca_cache = state.localization_cache.clone();
@@ -250,7 +250,7 @@ fn open_in_dialogue(
         // Caches already initialized - set pending load and ready immediately
         state.pending_load.set(Some(source));
         state.pending_caches_ready.set(true);
-        active_tab.set(7);
+        active_tab.set(6);
     }
 }
 

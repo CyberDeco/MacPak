@@ -190,10 +190,20 @@ impl PersistedConfig {
 
     /// Load config from disk, or return default
     pub fn load() -> Self {
-        Self::config_path()
+        let mut config: Self = Self::config_path()
             .and_then(|path| fs::read_to_string(path).ok())
             .and_then(|content| serde_json::from_str(&content).ok())
-            .unwrap_or_default()
+            .unwrap_or_default();
+
+        // Migrate tab indices: standalone GR2 (4) and Textures (5) tabs were removed
+        config.active_tab = match config.active_tab {
+            0..=3 => config.active_tab,  // Unchanged tabs
+            4 | 5 => 3,                   // GR2/Textures -> Convert
+            n if n >= 6 => n - 2,         // Shift remaining down by 2
+            _ => 0,
+        };
+
+        config
     }
 
     /// Save config to disk
