@@ -114,9 +114,8 @@ MacPak is self-contained, so there's no need to download/install/build any exter
   - Loca file handling
 - [xiba](https://gitlab.com/saghm/xiba/)
   - PAK handling in Rust
-- [Knit](https://github.com/neptuwunium/Knit)
-  - GR2 decompression
-  - ***Huge*** shoutout to [neptuwunium](https://github.com/arves100/opengr2/issues/8) for their clean room reverse-engineering.
+- [pybg3](https://github.com/eiz/pybg3) and [Knit](https://github.com/neptuwunium/Knit)
+  - GR2 decompression (clean room Bitknit decompression reverse-engineering)
 - [BG3 Dialog Reader](https://github.com/angaityel/bg3-dialog-reader)
   - Character dialogue tree and bark handling
 - [Padme's BG3 Tutorials Templates and Modding Resources](https://www.nexusmods.com/baldursgate3/mods/132?tab=files)
