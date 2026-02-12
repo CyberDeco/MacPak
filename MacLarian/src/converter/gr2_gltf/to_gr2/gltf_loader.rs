@@ -35,7 +35,6 @@ pub struct BoneBindingData {
     pub bone_name: String,
     pub obb_min: [f32; 3],
     pub obb_max: [f32; 3],
-    pub tri_count: i32,
     pub tri_indices: Vec<i32>,
 }
 
@@ -357,7 +356,6 @@ fn extract_mesh_extension_data(mesh_data: &mut MeshData, profile: &Bg3MeshProfil
                 bone_name: bb.bone_name.clone(),
                 obb_min: bb.obb_min,
                 obb_max: bb.obb_max,
-                tri_count: bb.tri_count,
                 tri_indices: bb.tri_indices.clone(),
             })
             .collect();

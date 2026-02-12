@@ -606,8 +606,6 @@ impl Gr2Writer {
                     for &v in &bb.obb_max {
                         sections[3].write_f32(v);
                     }
-                    // TriangleCount (i32)
-                    sections[3].write_i32(bb.tri_count);
                     // TriangleIndices (ref_to_array: count + ptr)
                     if let Some((tri_offset, tri_count)) = tri_idx_offsets[j] {
                         sections[3].write_array_ref(tri_count as u32, 3, tri_offset);

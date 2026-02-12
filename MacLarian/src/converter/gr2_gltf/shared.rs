@@ -94,11 +94,16 @@ pub fn encode_qtangent(normal: &[f32; 3], tangent: &[f32; 4]) -> [i16; 4] {
         quat = -quat;
     }
 
-    // Scale to i16 range [-32767, 32767]
-    [
-        (quat.x * 32767.0).clamp(-32767.0, 32767.0) as i16,
-        (quat.y * 32767.0).clamp(-32767.0, 32767.0) as i16,
-        (quat.z * 32767.0).clamp(-32767.0, 32767.0) as i16,
-        (quat.w * 32767.0).clamp(-32767.0, 32767.0) as i16,
-    ]
+    // Scale to i16 range [-32767, 32767], rounding to nearest
+    let x = (quat.x * 32767.0).round().clamp(-32767.0, 32767.0) as i16;
+    let y = (quat.y * 32767.0).round().clamp(-32767.0, 32767.0) as i16;
+    let z = (quat.z * 32767.0).round().clamp(-32767.0, 32767.0) as i16;
+    let mut w = (quat.w * 32767.0).round().clamp(-32767.0, 32767.0) as i16;
+
+    // W sign encodes handedness — ensure it never quantizes to 0
+    if w == 0 {
+        w = if handedness < 0.0 { -1 } else { 1 };
+    }
+
+    [x, y, z, w]
 }
