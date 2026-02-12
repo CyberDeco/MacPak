@@ -9,7 +9,7 @@
 ---
 
 <p align="center">
-<i>Baldurs Gate 3 modding tools for macOS? In <b>this</b> economy?</i>
+<i>Baldur's Gate 3 modding tools for macOS? In <b>this</b> economy?</i>
 </p>
 
 ---
