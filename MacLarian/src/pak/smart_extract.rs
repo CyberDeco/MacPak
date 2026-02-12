@@ -28,6 +28,7 @@
 
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::lspk::{PakPhase, PakProgress};
 use super::pak_tools::{PakOperations, ProgressCallback};
@@ -147,19 +148,32 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
     }
 
     // Phase 3: Process GR2 files
+    let total_gr2 = gr2_paths.len();
     progress(&PakProgress {
         phase: PakPhase::WritingFiles,
         current: 0,
-        total: gr2_paths.len(),
+        total: total_gr2,
         current_file: Some("Processing GR2 files...".to_string()),
     });
 
-    // Process GR2 files in parallel
+    // Process GR2 files in parallel, reporting progress as each completes
+    let completed = AtomicUsize::new(0);
     let processing_results: Vec<(PathBuf, std::result::Result<Gr2ExtractionResult, String>)> =
         gr2_paths
             .par_iter()
             .map(|gr2_path| {
                 let folder_result = process_single_gr2(gr2_path, output_dir, &options);
+                let done = completed.fetch_add(1, Ordering::Relaxed) + 1;
+                let filename = gr2_path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("GR2");
+                progress(&PakProgress::with_file(
+                    PakPhase::WritingFiles,
+                    done,
+                    total_gr2,
+                    filename,
+                ));
                 (gr2_path.clone(), folder_result)
             })
             .collect();
