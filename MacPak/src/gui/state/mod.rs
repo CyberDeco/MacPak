@@ -7,6 +7,7 @@ mod dialogue;
 mod dyes;
 mod editor;
 pub mod gr2;
+pub mod lsf_convert;
 mod pak_ops;
 mod search;
 pub mod virtual_textures;
@@ -28,6 +29,7 @@ pub use dyes::{
 };
 pub use editor::{EditorState, EditorTab, EditorTabsState};
 pub use gr2::Gr2State;
+pub use lsf_convert::LsfConvertState;
 pub use pak_ops::{ActiveDialog, PakCompression, PakOpsState};
 pub use search::{IndexStatus, SearchResult, SearchSortColumn, SearchState, SortDirection};
 pub use virtual_textures::VirtualTexturesState;

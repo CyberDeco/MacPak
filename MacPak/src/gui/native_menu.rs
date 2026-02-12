@@ -10,9 +10,9 @@ use muda::{
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use crate::gui::{generate_uuid_to_clipboard, send_notification};
 use crate::gui::state::{ConfigState, EditorTabsState};
 use crate::gui::tabs::editor::open_file_at_path;
+use crate::gui::{generate_uuid_to_clipboard, send_notification};
 
 /// Menu item IDs for event handling
 static PREFERENCES_ID: std::sync::OnceLock<muda::MenuId> = std::sync::OnceLock::new();
@@ -204,9 +204,7 @@ fn create_menu_bar(config_state: ConfigState) {
                 if let Some(uuid_id) = GENERATE_UUID_ID.get() {
                     if &event.id == uuid_id {
                         let uuid = generate_uuid_to_clipboard();
-                        send_notification(format!(
-                            "Generated UUID ({uuid}) copied to clipboard"
-                        ));
+                        send_notification(format!("Generated UUID ({uuid}) copied to clipboard"));
                         continue;
                     }
                 }

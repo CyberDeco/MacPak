@@ -1,6 +1,7 @@
 //! Tab views for MacPak
 
 pub mod browser;
+pub mod convert;
 pub mod dialogue;
 pub mod dyes;
 pub mod editor;
@@ -12,6 +13,7 @@ pub mod workbench;
 
 pub use browser::browser_tab;
 pub use browser::kill_preview_process;
+pub use convert::convert_tab;
 pub use dialogue::dialogue_tab;
 pub use dyes::dyes_tab;
 pub use editor::editor_tab;
