@@ -421,7 +421,7 @@ fn bundle_options_panel(
         // Header - updates based on selected output format
         label(move || {
             if use_glb.get() {
-                "Bundle Options (GR2→GLB)".to_string()
+                "Bundle Options (GR2 → GLB)".to_string()
             } else {
                 "Bundle Options (GR2→glTF)".to_string()
             }
