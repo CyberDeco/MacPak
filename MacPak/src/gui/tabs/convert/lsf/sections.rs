@@ -1,12 +1,10 @@
 //! UI sections for LSF/LSX/LSJ/LOCA conversion subtab
 
-use floem::AnyView;
 use floem::event::{Event, EventListener};
 use floem::prelude::*;
 use floem::text::Weight;
 
 use super::conversion::{convert_batch, convert_single};
-use crate::gui::shared::operation_button;
 use crate::gui::state::LsfConvertState;
 
 /// Detect format from file extension
@@ -53,49 +51,52 @@ pub fn operations_row(state: LsfConvertState) -> impl IntoView {
     .style(|s| s.width_full().gap(20.0).margin_bottom(20.0))
 }
 
-/// LSF/LSX/LSJ conversion group — single + batch
+/// LSF/LSX/LSJ conversion group — source → target toggle layout
 fn lsf_conversion_group(state: LsfConvertState) -> impl IntoView {
-    let detected = state.detected_format;
+    let source = state.detected_format;
     let target = state.target_format;
     let state_for_select = state.clone();
     let state_for_convert = state.clone();
 
     v_stack((
-        // Header row with title and target format toggle
+        // Title
+        label(|| "LSF / LSX / LSJ").style(|s| {
+            s.font_size(13.0)
+                .font_weight(Weight::SEMIBOLD)
+                .color(Color::rgb8(80, 80, 80))
+                .margin_bottom(8.0)
+        }),
+        // Source → Target format selector row
         h_stack((
-            label(|| "LSF / LSX / LSJ").style(|s| {
-                s.font_size(13.0)
-                    .font_weight(Weight::SEMIBOLD)
-                    .color(Color::rgb8(80, 80, 80))
+            // Source format buttons
+            h_stack((
+                format_source_button("LSF", source, target),
+                format_source_button("LSX", source, target),
+                format_source_button("LSJ", source, target),
+            ))
+            .style(|s| s.gap(4.0).items_center()),
+            // Arrow
+            label(|| "→").style(|s| {
+                s.font_size(16.0)
+                    .font_weight(Weight::BOLD)
+                    .color(Color::rgb8(120, 120, 120))
+                    .padding_horiz(12.0)
             }),
-            empty().style(|s| s.flex_grow(1.0)),
-            // Target format buttons - shown when a format is detected
-            dyn_container(
-                move || detected.get(),
-                move |fmt| {
-                    let targets = target_formats_for(&fmt);
-                    // Only show toggles for LSF/LSX/LSJ sources
-                    if targets.is_empty() || fmt == "LOCA" || fmt == "XML" {
-                        empty().into_any()
-                    } else {
-                        let mut views: Vec<AnyView> = Vec::new();
-                        for t in targets {
-                            views.push(format_select_button(t, target).into_any());
-                        }
-                        h_stack_from_iter(views)
-                            .style(|s| s.gap(4.0).items_center())
-                            .into_any()
-                    }
-                },
-            ),
+            // Target format buttons
+            h_stack((
+                format_target_button("LSF", target, source),
+                format_target_button("LSX", target, source),
+                format_target_button("LSJ", target, source),
+            ))
+            .style(|s| s.gap(4.0).items_center()),
         ))
-        .style(|s| s.width_full().gap(4.0).items_center().margin_bottom(8.0)),
+        .style(|s| s.width_full().items_center().justify_center().margin_bottom(12.0)),
         // Select + convert single file
-        operation_button("🔄 Convert File", move || {
+        lsf_dynamic_button(source, target, "🔄", "Convert", move || {
             select_and_convert_single_lsf(state_for_select.clone());
         }),
         // Batch convert
-        operation_button("📁 Batch Convert Directory", move || {
+        lsf_dynamic_button(source, target, "📁", "Batch", move || {
             select_and_convert_batch_lsf(state_for_convert.clone());
         }),
     ))
@@ -110,36 +111,51 @@ fn lsf_conversion_group(state: LsfConvertState) -> impl IntoView {
     })
 }
 
-/// LOCA <-> XML conversion group — single + batch
+/// LOCA <-> XML conversion group — source → target toggle layout
 fn loca_conversion_group(state: LsfConvertState) -> impl IntoView {
-    let state_for_loca = state.clone();
-    let state_for_xml = state.clone();
-    let state_for_batch_loca = state.clone();
-    let state_for_batch_xml = state.clone();
+    let source = state.loca_source_format;
+    let target = state.loca_target_format;
+    let state_for_select = state.clone();
+    let state_for_batch = state.clone();
 
     v_stack((
+        // Title
         label(|| "LOCA / XML").style(|s| {
             s.font_size(13.0)
                 .font_weight(Weight::SEMIBOLD)
                 .color(Color::rgb8(80, 80, 80))
-                .margin_bottom(14.0)
-                .margin_top(4.0)
+                .margin_bottom(8.0)
         }),
-        // LOCA -> XML
-        operation_button("🔄 Convert LOCA → XML", move || {
-            select_and_convert_single_fixed(state_for_loca.clone(), "LOCA", "XML", &["loca"]);
+        // Source → Target format selector row
+        h_stack((
+            // Source format buttons
+            h_stack((
+                format_source_button("LOCA", source, target),
+                format_source_button("XML", source, target),
+            ))
+            .style(|s| s.gap(4.0).items_center()),
+            // Arrow
+            label(|| "→").style(|s| {
+                s.font_size(16.0)
+                    .font_weight(Weight::BOLD)
+                    .color(Color::rgb8(120, 120, 120))
+                    .padding_horiz(12.0)
+            }),
+            // Target format buttons
+            h_stack((
+                format_target_button("LOCA", target, source),
+                format_target_button("XML", target, source),
+            ))
+            .style(|s| s.gap(4.0).items_center()),
+        ))
+        .style(|s| s.width_full().items_center().justify_center().margin_bottom(12.0)),
+        // Convert single file
+        lsf_dynamic_button(source, target, "🔄", "Convert", move || {
+            select_and_convert_single_loca(state_for_select.clone());
         }),
-        // XML -> LOCA
-        operation_button("🔄 Convert XML → LOCA", move || {
-            select_and_convert_single_fixed(state_for_xml.clone(), "XML", "LOCA", &["xml"]);
-        }),
-        // Batch LOCA -> XML
-        operation_button("📁 Batch LOCA → XML", move || {
-            select_and_convert_batch_fixed(state_for_batch_loca.clone(), "LOCA", "XML");
-        }),
-        // Batch XML -> LOCA
-        operation_button("📁 Batch XML → LOCA", move || {
-            select_and_convert_batch_fixed(state_for_batch_xml.clone(), "XML", "LOCA");
+        // Batch convert
+        lsf_dynamic_button(source, target, "📁", "Batch", move || {
+            select_and_convert_batch_loca(state_for_batch.clone());
         }),
     ))
     .style(|s| {
@@ -176,8 +192,9 @@ fn drop_zone(state: LsfConvertState) -> impl IntoView {
             let format = detect_format(&path);
 
             if format.is_empty() {
-                state_for_drop
-                    .add_result("⚠ Only .lsf, .lsx, .lsj, .loca, or .xml files can be dropped here");
+                state_for_drop.add_result(
+                    "⚠ Only .lsf, .lsx, .lsj, .loca, or .xml files can be dropped here",
+                );
                 return;
             }
 
@@ -206,12 +223,25 @@ fn drop_zone(state: LsfConvertState) -> impl IntoView {
     })
 }
 
-/// Toggle button for format selection (matches GR2 format_toggle_button style)
-fn format_select_button(text: &'static str, signal: RwSignal<String>) -> impl IntoView {
+/// Source format toggle button — selects the source format and auto-fixes target if needed
+fn format_source_button(
+    text: &'static str,
+    source: RwSignal<String>,
+    target: RwSignal<String>,
+) -> impl IntoView {
     button(text)
-        .action(move || signal.set(text.to_string()))
+        .action(move || {
+            source.set(text.to_string());
+            // If the target is now the same as source, pick the first valid alternative
+            if target.get() == text {
+                let targets = target_formats_for(text);
+                if let Some(first) = targets.first() {
+                    target.set(first.to_string());
+                }
+            }
+        })
         .style(move |s| {
-            let is_selected = signal.get() == text;
+            let is_selected = source.get() == text;
             let s = s
                 .padding_vert(4.0)
                 .padding_horiz(12.0)
@@ -233,58 +263,90 @@ fn format_select_button(text: &'static str, signal: RwSignal<String>) -> impl In
         })
 }
 
-// ─── File dialog functions ───────────────────────────────────────────────────
-
-/// Select an LSF/LSX/LSJ file, pick target format, then pick output folder and convert
-fn select_and_convert_single_lsf(state: LsfConvertState) {
-    let mut dialog = rfd::FileDialog::new()
-        .set_title("Select LSF/LSX/LSJ File")
-        .add_filter("LSF/LSX/LSJ Files", &["lsf", "lsx", "lsj"]);
-
-    if let Some(dir) = state.working_dir.get() {
-        dialog = dialog.set_directory(&dir);
-    }
-
-    let Some(file) = dialog.pick_file() else {
-        return;
-    };
-
-    if let Some(parent) = file.parent() {
-        state
-            .working_dir
-            .set(Some(parent.to_string_lossy().to_string()));
-    }
-
-    let path_str = file.to_string_lossy().to_string();
-    let format = detect_format(&path_str);
-
-    state.input_file.set(Some(path_str));
-    state.detected_format.set(format.clone());
-
-    // Use the currently selected target, or auto-select first valid target
-    let targets = target_formats_for(&format);
-    let current_target = state.target_format.get();
-    if !targets.contains(&current_target.as_str()) {
-        if let Some(first) = targets.first() {
-            state.target_format.set(first.to_string());
-        }
-    }
-
-    select_output_and_convert(state);
+/// Target format toggle button — grayed out/disabled when it matches the current source
+fn format_target_button(
+    text: &'static str,
+    target: RwSignal<String>,
+    source: RwSignal<String>,
+) -> impl IntoView {
+    button(text)
+        .action(move || {
+            // Only allow selection if not same as source
+            if source.get() != text {
+                target.set(text.to_string());
+            }
+        })
+        .style(move |s| {
+            let is_disabled = source.get() == text;
+            let is_selected = target.get() == text;
+            let s = s
+                .padding_vert(4.0)
+                .padding_horiz(12.0)
+                .border_radius(4.0)
+                .font_size(12.0);
+            if is_disabled {
+                // Grayed out — same as source format
+                s.background(Color::rgb8(240, 240, 240))
+                    .color(Color::rgb8(190, 190, 190))
+                    .border(1.0)
+                    .border_color(Color::rgb8(220, 220, 220))
+                    .cursor(floem::style::CursorStyle::Default)
+            } else if is_selected {
+                s.background(Color::rgb8(66, 133, 244))
+                    .color(Color::WHITE)
+                    .border(1.0)
+                    .border_color(Color::rgb8(66, 133, 244))
+                    .cursor(floem::style::CursorStyle::Pointer)
+            } else {
+                s.background(Color::rgb8(245, 245, 245))
+                    .color(Color::rgb8(100, 100, 100))
+                    .border(1.0)
+                    .border_color(Color::rgb8(200, 200, 200))
+                    .cursor(floem::style::CursorStyle::Pointer)
+                    .hover(|s| s.background(Color::rgb8(235, 235, 235)))
+            }
+        })
 }
 
-/// Select a file with a fixed source/target format, then pick output folder and convert
-fn select_and_convert_single_fixed(
-    state: LsfConvertState,
-    source_format: &str,
-    target_format: &str,
-    extensions: &[&str],
-) {
-    let title = format!("Select {} File", source_format);
-    let filter_label = format!("{} Files", source_format);
+/// Dynamic button whose label reflects the current source → target selection
+fn lsf_dynamic_button(
+    source: RwSignal<String>,
+    target: RwSignal<String>,
+    emoji: &'static str,
+    verb: &'static str,
+    on_click: impl Fn() + 'static,
+) -> impl IntoView {
+    button(label(move || {
+        format!("{} {} {} → {}", emoji, verb, source.get(), target.get())
+    }))
+    .action(on_click)
+    .style(|s| {
+        s.width_full()
+            .padding_vert(10.0)
+            .padding_horiz(16.0)
+            .background(Color::rgb8(245, 245, 245))
+            .border(1.0)
+            .border_color(Color::rgb8(200, 200, 200))
+            .border_radius(6.0)
+            .hover(|s| {
+                s.background(Color::rgb8(230, 230, 230))
+                    .border_color(Color::rgb8(180, 180, 180))
+            })
+    })
+}
+
+// ─── File dialog functions ───────────────────────────────────────────────────
+
+/// Select an LSF/LSX/LSJ file filtered by the chosen source format, then convert
+fn select_and_convert_single_lsf(state: LsfConvertState) {
+    let source = state.detected_format.get();
+    let source_ext = source.to_lowercase();
+    let title = format!("Select {} File", source);
+    let filter_label = format!("{} Files", source);
+
     let mut dialog = rfd::FileDialog::new()
         .set_title(&title)
-        .add_filter(&filter_label, extensions);
+        .add_filter(&filter_label, &[&source_ext]);
 
     if let Some(dir) = state.working_dir.get() {
         dialog = dialog.set_directory(&dir);
@@ -303,8 +365,41 @@ fn select_and_convert_single_fixed(
     state
         .input_file
         .set(Some(file.to_string_lossy().to_string()));
-    state.detected_format.set(source_format.to_string());
-    state.target_format.set(target_format.to_string());
+
+    select_output_and_convert(state);
+}
+
+/// Select a LOCA/XML file filtered by the chosen source format, then convert
+fn select_and_convert_single_loca(state: LsfConvertState) {
+    let source = state.loca_source_format.get();
+    let target = state.loca_target_format.get();
+    let source_ext = source.to_lowercase();
+    let title = format!("Select {} File", source);
+    let filter_label = format!("{} Files", source);
+
+    let mut dialog = rfd::FileDialog::new()
+        .set_title(&title)
+        .add_filter(&filter_label, &[&source_ext]);
+
+    if let Some(dir) = state.working_dir.get() {
+        dialog = dialog.set_directory(&dir);
+    }
+
+    let Some(file) = dialog.pick_file() else {
+        return;
+    };
+
+    if let Some(parent) = file.parent() {
+        state
+            .working_dir
+            .set(Some(parent.to_string_lossy().to_string()));
+    }
+
+    state
+        .input_file
+        .set(Some(file.to_string_lossy().to_string()));
+    state.detected_format.set(source.clone());
+    state.target_format.set(target);
 
     select_output_and_convert(state);
 }
@@ -331,44 +426,24 @@ fn select_output_and_convert(state: LsfConvertState) {
     convert_single(state, output_dir.to_string_lossy().to_string());
 }
 
-/// Select input directory for LSF/LSX/LSJ batch, then output directory, then convert
+/// Select input directory for LSF/LSX/LSJ batch using the toggle-selected source/target
 fn select_and_convert_batch_lsf(state: LsfConvertState) {
-    // Use the currently selected target from the format toggle in the header
+    let source = state.detected_format.get();
     let target = state.target_format.get();
-    let detected = state.detected_format.get();
 
-    // Determine source format from detected format, or default to LSF
-    let source_format = if !detected.is_empty()
-        && detected != "LOCA"
-        && detected != "XML"
-    {
-        detected.clone()
-    } else {
-        "LSF".to_string()
-    };
-
-    // Determine target format
-    let target_format = if !target.is_empty() {
-        target
-    } else {
-        let targets = target_formats_for(&source_format);
-        targets.first().unwrap_or(&"LSX").to_string()
-    };
-
-    state.batch_source_format.set(source_format);
-    state.batch_target_format.set(target_format);
+    state.batch_source_format.set(source);
+    state.batch_target_format.set(target);
 
     select_and_convert_batch_common(state);
 }
 
-/// Select input directory for LOCA/XML batch with fixed formats, then output directory
-fn select_and_convert_batch_fixed(
-    state: LsfConvertState,
-    source_format: &str,
-    target_format: &str,
-) {
-    state.batch_source_format.set(source_format.to_string());
-    state.batch_target_format.set(target_format.to_string());
+/// Select input directory for LOCA/XML batch using the toggle-selected source/target
+fn select_and_convert_batch_loca(state: LsfConvertState) {
+    let source = state.loca_source_format.get();
+    let target = state.loca_target_format.get();
+
+    state.batch_source_format.set(source);
+    state.batch_target_format.set(target);
 
     select_and_convert_batch_common(state);
 }
@@ -377,10 +452,8 @@ fn select_and_convert_batch_fixed(
 fn select_and_convert_batch_common(state: LsfConvertState) {
     let source_ext = state.batch_source_format.get().to_lowercase();
 
-    let mut dialog = rfd::FileDialog::new().set_title(&format!(
-        "Select Directory with .{} Files",
-        source_ext
-    ));
+    let mut dialog =
+        rfd::FileDialog::new().set_title(&format!("Select Directory with .{} Files", source_ext));
 
     if let Some(dir) = state.working_dir.get() {
         dialog = dialog.set_directory(&dir);

@@ -81,8 +81,7 @@ fn subtab_button(
                 .cursor(floem::style::CursorStyle::Pointer);
 
             if is_active {
-                s.background(Color::rgb8(66, 133, 244))
-                    .color(Color::WHITE)
+                s.background(Color::rgb8(66, 133, 244)).color(Color::WHITE)
             } else {
                 s.background(Color::TRANSPARENT)
                     .color(Color::rgb8(100, 100, 100))
@@ -112,5 +111,10 @@ fn subtab_content(
             _ => lsf_subtab(lsf_state.clone()).into_any(),
         },
     )
-    .style(|s| s.width_full().flex_grow(1.0).flex_basis(0.0).min_height(0.0))
+    .style(|s| {
+        s.width_full()
+            .flex_grow(1.0)
+            .flex_basis(0.0)
+            .min_height(0.0)
+    })
 }

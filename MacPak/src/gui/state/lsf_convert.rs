@@ -21,6 +21,10 @@ pub struct LsfConvertState {
     pub detected_format: RwSignal<String>,
     pub target_format: RwSignal<String>,
 
+    // LOCA/XML card source/target
+    pub loca_source_format: RwSignal<String>,
+    pub loca_target_format: RwSignal<String>,
+
     // Batch conversion
     pub batch_input_dir: RwSignal<Option<String>>,
     pub batch_source_format: RwSignal<String>,
@@ -42,8 +46,10 @@ impl LsfConvertState {
     pub fn new() -> Self {
         Self {
             input_file: RwSignal::new(None),
-            detected_format: RwSignal::new(String::new()),
-            target_format: RwSignal::new(String::new()),
+            detected_format: RwSignal::new("LSF".to_string()),
+            target_format: RwSignal::new("LSX".to_string()),
+            loca_source_format: RwSignal::new("LOCA".to_string()),
+            loca_target_format: RwSignal::new("XML".to_string()),
             batch_input_dir: RwSignal::new(None),
             batch_source_format: RwSignal::new("LSF".to_string()),
             batch_target_format: RwSignal::new("LSX".to_string()),
