@@ -382,8 +382,8 @@ fn extract_mesh_extension_data(mesh_data: &mut MeshData, profile: &Bg3MeshProfil
 }
 
 /// Remap vertex bone indices from skeleton-global joint indices (glTF) to
-/// mesh-local BoneBindings indices (GR2). This is the reverse of
-/// `remap_mesh_bone_indices` in the to_gltf direction.
+/// mesh-local `BoneBindings` indices (GR2). This is the reverse of
+/// `remap_mesh_bone_indices` in the `to_gltf` direction.
 fn remap_joint_indices_to_bone_bindings(mesh: &mut MeshData, skeleton: &Skeleton) {
     if mesh.bone_bindings.is_empty() {
         return;

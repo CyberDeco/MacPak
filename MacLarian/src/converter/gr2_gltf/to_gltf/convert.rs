@@ -11,10 +11,10 @@ fn bool_flag(v: bool) -> Option<bool> {
     if v { Some(true) } else { None }
 }
 
-/// Remap vertex bone indices from mesh-local BoneBindings indices to skeleton-global
-/// joint indices compatible with glTF. In GR2, vertex BoneIndices are indices into the
-/// mesh's BoneBindings array, not the skeleton's bone array. This function resolves
-/// BoneBindings[idx].bone_name → skeleton bone index, then applies the DFS reorder.
+/// Remap vertex bone indices from mesh-local `BoneBindings` indices to skeleton-global
+/// joint indices compatible with glTF. In GR2, vertex `BoneIndices` are indices into the
+/// mesh's `BoneBindings` array, not the skeleton's bone array. This function resolves
+/// `BoneBindings[idx].bone_name` → skeleton bone index, then applies the DFS reorder.
 pub(super) fn remap_mesh_bone_indices(mesh: &mut MeshData, skeleton: &Skeleton, dfs_remap: &[u8]) {
     // Build mapping: BoneBindings index → skeleton bone index (DFS-reordered)
     let binding_to_joint: Vec<u8> = mesh
