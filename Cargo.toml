@@ -21,7 +21,7 @@ version = "0.1.0"
 path = "./MacPak"
 
 [workspace.dependencies.maclarian]
-version = "0.1.2"
+version = "0.1" # got lazy with version tracking
 path = "./MacLarian"
 default-features = false
 
