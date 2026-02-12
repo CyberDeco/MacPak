@@ -29,18 +29,51 @@
 ## Features
 
 <div align="center">
-
-| MacPak Tab | General Purpose |
-|:----------:|--------------|
-| **Browser** | In-app file browser and previewer for text, image, and GR2 files (via bevy) |
-| **Editor** | In-app, multi-tab text file editor and converter (TXT, XML, LOCA, LSF, LSX, LSJ, and JSON) |
-| **PAK Ops** | Browse, extract, and create PAK files |
-| **Models** | GR2 ↔ glTF/GLB extraction, conversion, and texture matching |
-| **Textures** | Virtual texture (GTS/GTP) extraction, DDS ↔ PNG conversion |
-| **Dye Lab** | Import/export clothing and armor dye mods and create custom color palettes |
-| **Search** | Search across PAK contents (file name + contents both supported) without extraction |
-| **Dialogue** | Search and view character dialogue trees and play linked audio |
-| **Workbench** | Start a new mod with sample recipes for armor, dyes, spells, etc. |
+    
+<table>
+  <tr>
+    <th align="center">MacPak Tab</th>
+    <th>General Purpose</th>
+  </tr>
+  <tr>
+    <td align="center"><b>Browser</b></td>
+    <td>In-app file browser and previewer for text, image, and GR2 files (via bevy)</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Editor</b></td>
+    <td>In-app, multi-tab text file editor and converter (TXT, XML, LOCA, LSF, LSX, LSJ, and JSON)</td>
+  </tr>
+  <tr>
+    <td align="center"><b>PAK Ops</b></td>
+    <td>Browse, extract, and create PAK files</td>
+  </tr>
+  <tr>
+    <td align="center" rowspan="3"><b>Convert</b></td>
+    <td>LSF ↔ LSX ↔ LSJ and LOCA ↔ XML single-file and batch conversion</td>
+  <tr>
+    <td>GR2 ↔ glTF/GLB extraction, conversion, and texture matching</td>
+  </tr>
+  <tr>
+    <td>Virtual texture (GTS/GTP) extraction and DDS ↔ PNG conversion</td>
+  </tr>
+  </tr>
+  <tr>
+    <td align="center"><b>Dye Lab</b></td>
+    <td>Import/export clothing and armor dye mods and create custom color palettes</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Search</b></td>
+    <td>Search across PAK contents (file name + contents both supported) without extraction</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Dialogue</b></td>
+    <td>Search and view character dialogue trees and play linked audio</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Workbench</b></td>
+    <td>Start a new mod with sample recipes for armor, dyes, spells, etc.</td>
+  </tr>
+</table>
 
 </div>
 
