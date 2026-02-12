@@ -172,23 +172,6 @@ impl GltfModel {
             break; // Only support one skeleton for now
         }
 
-        // Build a map of node indices to bone indices (for future use with bone bindings)
-        let _bone_map: HashMap<usize, usize> = skeleton
-            .as_ref()
-            .map(|_| {
-                document
-                    .skins()
-                    .next()
-                    .map(|skin| {
-                        skin.joints()
-                            .enumerate()
-                            .map(|(bone_idx, joint)| (joint.index(), bone_idx))
-                            .collect()
-                    })
-                    .unwrap_or_default()
-            })
-            .unwrap_or_default();
-
         // Second pass: load meshes
         for node in document.nodes() {
             if let Some(mesh) = node.mesh() {
@@ -218,6 +201,14 @@ impl GltfModel {
             return Err(Error::ConversionError(
                 "No meshes found in glTF file".to_string(),
             ));
+        }
+
+        // Remap vertex bone indices from skeleton-global (glTF) to
+        // mesh-local BoneBindings indices (GR2)
+        if let Some(ref skel) = skeleton {
+            for mesh in &mut meshes {
+                remap_joint_indices_to_bone_bindings(mesh, skel);
+            }
         }
 
         Ok(GltfModel {
@@ -390,6 +381,34 @@ fn extract_mesh_extension_data(mesh_data: &mut MeshData, profile: &Bg3MeshProfil
     mesh_data
         .user_defined_properties
         .clone_from(&profile.user_defined_properties);
+}
+
+/// Remap vertex bone indices from skeleton-global joint indices (glTF) to
+/// mesh-local BoneBindings indices (GR2). This is the reverse of
+/// `remap_mesh_bone_indices` in the to_gltf direction.
+fn remap_joint_indices_to_bone_bindings(mesh: &mut MeshData, skeleton: &Skeleton) {
+    if mesh.bone_bindings.is_empty() {
+        return;
+    }
+
+    // Build mapping: skeleton bone index → BoneBindings array index
+    let mut joint_to_binding = vec![0u8; skeleton.bones.len()];
+    for (binding_idx, bb) in mesh.bone_bindings.iter().enumerate() {
+        if let Some(bone_idx) = skeleton.bones.iter().position(|b| b.name == bb.bone_name) {
+            joint_to_binding[bone_idx] = binding_idx as u8;
+        }
+    }
+
+    for vertex in &mut mesh.vertices {
+        for i in 0..4 {
+            let joint_idx = vertex.bone_indices[i] as usize;
+            vertex.bone_indices[i] = if joint_idx < joint_to_binding.len() {
+                joint_to_binding[joint_idx]
+            } else {
+                0
+            };
+        }
+    }
 }
 
 /// Load a mesh primitive.
