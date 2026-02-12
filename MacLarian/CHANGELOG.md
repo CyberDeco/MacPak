@@ -10,6 +10,9 @@
   - stream underflow detection
   - copy length bounds validation
   - nbits debug assertion
+ 
+### Fixed
+- Bug where progress calls weren't being communicated if converting GR2 -> GLB at the same time as GR2 extraction from .pak
     
 ## [0.1.3] - 2026-02-11
 
