@@ -175,6 +175,10 @@ impl RANSState {
     }
 
     fn pop_bits(&mut self, stream: &mut BitKnitStream, nbits: usize) -> u32 {
+        debug_assert!(
+            nbits < 16,
+            "nbits ({nbits}) must be less than refill_shift (16)"
+        );
         let sym = self.bits & ((1 << nbits) - 1);
         self.bits >>= nbits;
         self.maybe_refill(stream);
@@ -205,11 +209,16 @@ impl RANSState {
 struct BitKnitStream<'a> {
     data: &'a [u8],
     pos: usize,
+    underflowed: bool,
 }
 
 impl<'a> BitKnitStream<'a> {
     fn new(data: &'a [u8]) -> Self {
-        Self { data, pos: 0 }
+        Self {
+            data,
+            pos: 0,
+            underflowed: false,
+        }
     }
 
     fn pop(&mut self) -> u16 {
@@ -222,6 +231,7 @@ impl<'a> BitKnitStream<'a> {
             self.pos += 1;
             val
         } else {
+            self.underflowed = true;
             0
         }
     }
@@ -387,6 +397,18 @@ impl Bitknit2State {
             }
         }
 
+        if stream.underflowed {
+            return Err(Error::DecompressionError(
+                "Unexpected end of bitstream".to_string(),
+            ));
+        }
+
+        if state1.bits != RANS_THRESHOLD || state2.bits != RANS_THRESHOLD {
+            return Err(Error::DecompressionError(
+                "rANS stream corrupted".to_string(),
+            ));
+        }
+
         Ok(())
     }
 
@@ -437,10 +459,14 @@ impl Bitknit2State {
             )));
         }
 
+        if copy_length > self.output.len() - self.index {
+            return Err(Error::DecompressionError(format!(
+                "Copy length {copy_length} exceeds remaining output at position {}",
+                self.index
+            )));
+        }
+
         for _ in 0..copy_length {
-            if self.index >= self.output.len() {
-                break;
-            }
             let copy_pos = self.index - copy_offset as usize;
             self.output[self.index] = self.output[copy_pos];
             self.index += 1;
