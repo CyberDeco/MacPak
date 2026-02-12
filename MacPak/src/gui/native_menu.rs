@@ -10,12 +10,14 @@ use muda::{
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use crate::gui::{generate_uuid_to_clipboard, send_notification};
 use crate::gui::state::{ConfigState, EditorTabsState};
 use crate::gui::tabs::editor::open_file_at_path;
 
 /// Menu item IDs for event handling
 static PREFERENCES_ID: std::sync::OnceLock<muda::MenuId> = std::sync::OnceLock::new();
 static CLEAR_RECENT_ID: std::sync::OnceLock<muda::MenuId> = std::sync::OnceLock::new();
+static GENERATE_UUID_ID: std::sync::OnceLock<muda::MenuId> = std::sync::OnceLock::new();
 
 /// Map of menu item IDs to file paths for recent files
 static RECENT_FILE_IDS: std::sync::OnceLock<Mutex<HashMap<muda::MenuId, String>>> =
@@ -146,6 +148,20 @@ fn create_menu_bar(config_state: ConfigState) {
     let _ = file_submenu.append(&recent_submenu);
     let _ = menu_bar.append(&file_submenu);
 
+    // ============ Tools submenu ============
+    let tools_submenu = Submenu::new("Tools", true);
+
+    // Generate UUID (CMD+U)
+    let generate_uuid_item = MenuItem::new(
+        "Generate UUID",
+        true,
+        Some(Accelerator::new(Some(Modifiers::META), Code::KeyU)),
+    );
+    let _ = GENERATE_UUID_ID.set(generate_uuid_item.id().clone());
+    let _ = tools_submenu.append(&generate_uuid_item);
+
+    let _ = menu_bar.append(&tools_submenu);
+
     // Initialize as macOS app menu
     #[cfg(target_os = "macos")]
     menu_bar.init_for_nsapp();
@@ -180,6 +196,17 @@ fn create_menu_bar(config_state: ConfigState) {
                                 cfg.clear_recent_files();
                             }
                         });
+                        continue;
+                    }
+                }
+
+                // Check for Generate UUID
+                if let Some(uuid_id) = GENERATE_UUID_ID.get() {
+                    if &event.id == uuid_id {
+                        let uuid = generate_uuid_to_clipboard();
+                        send_notification(format!(
+                            "Generated UUID ({uuid}) copied to clipboard"
+                        ));
                         continue;
                     }
                 }

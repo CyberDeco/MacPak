@@ -14,10 +14,14 @@ pub mod state;
 pub mod tabs;
 pub mod utils;
 
+use std::time::Duration;
+
 use floem::Application;
+use floem::action::exec_after;
 use floem::event::{Event, EventListener};
 use floem::keyboard::{Key, Modifiers, NamedKey};
 use floem::prelude::*;
+use floem::text::Weight;
 use floem::window::WindowConfig;
 
 use shared::{ThemeColors, init_theme, theme_signal};
@@ -28,8 +32,49 @@ use tabs::editor::{init_config_state, open_file_dialog, save_file};
 use tabs::gr2::open_gr2_file;
 use tabs::pak_ops::extract_pak_file;
 use tabs::virtual_textures::open_gts_file;
+use utils::uuid::{UuidFormat, generate_uuid};
 use tabs::*;
 use utils::config_dialog;
+
+/// Channel sender for cross-thread notifications (safe to call from any thread)
+static NOTIFICATION_TX: std::sync::OnceLock<std::sync::mpsc::Sender<String>> =
+    std::sync::OnceLock::new();
+
+/// Generate a UUID and copy it to the system clipboard. Returns the UUID string.
+pub fn generate_uuid_to_clipboard() -> String {
+    let uuid = generate_uuid(UuidFormat::Standard);
+    if let Ok(mut child) = std::process::Command::new("pbcopy")
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+    {
+        if let Some(mut stdin) = child.stdin.take() {
+            use std::io::Write;
+            let _ = stdin.write_all(uuid.as_bytes());
+        }
+    }
+    uuid
+}
+
+/// Send a notification message from any thread. Auto-clears after 3 seconds.
+pub fn send_notification(message: String) {
+    if let Some(tx) = NOTIFICATION_TX.get() {
+        let _ = tx.send(message);
+    }
+}
+
+/// Poll the notification channel and update the signal.
+/// Called via `exec_after` on Floem's event loop to ensure reactive updates propagate.
+fn poll_notifications(rx: std::sync::mpsc::Receiver<String>, signal: RwSignal<String>) {
+    if let Ok(message) = rx.try_recv() {
+        signal.set(message);
+        exec_after(Duration::from_secs(3), move |_| {
+            signal.set(String::new());
+        });
+    }
+    exec_after(Duration::from_millis(50), move |_| {
+        poll_notifications(rx, signal);
+    });
+}
 
 /// Run the MacPak GUI application
 pub fn run_app() {
@@ -83,6 +128,13 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     let active_tab = app_state.active_tab;
     let config_state_for_keyboard = config_state.clone();
 
+    // Global notification channel — sender stored in static for cross-thread use,
+    // receiver polled on Floem's event loop via exec_after
+    let notification = RwSignal::new(String::new());
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    let _ = NOTIFICATION_TX.set(tx);
+    poll_notifications(rx, notification);
+
     // Set up native macOS menu with Preferences
     native_menu::setup_native_menu(editor_tabs_state.clone(), active_tab, config_state.clone());
 
@@ -124,6 +176,8 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
             workbench_state,
             config_state_for_dialogue,
         ),
+        // Notification footer bar
+        notification_bar(notification),
         // Config dialog (overlays when visible)
         config_dialog(config_state.clone()),
     ))
@@ -273,6 +327,17 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
                         editor_tabs_for_keyboard.try_close_tab(active_index);
                     }
                 }
+                return;
+            }
+
+            // CMD+U / Ctrl+U - Generate UUID and copy to clipboard
+            let is_u_key = matches!(
+                &key_event.key.logical_key,
+                Key::Character(c) if c.as_str().eq_ignore_ascii_case("u")
+            );
+            if is_cmd_or_ctrl && is_u_key {
+                let uuid = generate_uuid_to_clipboard();
+                send_notification(format!("Generated UUID ({uuid}) copied to clipboard"));
                 return;
             }
 
@@ -435,4 +500,30 @@ fn tab_content(
             .min_height(0.0) // Allow content to shrink for scroll
             .background(Color::WHITE)
     })
+}
+
+fn notification_bar(notification: RwSignal<String>) -> impl IntoView {
+    dyn_container(
+        move || notification.get(),
+        move |message| {
+            if message.is_empty() {
+                empty().into_any()
+            } else {
+                label(move || message.clone())
+                    .style(move |s| {
+                        let colors = theme_signal()
+                            .map(|t| ThemeColors::for_theme(t.get().effective()))
+                            .unwrap_or_else(ThemeColors::dark);
+                        s.width_full()
+                            .padding_horiz(12.0)
+                            .padding_vert(6.0)
+                            .font_size(12.0)
+                            .font_weight(Weight::SEMIBOLD)
+                            .background(colors.bg_surface)
+                            .color(colors.accent)
+                    })
+                    .into_any()
+            }
+        },
+    )
 }
