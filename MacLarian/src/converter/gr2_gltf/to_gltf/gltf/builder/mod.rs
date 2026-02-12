@@ -7,7 +7,7 @@
 mod export;
 mod material_methods;
 mod mesh;
-mod skeleton;
+pub(crate) mod skeleton;
 mod vertex_attributes;
 
 use super::materials::{GltfImage, GltfMaterial, GltfSampler, GltfTexture};

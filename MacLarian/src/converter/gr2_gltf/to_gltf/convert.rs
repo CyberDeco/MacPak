@@ -11,6 +11,37 @@ fn bool_flag(v: bool) -> Option<bool> {
     if v { Some(true) } else { None }
 }
 
+/// Remap vertex bone indices from mesh-local BoneBindings indices to skeleton-global
+/// joint indices compatible with glTF. In GR2, vertex BoneIndices are indices into the
+/// mesh's BoneBindings array, not the skeleton's bone array. This function resolves
+/// BoneBindings[idx].bone_name → skeleton bone index, then applies the DFS reorder.
+pub(super) fn remap_mesh_bone_indices(mesh: &mut MeshData, skeleton: &Skeleton, dfs_remap: &[u8]) {
+    // Build mapping: BoneBindings index → skeleton bone index (DFS-reordered)
+    let binding_to_joint: Vec<u8> = mesh
+        .bone_bindings
+        .iter()
+        .map(|bb| {
+            let skel_idx = skeleton
+                .bones
+                .iter()
+                .position(|b| b.name == bb.bone_name)
+                .unwrap_or(0);
+            dfs_remap[skel_idx]
+        })
+        .collect();
+
+    for vertex in &mut mesh.vertices {
+        for i in 0..4 {
+            let binding_idx = vertex.bone_indices[i] as usize;
+            vertex.bone_indices[i] = if binding_idx < binding_to_joint.len() {
+                binding_to_joint[binding_idx]
+            } else {
+                0
+            };
+        }
+    }
+}
+
 fn to_bg3_profile(ext: &MeshExtendedData, mesh: &MeshData, idx: usize) -> Bg3MeshProfile {
     let (proxy_geometry, cloth_physics, cloth_01, cloth_02, cloth_04, impostor, lod_distance) =
         if let Some(ref props) = ext.mesh_properties {
@@ -162,18 +193,14 @@ pub fn convert_gr2_to_gltf_with_progress(
     ));
     let mut builder = GltfBuilder::new();
 
-    let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
+    let (skin_idx, root_bone_idx, bone_remap) = if let Some(ref skel) = skeleton {
         let models = reader.parse_models(&file_data).unwrap_or_default();
         let skel_profile = to_bg3_skeleton_profile_from(skel, &models);
-        let skin_idx = builder.add_skeleton_with_profile(skel, skel_profile);
-        let root_idx = skel
-            .bones
-            .iter()
-            .position(|b| b.parent_index < 0)
-            .map(|i| builder.bone_node_offset + i);
-        (Some(skin_idx), root_idx)
+        let result = builder.add_skeleton_with_profile(skel, skel_profile);
+        let root_idx = Some(builder.bone_node_offset);
+        (Some(result.skin_idx), root_idx, Some(result.bone_remap))
     } else {
-        (None, None)
+        (None, None, None)
     };
 
     for (i, mesh) in meshes.iter().enumerate() {
@@ -181,7 +208,11 @@ pub fn convert_gr2_to_gltf_with_progress(
             .extended_data
             .as_ref()
             .map(|ext| to_bg3_profile(ext, mesh, i));
-        builder.add_mesh_with_profile(mesh, skin_idx, profile);
+        let mut mesh = mesh.clone();
+        if let (Some(remap), Some(skel)) = (&bone_remap, &skeleton) {
+            remap_mesh_bone_indices(&mut mesh, skel, remap);
+        }
+        builder.add_mesh_with_profile(&mesh, skin_idx, profile);
     }
 
     progress(&Gr2Progress::with_file(
@@ -246,18 +277,14 @@ pub fn convert_gr2_to_glb_with_progress(
     ));
     let mut builder = GltfBuilder::new();
 
-    let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
+    let (skin_idx, root_bone_idx, bone_remap) = if let Some(ref skel) = skeleton {
         let models = reader.parse_models(&file_data).unwrap_or_default();
         let skel_profile = to_bg3_skeleton_profile_from(skel, &models);
-        let skin_idx = builder.add_skeleton_with_profile(skel, skel_profile);
-        let root_idx = skel
-            .bones
-            .iter()
-            .position(|b| b.parent_index < 0)
-            .map(|i| builder.bone_node_offset + i);
-        (Some(skin_idx), root_idx)
+        let result = builder.add_skeleton_with_profile(skel, skel_profile);
+        let root_idx = Some(builder.bone_node_offset);
+        (Some(result.skin_idx), root_idx, Some(result.bone_remap))
     } else {
-        (None, None)
+        (None, None, None)
     };
 
     for (i, mesh) in meshes.iter().enumerate() {
@@ -265,7 +292,11 @@ pub fn convert_gr2_to_glb_with_progress(
             .extended_data
             .as_ref()
             .map(|ext| to_bg3_profile(ext, mesh, i));
-        builder.add_mesh_with_profile(mesh, skin_idx, profile);
+        let mut mesh = mesh.clone();
+        if let (Some(remap), Some(skel)) = (&bone_remap, &skeleton) {
+            remap_mesh_bone_indices(&mut mesh, skel, remap);
+        }
+        builder.add_mesh_with_profile(&mesh, skin_idx, profile);
     }
 
     progress(&Gr2Progress::with_file(
@@ -323,18 +354,14 @@ pub fn convert_gr2_bytes_to_glb_with_progress(
     ));
     let mut builder = GltfBuilder::new();
 
-    let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
+    let (skin_idx, root_bone_idx, bone_remap) = if let Some(ref skel) = skeleton {
         let models = reader.parse_models(gr2_data).unwrap_or_default();
         let skel_profile = to_bg3_skeleton_profile_from(skel, &models);
-        let skin_idx = builder.add_skeleton_with_profile(skel, skel_profile);
-        let root_idx = skel
-            .bones
-            .iter()
-            .position(|b| b.parent_index < 0)
-            .map(|i| builder.bone_node_offset + i);
-        (Some(skin_idx), root_idx)
+        let result = builder.add_skeleton_with_profile(skel, skel_profile);
+        let root_idx = Some(builder.bone_node_offset);
+        (Some(result.skin_idx), root_idx, Some(result.bone_remap))
     } else {
-        (None, None)
+        (None, None, None)
     };
 
     for (i, mesh) in meshes.iter().enumerate() {
@@ -342,7 +369,11 @@ pub fn convert_gr2_bytes_to_glb_with_progress(
             .extended_data
             .as_ref()
             .map(|ext| to_bg3_profile(ext, mesh, i));
-        builder.add_mesh_with_profile(mesh, skin_idx, profile);
+        let mut mesh = mesh.clone();
+        if let (Some(remap), Some(skel)) = (&bone_remap, &skeleton) {
+            remap_mesh_bone_indices(&mut mesh, skel, remap);
+        }
+        builder.add_mesh_with_profile(&mesh, skin_idx, profile);
     }
 
     progress(&Gr2Progress::new(Gr2Phase::WritingOutput, 5, 5));

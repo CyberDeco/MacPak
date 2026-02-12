@@ -53,18 +53,14 @@ pub fn convert_gr2_bytes_to_glb_with_textures(
     let mut builder = GltfBuilder::new();
 
     // Add skeleton first
-    let (skin_idx, root_bone_idx) = if let Some(ref skel) = skeleton {
+    let (skin_idx, root_bone_idx, bone_remap) = if let Some(ref skel) = skeleton {
         let models = reader.parse_models(gr2_data).unwrap_or_default();
         let skel_profile = super::convert::to_bg3_skeleton_profile_from(skel, &models);
-        let skin_idx = builder.add_skeleton_with_profile(skel, skel_profile);
-        let root_idx = skel
-            .bones
-            .iter()
-            .position(|b| b.parent_index < 0)
-            .map(|i| builder.bone_node_offset + i);
-        (Some(skin_idx), root_idx)
+        let result = builder.add_skeleton_with_profile(skel, skel_profile);
+        let root_idx = Some(builder.bone_node_offset);
+        (Some(result.skin_idx), root_idx, Some(result.bone_remap))
     } else {
-        (None, None)
+        (None, None, None)
     };
 
     // Try to load textures
@@ -73,7 +69,11 @@ pub fn convert_gr2_bytes_to_glb_with_textures(
 
     // Add meshes with material (if present)
     for mesh in &meshes {
-        builder.add_mesh_with_material(mesh, skin_idx, material_idx);
+        let mut mesh = mesh.clone();
+        if let (Some(remap), Some(skel)) = (&bone_remap, &skeleton) {
+            super::convert::remap_mesh_bone_indices(&mut mesh, skel, remap);
+        }
+        builder.add_mesh_with_material(&mesh, skin_idx, material_idx);
     }
 
     let glb_data = builder.build_glb(root_bone_idx)?;

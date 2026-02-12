@@ -112,6 +112,7 @@ pub struct Model {
 }
 
 /// Mesh data containing vertices and indices.
+#[derive(Clone)]
 pub struct MeshData {
     pub name: String,
     pub vertices: Vec<Vertex>,

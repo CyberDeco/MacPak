@@ -7,4 +7,4 @@ mod types;
 mod vertex_types;
 
 pub use reader::Gr2Reader;
-pub use types::{MeshData, MeshExtendedData, Model, Skeleton};
+pub use types::{Bone, MeshData, MeshExtendedData, Model, Skeleton};

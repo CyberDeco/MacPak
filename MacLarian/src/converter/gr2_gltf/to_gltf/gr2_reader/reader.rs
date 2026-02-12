@@ -627,10 +627,10 @@ impl Gr2Reader {
         }
 
         let ptr_size = self.ptr_size();
-        // BoneBinding struct layout:
+        // BoneBinding struct layout (per LSLib):
         // BoneName(string/ptr), OBBMin(3xf32), OBBMax(3xf32),
-        // TriangleCount(i32), TriangleIndices(ref_to_array: count + ptr)
-        let binding_size = ptr_size + 24 + 4 + 4 + ptr_size; // name + 6*f32 + tri_count + array(count+ptr)
+        // TriangleIndices(ref_to_array: count + ptr)
+        let binding_size = ptr_size + 24 + 4 + ptr_size; // name + 6*f32 + array(count+ptr)
         let mut bindings = Vec::with_capacity(count);
         for i in 0..count {
             let b_offset = array_ptr + i * binding_size;
@@ -653,9 +653,6 @@ impl Gr2Reader {
             }
             pos += 12;
 
-            let tri_count = self.read_i32(pos);
-            pos += 4;
-
             // TriangleIndices: ref_to_array (count + ptr)
             let tri_idx_count = self.read_u32(pos) as usize;
             let tri_idx_ptr = self.read_ptr(pos + 4);
@@ -673,7 +670,7 @@ impl Gr2Reader {
                 bone_name,
                 obb_min,
                 obb_max,
-                tri_count,
+                tri_count: tri_indices.len() as i32,
                 tri_indices,
             });
         }

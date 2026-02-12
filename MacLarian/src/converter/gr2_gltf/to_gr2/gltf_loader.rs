@@ -281,17 +281,24 @@ fn load_skeleton_with_profile(
         // Get local transform
         let (translation, rotation, scale) = joint.transform().decomposed();
 
-        // NO coordinate conversion for bone transforms - gr2_to_gltf exports them as-is
+        // Undo X-axis reflection applied during GR2→glTF export.
+        // The reflection is its own inverse: applying S*M*S twice = identity.
         let transform = Transform {
-            translation,
-            rotation,
+            translation: [-translation[0], translation[1], translation[2]],
+            rotation: [rotation[0], -rotation[1], -rotation[2], rotation[3]],
             scale_shear: [scale[0], 0.0, 0.0, 0.0, scale[1], 0.0, 0.0, 0.0, scale[2]],
         };
 
-        // NO coordinate conversion for inverse bind matrices - gr2_to_gltf exports them as-is
-        let inverse_world_transform = ibm.get(bone_idx).copied().unwrap_or([
+        // Undo X-axis reflection on inverse bind matrices (negate indices 1,2,3,4,8,12).
+        let mut inverse_world_transform = ibm.get(bone_idx).copied().unwrap_or([
             1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ]);
+        inverse_world_transform[1] = -inverse_world_transform[1];
+        inverse_world_transform[2] = -inverse_world_transform[2];
+        inverse_world_transform[3] = -inverse_world_transform[3];
+        inverse_world_transform[4] = -inverse_world_transform[4];
+        inverse_world_transform[8] = -inverse_world_transform[8];
+        inverse_world_transform[12] = -inverse_world_transform[12];
 
         let lod_error = bone_lod_errors
             .and_then(|errors| errors.get(bone_idx).copied())
