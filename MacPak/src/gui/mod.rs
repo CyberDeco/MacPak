@@ -128,6 +128,7 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     workbench_state.apply_persisted(&persisted.workbench);
 
     let active_tab = app_state.active_tab;
+    let convert_subtab: RwSignal<usize> = RwSignal::new(0);
     let config_state_for_keyboard = config_state.clone();
 
     // Global notification channel — sender stored in static for cross-thread use,
@@ -162,11 +163,12 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     let config_state_for_close = config_state.clone();
 
     v_stack((
-        // Tab bar
-        tab_bar(active_tab),
+        // Tab bar (with conditional subtab row for Convert)
+        tab_bar(active_tab, convert_subtab),
         // Tab content
         tab_content(
             active_tab,
+            convert_subtab,
             app_state,
             editor_tabs_state,
             browser_state,
@@ -368,38 +370,52 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
     })
 }
 
-fn tab_bar(active_tab: RwSignal<usize>) -> impl IntoView {
-    h_stack((
-        tab_button("📂 Browser", 0, active_tab),
-        tab_button("📝 Editor", 1, active_tab),
-        tab_button("📦 PAK Ops", 2, active_tab),
-        tab_button("🔄 Convert", 3, active_tab),
-        tab_button("🦴 GR2", 4, active_tab),
-        tab_button("🖼️ Textures", 5, active_tab),
-        tab_button("🧪 Dyes", 6, active_tab),
-        tab_button("🔍 Search", 7, active_tab),
-        tab_button("💬 Dialogue", 8, active_tab),
-        tab_button("🛠 Workbench", 9, active_tab),
-        empty().style(|s| s.flex_grow(1.0)),
-        // App info
-        label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION"))).style(move |s| {
+fn tab_bar(active_tab: RwSignal<usize>, convert_subtab: RwSignal<usize>) -> impl IntoView {
+    v_stack((
+        // Main tab row
+        h_stack((
+            tab_button("📂 Browser", 0, active_tab),
+            tab_button("📝 Editor", 1, active_tab),
+            tab_button("📦 PAK Ops", 2, active_tab),
+            tab_button("🔄 Convert", 3, active_tab),
+            tab_button("🦴 GR2", 4, active_tab),
+            tab_button("🖼️ Textures", 5, active_tab),
+            tab_button("🧪 Dyes", 6, active_tab),
+            tab_button("🔍 Search", 7, active_tab),
+            tab_button("💬 Dialogue", 8, active_tab),
+            tab_button("🛠 Workbench", 9, active_tab),
+            empty().style(|s| s.flex_grow(1.0)),
+            // App info
+            label(|| format!("MacPak v{}", env!("CARGO_PKG_VERSION"))).style(move |s| {
+                let colors = theme_signal()
+                    .map(|t| ThemeColors::for_theme(t.get().effective()))
+                    .unwrap_or_else(ThemeColors::dark);
+                s.color(colors.text_muted).font_size(12.0)
+            }),
+        ))
+        .style(move |s| {
             let colors = theme_signal()
                 .map(|t| ThemeColors::for_theme(t.get().effective()))
                 .unwrap_or_else(ThemeColors::dark);
-            s.color(colors.text_muted).font_size(12.0)
+            s.width_full()
+                .height(44.0)
+                .padding_horiz(8.0)
+                .gap(4.0)
+                .items_center()
+                .background(colors.bg_surface)
         }),
+        // Convert subtab row — only visible when Convert tab is active
+        dyn_container(
+            move || active_tab.get() == 3,
+            move |is_convert| {
+                if is_convert {
+                    subtab_bar(convert_subtab).into_any()
+                } else {
+                    empty().into_any()
+                }
+            },
+        ),
     ))
-    .style(move |s| {
-        let colors = theme_signal()
-            .map(|t| ThemeColors::for_theme(t.get().effective()))
-            .unwrap_or_else(ThemeColors::dark);
-        s.width_full()
-            .height(44.0)
-            .padding_horiz(8.0)
-            .gap(4.0)
-            .items_center()
-            .background(colors.bg_surface)
-    })
 }
 
 fn tab_button(
@@ -434,6 +450,7 @@ fn tab_button(
 
 fn tab_content(
     active_tab: RwSignal<usize>,
+    convert_subtab: RwSignal<usize>,
     app_state: AppState,
     editor_tabs_state: EditorTabsState,
     browser_state: BrowserState,
@@ -466,6 +483,7 @@ fn tab_content(
             )
             .into_any(),
             3 => convert_tab(
+                convert_subtab,
                 app_state.clone(),
                 lsf_convert_state.clone(),
                 gr2_state.clone(),

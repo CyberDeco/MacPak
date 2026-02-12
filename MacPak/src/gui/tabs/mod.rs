@@ -13,7 +13,7 @@ pub mod workbench;
 
 pub use browser::browser_tab;
 pub use browser::kill_preview_process;
-pub use convert::convert_tab;
+pub use convert::{convert_tab, subtab_bar};
 pub use dialogue::dialogue_tab;
 pub use dyes::dyes_tab;
 pub use editor::editor_tab;

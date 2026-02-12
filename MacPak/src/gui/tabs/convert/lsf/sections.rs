@@ -90,7 +90,12 @@ fn lsf_conversion_group(state: LsfConvertState) -> impl IntoView {
             ))
             .style(|s| s.gap(4.0).items_center()),
         ))
-        .style(|s| s.width_full().items_center().justify_center().margin_bottom(12.0)),
+        .style(|s| {
+            s.width_full()
+                .items_center()
+                .justify_center()
+                .margin_bottom(12.0)
+        }),
         // Select + convert single file
         lsf_dynamic_button(source, target, "🔄", "Convert", move || {
             select_and_convert_single_lsf(state_for_select.clone());
@@ -148,7 +153,12 @@ fn loca_conversion_group(state: LsfConvertState) -> impl IntoView {
             ))
             .style(|s| s.gap(4.0).items_center()),
         ))
-        .style(|s| s.width_full().items_center().justify_center().margin_bottom(12.0)),
+        .style(|s| {
+            s.width_full()
+                .items_center()
+                .justify_center()
+                .margin_bottom(12.0)
+        }),
         // Convert single file
         lsf_dynamic_button(source, target, "🔄", "Convert", move || {
             select_and_convert_single_loca(state_for_select.clone());

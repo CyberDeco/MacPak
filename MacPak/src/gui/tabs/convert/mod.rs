@@ -19,31 +19,24 @@ use crate::gui::state::{AppState, ConfigState, Gr2State, LsfConvertState, Virtua
 use lsf::lsf_subtab;
 
 pub fn convert_tab(
+    active_subtab: RwSignal<usize>,
     app_state: AppState,
     lsf_state: LsfConvertState,
     gr2_state: Gr2State,
     vt_state: VirtualTexturesState,
     config_state: ConfigState,
 ) -> impl IntoView {
-    let active_subtab: RwSignal<usize> = RwSignal::new(0);
-
-    v_stack((
-        // Subtab bar
-        subtab_bar(active_subtab),
-        // Subtab content
-        subtab_content(
-            active_subtab,
-            app_state,
-            lsf_state,
-            gr2_state,
-            vt_state,
-            config_state,
-        ),
-    ))
-    .style(|s| s.width_full().height_full())
+    subtab_content(
+        active_subtab,
+        app_state,
+        lsf_state,
+        gr2_state,
+        vt_state,
+        config_state,
+    )
 }
 
-fn subtab_bar(active_subtab: RwSignal<usize>) -> impl IntoView {
+pub fn subtab_bar(active_subtab: RwSignal<usize>) -> impl IntoView {
     h_stack((
         subtab_button("LSF/LSX/LSJ", 0, active_subtab),
         subtab_button("GR2", 1, active_subtab),
@@ -58,6 +51,7 @@ fn subtab_bar(active_subtab: RwSignal<usize>) -> impl IntoView {
             .padding_horiz(16.0)
             .gap(2.0)
             .items_center()
+            .justify_center()
             .background(colors.bg_surface)
             .border_bottom(1.0)
             .border_color(Color::rgb8(220, 220, 220))
