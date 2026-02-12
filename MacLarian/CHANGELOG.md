@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.3] - 2026-02-11
+
+### Bug Fixes
+
+#### GR2 <> glTF conversion:
+- Joint ordering: bones now export (to glTF) in depth-first order for Blender
+- Bone coordinate conversion: bone transforms and inverse bind matrices now have X-axis reflection applied to matching the mesh vertex coordinate conversion
+- BoneBindings:
+  - Vertex `bone_indices` are now correctly resolved through the per-mesh BoneBindings array to skeleton-global joint indices
+  - Fixed bug where bone binding reads after the first entry were misaligned
+- Fixed QTangent bug where truncation-toward-zero when quantizing to i16 would cause a sign flip
+
 ## [0.1.2] - 2026-02-04
 
 - Added support for alternate GR2 magic signature (LE64v2) for mods that were exported from LSLib with Divinity: Original Sin 2 DE settings
