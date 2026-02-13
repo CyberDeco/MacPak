@@ -2,6 +2,7 @@
 
 use floem::prelude::*;
 use im::Vector as ImVector;
+use maclarian::converter::DdsFormat;
 
 use crate::gui::shared::{BatchOperationState, SharedProgress};
 
@@ -40,6 +41,14 @@ pub struct VirtualTexturesState {
     // Extraction mode options
     pub from_pak: RwSignal<bool>, // true = extract from PAK, false = from files
     pub convert_to_png: RwSignal<bool>, // Convert DDS to PNG after extraction
+
+    // DDS ↔ PNG conversion
+    pub dds_format: RwSignal<DdsFormat>, // default BC3
+
+    // GTex hash extraction dialog
+    pub show_gtex_dialog: RwSignal<bool>,
+    pub gtex_hash_input: RwSignal<String>,
+    pub gtex_search_paths: RwSignal<Vec<String>>,
 }
 
 impl VirtualTexturesState {
@@ -57,6 +66,12 @@ impl VirtualTexturesState {
             // Extraction mode options
             from_pak: RwSignal::new(true), // Default to PAK mode
             convert_to_png: RwSignal::new(false),
+            // DDS ↔ PNG conversion
+            dds_format: RwSignal::new(DdsFormat::BC3),
+            // GTex hash extraction dialog
+            show_gtex_dialog: RwSignal::new(false),
+            gtex_hash_input: RwSignal::new(String::new()),
+            gtex_search_paths: RwSignal::new(Vec::new()),
         }
     }
 

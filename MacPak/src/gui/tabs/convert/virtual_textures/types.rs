@@ -22,6 +22,17 @@ pub enum VtResult {
         texture_count: usize,
         results: Vec<String>,
     },
+    DdsConvertDone {
+        success: bool,
+        input_name: String,
+        output_name: String,
+        error: Option<String>,
+    },
+    DdsBatchDone {
+        success_count: usize,
+        error_count: usize,
+        results: Vec<String>,
+    },
 }
 
 /// Create a sender for background operations that updates UI on the main thread
@@ -70,6 +81,38 @@ pub fn handle_vt_result(state: VirtualTexturesState, result: VtResult) {
                 format!(
                     "Completed: {} succeeded, {} failed ({} textures)",
                     success_count, error_count, texture_count
+                )
+            };
+            state.status_message.set(status);
+            state.is_extracting.set(false);
+        }
+        VtResult::DdsConvertDone {
+            success,
+            input_name,
+            output_name,
+            error,
+        } => {
+            if success {
+                state.add_result(&format!("Converted {} → {}", input_name, output_name));
+                state.status_message.set("Conversion complete!".to_string());
+            } else {
+                state.add_result(&format!("Error converting {}: {}", input_name, error.unwrap_or_default()));
+                state.status_message.set("Conversion failed".to_string());
+            }
+            state.is_extracting.set(false);
+        }
+        VtResult::DdsBatchDone {
+            success_count,
+            error_count,
+            results,
+        } => {
+            state.add_results_batch(results);
+            let status = if error_count == 0 {
+                format!("Converted {} files!", success_count)
+            } else {
+                format!(
+                    "Completed: {} succeeded, {} failed",
+                    success_count, error_count
                 )
             };
             state.status_message.set(status);

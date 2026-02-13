@@ -69,5 +69,5 @@ pub use batch::{BatchExtractResult, GtsExtractResult, extract_batch, extract_gts
 // Mod config discovery and lookup
 pub use mod_config::{
     DiscoveredVirtualTexture, DiscoverySource, discover_mod_virtual_textures,
-    discover_virtual_textures, find_gts_for_gtex, find_virtual_texture,
+    discover_virtual_textures, extract_by_gtex, find_gts_for_gtex, find_virtual_texture,
 };

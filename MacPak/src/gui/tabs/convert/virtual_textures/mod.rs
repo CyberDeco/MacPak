@@ -6,6 +6,7 @@
 //! - Drag & drop support
 
 mod extraction;
+mod gtex_dialog;
 mod sections;
 pub mod types;
 
@@ -24,6 +25,7 @@ pub fn virtual_textures_tab(
     config_state: ConfigState,
 ) -> impl IntoView {
     let state = vt_state.clone();
+    let config_for_dialog = config_state.clone();
 
     v_stack((
         // Header with title and status message (using shared component)
@@ -45,7 +47,9 @@ pub fn virtual_textures_tab(
                 .gap(16.0)
         }),
         // Progress overlay (using shared component)
-        progress_overlay(state),
+        progress_overlay(state.clone()),
+        // GTex hash extraction dialog
+        gtex_dialog::gtex_dialog_overlay(state, config_for_dialog),
     ))
     .style(|s| {
         s.width_full()
