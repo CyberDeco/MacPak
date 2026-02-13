@@ -7,12 +7,13 @@ mod import;
 mod picker_overlay;
 mod sections;
 pub mod shared;
+mod vendors;
 
 use floem::prelude::*;
 
 use crate::gui::state::{AppState, DyesState};
 use crate::gui::utils::meta_dialog::{MetaDialogSignals, meta_dialog_with_signals_and_extra};
-use crate::gui::utils::vendor_selection_section;
+use self::vendors::vendor_selection_section;
 use export::export_section;
 use generate::generate_dye_section;
 pub use import::import_from_mod_folder;

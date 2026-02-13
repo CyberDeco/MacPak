@@ -1,12 +1,12 @@
 //! UI sections for Virtual Textures tab
 
-use floem::event::{Event, EventListener};
+use floem::event::Event;
 use floem::prelude::*;
 use floem::text::Weight;
 use walkdir::WalkDir;
 
 use super::extraction::{extract_batch, extract_single};
-use crate::gui::shared::operation_button;
+use crate::gui::shared::{card_style, checkbox_option, drop_zone, operation_button};
 use crate::gui::state::{ConfigState, VirtualTexturesState};
 
 /// Main operations row with columns
@@ -16,7 +16,7 @@ pub fn operations_row(state: VirtualTexturesState, config: ConfigState) -> impl 
             // Extraction operations
             extraction_group(state.clone(), config.clone()),
             // Drop zone
-            drop_zone(state.clone(), config.clone()),
+            vt_drop_zone(state.clone(), config.clone()),
         ))
         .style(|s| s.width_full().gap(20.0)),
         // Options panel
@@ -64,35 +64,14 @@ fn extraction_group(state: VirtualTexturesState, config: ConfigState) -> impl In
             select_and_extract_batch(state2.clone(), config2.clone());
         }),
     ))
-    .style(|s| {
-        s.flex_grow(1.0)
-            .padding(16.0)
-            .gap(8.0)
-            .background(Color::WHITE)
-            .border(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
-            .border_radius(8.0)
-    })
+    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
 }
 
-fn drop_zone(state: VirtualTexturesState, config: ConfigState) -> impl IntoView {
+fn vt_drop_zone(state: VirtualTexturesState, config: ConfigState) -> impl IntoView {
     let state_for_drop = state.clone();
     let config_for_drop = config;
 
-    container(
-        v_stack((
-            label(|| "🖼".to_string()).style(|s| s.font_size(32.0)),
-            label(|| "Drag files here".to_string()).style(|s| {
-                s.font_size(14.0)
-                    .color(Color::rgb8(100, 100, 100))
-                    .margin_top(8.0)
-            }),
-            label(|| ".gts, .gtp".to_string())
-                .style(|s| s.font_size(12.0).color(Color::rgb8(150, 150, 150))),
-        ))
-        .style(|s| s.items_center()),
-    )
-    .on_event_cont(EventListener::DroppedFile, move |e| {
+    drop_zone("🖼", ".gts, .gtp", false, move |e| {
         if let Event::DroppedFile(drop_event) = e {
             let path = drop_event.path.to_string_lossy().to_string();
             let path_lower = path.to_lowercase();
@@ -114,17 +93,6 @@ fn drop_zone(state: VirtualTexturesState, config: ConfigState) -> impl IntoView 
                 state_for_drop.add_result("Only .gts or .gtp files can be dropped here");
             }
         }
-    })
-    .style(|s| {
-        s.flex_grow(1.0)
-            .min_height(120.0)
-            .padding(16.0)
-            .items_center()
-            .justify_center()
-            .background(Color::rgb8(249, 249, 249))
-            .border(2.0)
-            .border_color(Color::rgb8(204, 204, 204))
-            .border_radius(8.0)
     })
 }
 
@@ -238,21 +206,6 @@ fn options_panel(state: VirtualTexturesState, config: ConfigState) -> impl IntoV
     })
 }
 
-/// Checkbox with label for toggle options
-fn checkbox_option(label_text: &'static str, signal: RwSignal<bool>) -> impl IntoView {
-    h_stack((
-        checkbox(move || signal.get())
-            .on_update(move |checked| signal.set(checked))
-            .style(|s| s.cursor(floem::style::CursorStyle::Pointer)),
-        label(move || label_text).style(|s| {
-            s.font_size(12.0)
-                .margin_left(6.0)
-                .cursor(floem::style::CursorStyle::Pointer)
-        }),
-    ))
-    .on_click_stop(move |_| signal.update(|v| *v = !*v))
-    .style(|s| s.items_center())
-}
 
 /// Select a GTS/GTP file and extract it
 fn select_and_extract_single(state: VirtualTexturesState, config: ConfigState) {

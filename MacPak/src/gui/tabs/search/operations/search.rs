@@ -1,14 +1,13 @@
 //! Search execution operations
 
 use std::collections::HashSet;
-use std::io::Write;
-use std::process::{Command, Stdio};
 
 use floem::ext_event::create_ext_action;
 use floem::prelude::*;
 use floem_reactive::Scope;
 
 use crate::gui::state::{SearchResult, SearchState};
+pub use crate::gui::utils::copy_to_clipboard;
 
 use super::progress::{MAX_RESULTS, SEARCH_PROGRESS};
 
@@ -138,14 +137,4 @@ pub fn perform_search(state: SearchState) {
         SEARCH_PROGRESS.set_active(false);
         send_results(SearchMessage::Results(merged));
     });
-}
-
-/// Copy text to system clipboard (macOS)
-pub fn copy_to_clipboard(text: &str) {
-    if let Ok(mut child) = Command::new("pbcopy").stdin(Stdio::piped()).spawn() {
-        if let Some(stdin) = child.stdin.as_mut() {
-            let _ = stdin.write_all(text.as_bytes());
-        }
-        let _ = child.wait();
-    }
 }

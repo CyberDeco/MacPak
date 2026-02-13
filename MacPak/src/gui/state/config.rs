@@ -197,9 +197,9 @@ impl PersistedConfig {
 
         // Migrate tab indices: standalone GR2 (4) and Textures (5) tabs were removed
         config.active_tab = match config.active_tab {
-            0..=3 => config.active_tab,  // Unchanged tabs
-            4 | 5 => 3,                   // GR2/Textures -> Convert
-            n if n >= 6 => n - 2,         // Shift remaining down by 2
+            0..=3 => config.active_tab, // Unchanged tabs
+            4 | 5 => 3,                 // GR2/Textures -> Convert
+            n if n >= 6 => n - 2,       // Shift remaining down by 2
             _ => 0,
         };
 

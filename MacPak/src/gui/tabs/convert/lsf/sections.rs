@@ -1,10 +1,11 @@
 //! UI sections for LSF/LSX/LSJ/LOCA conversion subtab
 
-use floem::event::{Event, EventListener};
+use floem::event::Event;
 use floem::prelude::*;
 use floem::text::Weight;
 
 use super::conversion::{convert_batch, convert_single};
+use crate::gui::shared::{card_style, drop_zone};
 use crate::gui::state::LsfConvertState;
 
 /// Detect format from file extension
@@ -46,7 +47,7 @@ pub fn operations_row(state: LsfConvertState) -> impl IntoView {
         // LOCA/XML conversion group
         loca_conversion_group(state.clone()),
         // Drop zone
-        drop_zone(state),
+        lsf_drop_zone(state),
     ))
     .style(|s| s.width_full().gap(20.0).margin_bottom(20.0))
 }
@@ -105,15 +106,7 @@ fn lsf_conversion_group(state: LsfConvertState) -> impl IntoView {
             select_and_convert_batch_lsf(state_for_convert.clone());
         }),
     ))
-    .style(|s| {
-        s.flex_grow(1.0)
-            .padding(16.0)
-            .gap(8.0)
-            .background(Color::WHITE)
-            .border(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
-            .border_radius(8.0)
-    })
+    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
 }
 
 /// LOCA <-> XML conversion group — source → target toggle layout
@@ -168,69 +161,42 @@ fn loca_conversion_group(state: LsfConvertState) -> impl IntoView {
             select_and_convert_batch_loca(state_for_batch.clone());
         }),
     ))
-    .style(|s| {
-        s.flex_grow(1.0)
-            .padding(16.0)
-            .gap(8.0)
-            .background(Color::WHITE)
-            .border(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
-            .border_radius(8.0)
-    })
+    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
 }
 
 /// Drop zone for drag & drop conversion
-fn drop_zone(state: LsfConvertState) -> impl IntoView {
+fn lsf_drop_zone(state: LsfConvertState) -> impl IntoView {
     let state_for_drop = state.clone();
 
-    container(
-        v_stack((
-            label(|| "📄".to_string()).style(|s| s.font_size(32.0)),
-            label(|| "Drag files here".to_string()).style(|s| {
-                s.font_size(14.0)
-                    .color(Color::rgb8(100, 100, 100))
-                    .margin_top(8.0)
-            }),
-            label(|| ".lsf, .lsx, .lsj, .loca, .xml".to_string())
-                .style(|s| s.font_size(12.0).color(Color::rgb8(150, 150, 150))),
-        ))
-        .style(|s| s.items_center()),
+    drop_zone(
+        "📄",
+        ".lsf, .lsx, .lsj, .loca, .xml",
+        false,
+        move |e| {
+            if let Event::DroppedFile(drop_event) = e {
+                let path = drop_event.path.to_string_lossy().to_string();
+                let format = detect_format(&path);
+
+                if format.is_empty() {
+                    state_for_drop.add_result(
+                        "⚠ Only .lsf, .lsx, .lsj, .loca, or .xml files can be dropped here",
+                    );
+                    return;
+                }
+
+                // Auto-detect format and set up for conversion
+                state_for_drop.input_file.set(Some(path));
+                state_for_drop.detected_format.set(format.clone());
+
+                // Auto-select first valid target
+                let targets = target_formats_for(&format);
+                if let Some(first) = targets.first() {
+                    state_for_drop.target_format.set(first.to_string());
+                    select_output_and_convert(state_for_drop.clone());
+                }
+            }
+        },
     )
-    .on_event_cont(EventListener::DroppedFile, move |e| {
-        if let Event::DroppedFile(drop_event) = e {
-            let path = drop_event.path.to_string_lossy().to_string();
-            let format = detect_format(&path);
-
-            if format.is_empty() {
-                state_for_drop.add_result(
-                    "⚠ Only .lsf, .lsx, .lsj, .loca, or .xml files can be dropped here",
-                );
-                return;
-            }
-
-            // Auto-detect format and set up for conversion
-            state_for_drop.input_file.set(Some(path));
-            state_for_drop.detected_format.set(format.clone());
-
-            // Auto-select first valid target
-            let targets = target_formats_for(&format);
-            if let Some(first) = targets.first() {
-                state_for_drop.target_format.set(first.to_string());
-                select_output_and_convert(state_for_drop.clone());
-            }
-        }
-    })
-    .style(|s| {
-        s.flex_grow(1.0)
-            .min_height(120.0)
-            .padding(16.0)
-            .items_center()
-            .justify_center()
-            .background(Color::rgb8(249, 249, 249))
-            .border(2.0)
-            .border_color(Color::rgb8(204, 204, 204))
-            .border_radius(8.0)
-    })
 }
 
 /// Source format toggle button — selects the source format and auto-fixes target if needed

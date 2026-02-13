@@ -14,7 +14,7 @@ pub fn card_style(s: floem::style::Style) -> floem::style::Style {
         .background(Color::WHITE)
         .border(1.0)
         .border_color(Color::rgb8(220, 220, 220))
-        .border_radius(6.0)
+        .border_radius(8.0)
 }
 
 /// Generic header section that works with any BatchOperationState.
@@ -80,4 +80,22 @@ pub fn operation_button(text: &'static str, on_click: impl Fn() + 'static) -> im
                     .border_color(Color::rgb8(180, 180, 180))
             })
     })
+}
+
+/// Checkbox with label for toggle options.
+///
+/// Clicking anywhere on the row toggles the boolean signal.
+pub fn checkbox_option(label_text: &'static str, signal: RwSignal<bool>) -> impl IntoView {
+    h_stack((
+        checkbox(move || signal.get())
+            .on_update(move |checked| signal.set(checked))
+            .style(|s| s.cursor(floem::style::CursorStyle::Pointer)),
+        label(move || label_text).style(|s| {
+            s.font_size(12.0)
+                .margin_left(6.0)
+                .cursor(floem::style::CursorStyle::Pointer)
+        }),
+    ))
+    .on_click_stop(move |_| signal.update(|v| *v = !*v))
+    .style(|s| s.items_center())
 }

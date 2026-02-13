@@ -1,6 +1,5 @@
 //! Context menu for file operations
 
-use std::io::Write as IoWrite;
 use std::path::Path;
 use std::process::Command;
 
@@ -11,6 +10,7 @@ use floem::prelude::*;
 use super::operations::{convert_file_quick, delete_file, is_text_file};
 use crate::gui::state::{BrowserState, EditorTabsState, FileEntry};
 use crate::gui::tabs::load_file_in_tab;
+use crate::gui::utils::copy_to_clipboard;
 
 /// Show context menu for a file entry
 pub fn show_file_context_menu(
@@ -49,14 +49,7 @@ pub fn show_file_context_menu(
     {
         let path = file_path.clone();
         menu = menu.entry(MenuItem::new("Copy Path").action(move || {
-            if let Ok(mut child) = Command::new("pbcopy")
-                .stdin(std::process::Stdio::piped())
-                .spawn()
-            {
-                if let Some(stdin) = child.stdin.as_mut() {
-                    let _ = stdin.write_all(path.as_bytes());
-                }
-            }
+            copy_to_clipboard(&path);
         }));
     }
 

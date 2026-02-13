@@ -3,14 +3,16 @@
 //! This module provides reusable UI components and state traits for tabs that
 //! perform batch file operations with progress tracking and results logging.
 
+mod drop_zone;
 mod progress;
 mod results;
 mod styles;
 pub mod theme;
 
+pub use drop_zone::drop_zone;
 pub use progress::{SharedProgress, progress_overlay};
 pub use results::results_section;
-pub use styles::{card_style, header_section, operation_button};
+pub use styles::{card_style, checkbox_option, header_section, operation_button};
 pub use theme::{EffectiveTheme, Theme, ThemeColors, colors, init_theme, theme_signal, themed};
 
 use floem::prelude::*;

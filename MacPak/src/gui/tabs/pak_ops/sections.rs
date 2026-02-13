@@ -1,6 +1,6 @@
 //! UI sections for PAK Operations tab
 
-use floem::event::{Event, EventListener};
+use floem::event::Event;
 use floem::prelude::*;
 use floem::text::Weight;
 
@@ -9,6 +9,7 @@ use super::operations::{
     extract_pak_file, list_pak_contents, rebuild_pak_file,
 };
 use super::results::is_error_message;
+use crate::gui::shared::{card_style, drop_zone};
 use crate::gui::state::{ActiveDialog, PakOpsState};
 
 pub fn header_section(state: PakOpsState) -> impl IntoView {
@@ -62,7 +63,7 @@ pub fn operations_row(state: PakOpsState) -> impl IntoView {
         // Create operations group
         create_group(state.clone()),
         // Drop zone
-        drop_zone(state),
+        pak_drop_zone(state),
     ))
     .style(|s| s.width_full().gap(20.0).margin_bottom(20.0))
 }
@@ -91,15 +92,7 @@ fn extract_group(state: PakOpsState) -> impl IntoView {
             batch_extract_paks(state4.clone());
         }),
     ))
-    .style(|s| {
-        s.flex_grow(1.0)
-            .padding(16.0)
-            .gap(8.0)
-            .background(Color::WHITE)
-            .border(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
-            .border_radius(8.0)
-    })
+    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
 }
 
 fn create_group(state: PakOpsState) -> impl IntoView {
@@ -126,34 +119,13 @@ fn create_group(state: PakOpsState) -> impl IntoView {
             batch_create_paks(state4.clone());
         }),
     ))
-    .style(|s| {
-        s.flex_grow(1.0)
-            .padding(16.0)
-            .gap(8.0)
-            .background(Color::WHITE)
-            .border(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
-            .border_radius(8.0)
-    })
+    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
 }
 
-fn drop_zone(state: PakOpsState) -> impl IntoView {
+fn pak_drop_zone(state: PakOpsState) -> impl IntoView {
     let state_for_drop = state.clone();
 
-    container(
-        v_stack((
-            label(|| "📦".to_string()).style(|s| s.font_size(32.0)),
-            label(|| "Drag files here".to_string()).style(|s| {
-                s.font_size(14.0)
-                    .color(Color::rgb8(100, 100, 100))
-                    .margin_top(8.0)
-            }),
-            label(|| ".pak or folder".to_string())
-                .style(|s| s.font_size(12.0).color(Color::rgb8(150, 150, 150))),
-        ))
-        .style(|s| s.items_center()),
-    )
-    .on_event_stop(EventListener::DroppedFile, move |e| {
+    drop_zone("📦", ".pak or folder", true, move |e| {
         if let Event::DroppedFile(drop_event) = e {
             let path = drop_event.path.to_string_lossy().to_string();
             let display_name = drop_event
@@ -176,17 +148,6 @@ fn drop_zone(state: PakOpsState) -> impl IntoView {
                 state_for_drop.add_result("⚠ Only .pak files or folders can be dropped here");
             }
         }
-    })
-    .style(|s| {
-        s.flex_grow(1.0)
-            .min_height(120.0)
-            .padding(16.0)
-            .items_center()
-            .justify_center()
-            .background(Color::rgb8(249, 249, 249))
-            .border(2.0)
-            .border_color(Color::rgb8(204, 204, 204))
-            .border_radius(8.0)
     })
 }
 

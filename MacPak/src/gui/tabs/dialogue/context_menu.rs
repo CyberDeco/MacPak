@@ -1,8 +1,6 @@
 //! Context menu for dialogue node operations
 
 use std::cell::RefCell;
-use std::io::Write as IoWrite;
-use std::process::Command;
 
 use floem::action::show_context_menu;
 use floem::menu::{Menu, MenuItem};
@@ -10,6 +8,7 @@ use floem::reactive::SignalUpdate;
 
 use super::operations::{AudioPlayer, play_node_audio};
 use crate::gui::state::{DialogueState, DisplayNode};
+use crate::gui::utils::copy_to_clipboard;
 
 // Thread-local audio player (OutputStream is !Send+!Sync, must stay on main thread)
 thread_local! {
@@ -118,16 +117,4 @@ pub fn show_node_context_menu(node: &DisplayNode, state: DialogueState) {
     }
 
     show_context_menu(menu, None);
-}
-
-/// Copy text to system clipboard (macOS)
-fn copy_to_clipboard(text: &str) {
-    if let Ok(mut child) = Command::new("pbcopy")
-        .stdin(std::process::Stdio::piped())
-        .spawn()
-    {
-        if let Some(stdin) = child.stdin.as_mut() {
-            let _ = stdin.write_all(text.as_bytes());
-        }
-    }
 }

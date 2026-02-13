@@ -47,7 +47,8 @@ pub use maclarian::formats::{ModMetadata, parse_meta_lsx};
 pub use colors::{
     collect_all_colors, collect_colors_skip_defaults, load_colors_from_map, reset_colors_to_default,
 };
-pub use helpers::{copy_to_clipboard, normalize_hex, parse_hex_color, parse_hex_to_color};
+pub use crate::gui::utils::copy_to_clipboard;
+pub use helpers::{normalize_hex, parse_hex_color, parse_hex_to_color};
 pub use selector::{
     empty_state_style, nav_row, selector_container_gray, selector_container_green,
     selector_label_style,

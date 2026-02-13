@@ -1,11 +1,11 @@
 //! UI sections for GR2 conversion tab
 
-use floem::event::{Event, EventListener};
+use floem::event::Event;
 use floem::prelude::*;
 use floem::text::Weight;
 
 use super::conversion::{convert_batch_with_options, convert_single_with_options};
-use crate::gui::shared::operation_button;
+use crate::gui::shared::{card_style, checkbox_option, drop_zone, operation_button};
 use crate::gui::state::{ConfigState, Gr2State};
 
 /// Main operations row with 3 columns
@@ -21,7 +21,7 @@ pub fn operations_row(state: Gr2State, config: ConfigState) -> impl IntoView {
             // glTF -> GR2 operations
             gltf_to_gr2_group(state.clone()),
             // Drop zone
-            drop_zone(state.clone(), config.clone(), use_glb),
+            gr2_drop_zone(state.clone(), config.clone(), use_glb),
         ))
         .style(|s| s.width_full().gap(20.0)),
         // Bundle options for texture extraction
@@ -84,15 +84,7 @@ fn gr2_to_gltf_group(
             },
         ),
     ))
-    .style(|s| {
-        s.flex_grow(1.0)
-            .padding(16.0)
-            .gap(8.0)
-            .background(Color::WHITE)
-            .border(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
-            .border_radius(8.0)
-    })
+    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
 }
 
 fn gltf_to_gr2_group(state: Gr2State) -> impl IntoView {
@@ -116,35 +108,14 @@ fn gltf_to_gr2_group(state: Gr2State) -> impl IntoView {
             select_and_convert_gltf(state2.clone(), true);
         }),
     ))
-    .style(|s| {
-        s.flex_grow(1.0)
-            .padding(16.0)
-            .gap(8.0)
-            .background(Color::WHITE)
-            .border(1.0)
-            .border_color(Color::rgb8(220, 220, 220))
-            .border_radius(8.0)
-    })
+    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
 }
 
-fn drop_zone(state: Gr2State, config: ConfigState, use_glb: RwSignal<bool>) -> impl IntoView {
+fn gr2_drop_zone(state: Gr2State, config: ConfigState, use_glb: RwSignal<bool>) -> impl IntoView {
     let state_for_drop = state.clone();
     let config_for_drop = config;
 
-    container(
-        v_stack((
-            label(|| "🦴".to_string()).style(|s| s.font_size(32.0)),
-            label(|| "Drag files here".to_string()).style(|s| {
-                s.font_size(14.0)
-                    .color(Color::rgb8(100, 100, 100))
-                    .margin_top(8.0)
-            }),
-            label(|| ".gr2, .glb, .gltf".to_string())
-                .style(|s| s.font_size(12.0).color(Color::rgb8(150, 150, 150))),
-        ))
-        .style(|s| s.items_center()),
-    )
-    .on_event_cont(EventListener::DroppedFile, move |e| {
+    drop_zone("🦴", ".gr2, .glb, .gltf", false, move |e| {
         if let Event::DroppedFile(drop_event) = e {
             let path = drop_event.path.to_string_lossy().to_string();
             let path_lower = path.to_lowercase();
@@ -172,17 +143,6 @@ fn drop_zone(state: Gr2State, config: ConfigState, use_glb: RwSignal<bool>) -> i
                 state_for_drop.add_result("⚠ Only .gr2, .glb, or .gltf files can be dropped here");
             }
         }
-    })
-    .style(|s| {
-        s.flex_grow(1.0)
-            .min_height(120.0)
-            .padding(16.0)
-            .items_center()
-            .justify_center()
-            .background(Color::rgb8(249, 249, 249))
-            .border(2.0)
-            .border_color(Color::rgb8(204, 204, 204))
-            .border_radius(8.0)
     })
 }
 
@@ -459,8 +419,7 @@ fn bundle_options_panel(
         ),
     ))
     .style(|s| {
-        s.width_full()
-            .padding(16.0)
+        s.padding(16.0)
             .background(Color::rgb8(248, 248, 252))
             .border(1.0)
             .border_color(Color::rgb8(220, 220, 230))
@@ -468,18 +427,3 @@ fn bundle_options_panel(
     })
 }
 
-/// Checkbox with label for toggle options
-fn checkbox_option(label_text: &'static str, signal: RwSignal<bool>) -> impl IntoView {
-    h_stack((
-        checkbox(move || signal.get())
-            .on_update(move |checked| signal.set(checked))
-            .style(|s| s.cursor(floem::style::CursorStyle::Pointer)),
-        label(move || label_text).style(|s| {
-            s.font_size(12.0)
-                .margin_left(6.0)
-                .cursor(floem::style::CursorStyle::Pointer)
-        }),
-    ))
-    .on_click_stop(move |_| signal.update(|v| *v = !*v))
-    .style(|s| s.items_center())
-}

@@ -270,8 +270,14 @@ fn app_view(persisted: state::PersistedConfig) -> impl IntoView {
                     2 => extract_pak_file(pak_ops_state_for_keyboard.clone()), // PAK Ops - extract PAK
                     3 => match convert_subtab.get() {
                         0 => open_lsf_file(lsf_state_for_keyboard.clone()),
-                        1 => open_gr2_file(gr2_state_for_keyboard.clone(), config_state_for_keyboard.clone()),
-                        2 => open_gts_file(vt_state_for_keyboard.clone(), config_state_for_keyboard.clone()),
+                        1 => open_gr2_file(
+                            gr2_state_for_keyboard.clone(),
+                            config_state_for_keyboard.clone(),
+                        ),
+                        2 => open_gts_file(
+                            vt_state_for_keyboard.clone(),
+                            config_state_for_keyboard.clone(),
+                        ),
                         _ => open_lsf_file(lsf_state_for_keyboard.clone()),
                     },
                     4 => {

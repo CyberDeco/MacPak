@@ -42,21 +42,3 @@ pub fn normalize_hex(hex: &str) -> String {
         "808080".to_string() // Default to gray if invalid
     }
 }
-
-/// Copy text to clipboard
-pub fn copy_to_clipboard(text: &str) {
-    #[cfg(target_os = "macos")]
-    {
-        use std::process::Command;
-        let _ = Command::new("pbcopy")
-            .stdin(std::process::Stdio::piped())
-            .spawn()
-            .and_then(|mut child| {
-                use std::io::Write;
-                if let Some(stdin) = child.stdin.as_mut() {
-                    let _ = stdin.write_all(text.as_bytes());
-                }
-                child.wait()
-            });
-    }
-}
