@@ -34,7 +34,8 @@ pub fn drop_zone(
     };
 
     view.style(|s| {
-        s.flex_grow(2.0)
+        s.flex_grow(1.5)
+            .flex_basis(0.0)
             .min_height(120.0)
             .padding(16.0)
             .items_center()

@@ -106,7 +106,7 @@ fn lsf_conversion_group(state: LsfConvertState) -> impl IntoView {
             select_and_convert_batch_lsf(state_for_convert.clone());
         }),
     ))
-    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
+    .style(|s| card_style(s).flex_grow(1.0).flex_basis(0.0).gap(8.0))
 }
 
 /// LOCA <-> XML conversion group — source → target toggle layout
@@ -161,7 +161,7 @@ fn loca_conversion_group(state: LsfConvertState) -> impl IntoView {
             select_and_convert_batch_loca(state_for_batch.clone());
         }),
     ))
-    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
+    .style(|s| card_style(s).flex_grow(1.0).flex_basis(0.0).gap(8.0))
 }
 
 /// Drop zone for drag & drop conversion

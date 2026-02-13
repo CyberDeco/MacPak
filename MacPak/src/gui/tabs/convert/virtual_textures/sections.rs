@@ -64,7 +64,7 @@ fn extraction_group(state: VirtualTexturesState, config: ConfigState) -> impl In
             select_and_extract_batch(state2.clone(), config2.clone());
         }),
     ))
-    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
+    .style(|s| card_style(s).flex_grow(1.0).flex_basis(0.0).gap(8.0))
 }
 
 fn vt_drop_zone(state: VirtualTexturesState, config: ConfigState) -> impl IntoView {
@@ -197,8 +197,8 @@ fn options_panel(state: VirtualTexturesState, config: ConfigState) -> impl IntoV
         ),
     ))
     .style(|s| {
-        s.width_full()
-            .padding(16.0)
+        s.padding(16.0)
+            .align_self(floem::style::AlignItems::FlexStart)
             .background(Color::rgb8(248, 248, 252))
             .border(1.0)
             .border_color(Color::rgb8(220, 220, 230))

@@ -14,20 +14,25 @@ pub fn operations_row(state: Gr2State, config: ConfigState) -> impl IntoView {
     // Shared between the conversion group and bundle options panel
     let use_glb = RwSignal::new(true);
 
-    v_stack((
-        h_stack((
-            // GR2 -> glTF operations
-            gr2_to_gltf_group(state.clone(), config.clone(), use_glb),
-            // glTF -> GR2 operations
-            gltf_to_gr2_group(state.clone()),
-            // Drop zone
-            gr2_drop_zone(state.clone(), config.clone(), use_glb),
+    // Clone before moving into bundle_options_panel
+    let state_for_drop = state.clone();
+    let config_for_drop = config.clone();
+
+    h_stack((
+        // Left column: card groups + bundle options
+        v_stack((
+            h_stack((
+                gr2_to_gltf_group(state.clone(), config.clone(), use_glb),
+                gltf_to_gr2_group(state.clone()),
+            ))
+            .style(|s| s.width_full().gap(20.0)),
+            bundle_options_panel(state, config, use_glb),
         ))
-        .style(|s| s.width_full().gap(20.0)),
-        // Bundle options for texture extraction
-        bundle_options_panel(state, config, use_glb),
+        .style(|s| s.flex_grow(1.0).flex_basis(0.0).gap(16.0)),
+        // Drop zone to the right, stretching full height
+        gr2_drop_zone(state_for_drop, config_for_drop, use_glb),
     ))
-    .style(|s| s.gap(16.0).margin_bottom(20.0))
+    .style(|s| s.width_full().gap(20.0).margin_bottom(20.0))
 }
 
 fn gr2_to_gltf_group(
@@ -84,7 +89,7 @@ fn gr2_to_gltf_group(
             },
         ),
     ))
-    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
+    .style(|s| card_style(s).flex_grow(1.0).flex_basis(0.0).gap(8.0))
 }
 
 fn gltf_to_gr2_group(state: Gr2State) -> impl IntoView {
@@ -108,7 +113,7 @@ fn gltf_to_gr2_group(state: Gr2State) -> impl IntoView {
             select_and_convert_gltf(state2.clone(), true);
         }),
     ))
-    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
+    .style(|s| card_style(s).flex_grow(1.0).flex_basis(0.0).gap(8.0))
 }
 
 fn gr2_drop_zone(state: Gr2State, config: ConfigState, use_glb: RwSignal<bool>) -> impl IntoView {
@@ -419,7 +424,8 @@ fn bundle_options_panel(
         ),
     ))
     .style(|s| {
-        s.padding(16.0)
+        s.width_full()
+            .padding(16.0)
             .background(Color::rgb8(248, 248, 252))
             .border(1.0)
             .border_color(Color::rgb8(220, 220, 230))

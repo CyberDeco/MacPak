@@ -92,7 +92,7 @@ fn extract_group(state: PakOpsState) -> impl IntoView {
             batch_extract_paks(state4.clone());
         }),
     ))
-    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
+    .style(|s| card_style(s).flex_grow(1.0).flex_basis(0.0).gap(8.0))
 }
 
 fn create_group(state: PakOpsState) -> impl IntoView {
@@ -119,7 +119,7 @@ fn create_group(state: PakOpsState) -> impl IntoView {
             batch_create_paks(state4.clone());
         }),
     ))
-    .style(|s| card_style(s).flex_grow(1.0).gap(8.0))
+    .style(|s| card_style(s).flex_grow(1.0).flex_basis(0.0).gap(8.0))
 }
 
 fn pak_drop_zone(state: PakOpsState) -> impl IntoView {
