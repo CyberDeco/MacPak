@@ -35,8 +35,7 @@ use super::pak_tools::{PakOperations, ProgressCallback};
 use crate::converter::convert_gr2_to_glb;
 use crate::error::Result;
 use crate::gr2_extraction::{
-    Gr2ExtractionOptions, Gr2ExtractionResult, convert_textures_to_png,
-    extract_textures_for_gr2,
+    Gr2ExtractionOptions, Gr2ExtractionResult, convert_textures_to_png, extract_textures_for_gr2,
 };
 use crate::merged::GameDataResolver;
 
@@ -167,8 +166,9 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
         gr2_paths
             .par_iter()
             .map(|gr2_path| {
-                let folder_result =
-                    process_single_gr2(gr2_path, output_dir, &options, progress, &completed, total_gr2);
+                let folder_result = process_single_gr2(
+                    gr2_path, output_dir, &options, progress, &completed, total_gr2,
+                );
                 let done = completed.fetch_add(1, Ordering::Relaxed) + 1;
                 let filename = gr2_path
                     .file_name()
