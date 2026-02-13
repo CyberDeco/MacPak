@@ -5,10 +5,8 @@ pub mod convert;
 pub mod dialogue;
 pub mod dyes;
 pub mod editor;
-pub mod gr2;
 pub mod pak_ops;
 pub mod search;
-pub mod virtual_textures;
 pub mod workbench;
 
 pub use browser::browser_tab;

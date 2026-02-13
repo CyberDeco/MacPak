@@ -168,35 +168,30 @@ fn loca_conversion_group(state: LsfConvertState) -> impl IntoView {
 fn lsf_drop_zone(state: LsfConvertState) -> impl IntoView {
     let state_for_drop = state.clone();
 
-    drop_zone(
-        "📄",
-        ".lsf, .lsx, .lsj, .loca, .xml",
-        false,
-        move |e| {
-            if let Event::DroppedFile(drop_event) = e {
-                let path = drop_event.path.to_string_lossy().to_string();
-                let format = detect_format(&path);
+    drop_zone("📄", ".lsf, .lsx, .lsj, .loca, .xml", false, move |e| {
+        if let Event::DroppedFile(drop_event) = e {
+            let path = drop_event.path.to_string_lossy().to_string();
+            let format = detect_format(&path);
 
-                if format.is_empty() {
-                    state_for_drop.add_result(
-                        "⚠ Only .lsf, .lsx, .lsj, .loca, or .xml files can be dropped here",
-                    );
-                    return;
-                }
-
-                // Auto-detect format and set up for conversion
-                state_for_drop.input_file.set(Some(path));
-                state_for_drop.detected_format.set(format.clone());
-
-                // Auto-select first valid target
-                let targets = target_formats_for(&format);
-                if let Some(first) = targets.first() {
-                    state_for_drop.target_format.set(first.to_string());
-                    select_output_and_convert(state_for_drop.clone());
-                }
+            if format.is_empty() {
+                state_for_drop.add_result(
+                    "⚠ Only .lsf, .lsx, .lsj, .loca, or .xml files can be dropped here",
+                );
+                return;
             }
-        },
-    )
+
+            // Auto-detect format and set up for conversion
+            state_for_drop.input_file.set(Some(path));
+            state_for_drop.detected_format.set(format.clone());
+
+            // Auto-select first valid target
+            let targets = target_formats_for(&format);
+            if let Some(first) = targets.first() {
+                state_for_drop.target_format.set(first.to_string());
+                select_output_and_convert(state_for_drop.clone());
+            }
+        }
+    })
 }
 
 /// Source format toggle button — selects the source format and auto-fixes target if needed

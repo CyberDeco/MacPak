@@ -11,9 +11,9 @@ mod vendors;
 
 use floem::prelude::*;
 
+use self::vendors::vendor_selection_section;
 use crate::gui::state::{AppState, DyesState};
 use crate::gui::utils::meta_dialog::{MetaDialogSignals, meta_dialog_with_signals_and_extra};
-use self::vendors::vendor_selection_section;
 use export::export_section;
 use generate::generate_dye_section;
 pub use import::import_from_mod_folder;

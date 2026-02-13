@@ -2,21 +2,25 @@
 //!
 //! Subtabs:
 //! - LSF/LSX/LSJ (subtab 0) — LSF/LSX/LSJ/LOCA conversion
-//! - GR2 (subtab 1) — reuses existing GR2 tab
-//! - Virtual Textures (subtab 2) — reuses existing Virtual Textures tab
+//! - GR2 (subtab 1) — GR2 ↔ glTF/GLB conversion
+//! - Virtual Textures (subtab 2) — GTS/GTP texture extraction
 
+pub mod gr2;
 pub mod lsf;
+pub mod virtual_textures;
 
+pub use gr2::open_gr2_file;
 pub use lsf::open_lsf_file;
+pub use virtual_textures::open_gts_file;
 
 use floem::prelude::*;
 use floem::text::Weight;
 
-use super::gr2::gr2_tab;
-use super::virtual_textures::virtual_textures_tab;
 use crate::gui::shared::{ThemeColors, theme_signal};
 use crate::gui::state::{AppState, ConfigState, Gr2State, LsfConvertState, VirtualTexturesState};
+use gr2::gr2_tab;
 use lsf::lsf_subtab;
+use virtual_textures::virtual_textures_tab;
 
 pub fn convert_tab(
     active_subtab: RwSignal<usize>,

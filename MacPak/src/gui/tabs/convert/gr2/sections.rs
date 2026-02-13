@@ -426,4 +426,3 @@ fn bundle_options_panel(
             .border_radius(8.0)
     })
 }
-

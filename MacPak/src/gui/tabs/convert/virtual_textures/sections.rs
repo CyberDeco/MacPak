@@ -206,7 +206,6 @@ fn options_panel(state: VirtualTexturesState, config: ConfigState) -> impl IntoV
     })
 }
 
-
 /// Select a GTS/GTP file and extract it
 fn select_and_extract_single(state: VirtualTexturesState, config: ConfigState) {
     let game_data = config.bg3_data_path.get_untracked();
