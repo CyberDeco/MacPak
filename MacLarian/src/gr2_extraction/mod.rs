@@ -217,7 +217,7 @@ pub fn extract_gr2_with_textures(
 }
 
 /// Extract textures associated with a GR2 file (both regular DDS and virtual textures)
-fn extract_textures_for_gr2(
+pub(crate) fn extract_textures_for_gr2(
     gr2_path: &Path,
     db: &MergedDatabase,
     output_dir: &Path,
@@ -298,7 +298,7 @@ fn extract_textures_for_gr2(
 }
 
 /// Convert DDS textures to PNG format
-fn convert_textures_to_png(
+pub(crate) fn convert_textures_to_png(
     textures: &[std::path::PathBuf],
     options: &Gr2ExtractionOptions,
     warnings: &mut Vec<String>,

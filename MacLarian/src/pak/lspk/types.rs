@@ -210,6 +210,10 @@ pub enum PakPhase {
     WritingTable,
     /// Writing files to disk (during extraction)
     WritingFiles,
+    /// Extracting associated textures (DDS, virtual textures)
+    ExtractingTextures,
+    /// Converting textures to PNG
+    ConvertingTextures,
     /// Operation complete
     Complete,
 }
@@ -226,6 +230,8 @@ impl PakPhase {
             Self::CompressingFiles => "Compressing files",
             Self::WritingTable => "Writing file table",
             Self::WritingFiles => "Writing files",
+            Self::ExtractingTextures => "Extracting textures",
+            Self::ConvertingTextures => "Converting textures",
             Self::Complete => "Complete",
         }
     }

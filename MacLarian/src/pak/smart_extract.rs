@@ -32,8 +32,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::lspk::{PakPhase, PakProgress};
 use super::pak_tools::{PakOperations, ProgressCallback};
+use crate::converter::convert_gr2_to_glb;
 use crate::error::Result;
-use crate::gr2_extraction::{Gr2ExtractionOptions, Gr2ExtractionResult, process_extracted_gr2};
+use crate::gr2_extraction::{
+    Gr2ExtractionOptions, Gr2ExtractionResult, convert_textures_to_png,
+    extract_textures_for_gr2,
+};
+use crate::merged::GameDataResolver;
 
 /// Result of a smart extraction operation
 #[derive(Debug, Clone)]
@@ -162,7 +167,8 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
         gr2_paths
             .par_iter()
             .map(|gr2_path| {
-                let folder_result = process_single_gr2(gr2_path, output_dir, &options);
+                let folder_result =
+                    process_single_gr2(gr2_path, output_dir, &options, progress, &completed, total_gr2);
                 let done = completed.fetch_add(1, Ordering::Relaxed) + 1;
                 let filename = gr2_path
                     .file_name()
@@ -210,11 +216,17 @@ pub fn extract_files_smart<P: AsRef<Path>, S: AsRef<str>>(
     Ok(result)
 }
 
-/// Process a single GR2 file: move to subfolder, convert, extract textures
+/// Process a single GR2 file: move to subfolder, convert, extract textures.
+///
+/// This inlines the logic from `process_extracted_gr2` so that progress can be
+/// reported between each sub-step (GLB conversion, DDS extraction, PNG conversion).
 fn process_single_gr2(
     gr2_path: &Path,
     output_base: &Path,
     options: &Gr2ExtractionOptions,
+    progress: ProgressCallback,
+    completed: &AtomicUsize,
+    total_gr2: usize,
 ) -> std::result::Result<Gr2ExtractionResult, String> {
     // Get the GR2 filename without extension for the folder name
     let gr2_filename = gr2_path
@@ -239,8 +251,82 @@ fn process_single_gr2(
         cleanup_empty_parent_dirs(gr2_path, output_base);
     }
 
-    // Process the GR2 file
-    let result = process_extracted_gr2(&new_gr2_path, options).map_err(|e| e.to_string())?;
+    let mut result = Gr2ExtractionResult {
+        gr2_path: new_gr2_path.clone(),
+        glb_path: None,
+        texture_paths: Vec::new(),
+        warnings: Vec::new(),
+    };
+
+    let output_dir = &gr2_folder;
+
+    // Step 1: Convert GR2 to GLB
+    if options.convert_to_glb {
+        progress(&PakProgress::with_file(
+            PakPhase::WritingFiles,
+            completed.load(Ordering::Relaxed),
+            total_gr2,
+            format!("Converting {} to GLB", gr2_filename),
+        ));
+
+        let glb_path = new_gr2_path.with_extension("glb");
+        match convert_gr2_to_glb(&new_gr2_path, &glb_path) {
+            Ok(()) => {
+                result.glb_path = Some(glb_path);
+            }
+            Err(e) => {
+                result
+                    .warnings
+                    .push(format!("Failed to convert to GLB: {e}"));
+            }
+        }
+    }
+
+    // Step 2: Extract associated textures
+    if options.extract_textures {
+        progress(&PakProgress::with_file(
+            PakPhase::ExtractingTextures,
+            completed.load(Ordering::Relaxed),
+            total_gr2,
+            format!("Extracting textures for {}", folder_name),
+        ));
+
+        let resolver = if let Some(ref game_data) = options.bg3_path {
+            GameDataResolver::new(game_data).ok()
+        } else {
+            GameDataResolver::auto_detect().ok()
+        };
+
+        if let Some(resolver) = resolver {
+            match extract_textures_for_gr2(&new_gr2_path, resolver.database(), output_dir, options)
+            {
+                Ok(textures) => {
+                    // Step 3: Convert DDS to PNG if requested
+                    if options.convert_to_png {
+                        progress(&PakProgress::with_file(
+                            PakPhase::ConvertingTextures,
+                            completed.load(Ordering::Relaxed),
+                            total_gr2,
+                            format!("Converting textures to PNG for {}", folder_name),
+                        ));
+                        result.texture_paths =
+                            convert_textures_to_png(&textures, options, &mut result.warnings);
+                    } else {
+                        result.texture_paths = textures;
+                    }
+                }
+                Err(e) => {
+                    result
+                        .warnings
+                        .push(format!("Failed to extract textures: {e}"));
+                }
+            }
+        } else {
+            result.warnings.push(
+                "Could not find BG3 install path for texture lookup. Use --bg3-path to specify the path.".to_string()
+            );
+        }
+    }
 
     // Optionally delete the original GR2 after conversion
     if !options.keep_original_gr2 && result.glb_path.is_some() {
