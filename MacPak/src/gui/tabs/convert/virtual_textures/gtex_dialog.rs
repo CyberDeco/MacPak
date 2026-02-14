@@ -179,18 +179,12 @@ pub fn gtex_dialog_overlay(state: VirtualTexturesState, config: ConfigState) -> 
                             }),
                         button("Extract")
                             .action(move || {
-                                extract_by_gtex_hash(
-                                    state_extract.clone(),
-                                    config_extract.clone(),
-                                );
+                                extract_by_gtex_hash(state_extract.clone(), config_extract.clone());
                             })
                             .disabled(move || hash_input.get().trim().is_empty())
                             .style(move |s| {
                                 let disabled = hash_input.get().trim().is_empty();
-                                let s = s
-                                    .padding_vert(8.0)
-                                    .padding_horiz(20.0)
-                                    .border_radius(4.0);
+                                let s = s.padding_vert(8.0).padding_horiz(20.0).border_radius(4.0);
                                 if disabled {
                                     s.background(Color::rgb8(200, 200, 200))
                                         .color(Color::rgb8(150, 150, 150))

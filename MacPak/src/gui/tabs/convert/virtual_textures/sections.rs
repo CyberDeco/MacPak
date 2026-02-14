@@ -8,7 +8,7 @@ use walkdir::WalkDir;
 
 use super::extraction::{
     convert_dds_png_batch, convert_dds_to_png_file, convert_png_to_dds_file, extract_batch,
-    extract_single,
+    extract_from_pak, extract_single,
 };
 use crate::gui::shared::{card_style, drop_zone, operation_button};
 use crate::gui::state::{ConfigState, VirtualTexturesState};
@@ -107,116 +107,126 @@ fn vt_drop_zone(state: VirtualTexturesState, config: ConfigState) -> impl IntoVi
     let state_for_drop = state.clone();
     let config_for_drop = config;
 
-    drop_zone(
-        "\u{1f5bc}",
-        ".gts, .gtp\n.dds, .png",
-        false,
-        move |e| {
-            if let Event::DroppedFile(drop_event) = e {
-                let path = drop_event.path.to_string_lossy().to_string();
-                let path_lower = path.to_lowercase();
+    drop_zone("\u{1f5bc}", ".gts, .gtp, .pak\n.dds, .png", false, move |e| {
+        if let Event::DroppedFile(drop_event) = e {
+            let path = drop_event.path.to_string_lossy().to_string();
+            let path_lower = path.to_lowercase();
 
-                let file_name = drop_event
-                    .path
+            let file_name = drop_event
+                .path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+
+            if path_lower.ends_with(".gts") || path_lower.ends_with(".gtp") {
+                state_for_drop.from_pak.set(false);
+                state_for_drop.add_result(&format!("Extracting: {}", file_name));
+                state_for_drop.gts_file.set(Some(path));
+                let game_data = config_for_drop.bg3_data_path.get_untracked();
+                extract_single(state_for_drop.clone(), game_data);
+            } else if path_lower.ends_with(".dds") {
+                state_for_drop.add_result(&format!("Converting DDS \u{2192} PNG: {}", file_name));
+                let dds_path = drop_event.path.clone();
+                let png_path = dds_path.with_extension("png");
+                let output_name = png_path
                     .file_name()
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_default();
 
-                if path_lower.ends_with(".gts") || path_lower.ends_with(".gtp") {
-                    state_for_drop.from_pak.set(false);
-                    state_for_drop.add_result(&format!("Extracting: {}", file_name));
-                    state_for_drop.gts_file.set(Some(path));
-                    let game_data = config_for_drop.bg3_data_path.get_untracked();
-                    extract_single(state_for_drop.clone(), game_data);
-                } else if path_lower.ends_with(".dds") {
-                    state_for_drop.add_result(&format!("Converting DDS \u{2192} PNG: {}", file_name));
-                    let dds_path = drop_event.path.clone();
-                    let png_path = dds_path.with_extension("png");
-                    let output_name = png_path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
+                state_for_drop.is_extracting.set(true);
+                state_for_drop
+                    .status_message
+                    .set("Converting DDS \u{2192} PNG...".to_string());
 
-                    state_for_drop.is_extracting.set(true);
-                    state_for_drop
-                        .status_message
-                        .set("Converting DDS \u{2192} PNG...".to_string());
-
-                    let send_result =
-                        super::types::create_result_sender(state_for_drop.clone());
-                    let input_name_clone = file_name.clone();
-                    let output_name_clone = output_name.clone();
-                    std::thread::spawn(move || {
-                        match maclarian::converter::convert_dds_to_png(&dds_path, &png_path) {
-                            Ok(()) => {
-                                send_result(super::types::VtResult::DdsConvertDone {
-                                    success: true,
-                                    input_name: input_name_clone,
-                                    output_name: output_name_clone,
-                                    error: None,
-                                });
-                            }
-                            Err(e) => {
-                                send_result(super::types::VtResult::DdsConvertDone {
-                                    success: false,
-                                    input_name: input_name_clone,
-                                    output_name: output_name_clone,
-                                    error: Some(e.to_string()),
-                                });
-                            }
+                let send_result = super::types::create_result_sender(state_for_drop.clone());
+                let input_name_clone = file_name.clone();
+                let output_name_clone = output_name.clone();
+                std::thread::spawn(move || {
+                    match maclarian::converter::convert_dds_to_png(&dds_path, &png_path) {
+                        Ok(()) => {
+                            send_result(super::types::VtResult::DdsConvertDone {
+                                success: true,
+                                input_name: input_name_clone,
+                                output_name: output_name_clone,
+                                error: None,
+                            });
                         }
-                    });
-                } else if path_lower.ends_with(".png") {
-                    let format = state_for_drop.dds_format.get_untracked();
-                    state_for_drop.add_result(&format!(
-                        "Converting PNG \u{2192} DDS ({:?}): {}",
-                        format, file_name
-                    ));
-                    let png_path = drop_event.path.clone();
-                    let dds_path = png_path.with_extension("dds");
-                    let output_name = dds_path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
-
-                    state_for_drop.is_extracting.set(true);
-                    state_for_drop
-                        .status_message
-                        .set(format!("Converting PNG \u{2192} DDS ({:?})...", format));
-
-                    let send_result =
-                        super::types::create_result_sender(state_for_drop.clone());
-                    let input_name_clone = file_name.clone();
-                    let output_name_clone = output_name.clone();
-                    std::thread::spawn(move || {
-                        match maclarian::converter::convert_png_to_dds_with_format(
-                            &png_path, &dds_path, format,
-                        ) {
-                            Ok(()) => {
-                                send_result(super::types::VtResult::DdsConvertDone {
-                                    success: true,
-                                    input_name: input_name_clone,
-                                    output_name: output_name_clone,
-                                    error: None,
-                                });
-                            }
-                            Err(e) => {
-                                send_result(super::types::VtResult::DdsConvertDone {
-                                    success: false,
-                                    input_name: input_name_clone,
-                                    output_name: output_name_clone,
-                                    error: Some(e.to_string()),
-                                });
-                            }
+                        Err(e) => {
+                            send_result(super::types::VtResult::DdsConvertDone {
+                                success: false,
+                                input_name: input_name_clone,
+                                output_name: output_name_clone,
+                                error: Some(e.to_string()),
+                            });
                         }
-                    });
-                } else {
-                    state_for_drop
-                        .add_result("Drop .gts, .gtp, .dds, or .png files here");
+                    }
+                });
+            } else if path_lower.ends_with(".png") {
+                let format = state_for_drop.dds_format.get_untracked();
+                state_for_drop.add_result(&format!(
+                    "Converting PNG \u{2192} DDS ({:?}): {}",
+                    format, file_name
+                ));
+                let png_path = drop_event.path.clone();
+                let dds_path = png_path.with_extension("dds");
+                let output_name = dds_path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
+
+                state_for_drop.is_extracting.set(true);
+                state_for_drop
+                    .status_message
+                    .set(format!("Converting PNG \u{2192} DDS ({:?})...", format));
+
+                let send_result = super::types::create_result_sender(state_for_drop.clone());
+                let input_name_clone = file_name.clone();
+                let output_name_clone = output_name.clone();
+                std::thread::spawn(move || {
+                    match maclarian::converter::convert_png_to_dds_with_format(
+                        &png_path, &dds_path, format,
+                    ) {
+                        Ok(()) => {
+                            send_result(super::types::VtResult::DdsConvertDone {
+                                success: true,
+                                input_name: input_name_clone,
+                                output_name: output_name_clone,
+                                error: None,
+                            });
+                        }
+                        Err(e) => {
+                            send_result(super::types::VtResult::DdsConvertDone {
+                                success: false,
+                                input_name: input_name_clone,
+                                output_name: output_name_clone,
+                                error: Some(e.to_string()),
+                            });
+                        }
+                    }
+                });
+            } else if path_lower.ends_with(".pak") {
+                // PAK file: prompt for output directory and extract VT files
+                let mut out_dialog = rfd::FileDialog::new()
+                    .set_title("Select Output Directory for VT Extraction");
+                if let Some(dir) = state_for_drop.working_dir.get() {
+                    out_dialog = out_dialog.set_directory(&dir);
                 }
+                if let Some(out_dir) = out_dialog.pick_folder() {
+                    state_for_drop
+                        .working_dir
+                        .set(Some(out_dir.to_string_lossy().to_string()));
+                    state_for_drop.add_result(&format!("Extracting VT from PAK: {}", file_name));
+                    extract_from_pak(
+                        state_for_drop.clone(),
+                        path,
+                        out_dir.to_string_lossy().to_string(),
+                    );
+                }
+            } else {
+                state_for_drop.add_result("Drop .gts, .gtp, .pak, .dds, or .png files here");
             }
-        },
-    )
+        }
+    })
 }
 
 /// Toggle button for layer selection
@@ -300,15 +310,34 @@ fn select_and_extract_single(state: VirtualTexturesState, config: ConfigState) {
                 .set(Some(parent.to_string_lossy().to_string()));
         }
 
-        // Infer from_pak based on file extension
         let is_pak = file
             .extension()
             .map(|ext| ext.to_string_lossy().to_lowercase() == "pak")
             .unwrap_or(false);
-        state.from_pak.set(is_pak);
 
-        state.gts_file.set(Some(file.to_string_lossy().to_string()));
-        extract_single(state, game_data);
+        if is_pak {
+            // PAK file: prompt for output directory and extract VT files
+            let mut out_dialog =
+                rfd::FileDialog::new().set_title("Select Output Directory for VT Extraction");
+            if let Some(dir) = state.working_dir.get() {
+                out_dialog = out_dialog.set_directory(&dir);
+            }
+            if let Some(out_dir) = out_dialog.pick_folder() {
+                state
+                    .working_dir
+                    .set(Some(out_dir.to_string_lossy().to_string()));
+                extract_from_pak(
+                    state,
+                    file.to_string_lossy().to_string(),
+                    out_dir.to_string_lossy().to_string(),
+                );
+            }
+        } else {
+            // Loose GTS/GTP file
+            state.from_pak.set(false);
+            state.gts_file.set(Some(file.to_string_lossy().to_string()));
+            extract_single(state, game_data);
+        }
     }
 }
 

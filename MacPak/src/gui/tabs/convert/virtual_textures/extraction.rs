@@ -8,24 +8,19 @@ use walkdir::WalkDir;
 
 use super::types::{VtResult, create_result_sender, get_shared_progress};
 use crate::gui::state::{ConfigState, VirtualTexturesState};
-use maclarian::virtual_texture::{extract_batch as vt_extract_batch, extract_by_gtex, extract_gts_file};
+use maclarian::virtual_texture::{
+    extract_batch as vt_extract_batch, extract_by_gtex, extract_gts_file,
+};
 
 /// Extract textures from a single GTS file
-pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
+pub fn extract_single(state: VirtualTexturesState, _game_data_path: String) {
     let gts_path = match state.gts_file.get() {
         Some(path) => path,
         None => return,
     };
 
-    let _layer = state.selected_layer.get();
     let output_dir = state.batch_output_dir.get();
-    let _from_pak = state.from_pak.get_untracked();
     let convert_to_png = state.convert_to_png.get_untracked();
-    let _game_data = if game_data_path.is_empty() {
-        None
-    } else {
-        Some(PathBuf::from(&game_data_path))
-    };
 
     state.is_extracting.set(true);
     state.status_message.set("Extracting...".to_string());
@@ -112,21 +107,14 @@ pub fn extract_single(state: VirtualTexturesState, game_data_path: String) {
 }
 
 /// Extract textures from multiple GTS files
-pub fn extract_batch(state: VirtualTexturesState, game_data_path: String) {
+pub fn extract_batch(state: VirtualTexturesState, _game_data_path: String) {
     let files = state.batch_gts_files.get();
     if files.is_empty() {
         return;
     }
 
-    let _layer = state.selected_layer.get();
     let output_dir = state.batch_output_dir.get();
-    let _from_pak = state.from_pak.get_untracked();
     let convert_to_png = state.convert_to_png.get_untracked();
-    let _game_data = if game_data_path.is_empty() {
-        None
-    } else {
-        Some(PathBuf::from(&game_data_path))
-    };
 
     state.is_extracting.set(true);
     state.status_message.set("Extracting...".to_string());
@@ -190,6 +178,174 @@ pub fn extract_batch(state: VirtualTexturesState, game_data_path: String) {
     });
 }
 
+/// Extract virtual textures from a PAK file
+pub fn extract_from_pak(state: VirtualTexturesState, pak_path: String, output_dir: String) {
+    let convert_to_png = state.convert_to_png.get_untracked();
+
+    state.is_extracting.set(true);
+    state
+        .status_message
+        .set("Extracting VT files from PAK...".to_string());
+
+    let send_result = create_result_sender(state.clone());
+
+    std::thread::spawn(move || {
+        let progress = get_shared_progress();
+        progress.reset();
+        progress.update(0, 1, "Listing PAK contents...");
+
+        // List PAK contents and filter for VT files
+        let all_files = match maclarian::pak::PakOperations::list(&pak_path) {
+            Ok(files) => files,
+            Err(e) => {
+                send_result(VtResult::BatchDone {
+                    success_count: 0,
+                    error_count: 1,
+                    texture_count: 0,
+                    results: vec![format!("Failed to list PAK: {}", e)],
+                });
+                return;
+            }
+        };
+
+        let vt_files: Vec<String> = all_files
+            .into_iter()
+            .filter(|f| {
+                let lower = f.to_lowercase();
+                lower.ends_with(".gts") || lower.ends_with(".gtp")
+            })
+            .collect();
+
+        if vt_files.is_empty() {
+            send_result(VtResult::BatchDone {
+                success_count: 0,
+                error_count: 0,
+                texture_count: 0,
+                results: vec!["No .gts/.gtp files found in PAK".to_string()],
+            });
+            return;
+        }
+
+        // Create temp dir for extraction
+        let temp_dir =
+            std::env::temp_dir().join(format!("macpak_vt_pak_{}", std::process::id()));
+        if let Err(e) = std::fs::create_dir_all(&temp_dir) {
+            send_result(VtResult::BatchDone {
+                success_count: 0,
+                error_count: 1,
+                texture_count: 0,
+                results: vec![format!("Failed to create temp dir: {}", e)],
+            });
+            return;
+        }
+
+        // Extract VT files from PAK to temp dir
+        let temp_dir_str = temp_dir.to_string_lossy().to_string();
+        progress.update(0, 1, "Extracting VT files from PAK...");
+        if let Err(e) = maclarian::pak::PakOperations::extract_files_with_progress(
+            &pak_path,
+            &temp_dir_str,
+            &vt_files,
+            &|p| {
+                let desc = p
+                    .current_file
+                    .as_deref()
+                    .unwrap_or("Extracting from PAK...");
+                progress.update(p.current, p.total, desc);
+            },
+        ) {
+            let _ = std::fs::remove_dir_all(&temp_dir);
+            send_result(VtResult::BatchDone {
+                success_count: 0,
+                error_count: 1,
+                texture_count: 0,
+                results: vec![format!("Failed to extract from PAK: {}", e)],
+            });
+            return;
+        }
+
+        // Walk temp dir to find all extracted .gts files
+        let gts_files: Vec<PathBuf> = WalkDir::new(&temp_dir)
+            .follow_links(true)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.path().is_file()
+                    && e.path()
+                        .extension()
+                        .map(|ext| ext.to_string_lossy().to_lowercase() == "gts")
+                        .unwrap_or(false)
+            })
+            .map(|e| e.path().to_path_buf())
+            .collect();
+
+        if gts_files.is_empty() {
+            let _ = std::fs::remove_dir_all(&temp_dir);
+            send_result(VtResult::BatchDone {
+                success_count: 0,
+                error_count: 0,
+                texture_count: 0,
+                results: vec!["No .gts files found after PAK extraction".to_string()],
+            });
+            return;
+        }
+
+        // Run VT batch extraction on the loose files
+        let output_path = Path::new(&output_dir);
+        let result = vt_extract_batch(
+            &gts_files,
+            Some(output_path),
+            |p: &maclarian::virtual_texture::VTexProgress| {
+                let desc = p.current_file.as_deref().unwrap_or(p.phase.as_str());
+                progress.update(p.current, p.total, desc);
+            },
+        );
+
+        // Convert to PNG if requested (walk output dir recursively for DDS files)
+        let mut png_converted = 0;
+        if convert_to_png {
+            for entry in WalkDir::new(output_path)
+                .follow_links(true)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(ext) = path.extension() {
+                        if ext.to_string_lossy().to_lowercase() == "dds" {
+                            let png_path = path.with_extension("png");
+                            if maclarian::converter::convert_dds_to_png(path, &png_path).is_ok() {
+                                png_converted += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Clean up temp dir
+        let _ = std::fs::remove_dir_all(&temp_dir);
+
+        progress.update(
+            result.success_count + result.error_count,
+            result.success_count + result.error_count,
+            "Complete",
+        );
+
+        let mut results = result.results.clone();
+        if png_converted > 0 {
+            results.push(format!("Converted {} DDS files to PNG", png_converted));
+        }
+
+        send_result(VtResult::BatchDone {
+            success_count: result.success_count,
+            error_count: result.error_count,
+            texture_count: result.texture_count,
+            results,
+        });
+    });
+}
+
 /// Convert a single DDS file to PNG
 pub fn convert_dds_to_png_file(state: VirtualTexturesState) {
     let mut dialog = rfd::FileDialog::new()
@@ -218,7 +374,9 @@ pub fn convert_dds_to_png_file(state: VirtualTexturesState) {
             .unwrap_or_default();
 
         state.is_extracting.set(true);
-        state.status_message.set("Converting DDS → PNG...".to_string());
+        state
+            .status_message
+            .set("Converting DDS → PNG...".to_string());
 
         let send_result = create_result_sender(state);
 

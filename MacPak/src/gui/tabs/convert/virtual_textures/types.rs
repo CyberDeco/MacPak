@@ -96,7 +96,11 @@ pub fn handle_vt_result(state: VirtualTexturesState, result: VtResult) {
                 state.add_result(&format!("Converted {} → {}", input_name, output_name));
                 state.status_message.set("Conversion complete!".to_string());
             } else {
-                state.add_result(&format!("Error converting {}: {}", input_name, error.unwrap_or_default()));
+                state.add_result(&format!(
+                    "Error converting {}: {}",
+                    input_name,
+                    error.unwrap_or_default()
+                ));
                 state.status_message.set("Conversion failed".to_string());
             }
             state.is_extracting.set(false);
