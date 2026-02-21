@@ -14,6 +14,8 @@ pub struct ParsedDyeEntry {
 #[derive(Clone, Debug, Default)]
 pub struct DyeLocalizationInfo {
     pub name: String,
+    /// The ColorPreset UUID linking this root template to a color preset Resource
+    pub color_preset_uuid: Option<String>,
     pub display_name_handle: Option<String>,
     pub description_handle: Option<String>,
 }

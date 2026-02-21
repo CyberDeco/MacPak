@@ -274,6 +274,13 @@ pub fn parse_root_templates_localization(lsx_content: &str) -> Vec<DyeLocalizati
                 entry.name = value;
             }
 
+            // ColorPreset UUID - links root template to color preset Resource
+            if line.contains("attribute id=\"ColorPreset\"")
+                && let Some(value) = extract_xml_attribute(line, "value")
+            {
+                entry.color_preset_uuid = Some(value);
+            }
+
             // DisplayName - TranslatedString with handle
             if line.contains("attribute id=\"DisplayName\"")
                 && let Some(handle) = extract_xml_attribute(line, "handle")

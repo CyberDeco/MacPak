@@ -11,8 +11,9 @@ use super::super::shared::{
 };
 use crate::gui::state::DyesState;
 
-// maclarian imports for LSF conversion (via MacPak re-export)
+// maclarian imports for LSF/LOCA conversion (via MacPak re-export)
 use crate::maclarian::converter::to_lsx;
+use crate::maclarian::formats::loca;
 use crate::maclarian::formats::lsf;
 
 /// Import from an extracted mod folder
@@ -49,7 +50,8 @@ pub fn import_from_mod_folder(
         let mut color_files: Vec<std::path::PathBuf> = Vec::new(); // Fallback: individual LSF files
         let mut object_file: Option<std::path::PathBuf> = None;
         let mut root_templates_files: Vec<std::path::PathBuf> = Vec::new();
-        let mut localization_file: Option<std::path::PathBuf> = None;
+        let mut localization_file: Option<std::path::PathBuf> = None; // XML
+        let mut loca_file: Option<std::path::PathBuf> = None; // Binary LOCA
         let mut meta_file: Option<std::path::PathBuf> = None;
 
         for entry in WalkDir::new(&folder_path)
@@ -112,13 +114,13 @@ pub fn import_from_mod_folder(
                 root_templates_files.push(path.to_path_buf());
             }
 
-            // Look for localization XML file (in Localization/English/)
-            if localization_file.is_none() {
-                if file_name.ends_with(".xml")
-                    && path_str.contains("localization")
-                    && path_str.contains("english")
-                {
+            // Look for localization files (in Localization/English/)
+            if path_str.contains("localization") && path_str.contains("english") {
+                if localization_file.is_none() && file_name.ends_with(".xml") {
                     localization_file = Some(path.to_path_buf());
+                }
+                if loca_file.is_none() && file_name.ends_with(".loca") {
+                    loca_file = Some(path.to_path_buf());
                 }
             }
 
@@ -186,7 +188,7 @@ pub fn import_from_mod_folder(
             }
         }
 
-        // Parse RootTemplates to get localization handles
+        // Parse RootTemplates to get localization handles, keyed by ColorPreset UUID
         let mut localization_handles: HashMap<String, (Option<String>, Option<String>)> =
             HashMap::new();
         for rt_path in &root_templates_files {
@@ -206,16 +208,18 @@ pub fn import_from_mod_folder(
 
             if let Some(content) = lsx_content {
                 for info in parse_root_templates_localization(&content) {
-                    localization_handles.insert(
-                        info.name,
-                        (info.display_name_handle, info.description_handle),
-                    );
+                    if let Some(ref preset_uuid) = info.color_preset_uuid {
+                        localization_handles.insert(
+                            preset_uuid.clone(),
+                            (info.display_name_handle, info.description_handle),
+                        );
+                    }
                 }
             }
         }
 
-        // Parse localization XML to get actual text
-        let localization_map: HashMap<String, String> =
+        // Parse localization to get actual text (prefer XML, fall back to binary LOCA)
+        let mut localization_map: HashMap<String, String> =
             if let Some(ref loc_path) = localization_file {
                 fs::read_to_string(loc_path)
                     .ok()
@@ -224,10 +228,20 @@ pub fn import_from_mod_folder(
             } else {
                 HashMap::new()
             };
+        if localization_map.is_empty() {
+            if let Some(ref loc_path) = loca_file {
+                if let Ok(loca_resource) = loca::read_loca(loc_path) {
+                    for entry in &loca_resource.entries {
+                        localization_map.insert(entry.key.clone(), entry.text.clone());
+                    }
+                }
+            }
+        }
 
-        // Correlate localization data with dye entries
+        // Correlate localization data with dye entries via ColorPreset UUID
         for lsf_entry in &mut lsf_entries {
-            if let Some((display_handle, desc_handle)) = localization_handles.get(&lsf_entry.name) {
+            let key = lsf_entry.preset_uuid.as_deref().unwrap_or("");
+            if let Some((display_handle, desc_handle)) = localization_handles.get(key) {
                 // Look up display name
                 if let Some(handle) = display_handle {
                     if let Some(text) = localization_map.get(handle) {
